@@ -2,15 +2,16 @@ import type { SavedRun, SimulationConfig } from "../engine/types";
 import { defaultConfig } from "../engine/config";
 
 /**
- * Migrate a saved run from any older schema to the latest (v2).
+ * Migrate a saved run from any older schema to the latest (currently v3).
  * Returns null if the data is unrecognizable.
  */
 export function migrateSavedRun(raw: unknown): SavedRun | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   const version = typeof obj.version === "number" ? obj.version : 1;
-  if (version > 2) return null;
+  if (version > 3) return null;
   if (!obj.config || typeof obj.config !== "object") return null;
+
   const defaults = defaultConfig();
   const oldConfig = obj.config as Record<string, unknown>;
   const oldModes = (oldConfig.modes as Record<string, unknown>) ?? {};
@@ -43,12 +44,20 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
     semantics:
       (oldConfig.semantics as SimulationConfig["semantics"] | undefined) ??
       defaults.semantics,
+    obsolescence:
+      (oldConfig.obsolescence as SimulationConfig["obsolescence"] | undefined) ??
+      defaults.obsolescence,
     seedLexicon:
       (oldConfig.seedLexicon as SimulationConfig["seedLexicon"] | undefined) ??
       defaults.seedLexicon,
+    seedFrequencyHints:
+      (oldConfig.seedFrequencyHints as SimulationConfig["seedFrequencyHints"] | undefined) ??
+      defaults.seedFrequencyHints,
+    preset:
+      typeof oldConfig.preset === "string" ? (oldConfig.preset as string) : undefined,
   };
   return {
-    version: 2,
+    version: 3,
     id: String(obj.id ?? ""),
     label: String(obj.label ?? "unlabeled"),
     createdAt: typeof obj.createdAt === "number" ? obj.createdAt : Date.now(),

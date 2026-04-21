@@ -2,6 +2,8 @@ import type { GenesisRule } from "./types";
 import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isVowel, isConsonant } from "../phonology/ipa";
+import { neighborsOf } from "../semantics/neighbors";
+import { phonotacticFit } from "./phonotactics";
 
 function pickMeanings(lang: Language, rng: Rng, n: number): Meaning[] {
   const keys = Object.keys(lang.lexicon);
@@ -34,14 +36,32 @@ export const GENESIS_CATALOG: GenesisRule[] = [
     enabledByDefault: true,
     baseWeight: 1,
     tryCoin: (lang, rng) => {
-      const [a, b] = pickMeanings(lang, rng, 2);
+      // 70% of the time, prefer a semantically related pair so coinages are
+      // coherent (dark+night rather than stone+foot). Fall back to random.
+      let a: Meaning | undefined;
+      let b: Meaning | undefined;
+      const meanings = Object.keys(lang.lexicon);
+      if (meanings.length === 0) return null;
+      if (rng.chance(0.7)) {
+        a = meanings[rng.int(meanings.length)];
+        const neighbors = a ? neighborsOf(a).filter((n) => lang.lexicon[n]) : [];
+        if (a && neighbors.length > 0) b = neighbors[rng.int(neighbors.length)];
+      }
+      if (!a || !b || a === b) {
+        const pick = pickMeanings(lang, rng, 2);
+        a = pick[0];
+        b = pick[1];
+      }
       if (!a || !b || a === b) return null;
       const newMeaning: Meaning = `${a}-${b}`;
       if (lang.lexicon[newMeaning]) return null;
       const fa = lang.lexicon[a]!;
       const fb = lang.lexicon[b]!;
       if (fa.length + fb.length > 10) return null;
-      return { meaning: newMeaning, form: [...fa, ...fb] };
+      const form = [...fa, ...fb];
+      // Reject on obviously-bad phonotactics (score < 0.25).
+      if (phonotacticFit(form, lang) < 0.25) return null;
+      return { meaning: newMeaning, form };
     },
   },
   {
@@ -60,7 +80,9 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       if (lang.lexicon[newMeaning]) return null;
       const baseForm = lang.lexicon[base]!;
       if (baseForm.length + suffix.affix.length > 10) return null;
-      return { meaning: newMeaning, form: [...baseForm, ...suffix.affix] };
+      const form = [...baseForm, ...suffix.affix];
+      if (phonotacticFit(form, lang) < 0.25) return null;
+      return { meaning: newMeaning, form };
     },
   },
   {

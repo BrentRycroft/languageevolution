@@ -1,5 +1,8 @@
 import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
+import { inflect } from "../engine/morphology/evolve";
+import type { MorphCategory } from "../engine/morphology/types";
+import { formToString } from "../engine/phonology/ipa";
 
 export function GrammarView() {
   const state = useSimStore((s) => s.state);
@@ -25,6 +28,7 @@ export function GrammarView() {
             {selected.extinct && <span style={{ color: "var(--danger)" }}>(extinct)</span>}
           </div>
           <GrammarFeatureList grammar={selected.grammar} />
+          <ParadigmTable lang={selected} />
         </>
       ) : (
         <div style={{ color: "var(--muted)" }}>Select a language to view grammar.</div>
@@ -48,6 +52,60 @@ export function GrammarView() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
+  const paradigms = lang.morphology.paradigms;
+  const cats = Object.keys(paradigms) as MorphCategory[];
+  if (cats.length === 0) {
+    return (
+      <div style={{ color: "var(--muted)", marginTop: 10, fontSize: 11 }}>
+        No morphology yet.
+      </div>
+    );
+  }
+  const lexMeanings = Object.keys(lang.lexicon);
+  // Use the first short meaning as a demo noun/verb stem.
+  const demo = lexMeanings.find((m) => !m.includes("-")) ?? lexMeanings[0];
+  const demoForm = demo ? lang.lexicon[demo] : undefined;
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
+        Morphology
+        {demo && (
+          <>
+            {" — "}
+            showing "<span style={{ color: "var(--text)" }}>{demo}</span>" inflected
+          </>
+        )}
+      </div>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          fontFamily: "'SF Mono', Menlo, monospace",
+          fontSize: 11,
+        }}
+      >
+        <tbody>
+          {cats.map((cat) => {
+            const p = paradigms[cat];
+            if (!p) return null;
+            const inflected = demoForm ? formToString(inflect(demoForm, p)) : "—";
+            return (
+              <tr key={cat}>
+                <td style={{ padding: "2px 6px", color: "var(--muted)" }}>{cat}</td>
+                <td style={{ padding: "2px 6px", color: "var(--muted)" }}>
+                  /{formToString(p.affix)}/ ({p.position})
+                </td>
+                <td style={{ padding: "2px 6px" }}>{inflected}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -17,6 +17,9 @@ function makeTree(): LanguageTree {
     birthGeneration: 0,
     grammar: { ...DEFAULT_GRAMMAR },
     events: [],
+    wordFrequencyHints: {},
+    phonemeInventory: { segmental: [], tones: [], usesTones: false },
+    morphology: { paradigms: {} },
   };
   const root: LanguageNode = {
     language: lang,

@@ -3,7 +3,7 @@ import { migrateSavedRun } from "../migrate";
 import { defaultConfig } from "../../engine/config";
 
 describe("migrateSavedRun", () => {
-  it("upgrades a v1 run (no genesis/grammar/etc) to v2", () => {
+  it("upgrades a v1 run (no genesis/grammar/etc) to latest (v3)", () => {
     const v1 = {
       version: 1,
       id: "run-old",
@@ -29,7 +29,7 @@ describe("migrateSavedRun", () => {
     const migrated = migrateSavedRun(v1);
     expect(migrated).not.toBeNull();
     if (!migrated) return;
-    expect(migrated.version).toBe(2);
+    expect(migrated.version).toBe(3);
     expect(migrated.id).toBe("run-old");
     expect(migrated.generationsRun).toBe(42);
     expect(migrated.config.genesis).toBeDefined();
@@ -41,19 +41,19 @@ describe("migrateSavedRun", () => {
     expect(migrated.config.seed).toBe("hello");
   });
 
-  it("passes a v2 run through unchanged in shape", () => {
+  it("passes a current-version run through unchanged in shape", () => {
     const cfg = defaultConfig();
-    const v2 = {
-      version: 2,
+    const latest = {
+      version: 3,
       id: "run-new",
       label: "new run",
       createdAt: 2000,
       config: cfg,
       generationsRun: 0,
     };
-    const migrated = migrateSavedRun(v2);
+    const migrated = migrateSavedRun(latest);
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(2);
+    expect(migrated?.version).toBe(3);
     expect(migrated?.config.modes.grammar).toBe(cfg.modes.grammar);
   });
 

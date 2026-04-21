@@ -1,5 +1,10 @@
 import type { SoundChange, WordForm, Phoneme } from "../types";
 import { isVowel, isConsonant } from "./ipa";
+import { HIGH, LOW, stripTone, toneOf } from "./tone";
+
+const CLICKS = ["ǀ", "ǃ", "ǂ", "ǁ"] as const;
+const VOICED = new Set(["b", "d", "g", "v", "z", "ʒ", "dʒ", "dz"]);
+const VOICELESS = new Set(["p", "t", "k", "f", "s", "ʃ", "tʃ", "ts", "θ"]);
 
 type Mapping = readonly (readonly [Phoneme, Phoneme])[];
 
@@ -508,6 +513,219 @@ export const CATALOG: SoundChange[] = [
     enabledByDefault: true,
     baseWeight: 1,
   },
+
+  // --- Generative / cyclic rules ---
+  // These deliberately re-introduce phonemes that one-way chain shifts remove,
+  // keeping the inventory lively across long runs.
+
+  {
+    id: "monophthongization.au_to_o",
+    label: "au → o / ai → e",
+    category: "vowel",
+    description: "Diphthongs collapse, re-seeding mid vowels lost to raising.",
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 0; i < w.length - 1; i++) {
+        if ((w[i] === "a" && w[i + 1] === "u") || (w[i] === "a" && w[i + 1] === "i")) n++;
+      }
+      return 1 - Math.pow(1 - 0.06, n);
+    },
+    apply: (word, rng) => {
+      const sites: Array<{ idx: number; to: Phoneme }> = [];
+      for (let i = 0; i < word.length - 1; i++) {
+        if (word[i] === "a" && word[i + 1] === "u") sites.push({ idx: i, to: "o" });
+        else if (word[i] === "a" && word[i + 1] === "i") sites.push({ idx: i, to: "e" });
+      }
+      if (sites.length === 0) return word;
+      const pick = sites[rng.int(sites.length)]!;
+      return [...word.slice(0, pick.idx), pick.to, ...word.slice(pick.idx + 2)];
+    },
+    enabledByDefault: true,
+    baseWeight: 1,
+  },
+  mappingSub(
+    "vowel.lowering",
+    "i → e, e → a",
+    "vowel",
+    [
+      ["i", "e"],
+      ["e", "a"],
+    ],
+    0.03,
+    "Reverse-chain lowering: provides fresh vowels for the raising rule to act on again.",
+  ),
+  contextSub(
+    "fortition.w_to_v",
+    "w → v / #_V",
+    "fortition",
+    "w",
+    "v",
+    (_p, i, w) => i === 0 && i + 1 < w.length && isVowel(w[i + 1]!),
+    0.05,
+    "Word-initial w hardens to v, reintroducing fricatives.",
+  ),
+  contextSub(
+    "fortition.j_to_dz",
+    "j → dʒ / #_V",
+    "fortition",
+    "j",
+    "dʒ",
+    (_p, i, w) => i === 0 && i + 1 < w.length && isVowel(w[i + 1]!),
+    0.04,
+    "Word-initial j hardens to dʒ.",
+  ),
+  contextSub(
+    "lenition.z_to_r",
+    "z → r / V_V (rhotacism)",
+    "lenition",
+    "z",
+    "r",
+    (_p, i, w) => i > 0 && i < w.length - 1 && isVowel(w[i - 1]!) && isVowel(w[i + 1]!),
+    0.08,
+    "Rhotacism: intervocalic z → r (classical Latin pattern).",
+  ),
+  mappingSub(
+    "palatalization.cascade",
+    "tʃ → ʃ, kj → tʃ",
+    "palatalization",
+    [
+      ["tʃ", "ʃ"],
+      ["kj", "tʃ"],
+    ],
+    0.05,
+    "Palatal cascade: earlier palatalization outputs lenite, new palatalizations fill in.",
+  ),
+
+  // --- Tonogenesis / detonogenesis ---
+
+  {
+    id: "tonogenesis.voiced_coda",
+    label: "V → V˩ / _[+voiced]#",
+    category: "vowel",
+    description:
+      "Tonogenesis: a word-final voiced obstruent lowers the preceding vowel (tone split). Disabled by default — branches can pick it up via rule-set perturbation on split.",
+    probabilityFor: (w) => {
+      if (w.length < 2) return 0;
+      const last = w[w.length - 1]!;
+      const prev = w[w.length - 2]!;
+      if (toneOf(prev)) return 0;
+      if (!isVowel(stripTone(prev))) return 0;
+      if (VOICED.has(last)) return 0.04;
+      if (VOICELESS.has(last)) return 0.04;
+      return 0;
+    },
+    apply: (word) => {
+      if (word.length < 2) return word;
+      const last = word[word.length - 1]!;
+      const prev = word[word.length - 2]!;
+      if (toneOf(prev)) return word;
+      if (!isVowel(stripTone(prev))) return word;
+      let tone: string | null = null;
+      if (VOICED.has(last)) tone = LOW;
+      else if (VOICELESS.has(last)) tone = HIGH;
+      if (!tone) return word;
+      const out = word.slice();
+      out[out.length - 2] = prev + tone;
+      return out;
+    },
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  {
+    id: "tonogenesis.voiced_coda_loss",
+    label: "Cvoiced → ∅ / V˩_#",
+    category: "deletion",
+    description:
+      "After tonogenesis: the now-redundant voiced coda drops, leaving only the tone on the vowel.",
+    probabilityFor: (w) => {
+      if (w.length < 2) return 0;
+      const last = w[w.length - 1]!;
+      const prev = w[w.length - 2]!;
+      if (toneOf(prev) && VOICED.has(last)) return 0.08;
+      return 0;
+    },
+    apply: (word) => {
+      if (word.length < 2) return word;
+      const last = word[word.length - 1]!;
+      const prev = word[word.length - 2]!;
+      if (toneOf(prev) && VOICED.has(last)) return word.slice(0, -1);
+      return word;
+    },
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  {
+    id: "detonogenesis.tone_loss",
+    label: "V˥/V˩ → V",
+    category: "vowel",
+    description:
+      "Detonogenesis (rare): every toned vowel collapses back to its plain form. Fires on the whole word at once.",
+    probabilityFor: (w) => {
+      for (const p of w) if (toneOf(p)) return 0.01;
+      return 0;
+    },
+    apply: (word) => word.map((p) => (toneOf(p) ? stripTone(p) : p)),
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+
+  // --- Clicks (very rare) ---
+
+  {
+    id: "inventory.click_introduction",
+    label: "C → click (rare)",
+    category: "fortition",
+    description:
+      "Very rare: a stop consonant is reanalyzed as a click, typically spreading via prestige vocabulary.",
+    probabilityFor: (w) => {
+      let stops = 0;
+      for (const p of w) if (p === "t" || p === "k" || p === "p") stops++;
+      return stops > 0 ? 0.002 : 0;
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length; i++) {
+        const p = word[i]!;
+        if (p === "t" || p === "k" || p === "p") sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = CLICKS[rng.int(CLICKS.length)]!;
+      return out;
+    },
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  mappingSub(
+    "inventory.click_loss",
+    "click → stop",
+    "lenition",
+    [
+      ["ǀ", "t"],
+      ["ǃ", "k"],
+      ["ǂ", "tʃ"],
+      ["ǁ", "l"],
+    ],
+    0.03,
+    "Clicks eroding into ordinary stops in daughter languages.",
+  ),
+
+  // --- Retroflex series ---
+
+  mappingSub(
+    "retroflex.series",
+    "s → ʂ, t → ʈ, d → ɖ, n → ɳ",
+    "fortition",
+    [
+      ["s", "ʂ"],
+      ["t", "ʈ"],
+      ["d", "ɖ"],
+      ["n", "ɳ"],
+    ],
+    0.015,
+    "Retroflex series emerges. Rare; when on, gradually retroflexes alveolars.",
+  ),
 ];
 
 export const CATALOG_BY_ID: Record<string, SoundChange> = Object.fromEntries(
