@@ -34,9 +34,10 @@ body {
 .app {
   display: grid;
   grid-template-columns: 320px 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   grid-template-areas:
     "header header"
+    "controls tabs"
     "controls main";
   height: 100vh;
   height: 100dvh;
@@ -91,20 +92,24 @@ body {
 .main {
   grid-area: main;
   overflow: hidden;
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  grid-template-columns: 1fr 1fr;
-  grid-template-areas:
-    "tree lexicon"
-    "timeline agents";
-  gap: 8px;
+  display: flex;
   padding: 8px;
 }
 
-.panel-tree { grid-area: tree; }
-.panel-lexicon { grid-area: lexicon; }
-.panel-timeline { grid-area: timeline; }
-.panel-agents { grid-area: agents; }
+.panel-single {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-single > :last-child {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+}
 
 .panel {
   background: var(--panel);
@@ -318,21 +323,15 @@ input[type="range"] {
   stroke-width: 3;
 }
 
+.tree-node-circle.extinct {
+  fill: var(--muted);
+  opacity: 0.5;
+}
+
 .tree-link {
   fill: none;
   stroke: var(--border);
   stroke-width: 1.5;
-}
-
-.agent-grid {
-  display: grid;
-  gap: 2px;
-}
-
-.agent-cell {
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
 }
 
 .runs-list {
@@ -392,7 +391,8 @@ input[type="range"] {
 }
 
 .tab-bar {
-  display: none;
+  grid-area: tabs;
+  display: flex;
   gap: 4px;
   padding: 6px 8px 0;
   background: var(--panel);
@@ -471,31 +471,8 @@ input[type="range"] {
     z-index: 99;
   }
 
-  .tab-bar {
-    display: flex;
-    grid-area: tabs;
-  }
-
   .main {
-    grid-template-rows: 1fr;
-    grid-template-columns: 1fr;
-    grid-template-areas: "panel";
     padding: 6px;
-    gap: 0;
-  }
-
-  .main .panel {
-    grid-area: panel;
-    display: none;
-  }
-
-  .main .panel.active-tab {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .panel {
-    padding: 8px;
   }
 
   .lexicon-table {

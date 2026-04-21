@@ -4,15 +4,17 @@ import { ControlsPanel } from "./ControlsPanel";
 import { LexiconView } from "./LexiconView";
 import { LanguageTreeView } from "./LanguageTreeView";
 import { TimelineChart } from "./TimelineChart";
-import { AgentGrid } from "./AgentGrid";
+import { GrammarView } from "./GrammarView";
+import { EventsLog } from "./EventsLog";
 
-type Tab = "tree" | "lexicon" | "timeline" | "agents";
+type Tab = "tree" | "lexicon" | "timeline" | "grammar" | "events";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tree", label: "Tree" },
   { id: "lexicon", label: "Lexicon" },
   { id: "timeline", label: "Timeline" },
-  { id: "agents", label: "Agents" },
+  { id: "grammar", label: "Grammar" },
+  { id: "events", label: "History" },
 ];
 
 export function App() {
@@ -20,6 +22,7 @@ export function App() {
   const speed = useSimStore((s) => s.speed);
   const togglePlay = useSimStore((s) => s.togglePlay);
   const step = useSimStore((s) => s.step);
+  const stepN = useSimStore((s) => s.stepN);
   const reset = useSimStore((s) => s.reset);
   const generation = useSimStore((s) => s.state.generation);
 
@@ -69,7 +72,22 @@ export function App() {
             {playing ? "Pause" : "Play"}
           </button>
           <button onClick={step} disabled={playing}>Step</button>
-          <button onClick={reset}>Reset</button>
+          <button
+            onClick={() => stepN(50)}
+            disabled={playing}
+            title="Fast-forward 50 generations"
+          >
+            +50
+          </button>
+          <button
+            onClick={() => {
+              if (confirm("Reset simulation to generation 0? This wipes the current run (saved runs are preserved).")) {
+                reset();
+              }
+            }}
+          >
+            Reset
+          </button>
         </div>
       </header>
 
@@ -95,22 +113,36 @@ export function App() {
       </aside>
 
       <main className="main">
-        <div className={`panel panel-tree ${activeTab === "tree" ? "active-tab" : ""}`}>
-          <h3>Language Tree</h3>
-          <LanguageTreeView />
-        </div>
-        <div className={`panel panel-lexicon ${activeTab === "lexicon" ? "active-tab" : ""}`}>
-          <h3>Lexicon</h3>
-          <LexiconView />
-        </div>
-        <div className={`panel panel-timeline ${activeTab === "timeline" ? "active-tab" : ""}`}>
-          <h3>Timeline</h3>
-          <TimelineChart />
-        </div>
-        <div className={`panel panel-agents ${activeTab === "agents" ? "active-tab" : ""}`}>
-          <h3>Agents</h3>
-          <AgentGrid />
-        </div>
+        {activeTab === "tree" && (
+          <div className="panel panel-single">
+            <h3>Language Tree</h3>
+            <LanguageTreeView />
+          </div>
+        )}
+        {activeTab === "lexicon" && (
+          <div className="panel panel-single">
+            <h3>Lexicon</h3>
+            <LexiconView />
+          </div>
+        )}
+        {activeTab === "timeline" && (
+          <div className="panel panel-single">
+            <h3>Timeline</h3>
+            <TimelineChart />
+          </div>
+        )}
+        {activeTab === "grammar" && (
+          <div className="panel panel-single">
+            <h3>Grammar</h3>
+            <GrammarView />
+          </div>
+        )}
+        {activeTab === "events" && (
+          <div className="panel panel-single">
+            <h3>History</h3>
+            <EventsLog />
+          </div>
+        )}
       </main>
     </div>
   );

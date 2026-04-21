@@ -1,6 +1,7 @@
 import type { Language, LanguageNode, LanguageTree, Lexicon } from "../types";
 import { CATALOG, CATALOG_BY_ID } from "../phonology/catalog";
-import { clonePopulation } from "../agents/population";
+import { generateName } from "../naming";
+import { cloneGrammar } from "../grammar/evolve";
 import type { Rng } from "../rng";
 
 function cloneLexicon(lex: Lexicon): Lexicon {
@@ -51,12 +52,13 @@ export function splitLeaf(
     }
     return {
       id,
-      name: id,
+      name: generateName(parentLang, rng),
       lexicon: cloneLexicon(parentLang.lexicon),
-      population: parentLang.population ? clonePopulation(parentLang.population, id) : undefined,
       enabledChangeIds: enabled,
       changeWeights: weights,
       birthGeneration: generation,
+      grammar: cloneGrammar(parentLang.grammar),
+      events: [],
     };
   };
   const a = makeChild(false);

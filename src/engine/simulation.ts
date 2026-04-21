@@ -1,5 +1,6 @@
 import type {
   Language,
+  LanguageEvent,
   LanguageNode,
   LanguageTree,
   Lexicon,
@@ -9,10 +10,16 @@ import type {
 } from "./types";
 import { CATALOG_BY_ID } from "./phonology/catalog";
 import { applyChangesToLexicon } from "./phonology/apply";
-import { createPopulation, resyncAgentsToLexicon } from "./agents/population";
-import { runInteractions } from "./agents/interaction";
+import { GENESIS_BY_ID } from "./genesis/catalog";
+import type { GenesisRule } from "./genesis/types";
+import { tryGenesis } from "./genesis/apply";
+import { driftGrammar } from "./grammar/evolve";
+import { DEFAULT_GRAMMAR } from "./grammar/defaults";
+import { driftOneMeaning } from "./semantics/drift";
 import { leafIds, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
+
+const MAX_EVENTS_PER_LANGUAGE = 80;
 
 export interface Simulation {
   getState: () => SimulationState;
@@ -27,6 +34,13 @@ function cloneLexicon(lex: Lexicon): Lexicon {
   return out;
 }
 
+function pushEvent(lang: Language, event: LanguageEvent): void {
+  lang.events.push(event);
+  if (lang.events.length > MAX_EVENTS_PER_LANGUAGE) {
+    lang.events.splice(0, lang.events.length - MAX_EVENTS_PER_LANGUAGE);
+  }
+}
+
 function buildInitialState(config: SimulationConfig): SimulationState {
   const rng = makeRng(config.seed);
   const rootId = "L-0";
@@ -39,23 +53,11 @@ function buildInitialState(config: SimulationConfig): SimulationState {
     id: rootId,
     name: "Proto",
     lexicon: cloneLexicon(config.seedLexicon),
-    population: config.modes.agents
-      ? createPopulation(
-          config.seedLexicon,
-          {
-            interactionsPerStep: config.agents.interactionsPerStep,
-            adoptionProbability: config.agents.adoptionProbability,
-            innovationProbability: config.agents.innovationProbability,
-          },
-          config.agents.populationSize,
-          config.agents.gridWidth,
-          rootId,
-          rng,
-        )
-      : undefined,
     enabledChangeIds: enabled,
     changeWeights: weights,
     birthGeneration: 0,
+    grammar: { ...DEFAULT_GRAMMAR },
+    events: [],
   };
   const rootNode: LanguageNode = {
     language: rootLang,
@@ -77,48 +79,132 @@ function changesForLang(lang: Language): SoundChange[] {
     .filter((c): c is SoundChange => !!c);
 }
 
+function genesisRulesFor(config: SimulationConfig): GenesisRule[] {
+  return config.genesis.enabledRuleIds
+    .map((id) => GENESIS_BY_ID[id])
+    .filter((r): r is GenesisRule => !!r);
+}
+
+function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
+  const before = lang.lexicon;
+  const changes = changesForLang(lang);
+  lang.lexicon = applyChangesToLexicon(before, changes, rng, {
+    globalRate: config.phonology.globalRate,
+    weights: lang.changeWeights,
+  });
+  let mutated = 0;
+  for (const m of Object.keys(before)) {
+    const a = before[m]!.join("");
+    const b = (lang.lexicon[m] ?? []).join("");
+    if (a !== b) mutated++;
+  }
+  if (mutated > 0) {
+    pushEvent(lang, {
+      generation,
+      kind: "sound_change",
+      description: `${mutated} form${mutated === 1 ? "" : "s"} shifted`,
+    });
+  }
+}
+
+function stepGenesis(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
+  const rules = genesisRulesFor(config);
+  const result = tryGenesis(lang, rules, config.genesis.ruleWeights, config.genesis.globalRate, rng);
+  if (result) {
+    pushEvent(lang, {
+      generation,
+      kind: "coinage",
+      description: `coined ${result}`,
+    });
+  }
+}
+
+function stepGrammar(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
+  if (!rng.chance(config.grammar.driftProbabilityPerGeneration)) return;
+  const shifts = driftGrammar(lang.grammar, rng);
+  for (const s of shifts) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `${s.feature}: ${String(s.from)} → ${String(s.to)}`,
+    });
+  }
+}
+
+function stepSemantics(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
+  if (!rng.chance(config.semantics.driftProbabilityPerGeneration)) return;
+  const drift = driftOneMeaning(lang, rng);
+  if (drift) {
+    pushEvent(lang, {
+      generation,
+      kind: "semantic_drift",
+      description: `${drift.from} → ${drift.to}`,
+    });
+  }
+}
+
+function stepTreeSplit(
+  state: SimulationState,
+  leafId: string,
+  lang: Language,
+  config: SimulationConfig,
+  rng: Rng,
+): void {
+  const age = state.generation - lang.birthGeneration;
+  const aliveLeaves = leafIds(state.tree).filter((id) => !state.tree[id]!.language.extinct);
+  if (
+    age >= config.tree.minGenerationsBetweenSplits &&
+    aliveLeaves.length < config.tree.maxLeaves &&
+    rng.chance(config.tree.splitProbabilityPerGeneration)
+  ) {
+    splitLeaf(state.tree, leafId, state.generation + 1, rng);
+  }
+}
+
+function stepDeath(
+  state: SimulationState,
+  lang: Language,
+  config: SimulationConfig,
+  rng: Rng,
+): void {
+  const aliveLeaves = leafIds(state.tree).filter((id) => !state.tree[id]!.language.extinct);
+  if (aliveLeaves.length <= 1) return;
+  const age = state.generation - lang.birthGeneration;
+  if (age < config.tree.minGenerationsBeforeDeath) return;
+  // Scale death probability up as population grows to keep the tree in equilibrium.
+  const pressure = aliveLeaves.length / Math.max(1, config.tree.maxLeaves);
+  const p = config.tree.deathProbabilityPerGeneration * pressure;
+  if (rng.chance(p)) {
+    lang.extinct = true;
+    lang.deathGeneration = state.generation + 1;
+    pushEvent(lang, {
+      generation: state.generation + 1,
+      kind: "sound_change",
+      description: "language went extinct",
+    });
+  }
+}
+
 export function createSimulation(config: SimulationConfig): Simulation {
   let state: SimulationState = buildInitialState(config);
 
   const step = (): void => {
     const rng = makeRng(state.rngState);
     const leaves = leafIds(state.tree);
+    const nextGen = state.generation + 1;
     for (const leafId of leaves) {
-      const node = state.tree[leafId]!;
-      const lang = node.language;
-
-      if (config.modes.agents && lang.population) {
-        runInteractions(lang.population, rng);
-        lang.lexicon = cloneLexicon(lang.population.consensusLexicon);
-      }
-
-      if (config.modes.phonology) {
-        const changes = changesForLang(lang);
-        const nextLex = applyChangesToLexicon(lang.lexicon, changes, rng, {
-          globalRate: config.phonology.globalRate,
-          weights: lang.changeWeights,
-        });
-        lang.lexicon = nextLex;
-        if (config.modes.agents && lang.population) {
-          resyncAgentsToLexicon(lang.population, nextLex, rng);
-        }
-      }
-
-      if (config.modes.tree) {
-        const age = state.generation - lang.birthGeneration;
-        const currentLeafCount = leafIds(state.tree).length;
-        if (
-          age >= config.tree.minGenerationsBetweenSplits &&
-          currentLeafCount < config.tree.maxLeaves &&
-          rng.chance(config.tree.splitProbabilityPerGeneration)
-        ) {
-          splitLeaf(state.tree, leafId, state.generation + 1, rng);
-        }
-      }
+      const lang = state.tree[leafId]!.language;
+      if (lang.extinct) continue;
+      if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen);
+      if (config.modes.genesis) stepGenesis(lang, config, rng, nextGen);
+      if (config.modes.grammar) stepGrammar(lang, config, rng, nextGen);
+      if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
+      if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
+      if (config.modes.death) stepDeath(state, lang, config, rng);
     }
     state = {
       ...state,
-      generation: state.generation + 1,
+      generation: nextGen,
       rngState: rng.state(),
     };
   };

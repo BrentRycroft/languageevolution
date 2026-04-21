@@ -2,16 +2,13 @@
 
 Browser-based modular language evolution simulator.
 
-Combines three evolutionary dynamics, any subset toggleable at runtime:
+Two evolutionary dynamics, each toggleable at runtime:
 
 - **Phonological drift** — a curated catalog of sound changes (p→f, k→h/_V,
   intervocalic voicing, final-vowel deletion, nasal place assimilation,
   palatalization, vowel raising, metathesis, …) applied per generation with
   word-contextual probabilities.
-- **Agent-based communication** — a grid of agents exchange utterances, adopt
-  neighbors' forms, and occasionally innovate. The language's lexicon is the
-  population's consensus.
-- **Family-tree divergence** — populations split into daughter languages.
+- **Family-tree divergence** — languages split into daughter languages.
   Each daughter deep-copies the parent's lexicon; one gets a perturbation to
   its enabled sound changes so divergence is visible.
 
@@ -26,7 +23,14 @@ npm run dev              # opens the simulator at http://localhost:5173
 npm test                 # vitest
 npm run build            # production bundle to dist/
 npm run preview          # serves dist/ locally (with base path)
-node scripts/gen-icons.mjs   # regenerate PNG icons from public/icon.svg
+```
+
+To regenerate PNG icons from `public/icon.svg` (not needed for a normal build —
+the PNGs are committed):
+
+```bash
+npm install --no-save sharp
+node scripts/gen-icons.mjs
 ```
 
 ## Hosting & installing on your phone
@@ -65,7 +69,6 @@ src/
     rng.ts         # Mulberry32 + FNV-1a seed hash
     types.ts
     phonology/     # ipa, catalog of sound changes, apply logic
-    agents/        # population + interaction
     tree/          # splitting daughter languages
     lexicon/       # default Swadesh-style seed lexicon
     simulation.ts  # orchestrator

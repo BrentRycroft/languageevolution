@@ -7,12 +7,11 @@ export { DEFAULT_LEXICON } from "./lexicon/defaults";
 export { createSimulation, replay, type Simulation } from "./simulation";
 export { defaultConfig } from "./config";
 export { leafIds, splitLeaf } from "./tree/split";
-export {
-  createPopulation,
-  derivedConsensus,
-  clonePopulation,
-  agentAgreementPercent,
-  resyncAgentsToLexicon,
-} from "./agents/population";
-export { runInteractions } from "./agents/interaction";
 export { isVowel, isConsonant, formToString, levenshtein, asciiToIpa } from "./phonology/ipa";
+export { generateName } from "./naming";
+export { GENESIS_CATALOG, GENESIS_BY_ID } from "./genesis/catalog";
+export type { GenesisRule, GenesisCategory } from "./genesis/types";
+export { DEFAULT_GRAMMAR } from "./grammar/defaults";
+export { driftGrammar, cloneGrammar } from "./grammar/evolve";
+export { SEMANTIC_NEIGHBORS, neighborsOf } from "./semantics/neighbors";
+export { driftOneMeaning } from "./semantics/drift";

@@ -35,10 +35,13 @@ interface SimStore {
   updateConfig: (patch: Partial<SimulationConfig>) => void;
   updateModes: (patch: Partial<SimulationConfig["modes"]>) => void;
   updatePhonology: (patch: Partial<SimulationConfig["phonology"]>) => void;
-  updateAgents: (patch: Partial<SimulationConfig["agents"]>) => void;
   updateTree: (patch: Partial<SimulationConfig["tree"]>) => void;
+  updateGenesis: (patch: Partial<SimulationConfig["genesis"]>) => void;
+  updateGrammar: (patch: Partial<SimulationConfig["grammar"]>) => void;
+  updateSemantics: (patch: Partial<SimulationConfig["semantics"]>) => void;
   setChangeEnabled: (changeId: string, enabled: boolean) => void;
   setChangeWeight: (changeId: string, weight: number) => void;
+  setGenesisEnabled: (ruleId: string, enabled: boolean) => void;
   selectLanguage: (id: string | null) => void;
   selectMeaning: (m: Meaning | null) => void;
   setSeed: (s: string) => void;
@@ -139,13 +142,30 @@ export const useSimStore = create<SimStore>((set, get) => ({
     const { config, updateConfig } = get();
     updateConfig({ phonology: { ...config.phonology, ...patch } });
   },
-  updateAgents: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ agents: { ...config.agents, ...patch } });
-  },
   updateTree: (patch) => {
     const { config, updateConfig } = get();
     updateConfig({ tree: { ...config.tree, ...patch } });
+  },
+  updateGenesis: (patch) => {
+    const { config, updateConfig } = get();
+    updateConfig({ genesis: { ...config.genesis, ...patch } });
+  },
+  updateGrammar: (patch) => {
+    const { config, updateConfig } = get();
+    updateConfig({ grammar: { ...config.grammar, ...patch } });
+  },
+  updateSemantics: (patch) => {
+    const { config, updateConfig } = get();
+    updateConfig({ semantics: { ...config.semantics, ...patch } });
+  },
+  setGenesisEnabled: (ruleId, enabled) => {
+    const { config, updateConfig } = get();
+    const ids = new Set(config.genesis.enabledRuleIds);
+    if (enabled) ids.add(ruleId);
+    else ids.delete(ruleId);
+    updateConfig({
+      genesis: { ...config.genesis, enabledRuleIds: Array.from(ids).sort() },
+    });
   },
   setChangeEnabled: (changeId, enabled) => {
     const { config, updateConfig } = get();
