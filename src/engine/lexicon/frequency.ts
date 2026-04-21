@@ -1,0 +1,58 @@
+import type { Meaning } from "../types";
+
+/**
+ * Hand-tuned frequency-of-use hints for the default Swadesh-style lexicon.
+ * Values in [0, 1]: higher = more common in everyday speech, which makes the
+ * word mutate faster under phonological change (lexical-diffusion effect).
+ */
+export const DEFAULT_FREQUENCY_HINTS: Record<Meaning, number> = {
+  water: 0.95,
+  fire: 0.8,
+  stone: 0.7,
+  mother: 0.9,
+  father: 0.9,
+  night: 0.8,
+  tree: 0.7,
+  sun: 0.85,
+  moon: 0.7,
+  star: 0.55,
+  two: 0.95,
+  three: 0.9,
+  hand: 0.9,
+  foot: 0.9,
+  heart: 0.75,
+  head: 0.9,
+  eye: 0.9,
+  ear: 0.85,
+  mouth: 0.9,
+  tooth: 0.8,
+  bone: 0.7,
+  blood: 0.8,
+  hair: 0.8,
+  dog: 0.85,
+  wolf: 0.5,
+  horse: 0.7,
+  cow: 0.7,
+  fish: 0.75,
+  bird: 0.8,
+  snake: 0.55,
+  go: 0.98,
+  come: 0.95,
+  see: 0.95,
+  know: 0.9,
+  eat: 0.95,
+  drink: 0.9,
+  sleep: 0.9,
+  die: 0.8,
+  one: 0.98,
+  big: 0.9,
+  small: 0.9,
+  new: 0.85,
+  old: 0.85,
+  good: 0.95,
+  bad: 0.95,
+};
+
+export function frequencyFor(meaning: Meaning): number {
+  return DEFAULT_FREQUENCY_HINTS[meaning] ?? 0.5;
+}

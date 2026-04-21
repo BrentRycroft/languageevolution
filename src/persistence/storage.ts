@@ -59,7 +59,7 @@ export function saveRun(
 ): SavedRun {
   const id = `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
   const run: SavedRun = {
-    version: 2,
+    version: 3,
     id,
     label,
     createdAt: Date.now(),

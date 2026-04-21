@@ -10,6 +10,22 @@ function cloneLexicon(lex: Lexicon): Lexicon {
   return out;
 }
 
+function cloneMorph(morph: Language["morphology"]): Language["morphology"] {
+  const paradigms: Language["morphology"]["paradigms"] = {};
+  for (const k of Object.keys(morph.paradigms) as Array<
+    keyof Language["morphology"]["paradigms"]
+  >) {
+    const p = morph.paradigms[k];
+    if (!p) continue;
+    paradigms[k] = {
+      affix: p.affix.slice(),
+      position: p.position,
+      category: p.category,
+    };
+  }
+  return { paradigms };
+}
+
 export function leafIds(tree: LanguageTree): string[] {
   return Object.keys(tree)
     .filter((id) => tree[id]!.childrenIds.length === 0)
@@ -59,6 +75,13 @@ export function splitLeaf(
       birthGeneration: generation,
       grammar: cloneGrammar(parentLang.grammar),
       events: [],
+      wordFrequencyHints: { ...parentLang.wordFrequencyHints },
+      phonemeInventory: {
+        segmental: parentLang.phonemeInventory.segmental.slice(),
+        tones: parentLang.phonemeInventory.tones.slice(),
+        usesTones: parentLang.phonemeInventory.usesTones,
+      },
+      morphology: cloneMorph(parentLang.morphology),
     };
   };
   const a = makeChild(false);

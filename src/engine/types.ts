@@ -37,6 +37,12 @@ export interface LanguageEvent {
   description: string;
 }
 
+export interface PhonemeInventory {
+  segmental: string[];
+  tones: string[];
+  usesTones: boolean;
+}
+
 export interface Language {
   id: string;
   name: string;
@@ -48,6 +54,17 @@ export interface Language {
   deathGeneration?: number;
   grammar: GrammarFeatures;
   events: LanguageEvent[];
+  /**
+   * Per-word usage frequency hint in [0, 1], used for lexical-diffusion:
+   * common words change faster. Keys are meanings.
+   */
+  wordFrequencyHints: Record<Meaning, number>;
+  /**
+   * Active phoneme inventory — starts from the language's current forms and
+   * grows as generative rules introduce new phonemes (clicks, tones, etc.).
+   */
+  phonemeInventory: PhonemeInventory;
+  morphology: import("./morphology/types").Morphology;
 }
 
 export interface LanguageNode {
@@ -101,7 +118,18 @@ export interface SimulationConfig {
   semantics: {
     driftProbabilityPerGeneration: number;
   };
+  obsolescence: {
+    probabilityPerPairPerGeneration: number;
+    maxDistanceForRivalry: number;
+  };
+  morphology: {
+    grammaticalizationProbability: number;
+    paradigmMergeProbability: number;
+  };
   seedLexicon: Lexicon;
+  seedFrequencyHints?: Record<Meaning, number>;
+  seedMorphology?: import("./morphology/types").Morphology;
+  preset?: string;
 }
 
 export interface SimulationState {
@@ -112,7 +140,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 2;
+  version: 3;
   id: string;
   label: string;
   createdAt: number;

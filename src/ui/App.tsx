@@ -6,8 +6,9 @@ import { LanguageTreeView } from "./LanguageTreeView";
 import { TimelineChart } from "./TimelineChart";
 import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
+import { Translator } from "./Translator";
 
-type Tab = "tree" | "lexicon" | "timeline" | "grammar" | "events";
+type Tab = "tree" | "lexicon" | "timeline" | "grammar" | "events" | "translate";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tree", label: "Tree" },
@@ -15,6 +16,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "timeline", label: "Timeline" },
   { id: "grammar", label: "Grammar" },
   { id: "events", label: "History" },
+  { id: "translate", label: "Translate" },
 ];
 
 export function App() {
@@ -141,6 +143,12 @@ export function App() {
           <div className="panel panel-single">
             <h3>History</h3>
             <EventsLog />
+          </div>
+        )}
+        {activeTab === "translate" && (
+          <div className="panel panel-single">
+            <h3>Translator</h3>
+            <Translator />
           </div>
         )}
       </main>

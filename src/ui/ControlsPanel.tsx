@@ -7,6 +7,7 @@ import { StatsPanel } from "./StatsPanel";
 import { ChangePreview } from "./ChangePreview";
 import { SeedLexiconEditor } from "./SeedLexiconEditor";
 import { AiSemantics } from "./AiSemantics";
+import { PresetPicker } from "./PresetPicker";
 import {
   exportLexiconsJSON,
   exportLexiconsCSV,
@@ -89,6 +90,11 @@ export function ControlsPanel() {
 
   return (
     <div>
+      <div className="section">
+        <h4>Preset</h4>
+        <PresetPicker />
+      </div>
+
       <div className="section">
         <h4>Playback</h4>
         <Slider

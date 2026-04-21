@@ -4,18 +4,29 @@ import type {
   LanguageNode,
   LanguageTree,
   Lexicon,
+  PhonemeInventory,
   SimulationConfig,
   SimulationState,
   SoundChange,
 } from "./types";
 import { CATALOG_BY_ID } from "./phonology/catalog";
 import { applyChangesToLexicon } from "./phonology/apply";
+import { rateMultiplier } from "./phonology/rate";
+import { levenshtein } from "./phonology/ipa";
+import { toneOf } from "./phonology/tone";
 import { GENESIS_BY_ID } from "./genesis/catalog";
 import type { GenesisRule } from "./genesis/types";
 import { tryGenesis } from "./genesis/apply";
 import { driftGrammar } from "./grammar/evolve";
 import { DEFAULT_GRAMMAR } from "./grammar/defaults";
+import {
+  applyPhonologyToAffixes,
+  maybeGrammaticalize,
+  maybeMergeParadigms,
+} from "./morphology/evolve";
+import type { Morphology } from "./morphology/types";
 import { driftOneMeaning, type NeighborOverride } from "./semantics/drift";
+import { neighborsOf } from "./semantics/neighbors";
 import { leafIds, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
 
@@ -26,7 +37,7 @@ export interface Simulation {
   getConfig: () => SimulationConfig;
   step: () => void;
   reset: () => void;
-  setAiNeighbors: (n: import("./semantics/drift").NeighborOverride | undefined) => void;
+  setAiNeighbors: (n: NeighborOverride | undefined) => void;
 }
 
 function cloneLexicon(lex: Lexicon): Lexicon {
@@ -35,11 +46,53 @@ function cloneLexicon(lex: Lexicon): Lexicon {
   return out;
 }
 
+function cloneMorphology(morph: Morphology | undefined): Morphology {
+  if (!morph) return { paradigms: {} };
+  const paradigms: Morphology["paradigms"] = {};
+  for (const k of Object.keys(morph.paradigms) as Array<
+    keyof Morphology["paradigms"]
+  >) {
+    const p = morph.paradigms[k];
+    if (!p) continue;
+    paradigms[k] = {
+      affix: p.affix.slice(),
+      position: p.position,
+      category: p.category,
+    };
+  }
+  return { paradigms };
+}
+
 function pushEvent(lang: Language, event: LanguageEvent): void {
   lang.events.push(event);
   if (lang.events.length > MAX_EVENTS_PER_LANGUAGE) {
     lang.events.splice(0, lang.events.length - MAX_EVENTS_PER_LANGUAGE);
   }
+}
+
+function inventoryFromLexicon(lex: Lexicon): PhonemeInventory {
+  const set = new Set<string>();
+  for (const m of Object.keys(lex)) for (const p of lex[m]!) set.add(p);
+  return {
+    segmental: Array.from(set).sort(),
+    tones: [],
+    usesTones: false,
+  };
+}
+
+function refreshInventory(lang: Language): void {
+  const observed = new Set<string>();
+  const tones = new Set<string>();
+  for (const m of Object.keys(lang.lexicon)) {
+    for (const p of lang.lexicon[m]!) {
+      observed.add(p);
+      const t = toneOf(p);
+      if (t) tones.add(t);
+    }
+  }
+  lang.phonemeInventory.segmental = Array.from(observed).sort();
+  lang.phonemeInventory.tones = Array.from(tones).sort();
+  lang.phonemeInventory.usesTones = tones.size > 0;
 }
 
 function buildInitialState(config: SimulationConfig): SimulationState {
@@ -50,15 +103,19 @@ function buildInitialState(config: SimulationConfig): SimulationState {
   for (const id of enabled) {
     weights[id] = config.phonology.changeWeights[id] ?? CATALOG_BY_ID[id]?.baseWeight ?? 1;
   }
+  const seedLex = cloneLexicon(config.seedLexicon);
   const rootLang: Language = {
     id: rootId,
     name: "Proto",
-    lexicon: cloneLexicon(config.seedLexicon),
+    lexicon: seedLex,
     enabledChangeIds: enabled,
     changeWeights: weights,
     birthGeneration: 0,
     grammar: { ...DEFAULT_GRAMMAR },
     events: [],
+    wordFrequencyHints: { ...(config.seedFrequencyHints ?? {}) },
+    phonemeInventory: inventoryFromLexicon(seedLex),
+    morphology: cloneMorphology(config.seedMorphology),
   };
   const rootNode: LanguageNode = {
     language: rootLang,
@@ -89,9 +146,25 @@ function genesisRulesFor(config: SimulationConfig): GenesisRule[] {
 function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
   const before = lang.lexicon;
   const changes = changesForLang(lang);
-  lang.lexicon = applyChangesToLexicon(before, changes, rng, {
+  const mult = rateMultiplier(generation, lang.id);
+  const opts = {
     globalRate: config.phonology.globalRate,
     weights: lang.changeWeights,
+    rateMultiplier: mult,
+    frequencyHints: lang.wordFrequencyHints,
+  };
+  lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
+  // Affixes mutate in lockstep with the lexicon so morphology feels real.
+  applyPhonologyToAffixes(lang.morphology, (form) => {
+    return changes.reduce((acc, change) => {
+      const base = change.probabilityFor(acc);
+      if (base <= 0) return acc;
+      const weight = lang.changeWeights[change.id] ?? change.baseWeight;
+      const prob = Math.min(1, base * weight * opts.globalRate * mult);
+      if (!rng.chance(prob)) return acc;
+      const next = change.apply(acc, rng);
+      return next === acc ? acc : next;
+    }, form);
   });
   let mutated = 0;
   for (const m of Object.keys(before)) {
@@ -100,18 +173,26 @@ function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, gener
     if (a !== b) mutated++;
   }
   if (mutated > 0) {
+    refreshInventory(lang);
     pushEvent(lang, {
       generation,
       kind: "sound_change",
-      description: `${mutated} form${mutated === 1 ? "" : "s"} shifted`,
+      description: `${mutated} form${mutated === 1 ? "" : "s"} shifted (×${mult.toFixed(2)})`,
     });
   }
 }
 
 function stepGenesis(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
   const rules = genesisRulesFor(config);
-  const result = tryGenesis(lang, rules, config.genesis.ruleWeights, config.genesis.globalRate, rng);
-  if (result) {
+  // Scale coinage count inversely with current lexicon size: small languages
+  // coin aggressively, large languages coin sporadically.
+  const lexSize = Object.keys(lang.lexicon).length;
+  const target = Math.max(1, Math.ceil((200 - lexSize) / 30));
+  for (let i = 0; i < target; i++) {
+    const result = tryGenesis(lang, rules, config.genesis.ruleWeights, config.genesis.globalRate, rng);
+    if (!result) break;
+    // Mid-range frequency for coinages; they haven't entrenched yet.
+    lang.wordFrequencyHints[result] = 0.4;
     pushEvent(lang, {
       generation,
       kind: "coinage",
@@ -142,11 +223,65 @@ function stepSemantics(
   if (!rng.chance(config.semantics.driftProbabilityPerGeneration)) return;
   const drift = driftOneMeaning(lang, rng, override);
   if (drift) {
+    // Propagate frequency hint under the new name so it keeps evolving.
+    const hint = lang.wordFrequencyHints[drift.from];
+    if (hint !== undefined) {
+      lang.wordFrequencyHints[drift.to] = hint;
+      delete lang.wordFrequencyHints[drift.from];
+    }
     pushEvent(lang, {
       generation,
       kind: "semantic_drift",
       description: `${drift.from} → ${drift.to}`,
     });
+  }
+}
+
+function stepMorphology(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
+  const gShift = maybeGrammaticalize(lang, rng, config.morphology.grammaticalizationProbability);
+  if (gShift) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: gShift.description,
+    });
+  }
+  const merge = maybeMergeParadigms(lang, rng, config.morphology.paradigmMergeProbability);
+  if (merge) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: merge.description,
+    });
+  }
+}
+
+function stepObsolescence(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
+  const meanings = Object.keys(lang.lexicon);
+  if (meanings.length < 2) return;
+  // Find a near-homophone pair sharing a semantic neighborhood.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const a = meanings[rng.int(meanings.length)]!;
+    const b = meanings[rng.int(meanings.length)]!;
+    if (a === b) continue;
+    const fa = lang.lexicon[a]!;
+    const fb = lang.lexicon[b]!;
+    if (Math.abs(fa.length - fb.length) > 1) continue;
+    if (levenshtein(fa, fb) > config.obsolescence.maxDistanceForRivalry) continue;
+    // Prefer retiring a derived / less-frequent entry.
+    const freqA = lang.wordFrequencyHints[a] ?? 0.5;
+    const freqB = lang.wordFrequencyHints[b] ?? 0.5;
+    const loser = freqA < freqB ? a : freqB < freqA ? b : rng.chance(0.5) ? a : b;
+    const winner = loser === a ? b : a;
+    if (!rng.chance(config.obsolescence.probabilityPerPairPerGeneration)) return;
+    delete lang.lexicon[loser];
+    delete lang.wordFrequencyHints[loser];
+    pushEvent(lang, {
+      generation,
+      kind: "semantic_drift",
+      description: `retired "${loser}" (near-homophone of "${winner}")`,
+    });
+    return;
   }
 }
 
@@ -178,7 +313,6 @@ function stepDeath(
   if (aliveLeaves.length <= 1) return;
   const age = state.generation - lang.birthGeneration;
   if (age < config.tree.minGenerationsBeforeDeath) return;
-  // Scale death probability up as population grows to keep the tree in equilibrium.
   const pressure = aliveLeaves.length / Math.max(1, config.tree.maxLeaves);
   const p = config.tree.deathProbabilityPerGeneration * pressure;
   if (rng.chance(p)) {
@@ -189,6 +323,22 @@ function stepDeath(
       kind: "sound_change",
       description: "language went extinct",
     });
+  }
+}
+
+// Bootstrap: if a newly coined meaning had no neighbors, seed some from a
+// semantically-proximate ancestor so semantic drift can still affect it.
+function bootstrapNeologismNeighbors(lang: Language, _rng: Rng): void {
+  for (const m of Object.keys(lang.lexicon)) {
+    if (!m.includes("-")) continue;
+    if (neighborsOf(m).length > 0) continue;
+    const parts = m.split("-");
+    for (const p of parts) {
+      const hint = lang.wordFrequencyHints[p];
+      if (hint && !lang.wordFrequencyHints[m]) {
+        lang.wordFrequencyHints[m] = Math.max(lang.wordFrequencyHints[m] ?? 0, hint * 0.7);
+      }
+    }
   }
 }
 
@@ -211,9 +361,16 @@ export function createSimulation(
       const lang = state.tree[leafId]!.language;
       if (lang.extinct) continue;
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen);
-      if (config.modes.genesis) stepGenesis(lang, config, rng, nextGen);
-      if (config.modes.grammar) stepGrammar(lang, config, rng, nextGen);
+      if (config.modes.genesis) {
+        stepGenesis(lang, config, rng, nextGen);
+        bootstrapNeologismNeighbors(lang, rng);
+      }
+      if (config.modes.grammar) {
+        stepGrammar(lang, config, rng, nextGen);
+        stepMorphology(lang, config, rng, nextGen);
+      }
       if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen, aiNeighbors);
+      stepObsolescence(lang, config, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
       if (config.modes.death) stepDeath(state, lang, config, rng);
     }

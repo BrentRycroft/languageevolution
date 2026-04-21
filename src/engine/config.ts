@@ -2,6 +2,8 @@ import type { SimulationConfig } from "./types";
 import { CATALOG } from "./phonology/catalog";
 import { GENESIS_CATALOG } from "./genesis/catalog";
 import { DEFAULT_LEXICON } from "./lexicon/defaults";
+import { DEFAULT_FREQUENCY_HINTS } from "./lexicon/frequency";
+import { DEFAULT_MORPHOLOGY } from "./morphology/defaults";
 
 export function defaultConfig(): SimulationConfig {
   const enabled = CATALOG.filter((c) => c.enabledByDefault).map((c) => c.id);
@@ -43,6 +45,16 @@ export function defaultConfig(): SimulationConfig {
     semantics: {
       driftProbabilityPerGeneration: 0.02,
     },
+    obsolescence: {
+      probabilityPerPairPerGeneration: 0.04,
+      maxDistanceForRivalry: 1,
+    },
+    morphology: {
+      grammaticalizationProbability: 0.01,
+      paradigmMergeProbability: 0.01,
+    },
     seedLexicon: DEFAULT_LEXICON,
+    seedFrequencyHints: DEFAULT_FREQUENCY_HINTS,
+    seedMorphology: DEFAULT_MORPHOLOGY,
   };
 }
