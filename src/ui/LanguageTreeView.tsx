@@ -9,6 +9,7 @@ interface NodeDatum {
   name: string;
   sample: string;
   isLeaf: boolean;
+  extinct: boolean;
   children?: NodeDatum[];
 }
 
@@ -22,6 +23,7 @@ function buildHierarchy(tree: LanguageTree, rootId: string, sampleMeaning: strin
       name: lang.name,
       sample: form ? formToString(form) : "—",
       isLeaf: node.childrenIds.length === 0,
+      extinct: !!lang.extinct,
       children: node.childrenIds.length
         ? node.childrenIds.map((cid) => build(cid))
         : undefined,
@@ -68,15 +70,25 @@ export function LanguageTreeView() {
           {layout.root.links().map((link, i) => {
             const s = link.source as unknown as { x: number; y: number };
             const t = link.target as unknown as { x: number; y: number };
+            const targetExtinct = (link.target.data as NodeDatum).extinct;
             const mid = (s.y + t.y) / 2;
             const path = `M${s.y},${s.x} C${mid},${s.x} ${mid},${t.x} ${t.y},${t.x}`;
-            return <path key={i} className="tree-link" d={path} />;
+            return (
+              <path
+                key={i}
+                className="tree-link"
+                d={path}
+                strokeDasharray={targetExtinct ? "4 4" : undefined}
+                opacity={targetExtinct ? 0.5 : 1}
+              />
+            );
           })}
           {layout.root.descendants().map((n) => {
             const d = n.data;
             const pos = n as unknown as { x: number; y: number };
             const cls =
               (d.isLeaf ? "leaf" : "internal") +
+              (d.extinct ? " extinct" : "") +
               (selectedLangId === d.id ? " selected" : "");
             return (
               <g key={d.id} transform={`translate(${pos.y},${pos.x})`}>
@@ -85,10 +97,17 @@ export function LanguageTreeView() {
                   className={`tree-node-circle ${cls}`}
                   onClick={() => selectLanguage(d.id)}
                 />
+                {d.extinct && (
+                  <g pointerEvents="none" stroke="var(--danger)" strokeWidth={2}>
+                    <line x1={-6} y1={-6} x2={6} y2={6} />
+                    <line x1={-6} y1={6} x2={6} y2={-6} />
+                  </g>
+                )}
                 <text
                   className="tree-node-label"
                   x={d.isLeaf ? 11 : 7}
                   y={-2}
+                  opacity={d.extinct ? 0.5 : 1}
                 >
                   {d.name}
                 </text>
@@ -96,6 +115,7 @@ export function LanguageTreeView() {
                   className="tree-node-sample"
                   x={d.isLeaf ? 11 : 7}
                   y={11}
+                  opacity={d.extinct ? 0.4 : 1}
                 >
                   {d.sample}
                 </text>

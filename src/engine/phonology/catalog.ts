@@ -347,6 +347,167 @@ export const CATALOG: SoundChange[] = [
     0.05,
     "v glides to w between vowels.",
   ),
+
+  {
+    id: "insertion.prothetic_e",
+    label: "∅ → e / #_sC",
+    category: "insertion",
+    positionBias: "initial",
+    description:
+      "Insert a prothetic e before word-initial s+C clusters (Latin scola → Spanish escuela).",
+    probabilityFor: (w) =>
+      w.length >= 2 && w[0] === "s" && isConsonant(w[1]!) ? 0.08 : 0,
+    apply: (word) => (word[0] === "s" && word.length >= 2 && isConsonant(word[1]!) ? ["e", ...word] : word),
+    enabledByDefault: true,
+    baseWeight: 1,
+  },
+  {
+    id: "insertion.paragogic_vowel",
+    label: "∅ → e / _C#",
+    category: "insertion",
+    positionBias: "final",
+    description:
+      "Append a final vowel after a word-final stop or fricative (nox → noche).",
+    probabilityFor: (w) => {
+      if (w.length < 2) return 0;
+      const last = w[w.length - 1]!;
+      if (!isConsonant(last)) return 0;
+      if (last === "n" || last === "l" || last === "r") return 0;
+      return 0.05;
+    },
+    apply: (word) => [...word, "e"],
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  {
+    id: "insertion.anaptyxis",
+    label: "∅ → ə / C_C",
+    category: "insertion",
+    positionBias: "internal",
+    description: "Break up heavy internal CC clusters with a schwa.",
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 1; i < w.length - 1; i++) {
+        if (isConsonant(w[i]!) && isConsonant(w[i + 1]!)) n++;
+      }
+      return 1 - Math.pow(1 - 0.04, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 1; i < word.length - 1; i++) {
+        if (isConsonant(word[i]!) && isConsonant(word[i + 1]!)) sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      return [...word.slice(0, idx + 1), "ə", ...word.slice(idx + 1)];
+    },
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  {
+    id: "deletion.apheresis",
+    label: "C → ∅ / #_",
+    category: "deletion",
+    positionBias: "initial",
+    description: "Drop a word-initial single consonant (esquire → squire).",
+    probabilityFor: (w) =>
+      w.length >= 3 && isConsonant(w[0]!) && !isConsonant(w[1]!) ? 0.03 : 0,
+    apply: (word) =>
+      word.length >= 3 && isConsonant(word[0]!) && !isConsonant(word[1]!)
+        ? word.slice(1)
+        : word,
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  {
+    id: "deletion.apocope",
+    label: "C → ∅ / _#",
+    category: "deletion",
+    positionBias: "final",
+    description: "Drop a word-final consonant.",
+    probabilityFor: (w) =>
+      w.length >= 3 && isConsonant(w[w.length - 1]!) ? 0.04 : 0,
+    apply: (word) =>
+      word.length >= 3 && isConsonant(word[word.length - 1]!)
+        ? word.slice(0, -1)
+        : word,
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  {
+    id: "deletion.syncope",
+    label: "V → ∅ / C_C",
+    category: "deletion",
+    positionBias: "internal",
+    description: "Drop an internal unstressed vowel between two consonants.",
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 1; i < w.length - 1; i++) {
+        if (isVowel(w[i]!) && isConsonant(w[i - 1]!) && isConsonant(w[i + 1]!)) n++;
+      }
+      return 1 - Math.pow(1 - 0.03, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 1; i < word.length - 1; i++) {
+        if (isVowel(word[i]!) && isConsonant(word[i - 1]!) && isConsonant(word[i + 1]!)) sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      return [...word.slice(0, idx), ...word.slice(idx + 1)];
+    },
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  {
+    id: "gemination.emphatic",
+    label: "C → CC / V_V",
+    category: "gemination",
+    positionBias: "internal",
+    description: "Double an intervocalic consonant (emphatic gemination).",
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 1; i < w.length - 1; i++) {
+        if (isConsonant(w[i]!) && isVowel(w[i - 1]!) && isVowel(w[i + 1]!)) n++;
+      }
+      return 1 - Math.pow(1 - 0.02, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 1; i < word.length - 1; i++) {
+        if (isConsonant(word[i]!) && isVowel(word[i - 1]!) && isVowel(word[i + 1]!)) sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      return [...word.slice(0, idx + 1), word[idx]!, ...word.slice(idx + 1)];
+    },
+    enabledByDefault: false,
+    baseWeight: 1,
+  },
+  {
+    id: "gemination.degemination",
+    label: "CC → C",
+    category: "gemination",
+    description: "Collapse a double consonant to a single.",
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 0; i < w.length - 1; i++) {
+        if (w[i] === w[i + 1] && isConsonant(w[i]!)) n++;
+      }
+      return 1 - Math.pow(1 - 0.06, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length - 1; i++) {
+        if (word[i] === word[i + 1] && isConsonant(word[i]!)) sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      return [...word.slice(0, idx), ...word.slice(idx + 1)];
+    },
+    enabledByDefault: true,
+    baseWeight: 1,
+  },
 ];
 
 export const CATALOG_BY_ID: Record<string, SoundChange> = Object.fromEntries(

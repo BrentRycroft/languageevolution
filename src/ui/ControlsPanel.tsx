@@ -1,6 +1,13 @@
 import { useSimStore } from "../state/store";
 import { CATALOG } from "../engine/phonology/catalog";
+import { GENESIS_CATALOG } from "../engine/genesis/catalog";
 import { SavedRunsList } from "./SavedRunsList";
+import { StatsPanel } from "./StatsPanel";
+import {
+  exportLexiconsJSON,
+  exportLexiconsCSV,
+  exportTreeNewick,
+} from "../persistence/export";
 
 function Slider({
   label,
@@ -64,11 +71,16 @@ export function ControlsPanel() {
   const updateModes = useSimStore((s) => s.updateModes);
   const updatePhonology = useSimStore((s) => s.updatePhonology);
   const updateTree = useSimStore((s) => s.updateTree);
+  const updateGenesis = useSimStore((s) => s.updateGenesis);
+  const updateGrammar = useSimStore((s) => s.updateGrammar);
+  const updateSemantics = useSimStore((s) => s.updateSemantics);
   const setChangeEnabled = useSimStore((s) => s.setChangeEnabled);
   const setChangeWeight = useSimStore((s) => s.setChangeWeight);
+  const setGenesisEnabled = useSimStore((s) => s.setGenesisEnabled);
   const setSeed = useSimStore((s) => s.setSeed);
 
   const enabledSet = new Set(config.phonology.enabledChangeIds);
+  const genesisSet = new Set(config.genesis.enabledRuleIds);
 
   return (
     <div>
@@ -93,9 +105,29 @@ export function ControlsPanel() {
           onChange={(v) => updateModes({ phonology: v })}
         />
         <Toggle
-          label="Population splits (tree)"
+          label="Language splits (tree)"
           value={config.modes.tree}
           onChange={(v) => updateModes({ tree: v })}
+        />
+        <Toggle
+          label="Language death"
+          value={config.modes.death}
+          onChange={(v) => updateModes({ death: v })}
+        />
+        <Toggle
+          label="Word genesis"
+          value={config.modes.genesis}
+          onChange={(v) => updateModes({ genesis: v })}
+        />
+        <Toggle
+          label="Grammar drift"
+          value={config.modes.grammar}
+          onChange={(v) => updateModes({ grammar: v })}
+        />
+        <Toggle
+          label="Semantic drift"
+          value={config.modes.semantics}
+          onChange={(v) => updateModes({ semantics: v })}
         />
       </div>
 
@@ -125,6 +157,38 @@ export function ControlsPanel() {
           step={1}
           onChange={(v) => updateTree({ maxLeaves: Math.round(v) })}
           format={(v) => String(Math.round(v))}
+        />
+        <Slider
+          label="Death prob. / gen"
+          value={config.tree.deathProbabilityPerGeneration}
+          min={0}
+          max={0.1}
+          step={0.005}
+          onChange={(v) => updateTree({ deathProbabilityPerGeneration: v })}
+        />
+        <Slider
+          label="Genesis rate"
+          value={config.genesis.globalRate}
+          min={0}
+          max={0.3}
+          step={0.01}
+          onChange={(v) => updateGenesis({ globalRate: v })}
+        />
+        <Slider
+          label="Grammar drift / gen"
+          value={config.grammar.driftProbabilityPerGeneration}
+          min={0}
+          max={0.15}
+          step={0.005}
+          onChange={(v) => updateGrammar({ driftProbabilityPerGeneration: v })}
+        />
+        <Slider
+          label="Semantic drift / gen"
+          value={config.semantics.driftProbabilityPerGeneration}
+          min={0}
+          max={0.1}
+          step={0.005}
+          onChange={(v) => updateSemantics({ driftProbabilityPerGeneration: v })}
         />
       </div>
 
@@ -172,9 +236,54 @@ export function ControlsPanel() {
       </div>
 
       <div className="section">
+        <h4>Word genesis rules</h4>
+        <div className="change-catalog">
+          {GENESIS_CATALOG.map((g) => {
+            const enabled = genesisSet.has(g.id);
+            return (
+              <div
+                key={g.id}
+                className={`change-row ${enabled ? "" : "disabled"}`}
+                title={g.description}
+                style={{ gridTemplateColumns: "auto 1fr" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={(e) => setGenesisEnabled(g.id, e.target.checked)}
+                />
+                <span className="change-label">{g.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="section">
+        <h4>Stats</h4>
+        <StatsPanel />
+      </div>
+
+      <div className="section">
+        <h4>Export</h4>
+        <ExportButtons />
+      </div>
+
+      <div className="section">
         <h4>Saved runs</h4>
         <SavedRunsList />
       </div>
+    </div>
+  );
+}
+
+function ExportButtons() {
+  const state = useSimStore((s) => s.state);
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+      <button onClick={() => exportLexiconsJSON(state)}>Lexicons JSON</button>
+      <button onClick={() => exportLexiconsCSV(state)}>Lexicons CSV</button>
+      <button onClick={() => exportTreeNewick(state)}>Tree (Newick)</button>
     </div>
   );
 }
