@@ -1,10 +1,19 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { ControlsPanel } from "./ControlsPanel";
 import { LexiconView } from "./LexiconView";
 import { LanguageTreeView } from "./LanguageTreeView";
 import { TimelineChart } from "./TimelineChart";
 import { AgentGrid } from "./AgentGrid";
+
+type Tab = "tree" | "lexicon" | "timeline" | "agents";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "tree", label: "Tree" },
+  { id: "lexicon", label: "Lexicon" },
+  { id: "timeline", label: "Timeline" },
+  { id: "agents", label: "Agents" },
+];
 
 export function App() {
   const playing = useSimStore((s) => s.playing);
@@ -16,6 +25,9 @@ export function App() {
 
   const rafRef = useRef<number | null>(null);
   const lastRef = useRef<number>(0);
+
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>("tree");
 
   useEffect(() => {
     if (!playing) {
@@ -43,8 +55,15 @@ export function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>Language Evolution Simulator</h1>
-        <span className="generation">generation {generation}</span>
+        <button
+          className="menu-toggle"
+          onClick={() => setControlsOpen((v) => !v)}
+          aria-label="Toggle controls"
+        >
+          ☰
+        </button>
+        <h1>Language Evolution</h1>
+        <span className="generation">gen {generation}</span>
         <div className="playback">
           <button className="primary" onClick={togglePlay}>
             {playing ? "Pause" : "Play"}
@@ -53,23 +72,42 @@ export function App() {
           <button onClick={reset}>Reset</button>
         </div>
       </header>
-      <aside className="controls-panel">
+
+      <nav className="tab-bar">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={activeTab === t.id ? "active" : ""}
+            onClick={() => setActiveTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      <div
+        className={`controls-backdrop ${controlsOpen ? "open" : ""}`}
+        onClick={() => setControlsOpen(false)}
+      />
+
+      <aside className={`controls-panel ${controlsOpen ? "open" : ""}`}>
         <ControlsPanel />
       </aside>
+
       <main className="main">
-        <div className="panel" style={{ gridArea: "tree" }}>
+        <div className={`panel panel-tree ${activeTab === "tree" ? "active-tab" : ""}`}>
           <h3>Language Tree</h3>
           <LanguageTreeView />
         </div>
-        <div className="panel" style={{ gridArea: "lexicon" }}>
+        <div className={`panel panel-lexicon ${activeTab === "lexicon" ? "active-tab" : ""}`}>
           <h3>Lexicon</h3>
           <LexiconView />
         </div>
-        <div className="panel" style={{ gridArea: "timeline" }}>
+        <div className={`panel panel-timeline ${activeTab === "timeline" ? "active-tab" : ""}`}>
           <h3>Timeline</h3>
           <TimelineChart />
         </div>
-        <div className="panel" style={{ gridArea: "agents" }}>
+        <div className={`panel panel-agents ${activeTab === "agents" ? "active-tab" : ""}`}>
           <h3>Agents</h3>
           <AgentGrid />
         </div>

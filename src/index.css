@@ -13,6 +13,7 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
   color: var(--text);
   background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -27,6 +28,7 @@ html, body, #root {
 
 body {
   background: var(--bg);
+  overscroll-behavior: none;
 }
 
 .app {
@@ -37,6 +39,11 @@ body {
     "header header"
     "controls main";
   height: 100vh;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .header {
@@ -46,18 +53,19 @@ body {
   padding: 8px 16px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .header h1 {
-  font-size: 16px;
+  font-size: 15px;
   margin: 0;
   font-weight: 600;
 }
 
 .header .generation {
   font-family: "SF Mono", Menlo, monospace;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -67,12 +75,17 @@ body {
   margin-left: auto;
 }
 
+.header .menu-toggle {
+  display: none;
+}
+
 .controls-panel {
   grid-area: controls;
   background: var(--panel);
   border-right: 1px solid var(--border);
   overflow-y: auto;
   padding: 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .main {
@@ -88,6 +101,11 @@ body {
   padding: 8px;
 }
 
+.panel-tree { grid-area: tree; }
+.panel-lexicon { grid-area: lexicon; }
+.panel-timeline { grid-area: timeline; }
+.panel-agents { grid-area: agents; }
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -95,6 +113,7 @@ body {
   padding: 10px;
   overflow: auto;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .panel h3 {
@@ -129,9 +148,11 @@ button {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 5px 10px;
+  padding: 6px 12px;
   cursor: pointer;
   font-size: 12px;
+  min-height: 32px;
+  touch-action: manipulation;
 }
 
 button:hover {
@@ -155,9 +176,20 @@ input[type="number"] {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 6px 8px;
+  font-size: 14px;
   width: 100%;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  touch-action: manipulation;
+}
+
+input[type="range"] {
+  touch-action: manipulation;
+  min-height: 24px;
 }
 
 .slider-row {
@@ -188,8 +220,8 @@ input[type="number"] {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 0;
-  font-size: 12px;
+  padding: 4px 0;
+  font-size: 13px;
 }
 
 .toggle-row label {
@@ -207,7 +239,7 @@ input[type="number"] {
 .lexicon-table th,
 .lexicon-table td {
   border: 1px solid var(--border);
-  padding: 4px 6px;
+  padding: 5px 6px;
   text-align: left;
   white-space: nowrap;
 }
@@ -234,6 +266,9 @@ input[type="number"] {
   font-weight: 500;
   cursor: default;
   color: var(--muted);
+  position: sticky;
+  left: 0;
+  z-index: 2;
 }
 
 .lexicon-table td.changed {
@@ -354,4 +389,121 @@ input[type="number"] {
 
 .change-row input[type="range"] {
   width: 100%;
+}
+
+.tab-bar {
+  display: none;
+  gap: 4px;
+  padding: 6px 8px 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tab-bar button {
+  flex: 0 0 auto;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 4px 4px 0 0;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.tab-bar button.active {
+  color: var(--text);
+  border-color: var(--border);
+  border-bottom-color: var(--panel);
+  background: var(--panel);
+}
+
+.controls-backdrop {
+  display: none;
+}
+
+/* Mobile / tablet layout */
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "header"
+      "tabs"
+      "main";
+  }
+
+  .header {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .header h1 {
+    font-size: 14px;
+  }
+
+  .header .menu-toggle {
+    display: inline-flex;
+  }
+
+  .controls-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 340px);
+    z-index: 100;
+    border-right: 1px solid var(--border);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4);
+    padding-top: calc(12px + env(safe-area-inset-top, 0));
+  }
+
+  .controls-panel.open {
+    transform: translateX(0);
+  }
+
+  .controls-backdrop.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+  }
+
+  .tab-bar {
+    display: flex;
+    grid-area: tabs;
+  }
+
+  .main {
+    grid-template-rows: 1fr;
+    grid-template-columns: 1fr;
+    grid-template-areas: "panel";
+    padding: 6px;
+    gap: 0;
+  }
+
+  .main .panel {
+    grid-area: panel;
+    display: none;
+  }
+
+  .main .panel.active-tab {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel {
+    padding: 8px;
+  }
+
+  .lexicon-table {
+    font-size: 11px;
+  }
+
+  .lexicon-table th,
+  .lexicon-table td {
+    padding: 4px;
+  }
 }

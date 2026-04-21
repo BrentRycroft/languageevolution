@@ -22,10 +22,40 @@ state byte-for-byte — so saved runs replay exactly.
 
 ```bash
 npm install
-npm run dev      # opens the simulator at http://localhost:5173
-npm test         # vitest
-npm run build    # production bundle to dist/
+npm run dev              # opens the simulator at http://localhost:5173
+npm test                 # vitest
+npm run build            # production bundle to dist/
+npm run preview          # serves dist/ locally (with base path)
+node scripts/gen-icons.mjs   # regenerate PNG icons from public/icon.svg
 ```
+
+## Hosting & installing on your phone
+
+The repo includes a GitHub Actions workflow (`.github/workflows/deploy.yml`)
+that builds on every push to `main` and deploys to **GitHub Pages**. The
+deployed URL will be:
+
+```
+https://brentrycroft.github.io/languageevolution/
+```
+
+To enable it: in the repo on GitHub, **Settings → Pages → Build and deployment
+→ Source: GitHub Actions**. Then merge this branch into `main`; the workflow
+builds, runs tests, and publishes `dist/` to Pages.
+
+### Installing on iPhone / iPad
+
+1. Open the hosted URL in **Safari** on iOS.
+2. Tap the Share button → **Add to Home Screen**.
+3. Launch from the home-screen icon — it opens full-screen with the status
+   bar styled to match the app, no Safari chrome.
+
+The app is a Progressive Web App (manifest + service worker via
+`vite-plugin-pwa`), so it also caches for offline use once loaded. Saved
+runs persist in `localStorage` across launches.
+
+Android/Chrome installs the same way via the browser's "Install app" /
+"Add to Home screen" menu.
 
 ## Code layout
 
