@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { SimulationConfig, SimulationState, Meaning, WordForm } from "../engine/types";
 import { createSimulation, type Simulation } from "../engine/simulation";
 import { defaultConfig } from "../engine/config";
+import type { NeighborOverride } from "../engine/semantics/drift";
 
 const MAX_HISTORY = 500;
 
@@ -25,8 +26,11 @@ interface SimStore {
   speed: number;
   selectedLangId: string | null;
   selectedMeaning: Meaning | null;
+  timelineMeanings: Meaning[];
   history: HistoryByLangMeaning;
   seedFormsByMeaning: Record<Meaning, WordForm>;
+  aiNeighbors: NeighborOverride;
+  aiStatus: { ready: boolean; progress: number; text: string; error: string | null };
   step: () => void;
   stepN: (n: number) => void;
   togglePlay: () => void;
@@ -44,8 +48,12 @@ interface SimStore {
   setGenesisEnabled: (ruleId: string, enabled: boolean) => void;
   selectLanguage: (id: string | null) => void;
   selectMeaning: (m: Meaning | null) => void;
+  toggleTimelineMeaning: (m: Meaning) => void;
   setSeed: (s: string) => void;
   loadConfig: (config: SimulationConfig, generationsToReplay?: number) => void;
+  enableAiNeighbors: () => Promise<void>;
+  loadCachedAiNeighbors: () => Promise<void>;
+  clearAiNeighbors: () => Promise<void>;
 }
 
 function recordHistory(
@@ -93,8 +101,11 @@ export const useSimStore = create<SimStore>((set, get) => ({
   speed: 4,
   selectedLangId: initial.state.rootId,
   selectedMeaning: "water",
+  timelineMeanings: ["water"],
   history: initial.history,
   seedFormsByMeaning: initial.seedForms,
+  aiNeighbors: {},
+  aiStatus: { ready: false, progress: 0, text: "", error: null },
   step: () => {
     const { sim, history } = get();
     sim.step();
@@ -189,13 +200,29 @@ export const useSimStore = create<SimStore>((set, get) => ({
     });
   },
   selectLanguage: (id) => set({ selectedLangId: id }),
-  selectMeaning: (m) => set({ selectedMeaning: m }),
+  selectMeaning: (m) =>
+    set((s) => {
+      const tm = m && !s.timelineMeanings.includes(m)
+        ? [...s.timelineMeanings.slice(-2), m].slice(-3)
+        : s.timelineMeanings;
+      return { selectedMeaning: m, timelineMeanings: tm };
+    }),
+  toggleTimelineMeaning: (m) =>
+    set((s) => {
+      const has = s.timelineMeanings.includes(m);
+      const next = has
+        ? s.timelineMeanings.filter((x) => x !== m)
+        : [...s.timelineMeanings, m].slice(-5);
+      return { timelineMeanings: next };
+    }),
   setSeed: (s) => {
     const { config, updateConfig } = get();
     updateConfig({ ...config, seed: s });
   },
   loadConfig: (config, generationsToReplay) => {
     const init = initFromConfig(config);
+    const { aiNeighbors } = get();
+    init.sim.setAiNeighbors(aiNeighbors);
     set({
       config,
       sim: init.sim,
@@ -209,5 +236,63 @@ export const useSimStore = create<SimStore>((set, get) => ({
       const s = get();
       for (let i = 0; i < generationsToReplay; i++) s.step();
     }
+  },
+  loadCachedAiNeighbors: async () => {
+    const { config } = get();
+    const { loadCachedNeighbors } = await import("../engine/semantics/llm");
+    const cached = await loadCachedNeighbors(Object.keys(config.seedLexicon));
+    const { sim } = get();
+    sim.setAiNeighbors(cached);
+    set((s) => ({
+      aiNeighbors: cached,
+      aiStatus: { ...s.aiStatus, ready: Object.keys(cached).length > 0 },
+    }));
+  },
+  enableAiNeighbors: async () => {
+    const { config, sim } = get();
+    set({ aiStatus: { ready: false, progress: 0, text: "Loading model…", error: null } });
+    try {
+      const { prefillNeighbors, DEFAULT_LLM_CONFIG } = await import("../engine/semantics/llm");
+      const meanings = Object.keys(config.seedLexicon);
+      const neighbors = await prefillNeighbors(meanings, DEFAULT_LLM_CONFIG, (info) => {
+        set({
+          aiStatus: {
+            ready: false,
+            progress: info.progress,
+            text: info.text,
+            error: null,
+          },
+        });
+      });
+      sim.setAiNeighbors(neighbors);
+      set({
+        aiNeighbors: neighbors,
+        aiStatus: {
+          ready: true,
+          progress: 1,
+          text: `AI neighbors loaded for ${Object.keys(neighbors).length} meanings`,
+          error: null,
+        },
+      });
+    } catch (e) {
+      set({
+        aiStatus: {
+          ready: false,
+          progress: 0,
+          text: "",
+          error: e instanceof Error ? e.message : String(e),
+        },
+      });
+    }
+  },
+  clearAiNeighbors: async () => {
+    const { sim } = get();
+    const { clearCache } = await import("../engine/semantics/llm");
+    await clearCache();
+    sim.setAiNeighbors(undefined);
+    set({
+      aiNeighbors: {},
+      aiStatus: { ready: false, progress: 0, text: "", error: null },
+    });
   },
 }));

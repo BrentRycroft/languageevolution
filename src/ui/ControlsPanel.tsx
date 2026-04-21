@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useSimStore } from "../state/store";
 import { CATALOG } from "../engine/phonology/catalog";
 import { GENESIS_CATALOG } from "../engine/genesis/catalog";
 import { SavedRunsList } from "./SavedRunsList";
 import { StatsPanel } from "./StatsPanel";
+import { ChangePreview } from "./ChangePreview";
+import { SeedLexiconEditor } from "./SeedLexiconEditor";
+import { AiSemantics } from "./AiSemantics";
 import {
   exportLexiconsJSON,
   exportLexiconsCSV,
@@ -79,6 +83,7 @@ export function ControlsPanel() {
   const setGenesisEnabled = useSimStore((s) => s.setGenesisEnabled);
   const setSeed = useSimStore((s) => s.setSeed);
 
+  const [seedEditorOpen, setSeedEditorOpen] = useState(false);
   const enabledSet = new Set(config.phonology.enabledChangeIds);
   const genesisSet = new Set(config.genesis.enabledRuleIds);
 
@@ -200,6 +205,17 @@ export function ControlsPanel() {
           onChange={(e) => setSeed(e.target.value)}
           placeholder="seed"
         />
+        <button
+          style={{ marginTop: 6, width: "100%" }}
+          onClick={() => setSeedEditorOpen(true)}
+        >
+          Edit seed lexicon ({Object.keys(config.seedLexicon).length})
+        </button>
+      </div>
+
+      <div className="section">
+        <h4>Preview</h4>
+        <ChangePreview />
       </div>
 
       <div className="section">
@@ -270,9 +286,16 @@ export function ControlsPanel() {
       </div>
 
       <div className="section">
+        <h4>AI semantic drift</h4>
+        <AiSemantics />
+      </div>
+
+      <div className="section">
         <h4>Saved runs</h4>
         <SavedRunsList />
       </div>
+
+      {seedEditorOpen && <SeedLexiconEditor onClose={() => setSeedEditorOpen(false)} />}
     </div>
   );
 }
