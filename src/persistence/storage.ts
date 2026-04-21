@@ -1,4 +1,5 @@
 import type { SavedRun, SimulationConfig } from "../engine/types";
+import { migrateSavedRun } from "./migrate";
 
 const INDEX_KEY = "lev.runs.v1.index";
 const RUN_KEY = (id: string) => `lev.runs.v1.${id}`;
@@ -41,8 +42,9 @@ export function listRuns(): SavedRun[] {
     const rawRun = safeGet(RUN_KEY(id));
     if (!rawRun) continue;
     try {
-      const parsed = JSON.parse(rawRun) as SavedRun;
-      if (parsed.version === 1) runs.push(parsed);
+      const parsed = JSON.parse(rawRun);
+      const migrated = migrateSavedRun(parsed);
+      if (migrated) runs.push(migrated);
     } catch {
       // skip corrupt
     }
@@ -57,7 +59,7 @@ export function saveRun(
 ): SavedRun {
   const id = `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
   const run: SavedRun = {
-    version: 1,
+    version: 2,
     id,
     label,
     createdAt: Date.now(),
@@ -83,9 +85,7 @@ export function loadRun(id: string): SavedRun | null {
   const raw = safeGet(RUN_KEY(id));
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as SavedRun;
-    if (parsed.version !== 1) return null;
-    return parsed;
+    return migrateSavedRun(JSON.parse(raw));
   } catch {
     return null;
   }

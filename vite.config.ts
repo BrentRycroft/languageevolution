@@ -6,6 +6,16 @@ const repo = "languageevolution";
 
 export default defineConfig(({ command }) => ({
   base: command === "build" ? `/${repo}/` : "/",
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Isolate the WebLLM runtime (large, optional, lazy-loaded).
+          if (id.includes("@mlc-ai/web-llm")) return "webllm";
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -19,7 +29,7 @@ export default defineConfig(({ command }) => ({
         name: "Language Evolution Simulator",
         short_name: "LangEvo",
         description:
-          "A browser-based modular simulator for phonological drift, agent-based communication, and language family divergence.",
+          "A browser-based modular simulator for phonological drift, word genesis, grammar evolution, and family-tree divergence.",
         theme_color: "#0f1115",
         background_color: "#0f1115",
         display: "standalone",
@@ -40,11 +50,17 @@ export default defineConfig(({ command }) => ({
       workbox: {
         navigateFallback: "index.html",
         globPatterns: ["**/*.{js,css,html,svg,png,ico,webp,woff,woff2}"],
+        // The WebLLM chunk is 6+ MB and only loaded when the user opts in.
+        // Exclude it from the precache manifest; Workbox will still cache it
+        // on demand as the browser fetches it.
+        globIgnores: ["**/webllm-*.js"],
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
       },
     }),
   ],
   test: {
-    environment: "node",
+    environment: "jsdom",
     globals: true,
+    setupFiles: ["./src/test/setup.ts"],
   },
 }));

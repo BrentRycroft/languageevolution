@@ -15,7 +15,7 @@ import type { GenesisRule } from "./genesis/types";
 import { tryGenesis } from "./genesis/apply";
 import { driftGrammar } from "./grammar/evolve";
 import { DEFAULT_GRAMMAR } from "./grammar/defaults";
-import { driftOneMeaning } from "./semantics/drift";
+import { driftOneMeaning, type NeighborOverride } from "./semantics/drift";
 import { leafIds, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
 
@@ -26,6 +26,7 @@ export interface Simulation {
   getConfig: () => SimulationConfig;
   step: () => void;
   reset: () => void;
+  setAiNeighbors: (n: import("./semantics/drift").NeighborOverride | undefined) => void;
 }
 
 function cloneLexicon(lex: Lexicon): Lexicon {
@@ -131,9 +132,15 @@ function stepGrammar(lang: Language, config: SimulationConfig, rng: Rng, generat
   }
 }
 
-function stepSemantics(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
+function stepSemantics(
+  lang: Language,
+  config: SimulationConfig,
+  rng: Rng,
+  generation: number,
+  override?: NeighborOverride,
+): void {
   if (!rng.chance(config.semantics.driftProbabilityPerGeneration)) return;
-  const drift = driftOneMeaning(lang, rng);
+  const drift = driftOneMeaning(lang, rng, override);
   if (drift) {
     pushEvent(lang, {
       generation,
@@ -185,8 +192,16 @@ function stepDeath(
   }
 }
 
-export function createSimulation(config: SimulationConfig): Simulation {
+export interface SimulationOptions {
+  aiNeighbors?: NeighborOverride;
+}
+
+export function createSimulation(
+  config: SimulationConfig,
+  options: SimulationOptions = {},
+): Simulation {
   let state: SimulationState = buildInitialState(config);
+  let aiNeighbors = options.aiNeighbors;
 
   const step = (): void => {
     const rng = makeRng(state.rngState);
@@ -198,7 +213,7 @@ export function createSimulation(config: SimulationConfig): Simulation {
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen);
       if (config.modes.genesis) stepGenesis(lang, config, rng, nextGen);
       if (config.modes.grammar) stepGrammar(lang, config, rng, nextGen);
-      if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
+      if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen, aiNeighbors);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
       if (config.modes.death) stepDeath(state, lang, config, rng);
     }
@@ -207,6 +222,10 @@ export function createSimulation(config: SimulationConfig): Simulation {
       generation: nextGen,
       rngState: rng.state(),
     };
+  };
+
+  const setAiNeighbors = (n: NeighborOverride | undefined): void => {
+    aiNeighbors = n;
   };
 
   const reset = (): void => {
@@ -218,6 +237,7 @@ export function createSimulation(config: SimulationConfig): Simulation {
     getConfig: () => config,
     step,
     reset,
+    setAiNeighbors,
   };
 }
 
