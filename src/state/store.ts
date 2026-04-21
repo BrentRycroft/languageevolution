@@ -35,7 +35,6 @@ interface SimStore {
   updateConfig: (patch: Partial<SimulationConfig>) => void;
   updateModes: (patch: Partial<SimulationConfig["modes"]>) => void;
   updatePhonology: (patch: Partial<SimulationConfig["phonology"]>) => void;
-  updateAgents: (patch: Partial<SimulationConfig["agents"]>) => void;
   updateTree: (patch: Partial<SimulationConfig["tree"]>) => void;
   setChangeEnabled: (changeId: string, enabled: boolean) => void;
   setChangeWeight: (changeId: string, weight: number) => void;
@@ -138,10 +137,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
   updatePhonology: (patch) => {
     const { config, updateConfig } = get();
     updateConfig({ phonology: { ...config.phonology, ...patch } });
-  },
-  updateAgents: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ agents: { ...config.agents, ...patch } });
   },
   updateTree: (patch) => {
     const { config, updateConfig } = get();

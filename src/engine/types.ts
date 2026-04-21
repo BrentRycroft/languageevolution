@@ -24,30 +24,10 @@ export interface SoundChange {
   baseWeight: number;
 }
 
-export interface AgentParams {
-  interactionsPerStep: number;
-  adoptionProbability: number;
-  innovationProbability: number;
-}
-
-export interface Agent {
-  id: string;
-  lexicon: Lexicon;
-  neighbors: string[];
-}
-
-export interface Population {
-  agents: Agent[];
-  consensusLexicon: Lexicon;
-  params: AgentParams;
-  gridWidth: number;
-}
-
 export interface Language {
   id: string;
   name: string;
   lexicon: Lexicon;
-  population?: Population;
   enabledChangeIds: string[];
   changeWeights: Record<string, number>;
   birthGeneration: number;
@@ -66,17 +46,12 @@ export interface SimulationConfig {
   seed: string;
   modes: {
     phonology: boolean;
-    agents: boolean;
     tree: boolean;
   };
   phonology: {
     globalRate: number;
     enabledChangeIds: string[];
     changeWeights: Record<string, number>;
-  };
-  agents: AgentParams & {
-    populationSize: number;
-    gridWidth: number;
   };
   tree: {
     splitProbabilityPerGeneration: number;

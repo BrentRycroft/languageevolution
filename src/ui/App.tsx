@@ -4,15 +4,13 @@ import { ControlsPanel } from "./ControlsPanel";
 import { LexiconView } from "./LexiconView";
 import { LanguageTreeView } from "./LanguageTreeView";
 import { TimelineChart } from "./TimelineChart";
-import { AgentGrid } from "./AgentGrid";
 
-type Tab = "tree" | "lexicon" | "timeline" | "agents";
+type Tab = "tree" | "lexicon" | "timeline";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tree", label: "Tree" },
   { id: "lexicon", label: "Lexicon" },
   { id: "timeline", label: "Timeline" },
-  { id: "agents", label: "Agents" },
 ];
 
 export function App() {
@@ -106,10 +104,6 @@ export function App() {
         <div className={`panel panel-timeline ${activeTab === "timeline" ? "active-tab" : ""}`}>
           <h3>Timeline</h3>
           <TimelineChart />
-        </div>
-        <div className={`panel panel-agents ${activeTab === "agents" ? "active-tab" : ""}`}>
-          <h3>Agents</h3>
-          <AgentGrid />
         </div>
       </main>
     </div>

@@ -96,7 +96,7 @@ body {
   grid-template-columns: 1fr 1fr;
   grid-template-areas:
     "tree lexicon"
-    "timeline agents";
+    "timeline timeline";
   gap: 8px;
   padding: 8px;
 }
@@ -104,7 +104,6 @@ body {
 .panel-tree { grid-area: tree; }
 .panel-lexicon { grid-area: lexicon; }
 .panel-timeline { grid-area: timeline; }
-.panel-agents { grid-area: agents; }
 
 .panel {
   background: var(--panel);
@@ -322,17 +321,6 @@ input[type="range"] {
   fill: none;
   stroke: var(--border);
   stroke-width: 1.5;
-}
-
-.agent-grid {
-  display: grid;
-  gap: 2px;
-}
-
-.agent-cell {
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
 }
 
 .runs-list {

@@ -63,7 +63,6 @@ export function ControlsPanel() {
   const setSpeed = useSimStore((s) => s.setSpeed);
   const updateModes = useSimStore((s) => s.updateModes);
   const updatePhonology = useSimStore((s) => s.updatePhonology);
-  const updateAgents = useSimStore((s) => s.updateAgents);
   const updateTree = useSimStore((s) => s.updateTree);
   const setChangeEnabled = useSimStore((s) => s.setChangeEnabled);
   const setChangeWeight = useSimStore((s) => s.setChangeWeight);
@@ -94,11 +93,6 @@ export function ControlsPanel() {
           onChange={(v) => updateModes({ phonology: v })}
         />
         <Toggle
-          label="Agent communication"
-          value={config.modes.agents}
-          onChange={(v) => updateModes({ agents: v })}
-        />
-        <Toggle
           label="Population splits (tree)"
           value={config.modes.tree}
           onChange={(v) => updateModes({ tree: v })}
@@ -116,22 +110,6 @@ export function ControlsPanel() {
           onChange={(v) => updatePhonology({ globalRate: v })}
         />
         <Slider
-          label="Adoption prob."
-          value={config.agents.adoptionProbability}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={(v) => updateAgents({ adoptionProbability: v })}
-        />
-        <Slider
-          label="Innovation prob."
-          value={config.agents.innovationProbability}
-          min={0}
-          max={0.2}
-          step={0.005}
-          onChange={(v) => updateAgents({ innovationProbability: v })}
-        />
-        <Slider
           label="Split prob. / gen"
           value={config.tree.splitProbabilityPerGeneration}
           min={0}
@@ -146,28 +124,6 @@ export function ControlsPanel() {
           max={12}
           step={1}
           onChange={(v) => updateTree({ maxLeaves: Math.round(v) })}
-          format={(v) => String(Math.round(v))}
-        />
-      </div>
-
-      <div className="section">
-        <h4>Population</h4>
-        <Slider
-          label="Size"
-          value={config.agents.populationSize}
-          min={4}
-          max={64}
-          step={4}
-          onChange={(v) => updateAgents({ populationSize: Math.round(v) })}
-          format={(v) => String(Math.round(v))}
-        />
-        <Slider
-          label="Interactions/step"
-          value={config.agents.interactionsPerStep}
-          min={0}
-          max={200}
-          step={10}
-          onChange={(v) => updateAgents({ interactionsPerStep: Math.round(v) })}
           format={(v) => String(Math.round(v))}
         />
       </div>

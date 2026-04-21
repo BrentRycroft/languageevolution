@@ -7,12 +7,4 @@ export { DEFAULT_LEXICON } from "./lexicon/defaults";
 export { createSimulation, replay, type Simulation } from "./simulation";
 export { defaultConfig } from "./config";
 export { leafIds, splitLeaf } from "./tree/split";
-export {
-  createPopulation,
-  derivedConsensus,
-  clonePopulation,
-  agentAgreementPercent,
-  resyncAgentsToLexicon,
-} from "./agents/population";
-export { runInteractions } from "./agents/interaction";
 export { isVowel, isConsonant, formToString, levenshtein, asciiToIpa } from "./phonology/ipa";

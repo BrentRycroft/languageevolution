@@ -9,8 +9,6 @@ import type {
 } from "./types";
 import { CATALOG_BY_ID } from "./phonology/catalog";
 import { applyChangesToLexicon } from "./phonology/apply";
-import { createPopulation, resyncAgentsToLexicon } from "./agents/population";
-import { runInteractions } from "./agents/interaction";
 import { leafIds, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
 
@@ -39,20 +37,6 @@ function buildInitialState(config: SimulationConfig): SimulationState {
     id: rootId,
     name: "Proto",
     lexicon: cloneLexicon(config.seedLexicon),
-    population: config.modes.agents
-      ? createPopulation(
-          config.seedLexicon,
-          {
-            interactionsPerStep: config.agents.interactionsPerStep,
-            adoptionProbability: config.agents.adoptionProbability,
-            innovationProbability: config.agents.innovationProbability,
-          },
-          config.agents.populationSize,
-          config.agents.gridWidth,
-          rootId,
-          rng,
-        )
-      : undefined,
     enabledChangeIds: enabled,
     changeWeights: weights,
     birthGeneration: 0,
@@ -77,6 +61,32 @@ function changesForLang(lang: Language): SoundChange[] {
     .filter((c): c is SoundChange => !!c);
 }
 
+function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng): void {
+  const changes = changesForLang(lang);
+  lang.lexicon = applyChangesToLexicon(lang.lexicon, changes, rng, {
+    globalRate: config.phonology.globalRate,
+    weights: lang.changeWeights,
+  });
+}
+
+function stepTreeSplit(
+  state: SimulationState,
+  leafId: string,
+  lang: Language,
+  config: SimulationConfig,
+  rng: Rng,
+): void {
+  const age = state.generation - lang.birthGeneration;
+  const currentLeafCount = leafIds(state.tree).length;
+  if (
+    age >= config.tree.minGenerationsBetweenSplits &&
+    currentLeafCount < config.tree.maxLeaves &&
+    rng.chance(config.tree.splitProbabilityPerGeneration)
+  ) {
+    splitLeaf(state.tree, leafId, state.generation + 1, rng);
+  }
+}
+
 export function createSimulation(config: SimulationConfig): Simulation {
   let state: SimulationState = buildInitialState(config);
 
@@ -84,37 +94,9 @@ export function createSimulation(config: SimulationConfig): Simulation {
     const rng = makeRng(state.rngState);
     const leaves = leafIds(state.tree);
     for (const leafId of leaves) {
-      const node = state.tree[leafId]!;
-      const lang = node.language;
-
-      if (config.modes.agents && lang.population) {
-        runInteractions(lang.population, rng);
-        lang.lexicon = cloneLexicon(lang.population.consensusLexicon);
-      }
-
-      if (config.modes.phonology) {
-        const changes = changesForLang(lang);
-        const nextLex = applyChangesToLexicon(lang.lexicon, changes, rng, {
-          globalRate: config.phonology.globalRate,
-          weights: lang.changeWeights,
-        });
-        lang.lexicon = nextLex;
-        if (config.modes.agents && lang.population) {
-          resyncAgentsToLexicon(lang.population, nextLex, rng);
-        }
-      }
-
-      if (config.modes.tree) {
-        const age = state.generation - lang.birthGeneration;
-        const currentLeafCount = leafIds(state.tree).length;
-        if (
-          age >= config.tree.minGenerationsBetweenSplits &&
-          currentLeafCount < config.tree.maxLeaves &&
-          rng.chance(config.tree.splitProbabilityPerGeneration)
-        ) {
-          splitLeaf(state.tree, leafId, state.generation + 1, rng);
-        }
-      }
+      const lang = state.tree[leafId]!.language;
+      if (config.modes.phonology) stepPhonology(lang, config, rng);
+      if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
     }
     state = {
       ...state,

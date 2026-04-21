@@ -1,6 +1,5 @@
 import type { Language, LanguageNode, LanguageTree, Lexicon } from "../types";
 import { CATALOG, CATALOG_BY_ID } from "../phonology/catalog";
-import { clonePopulation } from "../agents/population";
 import type { Rng } from "../rng";
 
 function cloneLexicon(lex: Lexicon): Lexicon {
@@ -53,7 +52,6 @@ export function splitLeaf(
       id,
       name: id,
       lexicon: cloneLexicon(parentLang.lexicon),
-      population: parentLang.population ? clonePopulation(parentLang.population, id) : undefined,
       enabledChangeIds: enabled,
       changeWeights: weights,
       birthGeneration: generation,

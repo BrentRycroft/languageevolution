@@ -8,18 +8,11 @@ export function defaultConfig(): SimulationConfig {
   for (const c of CATALOG) weights[c.id] = c.baseWeight;
   return {
     seed: "hello",
-    modes: { phonology: true, agents: true, tree: true },
+    modes: { phonology: true, tree: true },
     phonology: {
       globalRate: 1,
       enabledChangeIds: enabled,
       changeWeights: weights,
-    },
-    agents: {
-      populationSize: 24,
-      gridWidth: 6,
-      interactionsPerStep: 50,
-      adoptionProbability: 0.35,
-      innovationProbability: 0.03,
     },
     tree: {
       splitProbabilityPerGeneration: 0.05,
