@@ -2,6 +2,7 @@ import type { Language, LanguageNode, LanguageTree } from "../types";
 import { CATALOG, CATALOG_BY_ID } from "../phonology/catalog";
 import { generateName } from "../naming";
 import { cloneLexicon, cloneGrammar, cloneMorphology } from "../utils/clone";
+import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import type { Rng } from "../rng";
 
 export function leafIds(tree: LanguageTree): string[] {
@@ -24,6 +25,19 @@ function perturbChangeSet(
     set.delete(arr[rng.int(arr.length)]!);
   }
   return Array.from(set).sort();
+}
+
+function jitterBias(
+  parent: Record<string, number>,
+  rng: Rng,
+  scale: number,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [family, w] of Object.entries(parent)) {
+    const delta = (rng.next() * 2 - 1) * scale;
+    out[family] = Math.max(0.15, w + delta);
+  }
+  return out;
 }
 
 export function splitLeaf(
@@ -71,7 +85,16 @@ export function splitLeaf(
         Math.min(1.8, parentLang.conservatism * (0.7 + rng.next() * 0.6)),
       ),
       wordOrigin: { ...parentLang.wordOrigin },
-      customRules: parentLang.customRules.slice(),
+      // Daughters inherit the parent's procedural rule stack, dropping a
+      // random ~30% so sisters begin to diverge immediately.
+      activeRules: (parentLang.activeRules ?? [])
+        .filter(() => rng.chance(0.7))
+        .map((r) => ({ ...r })),
+      retiredRules: (parentLang.retiredRules ?? []).map((r) => ({ ...r })),
+      // Jitter the rule-family bias by ±0.3 so the two sisters develop
+      // different phonological tastes over time.
+      ruleBias: jitterBias(parentLang.ruleBias ?? { ...DEFAULT_RULE_BIAS }, rng, 0.3),
+      registerOf: { ...(parentLang.registerOf ?? {}) },
       orthography: { ...parentLang.orthography },
       otRanking: parentLang.otRanking.slice(),
       lastChangeGeneration: { ...parentLang.lastChangeGeneration },

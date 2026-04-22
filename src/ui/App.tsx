@@ -8,6 +8,7 @@ import { Translator } from "./Translator";
 import { CompareView } from "./CompareView";
 import { NarrativeView } from "./NarrativeView";
 import { MapView } from "./MapView";
+import { SoundLawsView } from "./SoundLawsView";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
 import { WelcomeBanner } from "./Onboarding";
@@ -64,6 +65,7 @@ type Tab =
   | "lexicon"
   | "timeline"
   | "grammar"
+  | "laws"
   | "events"
   | "translate"
   | "compare"
@@ -75,6 +77,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "lexicon", label: "Lexicon" },
   { id: "timeline", label: "Timeline" },
   { id: "grammar", label: "Grammar" },
+  { id: "laws", label: "Sound laws" },
   { id: "events", label: "History" },
   { id: "translate", label: "Translate" },
   { id: "compare", label: "Compare" },
@@ -232,6 +235,12 @@ export function App() {
           <div className="panel panel-single">
             <h3>Grammar</h3>
             <GrammarView />
+          </div>
+        )}
+        {activeTab === "laws" && (
+          <div className="panel panel-single">
+            <h3>Sound laws</h3>
+            <SoundLawsView />
           </div>
         )}
         {activeTab === "events" && (

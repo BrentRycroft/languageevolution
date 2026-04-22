@@ -35,6 +35,11 @@ export function stepGenesis(
           ? "derivation"
           : "compound"
       : "coined";
+    // Freshly-coined words typically start colloquial (low register) before
+    // they settle into neutral usage.
+    if (lang.registerOf && !lang.registerOf[result]) {
+      lang.registerOf[result] = "low";
+    }
     pushEvent(lang, {
       generation,
       kind: "coinage",

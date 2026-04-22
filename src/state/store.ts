@@ -81,7 +81,6 @@ interface SimStore {
   setTheme: (theme: "dark" | "light" | "system") => void;
   setTimelineMode: (mode: "meanings" | "cognates") => void;
   setTimelineScrubGeneration: (g: number | null) => void;
-  setCustomRules: (rules: string[]) => void;
   setSeed: (s: string) => void;
   randomiseSeed: () => void;
   loadConfig: (
@@ -299,10 +298,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
   setTheme: (theme) => set({ theme }),
   setTimelineMode: (timelineMode) => set({ timelineMode }),
   setTimelineScrubGeneration: (g) => set({ timelineScrubGeneration: g }),
-  setCustomRules: (rules) => {
-    const { config, updateConfig } = get();
-    updateConfig({ ...config, customRules: rules });
-  },
   setSeed: (s) => {
     const { config, updateConfig } = get();
     updateConfig({ ...config, seed: s });

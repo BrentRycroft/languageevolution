@@ -220,6 +220,50 @@ body {
   border-radius: var(--r-pill);
 }
 
+.sound-laws-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-1);
+  font-family: var(--font-mono);
+}
+
+.sound-laws-table th,
+.sound-laws-table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.sound-laws-table th {
+  color: var(--muted);
+  font-weight: var(--fw-semi);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.sound-laws-table td.family {
+  color: var(--accent);
+}
+
+.sound-laws-table td.ctx {
+  color: var(--muted);
+}
+
+.sound-laws-table td.examples {
+  color: var(--text);
+}
+
+.sound-laws-table td.num {
+  text-align: right;
+  color: var(--muted);
+}
+
+.sound-laws-table.retired td {
+  opacity: 0.75;
+}
+
 .controls-panel {
   grid-area: controls;
   background: var(--panel);

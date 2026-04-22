@@ -32,7 +32,7 @@ function makeLang(): Language {
     localNeighbors: {},
     conservatism: 1,
     wordOrigin: {},
-    customRules: [],
+    activeRules: [],
     orthography: {}, otRanking: [], lastChangeGeneration: {},
   };
 }

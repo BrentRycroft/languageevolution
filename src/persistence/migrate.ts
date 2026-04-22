@@ -2,14 +2,16 @@ import type { SavedRun, SimulationConfig } from "../engine/types";
 import { defaultConfig } from "../engine/config";
 
 /**
- * Migrate a saved run from any older schema to the latest (currently v3).
+ * Migrate a saved run from any older schema to the latest (currently v4).
+ * v4 drops the `customRules` field (procedural sound-change engine replaces
+ * the user-defined DSL) and adds procedural rule state per language.
  * Returns null if the data is unrecognizable.
  */
 export function migrateSavedRun(raw: unknown): SavedRun | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   const version = typeof obj.version === "number" ? obj.version : 1;
-  if (version > 3) return null;
+  if (version > 4) return null;
   if (!obj.config || typeof obj.config !== "object") return null;
 
   const defaults = defaultConfig();
@@ -71,13 +73,11 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
     taboo:
       (oldConfig.taboo as SimulationConfig["taboo"] | undefined) ??
       defaults.taboo,
-    customRules:
-      (oldConfig.customRules as string[] | undefined) ?? [],
     useWorker:
       typeof oldConfig.useWorker === "boolean" ? (oldConfig.useWorker as boolean) : false,
   };
   return {
-    version: 3,
+    version: 4,
     id: String(obj.id ?? ""),
     label: String(obj.label ?? "unlabeled"),
     createdAt: typeof obj.createdAt === "number" ? obj.createdAt : Date.now(),
