@@ -26,7 +26,7 @@ export function stepSemantics(
     pushEvent(lang, {
       generation,
       kind: "semantic_drift",
-      description: `${drift.from} → ${drift.to}`,
+      description: `${drift.kind}: ${drift.from} → ${drift.to}`,
     });
   }
 }

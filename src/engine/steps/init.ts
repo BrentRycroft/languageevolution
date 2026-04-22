@@ -8,9 +8,28 @@ import type {
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
+import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon } from "./helpers";
+
+/**
+ * Assign a register ("high" / "low") to ~15% of seed meanings so the
+ * language begins life with a small stylistic stratification. Deterministic
+ * via the supplied RNG.
+ */
+function seedRegister(
+  lex: import("../types").Lexicon,
+  rng: import("../rng").Rng,
+): Record<string, "high" | "low"> {
+  const out: Record<string, "high" | "low"> = {};
+  for (const m of Object.keys(lex).sort()) {
+    if (rng.chance(0.15)) {
+      out[m] = rng.chance(0.5) ? "high" : "low";
+    }
+  }
+  return out;
+}
 
 export function buildInitialState(config: SimulationConfig): SimulationState {
   const rng = makeRng(config.seed);
@@ -36,7 +55,10 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     localNeighbors: {},
     conservatism: 1.0,
     wordOrigin: {},
-    customRules: (config.customRules ?? []).slice(),
+    activeRules: [],
+    retiredRules: [],
+    ruleBias: { ...DEFAULT_RULE_BIAS },
+    registerOf: seedRegister(seedLex, rng),
     orthography: {},
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},

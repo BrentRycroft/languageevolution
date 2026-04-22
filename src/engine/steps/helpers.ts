@@ -6,7 +6,7 @@ import type {
   SoundChange,
 } from "../types";
 import { CATALOG_BY_ID } from "../phonology/catalog";
-import { parseRuleDsl, compileUserRule } from "../phonology/dsl";
+import { generatedToSoundChange } from "../phonology/generated";
 import { toneOf } from "../phonology/tone";
 import { GENESIS_BY_ID } from "../genesis/catalog";
 import type { GenesisRule } from "../genesis/types";
@@ -50,12 +50,8 @@ export function changesForLang(lang: Language): SoundChange[] {
   const catalog = lang.enabledChangeIds
     .map((id) => CATALOG_BY_ID[id])
     .filter((c): c is SoundChange => !!c);
-  const user: SoundChange[] = [];
-  for (const text of lang.customRules) {
-    const parsed = parseRuleDsl(text);
-    if (typeof parsed !== "string") user.push(compileUserRule(parsed));
-  }
-  return [...catalog, ...user];
+  const procedural = (lang.activeRules ?? []).map(generatedToSoundChange);
+  return [...catalog, ...procedural];
 }
 
 export function genesisRulesFor(config: SimulationConfig): GenesisRule[] {

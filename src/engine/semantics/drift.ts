@@ -1,12 +1,36 @@
 import type { Language } from "../types";
 import type { Rng } from "../rng";
 import { neighborsOf } from "./neighbors";
-import { relatedMeanings } from "./clusters";
+import { relatedMeanings, clusterOf } from "./clusters";
 import { nearestMeanings } from "./embeddings";
+import { complexityFor } from "../lexicon/complexity";
+
+export type SemanticShiftKind =
+  | "metonymy"
+  | "metaphor"
+  | "narrowing"
+  | "broadening";
 
 export interface SemanticDrift {
   from: string;
   to: string;
+  kind: SemanticShiftKind;
+}
+
+/**
+ * Classify a drift event using a small heuristic so events are richer than
+ * "A → B". Same-cluster = metonymy (contiguity); cross-cluster = metaphor
+ * (conceptual jump); complexity delta picks narrowing vs broadening when
+ * the link is ambiguous.
+ */
+export function classifyShift(from: string, to: string): SemanticShiftKind {
+  const cFrom = clusterOf(from);
+  const cTo = clusterOf(to);
+  if (cFrom && cTo && cFrom === cTo) return "metonymy";
+  const complexityDelta = complexityFor(to) - complexityFor(from);
+  if (complexityDelta < 0) return "narrowing";
+  if (complexityDelta > 0) return "broadening";
+  return "metaphor";
 }
 
 export type NeighborOverride = Record<string, string[]>;
@@ -58,7 +82,7 @@ export function driftOneMeaning(
     const form = lang.lexicon[m]!;
     lang.lexicon[target] = form;
     delete lang.lexicon[m];
-    return { from: m, to: target };
+    return { from: m, to: target, kind: classifyShift(m, target) };
   }
   return null;
 }

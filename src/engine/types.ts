@@ -83,10 +83,25 @@ export interface Language {
    */
   wordOrigin: Record<Meaning, string>;
   /**
-   * User-defined sound-change rules as DSL strings (e.g. "p -> f / _V").
-   * Parsed + compiled at runtime alongside catalog rules.
+   * Procedurally-generated active sound laws that this language is currently
+   * subject to. Each rule has a strength that grows with use and decays with
+   * disuse; when strength falls below a threshold the rule retires.
    */
-  customRules: string[];
+  activeRules: import("./phonology/generated").GeneratedRule[];
+  /**
+   * Retired rules kept for UI history.
+   */
+  retiredRules?: import("./phonology/generated").GeneratedRule[];
+  /**
+   * Per-family bias vector used by the procedural proposer. Higher numbers
+   * mean the language is more inclined to invent rules of that family.
+   */
+  ruleBias?: Record<string, number>;
+  /**
+   * Register assignment per meaning: some meanings have a "high" / "low"
+   * split recorded here so narrative / cultural features can style output.
+   */
+  registerOf?: Record<string, "high" | "low">;
   /**
    * Romanization / orthography map: IPA phoneme → Latin-ish spelling.
    * Drifts slower than phonology, producing the classic "spelling vs
@@ -184,11 +199,6 @@ export interface SimulationConfig {
   seedFrequencyHints?: Record<Meaning, number>;
   seedMorphology?: import("./morphology/types").Morphology;
   /**
-   * User-authored sound-change rules (DSL strings, e.g. "p -> f / _V").
-   * Applied to the proto language at seed time; daughters inherit via split.
-   */
-  customRules?: string[];
-  /**
    * Opt-in: run fast-forward steps in a Web Worker so the UI thread
    * stays responsive during long runs.
    */
@@ -206,7 +216,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 3;
+  version: 4;
   id: string;
   label: string;
   createdAt: number;

@@ -20,7 +20,7 @@ function baseLang(overrides: Partial<Language> = {}): Language {
     localNeighbors: {},
     conservatism: 1,
     wordOrigin: {},
-    customRules: [],
+    activeRules: [],
     orthography: {},
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},

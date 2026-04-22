@@ -38,7 +38,7 @@ function stateOf(langId: string, lex: Record<string, string[]>, generation: numb
           localNeighbors: {},
           conservatism: 1,
           wordOrigin: {},
-          customRules: [],
+          activeRules: [],
           orthography: {},
           otRanking: [],
           lastChangeGeneration: {},

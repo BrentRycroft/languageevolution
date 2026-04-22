@@ -23,7 +23,7 @@ function makeTree(): LanguageTree {
     localNeighbors: {},
     conservatism: 1,
     wordOrigin: {},
-    customRules: [],
+    activeRules: [],
     orthography: {}, otRanking: [], lastChangeGeneration: {},
   };
   const root: LanguageNode = {

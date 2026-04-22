@@ -61,7 +61,7 @@ describe("taboo replacement", () => {
       localNeighbors: {},
       conservatism: 1,
       wordOrigin: {},
-      customRules: [],
+      activeRules: [],
       orthography: {}, otRanking: [], lastChangeGeneration: {},
       ...overrides,
     };
