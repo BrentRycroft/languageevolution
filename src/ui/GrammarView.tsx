@@ -28,6 +28,7 @@ export function GrammarView() {
             {selected.extinct && <span style={{ color: "var(--danger)" }}>(extinct)</span>}
           </div>
           <GrammarFeatureList grammar={selected.grammar} />
+          <InventoryDisplay lang={selected} />
           <ParadigmTable lang={selected} />
         </>
       ) : (
@@ -52,6 +53,31 @@ export function GrammarView() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function InventoryDisplay({ lang }: { lang: import("../engine/types").Language }) {
+  const { segmental, tones, usesTones } = lang.phonemeInventory;
+  if (segmental.length === 0) return null;
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div className="grammar-section-label">
+        Phoneme inventory
+        <span className="grammar-section-meta">{segmental.length} segments{usesTones ? `, ${tones.length} tones` : ""}</span>
+      </div>
+      <div className="phoneme-grid">
+        {segmental.map((p) => (
+          <span key={p} className="phoneme-tile">{p}</span>
+        ))}
+      </div>
+      {usesTones && tones.length > 0 && (
+        <div className="phoneme-grid" style={{ marginTop: 6 }}>
+          {tones.map((t) => (
+            <span key={t} className="phoneme-tile tonal">{t || "none"}</span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

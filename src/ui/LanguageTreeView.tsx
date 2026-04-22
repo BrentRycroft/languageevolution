@@ -10,10 +10,48 @@ interface NodeDatum {
   sample: string;
   isLeaf: boolean;
   extinct: boolean;
+  /** Multi-line tooltip shown via SVG <title>. */
+  tooltip: string;
   children?: NodeDatum[];
 }
 
-function buildHierarchy(tree: LanguageTree, rootId: string, sampleMeaning: string): NodeDatum {
+function buildTooltip(
+  tree: LanguageTree,
+  id: string,
+  generation: number,
+): string {
+  const node = tree[id]!;
+  const lang = node.language;
+  const age = generation - lang.birthGeneration;
+  const tempo = lang.conservatism >= 1.3 ? "🐢" : lang.conservatism <= 0.7 ? "🐇" : "⏱";
+  const lexCount = Object.keys(lang.lexicon).length;
+  const borrowCount = Object.values(lang.wordOrigin ?? {}).filter((o) =>
+    o.startsWith("borrow:"),
+  ).length;
+  const samples = ["water", "fire", "mother", "go"]
+    .map((m) => {
+      const f = lang.lexicon[m];
+      return f ? `${m}=${formToString(f)}` : null;
+    })
+    .filter(Boolean)
+    .slice(0, 3)
+    .join("\n  ");
+  return [
+    lang.name + (lang.extinct ? " (extinct)" : ""),
+    `age ${age} · ${lexCount} words · ${tempo} ${lang.conservatism.toFixed(2)}`,
+    borrowCount > 0 ? `${borrowCount} loanwords` : "",
+    samples ? "  " + samples : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildHierarchy(
+  tree: LanguageTree,
+  rootId: string,
+  sampleMeaning: string,
+  generation: number,
+): NodeDatum {
   const build = (id: string): NodeDatum => {
     const node = tree[id]!;
     const lang = node.language;
@@ -24,6 +62,7 @@ function buildHierarchy(tree: LanguageTree, rootId: string, sampleMeaning: strin
       sample: form ? formToString(form) : "—",
       isLeaf: node.childrenIds.length === 0,
       extinct: !!lang.extinct,
+      tooltip: buildTooltip(tree, id, generation),
       children: node.childrenIds.length
         ? node.childrenIds.map((cid) => build(cid))
         : undefined,
@@ -54,7 +93,7 @@ export function LanguageTreeView() {
 
   const layout = useMemo(() => {
     const sample = selectedMeaning ?? "water";
-    const data = buildHierarchy(state.tree, state.rootId, sample);
+    const data = buildHierarchy(state.tree, state.rootId, sample, state.generation);
     const root = hierarchy(data);
     const margin = 24;
     // Vertical layout: x spreads horizontally, y is depth downward.
@@ -97,6 +136,7 @@ export function LanguageTreeView() {
             const sampleY = d.isLeaf ? 30 : -22;
             return (
               <g key={d.id} transform={`translate(${pos.x},${pos.y})`}>
+                <title>{d.tooltip}</title>
                 <circle
                   r={d.isLeaf ? 7 : 4}
                   className={`tree-node-circle ${cls}`}

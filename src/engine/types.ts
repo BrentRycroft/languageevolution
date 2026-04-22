@@ -76,6 +76,12 @@ export interface Language {
    * conservative ("turtle") and others innovative ("hare").
    */
   conservatism: number;
+  /**
+   * Origin tag per meaning. Present only for words that didn't come from
+   * the proto-seed. "compound" / "derivation" / "reduplication" mirror the
+   * genesis catalog ids; "borrow:LangName" marks contact loans.
+   */
+  wordOrigin: Record<Meaning, string>;
 }
 
 export interface LanguageNode {

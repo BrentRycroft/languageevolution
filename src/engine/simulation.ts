@@ -102,6 +102,7 @@ function buildInitialState(config: SimulationConfig): SimulationState {
     // Proto starts at a deterministic 1.0 so base runs are reproducible;
     // daughters jitter on split.
     conservatism: 1.0,
+    wordOrigin: {},
   };
   const rootNode: LanguageNode = {
     language: rootLang,
@@ -201,6 +202,7 @@ function stepContact(
 ): void {
   const loan = tryBorrow(lang, state.tree, rng, config.contact.borrowProbabilityPerGeneration);
   if (loan) {
+    lang.wordOrigin[loan.meaning] = `borrow:${loan.donor}`;
     pushEvent(lang, {
       generation,
       kind: "coinage",
@@ -224,6 +226,14 @@ function stepGenesis(lang: Language, config: SimulationConfig, rng: Rng, generat
     if (!result) break;
     // Mid-range frequency for coinages; they haven't entrenched yet.
     lang.wordFrequencyHints[result] = 0.4;
+    // Tag the origin (compound/derivation/reduplication based on naming pattern).
+    lang.wordOrigin[result] = result.includes("-")
+      ? /-(intens)$/.test(result)
+        ? "reduplication"
+        : /-(er|ness|ic|al|ine)$/.test(result)
+          ? "derivation"
+          : "compound"
+      : "coined";
     pushEvent(lang, {
       generation,
       kind: "coinage",

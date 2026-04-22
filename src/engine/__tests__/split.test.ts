@@ -22,6 +22,7 @@ function makeTree(): LanguageTree {
     morphology: { paradigms: {} },
     localNeighbors: {},
     conservatism: 1,
+    wordOrigin: {},
   };
   const root: LanguageNode = {
     language: lang,

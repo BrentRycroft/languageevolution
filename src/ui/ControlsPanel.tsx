@@ -13,7 +13,10 @@ import {
   exportLexiconsJSON,
   exportLexiconsCSV,
   exportTreeNewick,
+  exportSnapshot,
+  importSnapshot,
 } from "../persistence/export";
+import { useRef } from "react";
 
 function Slider({
   label,
@@ -352,11 +355,44 @@ export function ControlsPanel() {
 
 function ExportButtons() {
   const state = useSimStore((s) => s.state);
+  const config = useSimStore((s) => s.config);
+  const loadConfig = useSimStore((s) => s.loadConfig);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const snap = await importSnapshot(file);
+      loadConfig(snap.config, undefined, snap.state);
+    } catch (err) {
+      alert(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
       <button onClick={() => exportLexiconsJSON(state)}>Lexicons JSON</button>
       <button onClick={() => exportLexiconsCSV(state)}>Lexicons CSV</button>
       <button onClick={() => exportTreeNewick(state)}>Tree (Newick)</button>
+      <button
+        onClick={() => exportSnapshot(config, state)}
+        title="Download the entire simulation state + config so you can share or restore it"
+      >
+        Snapshot ↓
+      </button>
+      <button onClick={() => fileInput.current?.click()} title="Load a snapshot JSON">
+        Snapshot ↑
+      </button>
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/json,.json"
+        onChange={onImport}
+        style={{ display: "none" }}
+      />
     </div>
   );
 }
