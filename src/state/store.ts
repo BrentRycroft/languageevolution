@@ -11,6 +11,7 @@ import type { NeighborOverride } from "../engine/semantics/drift";
 import {
   recordHistory,
   recordActivity,
+  countRuleBirthsAt,
   type HistoryByLangMeaning,
   type ActivityPoint,
 } from "./history";
@@ -38,7 +39,7 @@ interface SimStore {
   theme: "dark" | "light" | "system";
   /** Timeline display mode. "meanings" = one language, many meanings.
    *  "cognates" = one meaning, many languages. */
-  timelineMode: "meanings" | "cognates";
+  timelineMode: "meanings" | "cognates" | "rules";
   /** Scrubber-selected generation for the timeline. null = follow live. */
   timelineScrubGeneration: number | null;
   /** Ring buffer of per-generation activity counts, capped at 200. */
@@ -66,8 +67,6 @@ interface SimStore {
     key: K,
     patch: Partial<SimulationConfig[K]>,
   ) => void;
-  setChangeEnabled: (changeId: string, enabled: boolean) => void;
-  setChangeWeight: (changeId: string, weight: number) => void;
   setGenesisEnabled: (ruleId: string, enabled: boolean) => void;
   selectLanguage: (id: string | null) => void;
   selectMeaning: (m: Meaning | null) => void;
@@ -79,7 +78,7 @@ interface SimStore {
   setLexiconSearch: (q: string) => void;
   setLexiconScript: (s: "ipa" | "roman" | "both") => void;
   setTheme: (theme: "dark" | "light" | "system") => void;
-  setTimelineMode: (mode: "meanings" | "cognates") => void;
+  setTimelineMode: (mode: "meanings" | "cognates" | "rules") => void;
   setTimelineScrubGeneration: (g: number | null) => void;
   setSeed: (s: string) => void;
   randomiseSeed: () => void;
@@ -146,7 +145,12 @@ export const useSimStore = create<SimStore>((set, get) => ({
     set({
       state: { ...state },
       history: newHistory,
-      activityHistory: recordActivity(activityHistory, state.generation, changeCount),
+      activityHistory: recordActivity(
+        activityHistory,
+        state.generation,
+        changeCount,
+        countRuleBirthsAt(state, state.generation),
+      ),
     });
   },
   stepN: (n) => {
@@ -174,7 +178,12 @@ export const useSimStore = create<SimStore>((set, get) => ({
       set({
         state: { ...nextState },
         history: newHistory,
-        activityHistory: recordActivity(activityHistory, nextState.generation, changeCount),
+        activityHistory: recordActivity(
+          activityHistory,
+          nextState.generation,
+          changeCount,
+          countRuleBirthsAt(nextState, nextState.generation),
+        ),
       });
     } catch {
       get().stepN(n);
@@ -234,27 +243,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
     else ids.delete(ruleId);
     updateConfig({
       genesis: { ...config.genesis, enabledRuleIds: Array.from(ids).sort() },
-    });
-  },
-  setChangeEnabled: (changeId, enabled) => {
-    const { config, updateConfig } = get();
-    const ids = new Set(config.phonology.enabledChangeIds);
-    if (enabled) ids.add(changeId);
-    else ids.delete(changeId);
-    updateConfig({
-      phonology: {
-        ...config.phonology,
-        enabledChangeIds: Array.from(ids).sort(),
-      },
-    });
-  },
-  setChangeWeight: (changeId, weight) => {
-    const { config, updateConfig } = get();
-    updateConfig({
-      phonology: {
-        ...config.phonology,
-        changeWeights: { ...config.phonology.changeWeights, [changeId]: weight },
-      },
     });
   },
   selectLanguage: (id) => set({ selectedLangId: id }),

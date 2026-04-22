@@ -3,6 +3,7 @@ import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import { formToString, levenshtein } from "../engine/phonology/ipa";
 import type { Language, LanguageEvent } from "../engine/types";
+import { diffActiveRules, diffOtRankings } from "../engine/analysis/ruleDiff";
 
 /**
  * Swadesh-style lexicostatistic similarity: for every shared meaning, count
@@ -95,11 +96,100 @@ export function CompareView() {
           {sim.cognate}/{sim.shared} shared meanings classify as cognate (edit-dist ≤ 40% of longer form)
         </span>
       </div>
+      <RuleDiffBanner a={langA} b={langB} />
       <div className="compare-grid" style={{ flex: 1, minHeight: 0 }}>
         <CompareColumn lang={langA} otherLang={langB} />
         <CompareColumn lang={langB} otherLang={langA} />
       </div>
     </div>
+  );
+}
+
+function RuleDiffBanner({ a, b }: { a: Language; b: Language }) {
+  const rule = diffActiveRules(a, b);
+  const ot = diffOtRankings(a, b).filter(
+    (r) => (r.aRank ?? 0) !== (r.bRank ?? 0),
+  );
+  if (
+    rule.onlyInA.length === 0 &&
+    rule.onlyInB.length === 0 &&
+    rule.both.length === 0 &&
+    ot.length === 0
+  ) {
+    return null;
+  }
+  return (
+    <details className="compare-diff" open>
+      <summary>
+        Rule + OT diff ({rule.both.length} shared, {rule.onlyInA.length + rule.onlyInB.length} unique)
+      </summary>
+      <div className="compare-diff-body">
+        <div className="compare-diff-col">
+          <h6>Only in {a.name}</h6>
+          {rule.onlyInA.length === 0 ? (
+            <div className="muted">—</div>
+          ) : (
+            rule.onlyInA.map((r) => (
+              <div key={r.id} className="rule-chip" title={r.description}>
+                <span className="fam">{r.family}</span>
+                <span>{r.templateId.split(".").slice(-1)[0]}</span>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="compare-diff-col">
+          <h6>Only in {b.name}</h6>
+          {rule.onlyInB.length === 0 ? (
+            <div className="muted">—</div>
+          ) : (
+            rule.onlyInB.map((r) => (
+              <div key={r.id} className="rule-chip" title={r.description}>
+                <span className="fam">{r.family}</span>
+                <span>{r.templateId.split(".").slice(-1)[0]}</span>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="compare-diff-col">
+          <h6>Shared templates</h6>
+          {rule.both.length === 0 ? (
+            <div className="muted">—</div>
+          ) : (
+            rule.both.map((pair) => (
+              <div key={pair.template} className="rule-chip shared">
+                <span>{pair.template.split(".").slice(-1)[0]}</span>
+                <span className="muted">
+                  s={pair.a.strength.toFixed(2)}/{pair.b.strength.toFixed(2)}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+        {ot.length > 0 && (
+          <div className="compare-diff-col" style={{ gridColumn: "1 / -1" }}>
+            <h6>OT ranking diff (top 6)</h6>
+            <table className="compare-ot">
+              <thead>
+                <tr>
+                  <th>constraint</th>
+                  <th>{a.name}</th>
+                  <th>{b.name}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ot.slice(0, 6).map((row) => (
+                  <tr key={row.constraint}>
+                    <td>{row.constraint}</td>
+                    <td className="num">{row.aRank ?? "—"}</td>
+                    <td className="num">{row.bRank ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 

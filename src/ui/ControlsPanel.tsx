@@ -1,10 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { useSimStore } from "../state/store";
-import { CATALOG } from "../engine/phonology/catalog";
 import { GENESIS_CATALOG } from "../engine/genesis/catalog";
 import { SavedRunsList } from "./SavedRunsList";
 import { StatsPanel } from "./StatsPanel";
-import { ChangePreview } from "./ChangePreview";
 import { SeedLexiconEditor } from "./SeedLexiconEditor";
 import { AiSemantics } from "./AiSemantics";
 import { PresetPicker } from "./PresetPicker";
@@ -15,6 +13,7 @@ import {
   exportTreeNewick,
   exportSnapshot,
   importSnapshot,
+  exportGrammarBrief,
 } from "../persistence/export";
 import { useRef } from "react";
 import { DiceIcon } from "./icons";
@@ -105,14 +104,11 @@ export function ControlsPanel() {
   const updateSemantics = useSimStore((s) => s.updateSemantics);
   const updateObsolescence = useSimStore((s) => s.updateObsolescence);
   const updateMorphologyRates = useSimStore((s) => s.updateMorphologyRates);
-  const setChangeEnabled = useSimStore((s) => s.setChangeEnabled);
-  const setChangeWeight = useSimStore((s) => s.setChangeWeight);
   const setGenesisEnabled = useSimStore((s) => s.setGenesisEnabled);
   const setSeed = useSimStore((s) => s.setSeed);
   const randomiseSeed = useSimStore((s) => s.randomiseSeed);
 
   const [seedEditorOpen, setSeedEditorOpen] = useState(false);
-  const enabledSet = new Set(config.phonology.enabledChangeIds);
   const genesisSet = new Set(config.genesis.enabledRuleIds);
 
   return (
@@ -284,44 +280,6 @@ export function ControlsPanel() {
         </button>
       </Section>
 
-      <Section title="Preview" defaultOpen={false}>
-        <ChangePreview />
-      </Section>
-
-      <Section title="Sound changes" defaultOpen={false}>
-        <div className="change-catalog">
-          {CATALOG.map((c) => {
-            const enabled = enabledSet.has(c.id);
-            const w = config.phonology.changeWeights[c.id] ?? c.baseWeight;
-            return (
-              <div
-                key={c.id}
-                className={`change-row ${enabled ? "" : "disabled"}`}
-                title={c.description}
-              >
-                <input
-                  type="checkbox"
-                  checked={enabled}
-                  onChange={(e) => setChangeEnabled(c.id, e.target.checked)}
-                  aria-label={`${c.label} enabled`}
-                />
-                <span className="change-label">{c.label}</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={3}
-                  step={0.1}
-                  value={w}
-                  onChange={(e) => setChangeWeight(c.id, Number(e.target.value))}
-                  disabled={!enabled}
-                  aria-label={`${c.label} weight`}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-
       <Section title="Word genesis rules" defaultOpen={false}>
         <div className="change-catalog">
           {GENESIS_CATALOG.map((g) => {
@@ -387,6 +345,7 @@ function ExportButtons() {
   const state = useSimStore((s) => s.state);
   const config = useSimStore((s) => s.config);
   const loadConfig = useSimStore((s) => s.loadConfig);
+  const selectedLangId = useSimStore((s) => s.selectedLangId);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -407,6 +366,13 @@ function ExportButtons() {
       <button onClick={() => exportLexiconsJSON(state)}>Lexicons JSON</button>
       <button onClick={() => exportLexiconsCSV(state)}>Lexicons CSV</button>
       <button onClick={() => exportTreeNewick(state)}>Tree (Newick)</button>
+      <button
+        onClick={() => selectedLangId && exportGrammarBrief(state, selectedLangId)}
+        disabled={!selectedLangId}
+        title="Markdown grammar brief of the selected language"
+      >
+        Grammar brief ↓
+      </button>
       <button
         onClick={() => exportSnapshot(config, state)}
         title="Download the entire simulation state + config so you can share or restore it"
