@@ -21,6 +21,11 @@ export interface ApplyOptions {
    * speakers continuing to refine innovations before they entrench.
    */
   agesSinceChange?: Record<Meaning, number>;
+  /**
+   * Register tag per meaning. "high" words resist change (formal speech
+   * conserves older forms); "low" words change a bit faster.
+   */
+  registerOf?: Record<Meaning, "high" | "low">;
 }
 
 function ageBoost(age: number | undefined): number {
@@ -56,6 +61,10 @@ export function applyChangesToWord(
   const freqExponent = 0.4 + freq * 1.2;
   const age = opts.agesSinceChange?.[meaning];
   const ageMult = ageBoost(age);
+  // Register effect on sound change: formal register words resist change
+  // (~30 % dampening), colloquial words change slightly faster (~10 %).
+  const register = opts.registerOf?.[meaning];
+  const registerMult = register === "high" ? 0.7 : register === "low" ? 1.1 : 1;
 
   let current = word;
   for (const change of changes) {
@@ -65,7 +74,10 @@ export function applyChangesToWord(
     if (base <= 0) continue;
 
     const adjusted = Math.pow(base, 1 / Math.max(0.01, freqExponent));
-    const lambda = Math.min(3, adjusted * weight * opts.globalRate * mult * ageMult);
+    const lambda = Math.min(
+      3,
+      adjusted * weight * opts.globalRate * mult * ageMult * registerMult,
+    );
 
     const hits = samplePoissonBounded(lambda, rng);
     for (let i = 0; i < hits; i++) {

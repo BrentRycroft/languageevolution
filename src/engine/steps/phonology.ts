@@ -34,6 +34,7 @@ export function stepPhonology(
     rateMultiplier: mult,
     frequencyHints: lang.wordFrequencyHints,
     agesSinceChange: ages,
+    registerOf: lang.registerOf,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   applyPhonologyToAffixes(lang.morphology, (form) => {

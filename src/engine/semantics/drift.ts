@@ -2,7 +2,7 @@ import type { Language } from "../types";
 import type { Rng } from "../rng";
 import { neighborsOf } from "./neighbors";
 import { relatedMeanings, clusterOf } from "./clusters";
-import { nearestMeanings } from "./embeddings";
+import { nearestMeanings, embed, cosine } from "./embeddings";
 import { complexityFor } from "../lexicon/complexity";
 
 export type SemanticShiftKind =
@@ -20,18 +20,30 @@ export interface SemanticDrift {
 }
 
 /**
- * Classify a drift event using a small heuristic so events are richer than
- * "A → B". Same-cluster = metonymy (contiguity); cross-cluster = metaphor
- * (conceptual jump); complexity delta picks narrowing vs broadening when
- * the link is ambiguous.
+ * Classify a drift event. Richer than the original "cluster + complexity"
+ * heuristic:
+ *  - If the two meanings share a cluster AND their embeddings are very
+ *    close (cosine > 0.6), call it metonymy — conceptually adjacent.
+ *  - Otherwise use complexity delta to separate narrowing (more specific)
+ *    from broadening (more general), but only when the delta is clear.
+ *  - Embedding distance disambiguates the remaining cases: close meanings
+ *    with equal complexity are metonymy; distant ones are metaphor.
  */
 export function classifyShift(from: string, to: string): SemanticShiftKind {
   const cFrom = clusterOf(from);
   const cTo = clusterOf(to);
-  if (cFrom && cTo && cFrom === cTo) return "metonymy";
+  const similarity = cosine(embed(from), embed(to));
+  const sameCluster = cFrom && cTo && cFrom === cTo;
   const complexityDelta = complexityFor(to) - complexityFor(from);
-  if (complexityDelta < 0) return "narrowing";
-  if (complexityDelta > 0) return "broadening";
+
+  // Strong semantic adjacency (same cluster + high cosine) → metonymy.
+  if (sameCluster && similarity >= 0.6) return "metonymy";
+  // Clear complexity delta wins when the embedding is ambiguous.
+  if (complexityDelta <= -1) return "narrowing";
+  if (complexityDelta >= 1) return "broadening";
+  // Fall back to semantic distance: close meanings are metonymy,
+  // distant are metaphor.
+  if (similarity >= 0.45) return "metonymy";
   return "metaphor";
 }
 
@@ -68,6 +80,11 @@ export function driftOneMeaning(
   // slots, so without pass 2 drift would almost never fire.
   for (const strict of [true, false]) {
     for (const m of shuffled) {
+      // Register gate: high-register ("formal") words resist drift;
+      // low-register words embrace it. 50% skip on high, 0% on low.
+      // Default (no register tag) passes through.
+      const reg = lang.registerOf?.[m];
+      if (reg === "high" && rng.chance(0.5)) continue;
       const overrideNeighbors = override?.[m];
       // Preference order:
       //   1. Explicit override (AI-generated LLM neighbors if enabled).

@@ -7,6 +7,13 @@ export interface TimelineEntry {
   generation: number;
   form: WordForm;
   formKey: string;
+  /**
+   * Short tag describing why this form entered the timeline at this
+   * generation: "coinage", "sound_change", "semantic_drift", or — when
+   * no matching event was found on the same generation — undefined.
+   * Lets the UI annotate each form change with its cause.
+   */
+  origin?: string;
 }
 
 export interface HistoryByLangMeaning {
@@ -35,17 +42,36 @@ export function recordHistory(
     const lex = node.language.lexicon;
     if (!next[id]) next[id] = {};
     const byMeaning = (next[id] = { ...next[id] });
+    // Build a quick lookup of events on this generation, keyed by meaning.
+    // Events are already ordered by time so the last matching one wins,
+    // which is what we want (latest event describes the current form).
+    const eventsByMeaning: Record<string, string> = {};
+    for (const e of node.language.events) {
+      if (e.generation !== state.generation) continue;
+      // Derive a meaning-ish key from the event description. Not perfect
+      // but covers the common shapes: "coinage: foo", "metonymy: foo → bar",
+      // "sound_change: N forms shifted" (no meaning — so kind wins).
+      const match = e.description.match(/([a-z-]+)\s*(?:→|$)/i);
+      const token = match ? match[1] : undefined;
+      if (token && lex[token]) {
+        eventsByMeaning[token] = e.kind;
+      }
+    }
     for (const m of Object.keys(lex)) {
       const form = lex[m]!;
       const key = form.join("");
       const arr = byMeaning[m] ?? [];
       const last = arr[arr.length - 1];
       if (!last || last.formKey !== key) {
-        const nextArr = arr.concat({
+        const entry: TimelineEntry = {
           generation: state.generation,
           form: form.slice(),
           formKey: key,
-        });
+        };
+        const origin = eventsByMeaning[m];
+        if (origin) entry.origin = origin;
+        else if (last) entry.origin = "sound_change"; // default for form changes
+        const nextArr = arr.concat(entry);
         byMeaning[m] =
           nextArr.length > MAX_HISTORY
             ? nextArr.slice(nextArr.length - MAX_HISTORY)
