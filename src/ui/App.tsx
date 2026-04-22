@@ -1,12 +1,28 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { ControlsPanel } from "./ControlsPanel";
 import { LexiconView } from "./LexiconView";
-import { LanguageTreeView } from "./LanguageTreeView";
-import { TimelineChart } from "./TimelineChart";
 import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+
+// Lazy-split the two chart/tree views so d3-hierarchy + recharts stay out of
+// the initial bundle until their tab is opened.
+const LanguageTreeView = lazy(() =>
+  import("./LanguageTreeView").then((m) => ({ default: m.LanguageTreeView })),
+);
+const TimelineChart = lazy(() =>
+  import("./TimelineChart").then((m) => ({ default: m.TimelineChart })),
+);
+
+function Loading() {
+  return (
+    <div style={{ color: "var(--muted)", fontSize: 12, padding: 12 }}>
+      Loading…
+    </div>
+  );
+}
 
 type Tab = "tree" | "lexicon" | "timeline" | "grammar" | "events" | "translate";
 
@@ -34,32 +50,7 @@ export function App() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("tree");
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))
-        return;
-      if (e.key === " ") {
-        e.preventDefault();
-        togglePlay();
-      } else if (e.key === "ArrowRight" && !playing) {
-        e.preventDefault();
-        step();
-      } else if (e.key === "f") {
-        e.preventDefault();
-        stepN(50);
-      } else if (e.key === "r" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        if (confirm("Reset to generation 0?")) reset();
-      } else if (e.key >= "1" && e.key <= "6") {
-        const idx = parseInt(e.key, 10) - 1;
-        const ids: Tab[] = ["tree", "lexicon", "timeline", "grammar", "events", "translate"];
-        if (ids[idx]) setActiveTab(ids[idx]);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [playing, togglePlay, step, stepN, reset]);
+  useKeyboardShortcuts({ playing, togglePlay, step, stepN, reset, setActiveTab });
 
   useEffect(() => {
     if (!playing) {
@@ -145,7 +136,9 @@ export function App() {
         {activeTab === "tree" && (
           <div className="panel panel-single">
             <h3>Language Tree</h3>
-            <LanguageTreeView />
+            <Suspense fallback={<Loading />}>
+              <LanguageTreeView />
+            </Suspense>
           </div>
         )}
         {activeTab === "lexicon" && (
@@ -157,7 +150,9 @@ export function App() {
         {activeTab === "timeline" && (
           <div className="panel panel-single">
             <h3>Timeline</h3>
-            <TimelineChart />
+            <Suspense fallback={<Loading />}>
+              <TimelineChart />
+            </Suspense>
           </div>
         )}
         {activeTab === "grammar" && (

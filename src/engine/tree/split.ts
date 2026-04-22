@@ -1,30 +1,8 @@
-import type { Language, LanguageNode, LanguageTree, Lexicon } from "../types";
+import type { Language, LanguageNode, LanguageTree } from "../types";
 import { CATALOG, CATALOG_BY_ID } from "../phonology/catalog";
 import { generateName } from "../naming";
-import { cloneGrammar } from "../grammar/evolve";
+import { cloneLexicon, cloneGrammar, cloneMorphology } from "../utils/clone";
 import type { Rng } from "../rng";
-
-function cloneLexicon(lex: Lexicon): Lexicon {
-  const out: Lexicon = {};
-  for (const m of Object.keys(lex)) out[m] = lex[m]!.slice();
-  return out;
-}
-
-function cloneMorph(morph: Language["morphology"]): Language["morphology"] {
-  const paradigms: Language["morphology"]["paradigms"] = {};
-  for (const k of Object.keys(morph.paradigms) as Array<
-    keyof Language["morphology"]["paradigms"]
-  >) {
-    const p = morph.paradigms[k];
-    if (!p) continue;
-    paradigms[k] = {
-      affix: p.affix.slice(),
-      position: p.position,
-      category: p.category,
-    };
-  }
-  return { paradigms };
-}
 
 export function leafIds(tree: LanguageTree): string[] {
   return Object.keys(tree)
@@ -81,7 +59,7 @@ export function splitLeaf(
         tones: parentLang.phonemeInventory.tones.slice(),
         usesTones: parentLang.phonemeInventory.usesTones,
       },
-      morphology: cloneMorph(parentLang.morphology),
+      morphology: cloneMorphology(parentLang.morphology),
       localNeighbors: Object.fromEntries(
         Object.entries(parentLang.localNeighbors).map(([k, v]) => [k, v.slice()]),
       ),

@@ -41,7 +41,7 @@ export function tryBorrow(
   if (pool.length === 0) return null;
   const meaning = pool[rng.int(pool.length)]!;
   const originalForm = donor.lexicon[meaning]!;
-  const adapted = adaptPhonemes(originalForm, recipient);
+  const adapted = adaptPhonemes(originalForm, recipient, rng);
   if (adapted.length === 0) return null;
   recipient.lexicon[meaning] = adapted;
   // Loanwords typically enter with medium frequency.
@@ -66,7 +66,7 @@ function isAncestor(tree: LanguageTree, candidateAncestorId: string, descendantI
   return false;
 }
 
-function adaptPhonemes(form: string[], recipient: Language): string[] {
+function adaptPhonemes(form: string[], recipient: Language, rng: Rng): string[] {
   const inv = new Set(recipient.phonemeInventory.segmental);
   if (inv.size === 0) return form.slice();
   return form.map((p) => {
@@ -78,6 +78,6 @@ function adaptPhonemes(form: string[], recipient: Language): string[] {
       (q) => isVowel(q) === targetVowel,
     );
     if (candidates.length === 0) return p;
-    return candidates[p.charCodeAt(0) % candidates.length]!;
+    return candidates[rng.int(candidates.length)]!;
   });
 }

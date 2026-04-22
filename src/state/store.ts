@@ -32,6 +32,10 @@ interface SimStore {
   selectedLangId: string | null;
   selectedMeaning: Meaning | null;
   timelineMeanings: Meaning[];
+  /** Lexicon visibility filter: "alive" (default), "all", "starred". */
+  lexiconFilter: "alive" | "all" | "starred";
+  /** Set of language ids the user has bookmarked. */
+  starredLangIds: string[];
   history: HistoryByLangMeaning;
   seedFormsByMeaning: Record<Meaning, WordForm>;
   aiNeighbors: NeighborOverride;
@@ -50,12 +54,18 @@ interface SimStore {
   updateSemantics: (patch: Partial<SimulationConfig["semantics"]>) => void;
   updateObsolescence: (patch: Partial<SimulationConfig["obsolescence"]>) => void;
   updateMorphologyRates: (patch: Partial<SimulationConfig["morphology"]>) => void;
+  patchConfigKey: <K extends keyof SimulationConfig>(
+    key: K,
+    patch: Partial<SimulationConfig[K]>,
+  ) => void;
   setChangeEnabled: (changeId: string, enabled: boolean) => void;
   setChangeWeight: (changeId: string, weight: number) => void;
   setGenesisEnabled: (ruleId: string, enabled: boolean) => void;
   selectLanguage: (id: string | null) => void;
   selectMeaning: (m: Meaning | null) => void;
   toggleTimelineMeaning: (m: Meaning) => void;
+  setLexiconFilter: (filter: "alive" | "all" | "starred") => void;
+  toggleStarredLang: (id: string) => void;
   setSeed: (s: string) => void;
   loadConfig: (
     config: SimulationConfig,
@@ -113,6 +123,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
   selectedLangId: initial.state.rootId,
   selectedMeaning: "water",
   timelineMeanings: ["water"],
+  lexiconFilter: "alive",
+  starredLangIds: [],
   history: initial.history,
   seedFormsByMeaning: initial.seedForms,
   aiNeighbors: {},
@@ -156,37 +168,20 @@ export const useSimStore = create<SimStore>((set, get) => ({
       playing: false,
     });
   },
-  updateModes: (patch) => {
+  updateModes: (patch) => get().patchConfigKey("modes", patch),
+  updatePhonology: (patch) => get().patchConfigKey("phonology", patch),
+  updateTree: (patch) => get().patchConfigKey("tree", patch),
+  updateGenesis: (patch) => get().patchConfigKey("genesis", patch),
+  updateGrammar: (patch) => get().patchConfigKey("grammar", patch),
+  updateSemantics: (patch) => get().patchConfigKey("semantics", patch),
+  updateObsolescence: (patch) => get().patchConfigKey("obsolescence", patch),
+  updateMorphologyRates: (patch) => get().patchConfigKey("morphology", patch),
+  patchConfigKey: (key, patch) => {
     const { config, updateConfig } = get();
-    updateConfig({ modes: { ...config.modes, ...patch } });
-  },
-  updatePhonology: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ phonology: { ...config.phonology, ...patch } });
-  },
-  updateTree: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ tree: { ...config.tree, ...patch } });
-  },
-  updateGenesis: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ genesis: { ...config.genesis, ...patch } });
-  },
-  updateGrammar: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ grammar: { ...config.grammar, ...patch } });
-  },
-  updateSemantics: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ semantics: { ...config.semantics, ...patch } });
-  },
-  updateObsolescence: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ obsolescence: { ...config.obsolescence, ...patch } });
-  },
-  updateMorphologyRates: (patch) => {
-    const { config, updateConfig } = get();
-    updateConfig({ morphology: { ...config.morphology, ...patch } });
+    const current = config[key];
+    if (current && typeof current === "object") {
+      updateConfig({ [key]: { ...(current as object), ...(patch as object) } } as Partial<SimulationConfig>);
+    }
   },
   setGenesisEnabled: (ruleId, enabled) => {
     const { config, updateConfig } = get();
@@ -233,6 +228,16 @@ export const useSimStore = create<SimStore>((set, get) => ({
         ? s.timelineMeanings.filter((x) => x !== m)
         : [...s.timelineMeanings, m].slice(-5);
       return { timelineMeanings: next };
+    }),
+  setLexiconFilter: (filter) => set({ lexiconFilter: filter }),
+  toggleStarredLang: (id) =>
+    set((s) => {
+      const has = s.starredLangIds.includes(id);
+      return {
+        starredLangIds: has
+          ? s.starredLangIds.filter((x) => x !== id)
+          : [...s.starredLangIds, id],
+      };
     }),
   setSeed: (s) => {
     const { config, updateConfig } = get();

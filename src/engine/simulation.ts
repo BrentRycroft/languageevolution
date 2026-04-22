@@ -27,11 +27,11 @@ import {
   maybeGrammaticalize,
   maybeMergeParadigms,
 } from "./morphology/evolve";
-import type { Morphology } from "./morphology/types";
 import { driftOneMeaning, type NeighborOverride } from "./semantics/drift";
 import { neighborsOf } from "./semantics/neighbors";
 import { leafIds, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
+import { cloneLexicon, cloneMorphology } from "./utils/clone";
 
 const MAX_EVENTS_PER_LANGUAGE = 80;
 
@@ -42,29 +42,6 @@ export interface Simulation {
   reset: () => void;
   setAiNeighbors: (n: NeighborOverride | undefined) => void;
   restoreState: (snapshot: SimulationState) => void;
-}
-
-function cloneLexicon(lex: Lexicon): Lexicon {
-  const out: Lexicon = {};
-  for (const m of Object.keys(lex)) out[m] = lex[m]!.slice();
-  return out;
-}
-
-function cloneMorphology(morph: Morphology | undefined): Morphology {
-  if (!morph) return { paradigms: {} };
-  const paradigms: Morphology["paradigms"] = {};
-  for (const k of Object.keys(morph.paradigms) as Array<
-    keyof Morphology["paradigms"]
-  >) {
-    const p = morph.paradigms[k];
-    if (!p) continue;
-    paradigms[k] = {
-      affix: p.affix.slice(),
-      position: p.position,
-      category: p.category,
-    };
-  }
-  return { paradigms };
 }
 
 function pushEvent(lang: Language, event: LanguageEvent): void {
