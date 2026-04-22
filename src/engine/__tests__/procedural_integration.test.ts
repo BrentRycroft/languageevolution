@@ -58,14 +58,11 @@ describe("procedural sound-change integration", () => {
     for (const id of Object.keys(state.tree)) {
       for (const e of state.tree[id]!.language.events) {
         if (e.kind !== "semantic_drift") continue;
-        const prefix = e.description.split(":")[0]!;
-        if (
-          prefix === "metonymy" ||
-          prefix === "metaphor" ||
-          prefix === "narrowing" ||
-          prefix === "broadening"
-        ) {
-          found.add(prefix);
+        // Event descriptions look like "metonymy: foo → bar" or
+        // "metaphor (takeover): foo → bar". We only need to detect the
+        // taxonomy label at the start of the description.
+        for (const tag of ["metonymy", "metaphor", "narrowing", "broadening"]) {
+          if (e.description.startsWith(tag)) found.add(tag);
         }
       }
     }
