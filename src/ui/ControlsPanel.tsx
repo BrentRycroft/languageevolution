@@ -3,6 +3,8 @@ import { useSimStore } from "../state/store";
 import { GENESIS_CATALOG } from "../engine/genesis/catalog";
 import { SavedRunsList } from "./SavedRunsList";
 import { StatsPanel } from "./StatsPanel";
+import { AchievementsStrip } from "./Achievements";
+import { shareUrl } from "../share/url";
 import { SeedLexiconEditor } from "./SeedLexiconEditor";
 import { AiSemantics } from "./AiSemantics";
 import { PresetPicker } from "./PresetPicker";
@@ -308,6 +310,26 @@ export function ControlsPanel() {
         <StatsPanel />
       </Section>
 
+      <Section title="Achievements" defaultOpen={false}>
+        <AchievementsStrip />
+        <button
+          onClick={() => useSimStore.getState().clearAchievements()}
+          style={{
+            marginTop: 6,
+            fontSize: "var(--fs-1)",
+            minHeight: 24,
+            padding: "2px 10px",
+          }}
+          className="ghost"
+        >
+          Reset progress
+        </button>
+      </Section>
+
+      <Section title="Share" defaultOpen={false}>
+        <ShareUrlButton />
+      </Section>
+
       <Section title="Export" defaultOpen={false}>
         <ExportButtons />
       </Section>
@@ -389,6 +411,68 @@ function ExportButtons() {
         onChange={onImport}
         style={{ display: "none" }}
       />
+    </div>
+  );
+}
+
+
+function ShareUrlButton() {
+  const config = useSimStore((s) => s.config);
+  const state = useSimStore((s) => s.state);
+  const [copied, setCopied] = useState(false);
+  const [url, setUrl] = useState("");
+
+  const build = () => {
+    const biases: Record<string, Record<string, number>> = {};
+    for (const id of Object.keys(state.tree)) {
+      const b = state.tree[id]!.language.ruleBias;
+      if (b) biases[id] = b;
+    }
+    const link = shareUrl({
+      v: 1,
+      seed: config.seed,
+      config,
+      biases: Object.keys(biases).length > 0 ? biases : undefined,
+      replay: state.generation,
+    });
+    setUrl(link);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).then(
+        () => setCopied(true),
+        () => setCopied(false),
+      );
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: "var(--fs-1)", color: "var(--muted)", marginBottom: 6 }}>
+        Generates a URL that replays this run from its seed. Copies to
+        clipboard and lets you grab the link below.
+      </div>
+      <button onClick={build} className="primary">
+        {copied ? "Copied!" : "Copy share link"}
+      </button>
+      {url && (
+        <textarea
+          readOnly
+          value={url}
+          onFocus={(e) => e.currentTarget.select()}
+          rows={2}
+          style={{
+            width: "100%",
+            marginTop: 6,
+            fontSize: 10,
+            fontFamily: "var(--font-mono)",
+            padding: 6,
+            background: "var(--panel-2)",
+            color: "var(--text)",
+            border: "1px solid var(--border)",
+            borderRadius: 4,
+            resize: "vertical",
+          }}
+        />
+      )}
     </div>
   );
 }

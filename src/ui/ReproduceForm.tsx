@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useSimStore } from "../state/store";
 import { formToString } from "../engine/phonology/ipa";
 import { CloseIcon } from "./icons";
+import { speakForm, ttsAvailable } from "./audio";
 
 interface Props {
   langId: string;
@@ -111,6 +112,17 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
           <h3 style={{ margin: 0, fontSize: "var(--fs-3)" }}>
             How did "{meaning}" become {currentForm ? formToString(currentForm) : "—"}?
           </h3>
+          {currentForm && ttsAvailable() && (
+            <button
+              onClick={() => speakForm(formToString(currentForm))}
+              aria-label="Speak form aloud"
+              title="Speak form aloud (browser TTS)"
+              className="ghost"
+              style={{ marginLeft: 8, minHeight: 28, padding: "2px 10px" }}
+            >
+              🔊
+            </button>
+          )}
           <button
             onClick={onClose}
             aria-label="Close"
