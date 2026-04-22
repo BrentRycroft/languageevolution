@@ -33,6 +33,7 @@ function makeLang(): Language {
     conservatism: 1,
     wordOrigin: {},
     customRules: [],
+    orthography: {},
   };
 }
 

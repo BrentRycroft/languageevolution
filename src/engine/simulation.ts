@@ -12,6 +12,7 @@ import type {
 import { CATALOG_BY_ID } from "./phonology/catalog";
 import { applyChangesToLexicon } from "./phonology/apply";
 import { parseRuleDsl, compileUserRule } from "./phonology/dsl";
+import { driftOrthography } from "./phonology/orthography";
 import { rateMultiplier } from "./phonology/rate";
 import { applyOneRegularChange } from "./phonology/regular";
 import { maybeSpreadTone } from "./phonology/tone_spread";
@@ -106,6 +107,7 @@ function buildInitialState(config: SimulationConfig): SimulationState {
     conservatism: 1.0,
     wordOrigin: {},
     customRules: (config.customRules ?? []).slice(),
+    orthography: {},
   };
   const rootNode: LanguageNode = {
     language: rootLang,
@@ -198,6 +200,18 @@ function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, gener
       generation,
       kind: "sound_change",
       description: `tone spread to ${spread} word${spread === 1 ? "" : "s"}`,
+    });
+  }
+
+  // Orthography drifts slower than phonology (0.5% per generation, per the
+  // conservatism multiplier). Logged as a grammar_shift since it's not a
+  // phonological change.
+  const ortho = driftOrthography(lang, rng, 0.005 * lang.conservatism);
+  if (ortho) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `orthography: ${ortho.phoneme} spelt "${ortho.from}" → "${ortho.to}"`,
     });
   }
 }

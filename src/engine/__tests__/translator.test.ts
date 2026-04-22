@@ -27,6 +27,7 @@ function sampleLang(): Language {
     conservatism: 1,
     wordOrigin: {},
     customRules: [],
+    orthography: {},
   };
 }
 
