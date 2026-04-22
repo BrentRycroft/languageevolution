@@ -35,6 +35,33 @@ export function App() {
   const [activeTab, setActiveTab] = useState<Tab>("tree");
 
   useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))
+        return;
+      if (e.key === " ") {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === "ArrowRight" && !playing) {
+        e.preventDefault();
+        step();
+      } else if (e.key === "f") {
+        e.preventDefault();
+        stepN(50);
+      } else if (e.key === "r" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        if (confirm("Reset to generation 0?")) reset();
+      } else if (e.key >= "1" && e.key <= "6") {
+        const idx = parseInt(e.key, 10) - 1;
+        const ids: Tab[] = ["tree", "lexicon", "timeline", "grammar", "events", "translate"];
+        if (ids[idx]) setActiveTab(ids[idx]);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [playing, togglePlay, step, stepN, reset]);
+
+  useEffect(() => {
     if (!playing) {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;

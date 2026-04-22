@@ -10,6 +10,10 @@ import { isVowel } from "../phonology/ipa";
  */
 export function phonotacticFit(form: Phoneme[], lang: Language): number {
   if (form.length === 0) return 0;
+  // Skip the bigram penalty for very small languages — they haven't yet
+  // established their phonotactics, so we'd reject every candidate.
+  const lexSize = Object.keys(lang.lexicon).length;
+  const trustBigrams = lexSize >= 6;
   let cvHits = 0;
   let ccHits = 0;
   let badClusters = 0;
@@ -20,14 +24,14 @@ export function phonotacticFit(form: Phoneme[], lang: Language): number {
       if (!prevIsC && !isC) cvHits++;
       else if (prevIsC && isC) ccHits++;
     }
-    if (prevIsC && isC) {
+    if (trustBigrams && prevIsC && isC) {
       const bigram = form[i - 1]! + form[i]!;
       if (!languageHasBigram(lang, bigram)) badClusters++;
     }
     prevIsC = isC;
   }
   const alternation = (cvHits + 1) / (cvHits + ccHits + 1);
-  const clusterPenalty = Math.pow(0.7, badClusters);
+  const clusterPenalty = trustBigrams ? Math.pow(0.7, badClusters) : 1;
   return alternation * clusterPenalty;
 }
 

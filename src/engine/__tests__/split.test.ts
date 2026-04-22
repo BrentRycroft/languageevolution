@@ -20,6 +20,7 @@ function makeTree(): LanguageTree {
     wordFrequencyHints: {},
     phonemeInventory: { segmental: [], tones: [], usesTones: false },
     morphology: { paradigms: {} },
+    localNeighbors: {},
   };
   const root: LanguageNode = {
     language: lang,

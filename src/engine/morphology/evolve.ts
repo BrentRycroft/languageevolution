@@ -35,12 +35,12 @@ export function maybeGrammaticalize(
   if (!rng.chance(probability)) return null;
   const meanings = Object.keys(lang.lexicon);
   if (meanings.length === 0) return null;
-  // Pick a high-frequency meaning that doesn't already correspond to a paradigm.
+  // Pick a reasonably common short word that doesn't already correspond to a paradigm.
   const candidate = meanings[rng.int(meanings.length)]!;
   const form = lang.lexicon[candidate]!;
-  if (form.length === 0 || form.length > 3) return null;
+  if (form.length === 0 || form.length > 4) return null;
   const freq = lang.wordFrequencyHints[candidate] ?? 0.5;
-  if (freq < 0.8) return null;
+  if (freq < 0.6) return null;
 
   // Target category: pick an unfilled grammatical slot.
   const options: MorphCategory[] = [

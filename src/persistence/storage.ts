@@ -1,5 +1,6 @@
-import type { SavedRun, SimulationConfig } from "../engine/types";
+import type { SavedRun, SimulationConfig, SimulationState } from "../engine/types";
 import { migrateSavedRun } from "./migrate";
+import { fnv1a } from "../engine/rng";
 
 const INDEX_KEY = "lev.runs.v1.index";
 const RUN_KEY = (id: string) => `lev.runs.v1.${id}`;
@@ -56,8 +57,13 @@ export function saveRun(
   label: string,
   config: SimulationConfig,
   generationsRun: number,
+  stateSnapshot?: SimulationState,
 ): SavedRun {
-  const id = `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  // Deterministic-ish ID: timestamp + hash of label/seed/generation. Avoids
+  // a dependency on Math.random() for non-deterministic build environments.
+  const now = Date.now();
+  const hash = fnv1a(`${label}|${config.seed}|${generationsRun}|${now}`);
+  const id = `run-${now.toString(36)}-${hash.toString(36).padStart(7, "0").slice(0, 7)}`;
   const run: SavedRun = {
     version: 3,
     id,
@@ -65,6 +71,7 @@ export function saveRun(
     createdAt: Date.now(),
     config,
     generationsRun,
+    stateSnapshot,
   };
   safeSet(RUN_KEY(id), JSON.stringify(run));
   const existing = listRuns();
