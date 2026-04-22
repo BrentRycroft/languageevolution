@@ -28,11 +28,14 @@ export function tryCoin(
   weights: Record<string, number>,
   globalRate: number,
   rng: Rng,
+  /** Optional pre-computed need vector — allows the step to compute it
+   *  once per step and reuse across multiple coinages in the same tick. */
+  cachedNeed?: Record<Meaning, number>,
 ): CoinageOutcome | null {
   if (!rng.chance(Math.min(1, globalRate))) return null;
 
   // 1. Sample a target meaning from lexical-need pressure.
-  const need = lexicalNeed(lang, tree);
+  const need = cachedNeed ?? lexicalNeed(lang, tree);
   const target = sampleNeededMeaning(need, rng);
   if (!target) {
     // No needed meaning. Fall back to legacy catalog for variety (lets
@@ -107,18 +110,24 @@ function coinViaLegacy(
 }
 
 /**
- * Apply one pass of the language's active sound changes to the form.
+ * Run each of the language's active sound changes once over the form so
+ * that the coinage respects the language's current phonological character.
+ * Bounded iteration: we stop early if no rule fires, at most MAX_PASSES
+ * applications overall, so feeding/bleeding stacks can't loop.
  * Deterministic under rng; doesn't modify the lexicon.
  */
+const MAX_SMOOTHING_APPLICATIONS = 3;
 function smoothForm(form: WordForm, lang: Language, rng: Rng): WordForm {
   const changes = changesForLang(lang);
   let current = form;
+  let applied = 0;
   for (const c of changes) {
+    if (applied >= MAX_SMOOTHING_APPLICATIONS) break;
     if (c.probabilityFor(current) <= 0) continue;
     const next = c.apply(current, rng);
     if (next !== current) {
       current = next;
-      break; // one pass only
+      applied++;
     }
   }
   return current;

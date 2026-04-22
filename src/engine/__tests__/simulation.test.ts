@@ -17,6 +17,38 @@ function serializeLeafLexicons(tree: LanguageTree): Record<string, Lexicon> {
   return out;
 }
 
+/**
+ * Serialize everything that should be deterministic across runs: active +
+ * retired rules, rule-bias, OT ranking, register tags, word origins. Used
+ * to catch regressions in procedural-engine determinism that the lexicon-
+ * only check from the earliest tests couldn't see.
+ */
+function serializeRuleState(tree: LanguageTree): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const id of Object.keys(tree).sort()) {
+    const lang = tree[id]!.language;
+    out[id] = {
+      activeRules: (lang.activeRules ?? []).map((r) => ({
+        id: r.id,
+        templateId: r.templateId,
+        family: r.family,
+        strength: r.strength,
+        birthGeneration: r.birthGeneration,
+      })),
+      retiredRules: (lang.retiredRules ?? []).map((r) => ({
+        id: r.id,
+        templateId: r.templateId,
+        deathGeneration: r.deathGeneration,
+      })),
+      ruleBias: lang.ruleBias,
+      otRanking: lang.otRanking.slice(),
+      registerOf: { ...(lang.registerOf ?? {}) },
+      wordOrigin: { ...lang.wordOrigin },
+    };
+  }
+  return out;
+}
+
 describe("simulation determinism", () => {
   it("two sims with identical config produce identical state after N steps", () => {
     const cfg = defaultConfig();
@@ -33,6 +65,12 @@ describe("simulation determinism", () => {
     );
     expect(serializeLeafLexicons(a.getState().tree)).toEqual(
       serializeLeafLexicons(b.getState().tree),
+    );
+    // Procedural-engine state must also be identical — this catches
+    // regressions where activeRules, retiredRules, ruleBias, or register
+    // assignments accidentally diverge even though the lexicons agree.
+    expect(serializeRuleState(a.getState().tree)).toEqual(
+      serializeRuleState(b.getState().tree),
     );
   });
 

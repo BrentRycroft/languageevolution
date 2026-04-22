@@ -15,6 +15,8 @@ export interface SemanticDrift {
   from: string;
   to: string;
   kind: SemanticShiftKind;
+  /** True when the target slot already held a form; the drift displaced it. */
+  takeover?: boolean;
 }
 
 /**
@@ -89,8 +91,25 @@ export function driftOneMeaning(
       if (strict && targetOccupied) continue;
       const form = lang.lexicon[m]!;
       lang.lexicon[target] = form;
+      // Transfer frequency + register from the old slot so the new
+      // incarnation keeps its usage profile. Without this, a takeover
+      // silently reset the word's frequency hint to default.
+      const oldFreq = lang.wordFrequencyHints[m];
+      if (oldFreq !== undefined) {
+        lang.wordFrequencyHints[target] = oldFreq;
+      }
+      delete lang.wordFrequencyHints[m];
+      if (lang.registerOf?.[m] !== undefined) {
+        lang.registerOf[target] = lang.registerOf[m]!;
+      }
+      if (lang.registerOf?.[m] !== undefined) delete lang.registerOf[m];
       delete lang.lexicon[m];
-      return { from: m, to: target, kind: classifyShift(m, target) };
+      return {
+        from: m,
+        to: target,
+        kind: classifyShift(m, target),
+        takeover: targetOccupied,
+      };
     }
   }
   return null;

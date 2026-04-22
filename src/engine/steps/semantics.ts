@@ -18,15 +18,14 @@ export function stepSemantics(
   }
   const drift = driftOneMeaning(lang, rng, merged);
   if (drift) {
-    const hint = lang.wordFrequencyHints[drift.from];
-    if (hint !== undefined) {
-      lang.wordFrequencyHints[drift.to] = hint;
-      delete lang.wordFrequencyHints[drift.from];
-    }
+    // Frequency + register transfer now happens inside driftOneMeaning
+    // so takeovers preserve the old usage profile too.
     pushEvent(lang, {
       generation,
       kind: "semantic_drift",
-      description: `${drift.kind}: ${drift.from} → ${drift.to}`,
+      description: drift.takeover
+        ? `${drift.kind} (takeover): ${drift.from} → ${drift.to}`
+        : `${drift.kind}: ${drift.from} → ${drift.to}`,
     });
   }
 }

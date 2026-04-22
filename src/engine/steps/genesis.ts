@@ -1,5 +1,6 @@
 import type { Language, SimulationConfig, SimulationState } from "../types";
 import { tryCoin } from "../genesis/apply";
+import { lexicalNeed } from "../genesis/need";
 import { neighborsOf } from "../semantics/neighbors";
 import type { Rng } from "../rng";
 import { genesisRulesFor, pushEvent } from "./helpers";
@@ -19,6 +20,9 @@ export function stepGenesis(
   const noise = 0.5 + rng.next();
   const target = Math.max(1, Math.round(base * noise * lang.conservatism));
   if (!rng.chance(Math.min(1, 0.5 + 0.5 * lang.conservatism))) return;
+  // Compute need once per step; cheaper than recomputing for each coinage.
+  // Gets stale across coinages within a single step but the drift is small.
+  const need = lexicalNeed(lang, state.tree);
   for (let i = 0; i < target; i++) {
     const outcome = tryCoin(
       lang,
@@ -27,6 +31,7 @@ export function stepGenesis(
       config.genesis.ruleWeights,
       config.genesis.globalRate,
       rng,
+      need,
     );
     if (!outcome) break;
     // Commit the coinage to the lexicon.

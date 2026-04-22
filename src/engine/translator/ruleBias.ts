@@ -70,16 +70,26 @@ export function parseBias(raw: string): BiasVector | null {
   if (!match) return null;
   try {
     const obj = JSON.parse(match[0]) as Record<string, unknown>;
+    // Start from the default vector so every family is guaranteed present
+    // in the output; per-family LLM suggestions override.
     const out: Record<string, number> = { ...DEFAULT_RULE_BIAS };
+    let acceptedKeys = 0;
     for (const [key, v] of Object.entries(obj)) {
       if (!LOWER_FAMILY.has(key.toLowerCase())) continue;
       const num = Number(v);
       if (!Number.isFinite(num)) continue;
       out[key.toLowerCase()] = Math.max(0.2, Math.min(2.5, num));
+      acceptedKeys++;
     }
-    // Shape-check — at least one family must be present.
-    const anyFamily = FAMILIES.some((f) => out[f] !== undefined);
-    if (!anyFamily) return null;
+    // Reject an output that doesn't map any family — a model that returned
+    // {} or something full of unknown keys has effectively failed.
+    if (acceptedKeys === 0) return null;
+    // Shape-check: ensure every canonical family has a value. DEFAULT_RULE_BIAS
+    // already covered this, but we re-verify defensively for callers that
+    // want to iterate FAMILIES.
+    for (const f of FAMILIES) {
+      if (typeof out[f] !== "number") out[f] = DEFAULT_RULE_BIAS[f];
+    }
     return out as BiasVector;
   } catch {
     return null;

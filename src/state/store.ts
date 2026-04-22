@@ -344,14 +344,17 @@ export const useSimStore = create<SimStore>((set, get) => ({
     updateConfig({ ...config, seed: makeRandomSeed() });
   },
   applyRuleBiasToLanguage: (langId, bias) => {
-    // Mutate the live sim state directly: ruleBias influences future
-    // proposals but doesn't require a replay — the next step picks it up.
+    // Bias lives on the language and is read by the procedural proposer
+    // each generation. We mutate the engine's state directly (the engine
+    // treats its state as owned-mutable inside step()), then hand React a
+    // fresh top-level wrapper so selectors re-run. The bias persists on
+    // the engine's internal state across subsequent steps.
     const { sim } = get();
     const state = sim.getState();
     const node = state.tree[langId];
     if (!node) return;
     node.language.ruleBias = { ...(node.language.ruleBias ?? {}), ...bias };
-    set({ state: { ...state } });
+    set({ state: { ...state, tree: { ...state.tree } } });
   },
   dismissAchievementToast: () => set({ lastAchievement: null }),
   clearAchievements: () => {

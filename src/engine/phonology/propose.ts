@@ -8,6 +8,7 @@ import {
   type GeneratedRule,
   type RuleFamily,
 } from "./generated";
+import { featuresOf } from "./features";
 
 const INITIAL_STRENGTH = 0.3;
 /** Strength below which a rule is retired. */
@@ -84,6 +85,17 @@ export function proposeOneRule(
     const proposal = template.propose(lang, rng);
     if (!proposal) continue;
 
+    // Filter outputMap: every output must be either empty (deletion) or
+    // a known phoneme in the feature table. Prevents templates from
+    // emitting exotic characters that no downstream matcher understands.
+    const validatedMap: Record<string, string> = {};
+    for (const [from, to] of Object.entries(proposal.outputMap)) {
+      if (featuresOf(from) === undefined) continue;
+      if (to !== "" && featuresOf(to) === undefined) continue;
+      validatedMap[from] = to;
+    }
+    if (Object.keys(validatedMap).length === 0) continue;
+
     const candidate: GeneratedRule = {
       id: `${lang.id}.g${generation}.${template.id}`,
       family: proposal.family,
@@ -91,7 +103,7 @@ export function proposeOneRule(
       description: proposal.description,
       from: proposal.from,
       context: proposal.context,
-      outputMap: proposal.outputMap,
+      outputMap: validatedMap,
       birthGeneration: generation,
       lastFireGeneration: generation,
       strength: INITIAL_STRENGTH,
