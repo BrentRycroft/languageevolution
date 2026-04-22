@@ -18,10 +18,41 @@ export interface LlmConfig {
 }
 
 export const DEFAULT_LLM_CONFIG: LlmConfig = {
-  // Gemma 2 2B instruction-tuned, quantized. ~1.5 GB first download.
+  // Ministral 3B Instruct, quantized. ~1.9 GB first download.
+  // Switched from Gemma 2 2B for better structured-output quality and
+  // slightly better handling of IPA glyphs.
   // See https://github.com/mlc-ai/web-llm for available models.
-  modelId: "gemma-2-2b-it-q4f16_1-MLC",
+  modelId: "Ministral-3B-Instruct-2410-q4f16_1-MLC",
 };
+
+/**
+ * Expose the engine loader so other AI-backed features (translation,
+ * grammar sketch, rule-bias suggestion) can share a single engine
+ * instance without rewrapping initialisation logic.
+ */
+export async function loadEngine(
+  config: LlmConfig = DEFAULT_LLM_CONFIG,
+  onProgress?: ProgressCallback,
+): Promise<EngineLike> {
+  return getEngine(config, onProgress);
+}
+
+/**
+ * Single-shot prompt helper for features that want one response rather
+ * than a neighbor list. Thin wrapper around the raw chat API.
+ */
+export async function chatOnce(
+  prompt: string,
+  opts: { maxTokens?: number; temperature?: number; config?: LlmConfig } = {},
+): Promise<string> {
+  const engine = await getEngine(opts.config ?? DEFAULT_LLM_CONFIG);
+  const res = await engine.chat.completions.create({
+    messages: [{ role: "user", content: prompt }],
+    temperature: opts.temperature ?? 0.7,
+    max_tokens: opts.maxTokens ?? 200,
+  });
+  return res.choices[0]?.message.content ?? "";
+}
 
 export interface ProgressCallback {
   (info: { text: string; progress: number }): void;

@@ -82,6 +82,7 @@ interface SimStore {
   setTimelineScrubGeneration: (g: number | null) => void;
   setSeed: (s: string) => void;
   randomiseSeed: () => void;
+  applyRuleBiasToLanguage: (langId: string, bias: Record<string, number>) => void;
   loadConfig: (
     config: SimulationConfig,
     generationsToReplay?: number,
@@ -293,6 +294,16 @@ export const useSimStore = create<SimStore>((set, get) => ({
   randomiseSeed: () => {
     const { config, updateConfig } = get();
     updateConfig({ ...config, seed: makeRandomSeed() });
+  },
+  applyRuleBiasToLanguage: (langId, bias) => {
+    // Mutate the live sim state directly: ruleBias influences future
+    // proposals but doesn't require a replay — the next step picks it up.
+    const { sim } = get();
+    const state = sim.getState();
+    const node = state.tree[langId];
+    if (!node) return;
+    node.language.ruleBias = { ...(node.language.ruleBias ?? {}), ...bias };
+    set({ state: { ...state } });
   },
   loadConfig: (config, generationsToReplay, stateSnapshot) => {
     const init = initFromConfig(config);
