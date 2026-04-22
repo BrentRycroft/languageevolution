@@ -6,6 +6,8 @@ import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
 import { CompareView } from "./CompareView";
+import { NarrativeView } from "./NarrativeView";
+import { MapView } from "./MapView";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
 import { WelcomeBanner } from "./Onboarding";
@@ -55,16 +57,27 @@ function PanelSkeleton() {
   );
 }
 
-type Tab = "tree" | "lexicon" | "timeline" | "grammar" | "events" | "translate" | "compare";
+type Tab =
+  | "tree"
+  | "map"
+  | "lexicon"
+  | "timeline"
+  | "grammar"
+  | "events"
+  | "translate"
+  | "compare"
+  | "narrative";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tree", label: "Tree" },
+  { id: "map", label: "Map" },
   { id: "lexicon", label: "Lexicon" },
   { id: "timeline", label: "Timeline" },
   { id: "grammar", label: "Grammar" },
   { id: "events", label: "History" },
   { id: "translate", label: "Translate" },
   { id: "compare", label: "Compare" },
+  { id: "narrative", label: "Narrative" },
 ];
 
 export function App() {
@@ -232,6 +245,18 @@ export function App() {
           <div className="panel panel-single">
             <h3>Compare</h3>
             <CompareView />
+          </div>
+        )}
+        {activeTab === "narrative" && (
+          <div className="panel panel-single">
+            <h3>Narrative</h3>
+            <NarrativeView />
+          </div>
+        )}
+        {activeTab === "map" && (
+          <div className="panel panel-single">
+            <h3>World Map</h3>
+            <MapView />
           </div>
         )}
       </main>

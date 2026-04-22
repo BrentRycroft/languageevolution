@@ -1,15 +1,26 @@
 import { useEffect } from "react";
 
-type Tab = "tree" | "lexicon" | "timeline" | "grammar" | "events" | "translate" | "compare";
+type Tab =
+  | "tree"
+  | "map"
+  | "lexicon"
+  | "timeline"
+  | "grammar"
+  | "events"
+  | "translate"
+  | "compare"
+  | "narrative";
 
 const TAB_ORDER: Tab[] = [
   "tree",
+  "map",
   "lexicon",
   "timeline",
   "grammar",
   "events",
   "translate",
   "compare",
+  "narrative",
 ];
 
 interface Options {
@@ -51,7 +62,7 @@ export function useKeyboardShortcuts(options: Options): void {
       } else if (e.key === "r" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         if (confirm("Reset to generation 0?")) reset();
-      } else if (e.key >= "1" && e.key <= "7") {
+      } else if (e.key >= "1" && e.key <= "9") {
         const idx = parseInt(e.key, 10) - 1;
         if (TAB_ORDER[idx]) setActiveTab(TAB_ORDER[idx]);
       }

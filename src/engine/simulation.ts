@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { CATALOG_BY_ID } from "./phonology/catalog";
 import { applyChangesToLexicon } from "./phonology/apply";
+import { parseRuleDsl, compileUserRule } from "./phonology/dsl";
 import { rateMultiplier } from "./phonology/rate";
 import { applyOneRegularChange } from "./phonology/regular";
 import { maybeSpreadTone } from "./phonology/tone_spread";
@@ -104,6 +105,7 @@ function buildInitialState(config: SimulationConfig): SimulationState {
     // daughters jitter on split.
     conservatism: 1.0,
     wordOrigin: {},
+    customRules: (config.customRules ?? []).slice(),
   };
   const rootNode: LanguageNode = {
     language: rootLang,
@@ -120,9 +122,15 @@ function buildInitialState(config: SimulationConfig): SimulationState {
 }
 
 function changesForLang(lang: Language): SoundChange[] {
-  return lang.enabledChangeIds
+  const catalog = lang.enabledChangeIds
     .map((id) => CATALOG_BY_ID[id])
     .filter((c): c is SoundChange => !!c);
+  const user: SoundChange[] = [];
+  for (const text of lang.customRules) {
+    const parsed = parseRuleDsl(text);
+    if (typeof parsed !== "string") user.push(compileUserRule(parsed));
+  }
+  return [...catalog, ...user];
 }
 
 function genesisRulesFor(config: SimulationConfig): GenesisRule[] {

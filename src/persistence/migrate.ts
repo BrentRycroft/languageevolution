@@ -71,6 +71,8 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
     taboo:
       (oldConfig.taboo as SimulationConfig["taboo"] | undefined) ??
       defaults.taboo,
+    customRules:
+      (oldConfig.customRules as string[] | undefined) ?? [],
   };
   return {
     version: 3,
