@@ -25,6 +25,124 @@ code {
   outline-offset: 2px;
 }
 
+/* Accessibility: skip link positioned off-screen until focused. */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 200;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #0a1520;
+  font-size: var(--fs-2);
+  font-weight: var(--fw-semi);
+  border-radius: 0 0 6px 0;
+  transform: translateY(-120%);
+  transition: transform 0.15s ease;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: none;
+}
+
+/* Achievements */
+.achievements-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.achievement {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-1);
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.achievement.done {
+  border-color: var(--accent);
+  background: rgba(124, 196, 255, 0.12);
+  color: var(--text);
+}
+
+.achievement.locked {
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.achievement .glyph {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+}
+
+.achievement-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 150;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  max-width: 360px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  animation: toast-in 0.25s ease-out;
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.achievement-toast .toast-glyph {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  color: var(--accent);
+  align-self: center;
+}
+
+.achievement-toast .toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.achievement-toast .toast-title {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.achievement-toast .toast-label {
+  font-weight: var(--fw-semi);
+  font-size: var(--fs-2);
+}
+
+.achievement-toast .toast-desc {
+  font-size: var(--fs-1);
+  color: var(--muted);
+}
+
 * {
   box-sizing: border-box;
 }

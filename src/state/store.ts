@@ -15,6 +15,30 @@ import {
   type HistoryByLangMeaning,
   type ActivityPoint,
 } from "./history";
+import { detectNewAchievements } from "../engine/achievements/detect";
+
+const ACHIEVEMENTS_KEY = "lev-achievements-v1";
+
+function loadPersistedAchievements(): string[] {
+  try {
+    if (typeof localStorage === "undefined") return [];
+    const raw = localStorage.getItem(ACHIEVEMENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistAchievements(ids: string[]): void {
+  try {
+    if (typeof localStorage === "undefined") return;
+    localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(ids));
+  } catch {
+    // best-effort persistence
+  }
+}
 
 interface SimStore {
   sim: Simulation;
@@ -48,6 +72,10 @@ interface SimStore {
   seedFormsByMeaning: Record<Meaning, WordForm>;
   aiNeighbors: NeighborOverride;
   aiStatus: { ready: boolean; progress: number; text: string; error: string | null };
+  /** Ids of procedural-engine achievements unlocked across this session. */
+  unlockedAchievements: string[];
+  /** Most recently unlocked achievement id, for the toast. null = dismissed. */
+  lastAchievement: string | null;
   step: () => void;
   stepN: (n: number) => void;
   stepNAsync: (n: number) => Promise<void>;
@@ -83,6 +111,8 @@ interface SimStore {
   setSeed: (s: string) => void;
   randomiseSeed: () => void;
   applyRuleBiasToLanguage: (langId: string, bias: Record<string, number>) => void;
+  dismissAchievementToast: () => void;
+  clearAchievements: () => void;
   loadConfig: (
     config: SimulationConfig,
     generationsToReplay?: number,
@@ -138,11 +168,18 @@ export const useSimStore = create<SimStore>((set, get) => ({
   seedFormsByMeaning: initial.seedForms,
   aiNeighbors: {},
   aiStatus: { ready: false, progress: 0, text: "", error: null },
+  unlockedAchievements: loadPersistedAchievements(),
+  lastAchievement: null,
   step: () => {
-    const { sim, history, activityHistory } = get();
+    const { sim, history, activityHistory, unlockedAchievements } = get();
     sim.step();
     const state = sim.getState();
     const { next: newHistory, changeCount } = recordHistory(history, state);
+    const fresh = detectNewAchievements(new Set(unlockedAchievements), state);
+    const nextUnlocked = fresh.length > 0
+      ? [...unlockedAchievements, ...fresh]
+      : unlockedAchievements;
+    if (fresh.length > 0) persistAchievements(nextUnlocked);
     set({
       state: { ...state },
       history: newHistory,
@@ -152,6 +189,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
         changeCount,
         countRuleBirthsAt(state, state.generation),
       ),
+      unlockedAchievements: nextUnlocked,
+      lastAchievement: fresh[0] ?? get().lastAchievement,
     });
   },
   stepN: (n) => {
@@ -176,6 +215,12 @@ export const useSimStore = create<SimStore>((set, get) => ({
       client.terminate();
       sim.restoreState(nextState);
       const { next: newHistory, changeCount } = recordHistory(history, nextState);
+      const { unlockedAchievements } = get();
+      const fresh = detectNewAchievements(new Set(unlockedAchievements), nextState);
+      const nextUnlocked = fresh.length > 0
+        ? [...unlockedAchievements, ...fresh]
+        : unlockedAchievements;
+      if (fresh.length > 0) persistAchievements(nextUnlocked);
       set({
         state: { ...nextState },
         history: newHistory,
@@ -185,6 +230,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
           changeCount,
           countRuleBirthsAt(nextState, nextState.generation),
         ),
+        unlockedAchievements: nextUnlocked,
+        lastAchievement: fresh[0] ?? get().lastAchievement,
       });
     } catch {
       get().stepN(n);
@@ -304,6 +351,11 @@ export const useSimStore = create<SimStore>((set, get) => ({
     if (!node) return;
     node.language.ruleBias = { ...(node.language.ruleBias ?? {}), ...bias };
     set({ state: { ...state } });
+  },
+  dismissAchievementToast: () => set({ lastAchievement: null }),
+  clearAchievements: () => {
+    persistAchievements([]);
+    set({ unlockedAchievements: [], lastAchievement: null });
   },
   loadConfig: (config, generationsToReplay, stateSnapshot) => {
     const init = initFromConfig(config);

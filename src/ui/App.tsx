@@ -12,6 +12,9 @@ import { SoundLawsView } from "./SoundLawsView";
 import { StemmaView } from "./StemmaView";
 import { Glossary } from "./Glossary";
 import { ReconstructionQuiz } from "./ReconstructionQuiz";
+import { AchievementToast } from "./Achievements";
+import { AboutModal } from "./AboutModal";
+import { readShareFromLocation, clearShareFromLocation } from "../share/url";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
 import { WelcomeBanner } from "./Onboarding";
@@ -108,6 +111,24 @@ export function App() {
 
   const [controlsOpen, setControlsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("tree");
+  const [aboutOpen, setAboutOpen] = useState(false);
+
+  // Deep-link loader: if the URL has a ?s=... share payload, decode it and
+  // restore the run once. Cleared from the URL so later copies share the
+  // user's live state instead.
+  useEffect(() => {
+    const payload = readShareFromLocation();
+    if (!payload) return;
+    const { loadConfig } = useSimStore.getState();
+    loadConfig(payload.config, payload.replay ?? 0);
+    if (payload.biases) {
+      const { applyRuleBiasToLanguage } = useSimStore.getState();
+      for (const [langId, bias] of Object.entries(payload.biases)) {
+        applyRuleBiasToLanguage(langId, bias);
+      }
+    }
+    clearShareFromLocation();
+  }, []);
 
   useKeyboardShortcuts({ playing, togglePlay, step, stepN, reset, setActiveTab });
 
@@ -137,6 +158,11 @@ export function App() {
   return (
     <div className="app">
       <ThemeEffect />
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+      <AchievementToast />
+      {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       <header className="header">
         <button
           className="menu-toggle ghost icon-only"
@@ -145,7 +171,13 @@ export function App() {
         >
           <MenuIcon size={18} />
         </button>
-        <h1>Language Evolution</h1>
+        <h1
+          onClick={() => setAboutOpen(true)}
+          style={{ cursor: "pointer" }}
+          title="About this project"
+        >
+          Language Evolution
+        </h1>
         <span className="generation">gen {generation}</span>
         <GlobalSearch onJumpToLexicon={() => setActiveTab("lexicon")} />
         <div className="playback">
@@ -215,7 +247,7 @@ export function App() {
         <ControlsPanel />
       </aside>
 
-      <main className="main" style={{ position: "relative" }}>
+      <main id="main-content" className="main" style={{ position: "relative" }}>
         {activeTab === "tree" && <WelcomeBanner />}
         {activeTab === "tree" && (
           <div className="panel panel-single">
