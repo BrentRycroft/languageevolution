@@ -1,28 +1,17 @@
 import type { Meaning } from "../types";
 import { neighborsOf } from "./neighbors";
+import { CLUSTERS as BASIC_CLUSTERS } from "../lexicon/basic240";
 
 /**
  * Meanings grouped into loose semantic clusters. Drift, loanwords, and
  * compounding prefer targets within the same cluster — so "water" is much
  * more likely to shift to "river" than to "heart". Non-seed / derived words
  * fall back to the static-neighbor table.
+ *
+ * Sourced from the Basic-240 inventory so the two stay in lock-step.
  */
-export const SEMANTIC_CLUSTERS: Readonly<Record<string, readonly Meaning[]>> = {
-  body: [
-    "hand", "foot", "heart", "head", "eye", "ear", "mouth", "tooth",
-    "bone", "blood", "hair",
-  ],
-  kinship: ["mother", "father"],
-  environment: [
-    "water", "fire", "stone", "tree", "sun", "moon", "star", "night",
-  ],
-  animals: ["dog", "wolf", "horse", "cow", "fish", "bird", "snake"],
-  motion: ["go", "come"],
-  perception: ["see", "know"],
-  metabolism: ["eat", "drink", "sleep", "die"],
-  numbers: ["one", "two", "three"],
-  evaluation: ["big", "small", "new", "old", "good", "bad"],
-};
+export const SEMANTIC_CLUSTERS: Readonly<Record<string, readonly Meaning[]>> =
+  BASIC_CLUSTERS;
 
 const MEANING_TO_CLUSTER: Record<Meaning, string> = (() => {
   const out: Record<Meaning, string> = {};

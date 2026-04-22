@@ -59,30 +59,39 @@ export function driftOneMeaning(
     used.add(idx);
     shuffled.push(meanings[idx]!);
   }
-  for (const m of shuffled) {
-    const overrideNeighbors = override?.[m];
-    // Preference order:
-    //   1. Explicit override (AI-generated LLM neighbors if enabled).
-    //   2. Embedding-space nearest meanings (cosine similarity).
-    //   3. Hand-curated semantic cluster (relatedMeanings()).
-    //   4. Static neighbor table (neighborsOf()).
-    const embeddingNearest = nearestMeanings(m, meanings, 5);
-    const related = relatedMeanings(m);
-    const neighbors =
-      overrideNeighbors && overrideNeighbors.length > 0
-        ? overrideNeighbors
-        : embeddingNearest.length > 0
-          ? embeddingNearest
-          : related.length > 0
-            ? related
-            : neighborsOf(m);
-    if (neighbors.length === 0) continue;
-    const target = neighbors[rng.int(neighbors.length)]!;
-    if (lang.lexicon[target]) continue;
-    const form = lang.lexicon[m]!;
-    lang.lexicon[target] = form;
-    delete lang.lexicon[m];
-    return { from: m, to: target, kind: classifyShift(m, target) };
+  // Two passes: first try to drift into an EMPTY slot (the clean case),
+  // then allow crowded drift where the target already has a form (the
+  // new form replaces the old one — a realistic "meaning-takeover").
+  // Dense lexicons (like the Basic-240 expansion) rarely have empty
+  // slots, so without pass 2 drift would almost never fire.
+  for (const strict of [true, false]) {
+    for (const m of shuffled) {
+      const overrideNeighbors = override?.[m];
+      // Preference order:
+      //   1. Explicit override (AI-generated LLM neighbors if enabled).
+      //   2. Embedding-space nearest meanings (cosine similarity).
+      //   3. Hand-curated semantic cluster (relatedMeanings()).
+      //   4. Static neighbor table (neighborsOf()).
+      const embeddingNearest = nearestMeanings(m, meanings, 5);
+      const related = relatedMeanings(m);
+      const neighbors =
+        overrideNeighbors && overrideNeighbors.length > 0
+          ? overrideNeighbors
+          : embeddingNearest.length > 0
+            ? embeddingNearest
+            : related.length > 0
+              ? related
+              : neighborsOf(m);
+      if (neighbors.length === 0) continue;
+      const target = neighbors[rng.int(neighbors.length)]!;
+      if (target === m) continue;
+      const targetOccupied = !!lang.lexicon[target];
+      if (strict && targetOccupied) continue;
+      const form = lang.lexicon[m]!;
+      lang.lexicon[target] = form;
+      delete lang.lexicon[m];
+      return { from: m, to: target, kind: classifyShift(m, target) };
+    }
   }
   return null;
 }

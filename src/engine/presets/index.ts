@@ -3,6 +3,7 @@ import { presetPIE } from "./pie";
 import { presetGermanic } from "./germanic";
 import { presetRomance } from "./romance";
 import { presetBantu } from "./bantu";
+import { presetTokipona } from "./tokipona";
 import { defaultConfig } from "../config";
 
 export interface PresetDescriptor {
@@ -42,6 +43,13 @@ export const PRESETS: readonly PresetDescriptor[] = [
     label: "Proto-Bantu",
     description: "CV syllables, noun-class prefixes, tone already on.",
     build: presetBantu,
+  },
+  {
+    id: "tokipona",
+    label: "Toki pona",
+    description:
+      "Minimal conlang: 120 root words, 9 consonants + 5 vowels, SVO, no inflection. A minimalist starting point.",
+    build: presetTokipona,
   },
 ];
 
