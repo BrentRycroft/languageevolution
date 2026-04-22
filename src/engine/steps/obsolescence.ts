@@ -26,8 +26,14 @@ export function stepObsolescence(
     const winner = loser === a ? b : a;
     const p = config.obsolescence.probabilityPerPairPerGeneration * lang.conservatism;
     if (!rng.chance(p)) return;
+    // Clean every auxiliary map keyed by meaning — leaving stale entries
+    // here was a silent source of orphan tags in long runs.
     delete lang.lexicon[loser];
     delete lang.wordFrequencyHints[loser];
+    if (lang.registerOf) delete lang.registerOf[loser];
+    delete lang.localNeighbors[loser];
+    delete lang.wordOrigin[loser];
+    delete lang.lastChangeGeneration[loser];
     pushEvent(lang, {
       generation,
       kind: "semantic_drift",

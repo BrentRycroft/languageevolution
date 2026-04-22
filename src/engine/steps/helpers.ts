@@ -12,6 +12,12 @@ import { GENESIS_BY_ID } from "../genesis/catalog";
 import type { GenesisRule } from "../genesis/types";
 import type { SimulationConfig } from "../types";
 
+/**
+ * Ring-buffer cap for per-language events. Beyond this, the oldest
+ * events are dropped to keep memory footprint bounded over long runs.
+ * UIs that need a full history should consult the state history log
+ * (src/state/history.ts), not lang.events.
+ */
 export const MAX_EVENTS_PER_LANGUAGE = 80;
 
 export function pushEvent(lang: Language, event: LanguageEvent): void {

@@ -349,11 +349,36 @@ export const useSimStore = create<SimStore>((set, get) => ({
     // treats its state as owned-mutable inside step()), then hand React a
     // fresh top-level wrapper so selectors re-run. The bias persists on
     // the engine's internal state across subsequent steps.
+    //
+    // We also fire a one-off rule proposal right away so the user sees
+    // an immediate effect — without this, the next proposal cycle only
+    // lands at PROPOSAL_CADENCE gens, which was surprising per the
+    // post-Update-6 review.
     const { sim } = get();
     const state = sim.getState();
     const node = state.tree[langId];
     if (!node) return;
     node.language.ruleBias = { ...(node.language.ruleBias ?? {}), ...bias };
+    (async () => {
+      try {
+        const { makeRng } = await import("../engine/rng");
+        const { proposeOneRule } = await import("../engine/phonology/propose");
+        const rng = makeRng(`bias-${langId}-${state.generation}`);
+        const rule = proposeOneRule(node.language, rng, state.generation);
+        if (rule) {
+          node.language.activeRules = node.language.activeRules ?? [];
+          node.language.activeRules.push(rule);
+          node.language.events.push({
+            generation: state.generation,
+            kind: "sound_change",
+            description: `new sound law (bias): ${rule.description}`,
+          });
+        }
+      } catch {
+        // non-fatal — bias still takes effect for the next cadence.
+      }
+      set({ state: { ...state, tree: { ...state.tree } } });
+    })();
     set({ state: { ...state, tree: { ...state.tree } } });
   },
   dismissAchievementToast: () => set({ lastAchievement: null }),

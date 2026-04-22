@@ -80,20 +80,24 @@ type Tab =
   | "quiz"
   | "glossary";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "tree", label: "Tree" },
-  { id: "map", label: "Map" },
-  { id: "lexicon", label: "Lexicon" },
-  { id: "timeline", label: "Timeline" },
-  { id: "grammar", label: "Grammar" },
-  { id: "laws", label: "Sound laws" },
-  { id: "stemma", label: "Stemma" },
-  { id: "events", label: "History" },
-  { id: "translate", label: "Translate" },
-  { id: "compare", label: "Compare" },
-  { id: "narrative", label: "Narrative" },
-  { id: "quiz", label: "Quiz" },
-  { id: "glossary", label: "Glossary" },
+const TABS: { id: Tab; label: string; title: string }[] = [
+  { id: "tree", label: "Tree", title: "Phylogenetic tree of languages" },
+  { id: "map", label: "Map", title: "2-D map of where languages live" },
+  { id: "lexicon", label: "Lexicon", title: "Full word-by-meaning table for every language" },
+  { id: "timeline", label: "Timeline", title: "Form changes + sound-law lifecycles over time" },
+  { id: "grammar", label: "Grammar", title: "Grammar features of the selected language" },
+  { id: "laws", label: "Sound laws", title: "Procedurally-invented sound laws per language" },
+  { id: "stemma", label: "Stemma", title: "Rule-similarity tree (vs phylogeny)" },
+  { id: "events", label: "History", title: "Event log for the selected language" },
+  {
+    id: "translate",
+    label: "Translate",
+    title: "Word + sentence translation tools (AI-assisted)",
+  },
+  { id: "compare", label: "Compare", title: "Side-by-side diff of two languages" },
+  { id: "narrative", label: "Narrative", title: "AI-generated folk tale in a language" },
+  { id: "quiz", label: "Quiz", title: "Guess which sound law produced a form" },
+  { id: "glossary", label: "Glossary", title: "Reference for rule families, shift taxa, register" },
 ];
 
 export function App() {
@@ -126,6 +130,13 @@ export function App() {
       for (const [langId, bias] of Object.entries(payload.biases)) {
         applyRuleBiasToLanguage(langId, bias);
       }
+    }
+    if (payload.aiNeighbors && Object.keys(payload.aiNeighbors).length > 0) {
+      // Seed the AI-neighbor map directly on the sim so drift behaves the
+      // same as the sender without needing to download the model.
+      const { sim } = useSimStore.getState();
+      sim.setAiNeighbors(payload.aiNeighbors);
+      useSimStore.setState({ aiNeighbors: payload.aiNeighbors });
     }
     clearShareFromLocation();
   }, []);
@@ -232,6 +243,7 @@ export function App() {
             aria-selected={activeTab === t.id}
             className={activeTab === t.id ? "active" : ""}
             onClick={() => setActiveTab(t.id)}
+            title={t.title}
           >
             {t.label}
           </button>

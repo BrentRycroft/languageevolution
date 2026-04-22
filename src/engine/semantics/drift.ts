@@ -120,6 +120,14 @@ export function driftOneMeaning(
         lang.registerOf[target] = lang.registerOf[m]!;
       }
       if (lang.registerOf?.[m] !== undefined) delete lang.registerOf[m];
+      // Clean the remaining auxiliary maps so the old meaning leaves no
+      // orphans. wordOrigin is preserved on the target if not already set.
+      if (lang.wordOrigin[m] !== undefined && !lang.wordOrigin[target]) {
+        lang.wordOrigin[target] = lang.wordOrigin[m]!;
+      }
+      delete lang.wordOrigin[m];
+      delete lang.localNeighbors[m];
+      delete lang.lastChangeGeneration[m];
       delete lang.lexicon[m];
       return {
         from: m,

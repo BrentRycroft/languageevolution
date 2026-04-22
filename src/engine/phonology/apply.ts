@@ -28,9 +28,20 @@ export interface ApplyOptions {
   registerOf?: Record<Meaning, "high" | "low">;
 }
 
+/**
+ * Age-grading multiplier. Freshly-changed words keep drifting for a few
+ * generations as speakers refine the innovation; old stable words sit at
+ * the baseline.
+ *
+ * Curve (asymptotic to 1.0, never drops below):
+ *   age  0 → 1.40
+ *   age  3 → 1.15
+ *   age  8 → 1.03
+ *   age 30 → ~1.00
+ * A never-changed word (age === undefined) also returns 1.0.
+ */
 function ageBoost(age: number | undefined): number {
   if (age === undefined || age < 0) return 1;
-  // Age 0 → ×1.4, age 3 → ×1.15, age 8+ → ×1.0 (baseline).
   return 1 + 0.4 * Math.exp(-age / 3);
 }
 
@@ -123,7 +134,12 @@ export function applyChangesToLexicon(
       out[m] = lexicon[m]!.slice();
       continue;
     }
-    out[m] = applyChangesToWord(lexicon[m]!, changes, rng, opts, m);
+    const next = applyChangesToWord(lexicon[m]!, changes, rng, opts, m);
+    // Drop meanings whose form deletion-rules reduced to zero segments —
+    // the word has effectively been erased. Without this, empty lexicon
+    // entries accumulate and break downstream consumers.
+    if (next.length === 0) continue;
+    out[m] = next;
   }
   return out;
 }
