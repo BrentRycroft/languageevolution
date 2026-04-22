@@ -18,6 +18,7 @@ import {
   importSnapshot,
 } from "../persistence/export";
 import { useRef } from "react";
+import { DiceIcon } from "./icons";
 
 function Slider({
   label,
@@ -109,6 +110,7 @@ export function ControlsPanel() {
   const setChangeWeight = useSimStore((s) => s.setChangeWeight);
   const setGenesisEnabled = useSimStore((s) => s.setGenesisEnabled);
   const setSeed = useSimStore((s) => s.setSeed);
+  const randomiseSeed = useSimStore((s) => s.randomiseSeed);
 
   const [seedEditorOpen, setSeedEditorOpen] = useState(false);
   const enabledSet = new Set(config.phonology.enabledChangeIds);
@@ -256,13 +258,25 @@ export function ControlsPanel() {
       </Section>
 
       <Section title="Seed" defaultOpen={false}>
-        <input
-          type="text"
-          value={config.seed}
-          onChange={(e) => setSeed(e.target.value)}
-          placeholder="seed"
-          aria-label="Random seed"
-        />
+        <div style={{ display: "flex", gap: 4 }}>
+          <input
+            type="text"
+            value={config.seed}
+            onChange={(e) => setSeed(e.target.value)}
+            placeholder="seed"
+            aria-label="Random seed"
+            style={{ flex: 1 }}
+          />
+          <button
+            type="button"
+            className="icon-only"
+            onClick={randomiseSeed}
+            aria-label="Randomise seed"
+            title="Randomise seed — rolls a fresh run"
+          >
+            <DiceIcon size={16} />
+          </button>
+        </div>
         <button
           style={{ marginTop: 6, width: "100%" }}
           onClick={() => setSeedEditorOpen(true)}

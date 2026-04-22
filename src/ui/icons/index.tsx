@@ -121,6 +121,28 @@ export function MoonIcon(props: IconProps) {
   );
 }
 
+export function SearchIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="11" cy="11" r="6" />
+      <line x1="20" y1="20" x2="15.5" y2="15.5" />
+    </svg>
+  );
+}
+
+export function DiceIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <circle cx="8" cy="8" r="1.2" fill="currentColor" />
+      <circle cx="16" cy="16" r="1.2" fill="currentColor" />
+      <circle cx="16" cy="8" r="1.2" fill="currentColor" />
+      <circle cx="8" cy="16" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function AutoThemeIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

@@ -8,20 +8,12 @@ import type {
 import { createSimulation, type Simulation } from "../engine/simulation";
 import { defaultConfig } from "../engine/config";
 import type { NeighborOverride } from "../engine/semantics/drift";
-
-const MAX_HISTORY = 500;
-
-interface TimelineEntry {
-  generation: number;
-  form: WordForm;
-  formKey: string;
-}
-
-interface HistoryByLangMeaning {
-  [langId: string]: {
-    [meaning: string]: TimelineEntry[];
-  };
-}
+import {
+  recordHistory,
+  recordActivity,
+  type HistoryByLangMeaning,
+  type ActivityPoint,
+} from "./history";
 
 interface SimStore {
   sim: Simulation;
@@ -47,8 +39,10 @@ interface SimStore {
   /** Timeline display mode. "meanings" = one language, many meanings.
    *  "cognates" = one meaning, many languages. */
   timelineMode: "meanings" | "cognates";
+  /** Scrubber-selected generation for the timeline. null = follow live. */
+  timelineScrubGeneration: number | null;
   /** Ring buffer of per-generation activity counts, capped at 200. */
-  activityHistory: Array<{ generation: number; count: number }>;
+  activityHistory: ActivityPoint[];
   history: HistoryByLangMeaning;
   seedFormsByMeaning: Record<Meaning, WordForm>;
   aiNeighbors: NeighborOverride;
@@ -86,8 +80,10 @@ interface SimStore {
   setLexiconScript: (s: "ipa" | "roman" | "both") => void;
   setTheme: (theme: "dark" | "light" | "system") => void;
   setTimelineMode: (mode: "meanings" | "cognates") => void;
+  setTimelineScrubGeneration: (g: number | null) => void;
   setCustomRules: (rules: string[]) => void;
   setSeed: (s: string) => void;
+  randomiseSeed: () => void;
   loadConfig: (
     config: SimulationConfig,
     generationsToReplay?: number,
@@ -98,44 +94,6 @@ interface SimStore {
   clearAiNeighbors: () => Promise<void>;
 }
 
-function recordHistory(
-  history: HistoryByLangMeaning,
-  state: SimulationState,
-): { next: HistoryByLangMeaning; changeCount: number } {
-  const next: HistoryByLangMeaning = { ...history };
-  let changeCount = 0;
-  for (const id of Object.keys(state.tree)) {
-    const node = state.tree[id]!;
-    if (node.childrenIds.length > 0) continue;
-    const lex = node.language.lexicon;
-    if (!next[id]) next[id] = {};
-    const byMeaning = (next[id] = { ...next[id] });
-    for (const m of Object.keys(lex)) {
-      const form = lex[m]!;
-      const key = form.join("");
-      const arr = byMeaning[m] ?? [];
-      const last = arr[arr.length - 1];
-      if (!last || last.formKey !== key) {
-        const nextArr = arr.concat({ generation: state.generation, form: form.slice(), formKey: key });
-        byMeaning[m] = nextArr.length > MAX_HISTORY ? nextArr.slice(nextArr.length - MAX_HISTORY) : nextArr;
-        if (last) changeCount++;
-      }
-    }
-  }
-  return { next, changeCount };
-}
-
-const MAX_ACTIVITY = 200;
-
-function recordActivity(
-  history: Array<{ generation: number; count: number }>,
-  generation: number,
-  count: number,
-): Array<{ generation: number; count: number }> {
-  const next = [...history, { generation, count }];
-  return next.length > MAX_ACTIVITY ? next.slice(next.length - MAX_ACTIVITY) : next;
-}
-
 function initFromConfig(config: SimulationConfig) {
   const sim = createSimulation(config);
   const state = sim.getState();
@@ -143,6 +101,17 @@ function initFromConfig(config: SimulationConfig) {
   for (const m of Object.keys(config.seedLexicon)) seedForms[m] = config.seedLexicon[m]!.slice();
   const { next: history } = recordHistory({}, state);
   return { sim, state, seedForms, history };
+}
+
+// A short, pronounceable random seed like "l7jq2" — friendlier than a
+// UUID and easy to share verbally.
+function makeRandomSeed(): string {
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return out;
 }
 
 const initialConfig = defaultConfig();
@@ -164,6 +133,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
   lexiconScript: "ipa",
   theme: "dark",
   timelineMode: "meanings",
+  timelineScrubGeneration: null,
   activityHistory: [],
   history: initial.history,
   seedFormsByMeaning: initial.seedForms,
@@ -187,7 +157,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
   stepNAsync: async (n) => {
     const { config, sim, history, activityHistory } = get();
     if (!config.useWorker) {
-      // Sync path: just run locally.
       get().stepN(n);
       return;
     }
@@ -198,8 +167,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
         get().stepN(n);
         return;
       }
-      // Fast-forward to the current local state so the worker continues
-      // from where the UI is, not from gen 0.
       await client.restore(sim.getState());
       const nextState = await client.stepN(n);
       client.terminate();
@@ -226,6 +193,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       activityHistory: [],
       seedFormsByMeaning: init.seedForms,
       selectedLangId: init.state.rootId,
+      timelineScrubGeneration: null,
       playing: false,
     });
   },
@@ -241,6 +209,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       activityHistory: [],
       seedFormsByMeaning: init.seedForms,
       selectedLangId: init.state.rootId,
+      timelineScrubGeneration: null,
       playing: false,
     });
   },
@@ -329,6 +298,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
   setLexiconScript: (s) => set({ lexiconScript: s }),
   setTheme: (theme) => set({ theme }),
   setTimelineMode: (timelineMode) => set({ timelineMode }),
+  setTimelineScrubGeneration: (g) => set({ timelineScrubGeneration: g }),
   setCustomRules: (rules) => {
     const { config, updateConfig } = get();
     updateConfig({ ...config, customRules: rules });
@@ -336,6 +306,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
   setSeed: (s) => {
     const { config, updateConfig } = get();
     updateConfig({ ...config, seed: s });
+  },
+  randomiseSeed: () => {
+    const { config, updateConfig } = get();
+    updateConfig({ ...config, seed: makeRandomSeed() });
   },
   loadConfig: (config, generationsToReplay, stateSnapshot) => {
     const init = initFromConfig(config);
@@ -350,6 +324,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
         history: init.history,
         seedFormsByMeaning: init.seedForms,
         selectedLangId: init.sim.getState().rootId,
+        timelineScrubGeneration: null,
         playing: false,
       });
       return;
@@ -362,6 +337,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       activityHistory: [],
       seedFormsByMeaning: init.seedForms,
       selectedLangId: init.state.rootId,
+      timelineScrubGeneration: null,
       playing: false,
     });
     if (generationsToReplay && generationsToReplay > 0) {
