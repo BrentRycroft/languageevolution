@@ -1,6 +1,7 @@
 import type { Language, Meaning } from "../types";
 import type { GenesisRule } from "./types";
 import type { Rng } from "../rng";
+import { weightedSample } from "../utils/sampling";
 
 export function tryGenesis(
   lang: Language,
@@ -11,18 +12,7 @@ export function tryGenesis(
 ): Meaning | null {
   if (rules.length === 0) return null;
   if (!rng.chance(Math.min(1, globalRate))) return null;
-  const totalWeight = rules.reduce((s, r) => s + (weights[r.id] ?? r.baseWeight), 0);
-  if (totalWeight <= 0) return null;
-  let pick = rng.next() * totalWeight;
-  let chosen: GenesisRule | null = null;
-  for (const r of rules) {
-    const w = weights[r.id] ?? r.baseWeight;
-    pick -= w;
-    if (pick <= 0) {
-      chosen = r;
-      break;
-    }
-  }
+  const chosen = weightedSample(rules, (r) => weights[r.id] ?? r.baseWeight, rng);
   if (!chosen) return null;
   const result = chosen.tryCoin(lang, rng);
   if (!result) return null;

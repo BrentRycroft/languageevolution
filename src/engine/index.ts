@@ -13,5 +13,5 @@ export { GENESIS_CATALOG, GENESIS_BY_ID } from "./genesis/catalog";
 export type { GenesisRule, GenesisCategory } from "./genesis/types";
 export { DEFAULT_GRAMMAR } from "./grammar/defaults";
 export { driftGrammar, cloneGrammar } from "./grammar/evolve";
-export { SEMANTIC_NEIGHBORS, neighborsOf } from "./semantics/neighbors";
+export { neighborsOf } from "./semantics/neighbors";
 export { driftOneMeaning } from "./semantics/drift";

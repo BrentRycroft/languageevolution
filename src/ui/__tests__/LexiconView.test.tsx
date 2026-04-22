@@ -21,7 +21,10 @@ describe("LexiconView", () => {
   it("renders the proto language as a column header", () => {
     const { container } = render(<LexiconView />);
     const headers = container.querySelectorAll("th");
-    expect(Array.from(headers).some((h) => h.textContent === "Proto")).toBe(true);
+    // Column header now wraps the name in a span alongside a star button.
+    expect(
+      Array.from(headers).some((h) => h.textContent?.includes("Proto")),
+    ).toBe(true);
   });
 
   it("still renders meaning column after stepping the sim", () => {
