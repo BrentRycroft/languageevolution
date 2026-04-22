@@ -2,6 +2,7 @@ import type { Language } from "../types";
 import type { Rng } from "../rng";
 import { neighborsOf } from "./neighbors";
 import { relatedMeanings } from "./clusters";
+import { nearestMeanings } from "./embeddings";
 
 export interface SemanticDrift {
   from: string;
@@ -36,15 +37,21 @@ export function driftOneMeaning(
   }
   for (const m of shuffled) {
     const overrideNeighbors = override?.[m];
-    // Preference order: explicit override (AI) → semantic cluster →
-    // static neighbor table.
+    // Preference order:
+    //   1. Explicit override (AI-generated LLM neighbors if enabled).
+    //   2. Embedding-space nearest meanings (cosine similarity).
+    //   3. Hand-curated semantic cluster (relatedMeanings()).
+    //   4. Static neighbor table (neighborsOf()).
+    const embeddingNearest = nearestMeanings(m, meanings, 5);
     const related = relatedMeanings(m);
     const neighbors =
       overrideNeighbors && overrideNeighbors.length > 0
         ? overrideNeighbors
-        : related.length > 0
-          ? related
-          : neighborsOf(m);
+        : embeddingNearest.length > 0
+          ? embeddingNearest
+          : related.length > 0
+            ? related
+            : neighborsOf(m);
     if (neighbors.length === 0) continue;
     const target = neighbors[rng.int(neighbors.length)]!;
     if (lang.lexicon[target]) continue;

@@ -73,6 +73,8 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
       defaults.taboo,
     customRules:
       (oldConfig.customRules as string[] | undefined) ?? [],
+    useWorker:
+      typeof oldConfig.useWorker === "boolean" ? (oldConfig.useWorker as boolean) : false,
   };
   return {
     version: 3,

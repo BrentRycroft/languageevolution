@@ -73,6 +73,8 @@ export function splitLeaf(
       wordOrigin: { ...parentLang.wordOrigin },
       customRules: parentLang.customRules.slice(),
       orthography: { ...parentLang.orthography },
+      otRanking: parentLang.otRanking.slice(),
+      lastChangeGeneration: { ...parentLang.lastChangeGeneration },
     };
   };
   const a = makeChild(false);

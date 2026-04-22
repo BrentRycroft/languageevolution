@@ -24,7 +24,7 @@ function makeTree(): LanguageTree {
     conservatism: 1,
     wordOrigin: {},
     customRules: [],
-    orthography: {},
+    orthography: {}, otRanking: [], lastChangeGeneration: {},
   };
   const root: LanguageNode = {
     language: lang,

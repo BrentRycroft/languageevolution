@@ -55,6 +55,7 @@ interface SimStore {
   aiStatus: { ready: boolean; progress: number; text: string; error: string | null };
   step: () => void;
   stepN: (n: number) => void;
+  stepNAsync: (n: number) => Promise<void>;
   togglePlay: () => void;
   setSpeed: (s: number) => void;
   reset: () => void;
@@ -182,6 +183,36 @@ export const useSimStore = create<SimStore>((set, get) => ({
   stepN: (n) => {
     const s = get();
     for (let i = 0; i < n; i++) s.step();
+  },
+  stepNAsync: async (n) => {
+    const { config, sim, history, activityHistory } = get();
+    if (!config.useWorker) {
+      // Sync path: just run locally.
+      get().stepN(n);
+      return;
+    }
+    try {
+      const { createEngineWorker } = await import("../engine/workerClient");
+      const client = await createEngineWorker(config);
+      if (!client) {
+        get().stepN(n);
+        return;
+      }
+      // Fast-forward to the current local state so the worker continues
+      // from where the UI is, not from gen 0.
+      await client.restore(sim.getState());
+      const nextState = await client.stepN(n);
+      client.terminate();
+      sim.restoreState(nextState);
+      const { next: newHistory, changeCount } = recordHistory(history, nextState);
+      set({
+        state: { ...nextState },
+        history: newHistory,
+        activityHistory: recordActivity(activityHistory, nextState.generation, changeCount),
+      });
+    } catch {
+      get().stepN(n);
+    }
   },
   togglePlay: () => set((s) => ({ playing: !s.playing })),
   setSpeed: (s) => set({ speed: s }),

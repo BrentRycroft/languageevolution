@@ -5,7 +5,13 @@ import { isVowel, isConsonant } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { relatedMeanings } from "../semantics/clusters";
 import { phonotacticFit } from "./phonotactics";
+import { otFit } from "../phonology/ot";
 import { complexityFor } from "../lexicon/complexity";
+
+/** Blend OT constraint ranking with bigram-frequency fit; both map to [0,1]. */
+function combinedFit(form: WordForm, lang: Language): number {
+  return 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
+}
 
 function pickMeanings(lang: Language, rng: Rng, n: number): Meaning[] {
   const keys = Object.keys(lang.lexicon);
@@ -75,7 +81,7 @@ export const GENESIS_CATALOG: GenesisRule[] = [
         form = [...form, "ə"];
       }
       // Reject on obviously-bad phonotactics (score < 0.25).
-      if (phonotacticFit(form, lang) < 0.25) return null;
+      if (combinedFit(form, lang) < 0.25) return null;
       return { meaning: newMeaning, form };
     },
   },
@@ -96,7 +102,7 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       const baseForm = lang.lexicon[base]!;
       if (baseForm.length + suffix.affix.length > 10) return null;
       const form = [...baseForm, ...suffix.affix];
-      if (phonotacticFit(form, lang) < 0.25) return null;
+      if (combinedFit(form, lang) < 0.25) return null;
       return { meaning: newMeaning, form };
     },
   },

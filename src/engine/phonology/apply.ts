@@ -15,6 +15,18 @@ export interface ApplyOptions {
    * (lexical-frequency effect). Missing entries default to 0.5.
    */
   frequencyHints?: Record<Meaning, number>;
+  /**
+   * Age-grading: map of meaning → generations since its form last changed.
+   * Freshly-changed words (age 0-2) mutate a little more, modelling young
+   * speakers continuing to refine innovations before they entrench.
+   */
+  agesSinceChange?: Record<Meaning, number>;
+}
+
+function ageBoost(age: number | undefined): number {
+  if (age === undefined || age < 0) return 1;
+  // Age 0 → ×1.4, age 3 → ×1.15, age 8+ → ×1.0 (baseline).
+  return 1 + 0.4 * Math.exp(-age / 3);
 }
 
 const DEFAULT_FREQUENCY = 0.5;
@@ -42,6 +54,8 @@ export function applyChangesToWord(
   // High-frequency words: exponent > 1 keeps probability closer to base.
   // Low-frequency words: exponent < 1 suppresses small probabilities.
   const freqExponent = 0.4 + freq * 1.2;
+  const age = opts.agesSinceChange?.[meaning];
+  const ageMult = ageBoost(age);
 
   let current = word;
   for (const change of changes) {
@@ -51,7 +65,7 @@ export function applyChangesToWord(
     if (base <= 0) continue;
 
     const adjusted = Math.pow(base, 1 / Math.max(0.01, freqExponent));
-    const lambda = Math.min(3, adjusted * weight * opts.globalRate * mult);
+    const lambda = Math.min(3, adjusted * weight * opts.globalRate * mult * ageMult);
 
     const hits = samplePoissonBounded(lambda, rng);
     for (let i = 0; i < hits; i++) {
