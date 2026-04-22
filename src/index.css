@@ -499,6 +499,94 @@ input[type="range"] {
   100% { background: transparent; color: var(--text); }
 }
 
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-2);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.compare-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 0;
+  overflow: auto;
+  padding: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+}
+
+.compare-col-head {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.compare-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.compare-lex {
+  display: grid;
+  gap: 1px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.compare-lex-row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+}
+
+.compare-lex-row.divergent {
+  background: var(--accent-soft);
+}
+
+.compare-lex-meaning {
+  color: var(--muted);
+}
+
+.compare-lex-form {
+  color: var(--text);
+}
+
+tr.grammar-diff td:last-child {
+  color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.activity-heatmap {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 30px;
+  padding: 2px 0 4px;
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+
+.activity-bar {
+  flex: 1 1 auto;
+  min-width: 2px;
+  border-radius: 1px;
+  transition: height var(--dur-fast) var(--ease-out);
+}
+
 .tree-svg {
   width: 100%;
   height: 100%;

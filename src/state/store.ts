@@ -45,6 +45,8 @@ interface SimStore {
   /** Timeline display mode. "meanings" = one language, many meanings.
    *  "cognates" = one meaning, many languages. */
   timelineMode: "meanings" | "cognates";
+  /** Ring buffer of per-generation activity counts, capped at 200. */
+  activityHistory: Array<{ generation: number; count: number }>;
   history: HistoryByLangMeaning;
   seedFormsByMeaning: Record<Meaning, WordForm>;
   aiNeighbors: NeighborOverride;
@@ -94,8 +96,9 @@ interface SimStore {
 function recordHistory(
   history: HistoryByLangMeaning,
   state: SimulationState,
-): HistoryByLangMeaning {
+): { next: HistoryByLangMeaning; changeCount: number } {
   const next: HistoryByLangMeaning = { ...history };
+  let changeCount = 0;
   for (const id of Object.keys(state.tree)) {
     const node = state.tree[id]!;
     if (node.childrenIds.length > 0) continue;
@@ -110,10 +113,22 @@ function recordHistory(
       if (!last || last.formKey !== key) {
         const nextArr = arr.concat({ generation: state.generation, form: form.slice(), formKey: key });
         byMeaning[m] = nextArr.length > MAX_HISTORY ? nextArr.slice(nextArr.length - MAX_HISTORY) : nextArr;
+        if (last) changeCount++;
       }
     }
   }
-  return next;
+  return { next, changeCount };
+}
+
+const MAX_ACTIVITY = 200;
+
+function recordActivity(
+  history: Array<{ generation: number; count: number }>,
+  generation: number,
+  count: number,
+): Array<{ generation: number; count: number }> {
+  const next = [...history, { generation, count }];
+  return next.length > MAX_ACTIVITY ? next.slice(next.length - MAX_ACTIVITY) : next;
 }
 
 function initFromConfig(config: SimulationConfig) {
@@ -121,7 +136,7 @@ function initFromConfig(config: SimulationConfig) {
   const state = sim.getState();
   const seedForms: Record<Meaning, WordForm> = {};
   for (const m of Object.keys(config.seedLexicon)) seedForms[m] = config.seedLexicon[m]!.slice();
-  const history = recordHistory({}, state);
+  const { next: history } = recordHistory({}, state);
   return { sim, state, seedForms, history };
 }
 
@@ -143,16 +158,21 @@ export const useSimStore = create<SimStore>((set, get) => ({
   lexiconSearch: "",
   theme: "dark",
   timelineMode: "meanings",
+  activityHistory: [],
   history: initial.history,
   seedFormsByMeaning: initial.seedForms,
   aiNeighbors: {},
   aiStatus: { ready: false, progress: 0, text: "", error: null },
   step: () => {
-    const { sim, history } = get();
+    const { sim, history, activityHistory } = get();
     sim.step();
     const state = sim.getState();
-    const newHistory = recordHistory(history, state);
-    set({ state: { ...state }, history: newHistory });
+    const { next: newHistory, changeCount } = recordHistory(history, state);
+    set({
+      state: { ...state },
+      history: newHistory,
+      activityHistory: recordActivity(activityHistory, state.generation, changeCount),
+    });
   },
   stepN: (n) => {
     const s = get();
@@ -167,6 +187,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       sim: init.sim,
       state: init.state,
       history: init.history,
+      activityHistory: [],
       seedFormsByMeaning: init.seedForms,
       selectedLangId: init.state.rootId,
       playing: false,
@@ -181,6 +202,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       sim: init.sim,
       state: init.state,
       history: init.history,
+      activityHistory: [],
       seedFormsByMeaning: init.seedForms,
       selectedLangId: init.state.rootId,
       playing: false,
@@ -296,6 +318,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       sim: init.sim,
       state: init.state,
       history: init.history,
+      activityHistory: [],
       seedFormsByMeaning: init.seedForms,
       selectedLangId: init.state.rootId,
       playing: false,

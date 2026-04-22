@@ -5,9 +5,11 @@ import { LexiconView } from "./LexiconView";
 import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
+import { CompareView } from "./CompareView";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
 import { WelcomeBanner } from "./Onboarding";
+import { ActivityHeatmap } from "./ActivityHeatmap";
 import {
   MenuIcon,
   PlayIcon,
@@ -53,7 +55,7 @@ function PanelSkeleton() {
   );
 }
 
-type Tab = "tree" | "lexicon" | "timeline" | "grammar" | "events" | "translate";
+type Tab = "tree" | "lexicon" | "timeline" | "grammar" | "events" | "translate" | "compare";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tree", label: "Tree" },
@@ -62,6 +64,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "grammar", label: "Grammar" },
   { id: "events", label: "History" },
   { id: "translate", label: "Translate" },
+  { id: "compare", label: "Compare" },
 ];
 
 export function App() {
@@ -187,6 +190,7 @@ export function App() {
         {activeTab === "tree" && (
           <div className="panel panel-single">
             <h3>Language Tree</h3>
+            <ActivityHeatmap />
             <Suspense fallback={<PanelSkeleton />}>
               <LanguageTreeView />
             </Suspense>
@@ -222,6 +226,12 @@ export function App() {
           <div className="panel panel-single">
             <h3>Translator</h3>
             <Translator />
+          </div>
+        )}
+        {activeTab === "compare" && (
+          <div className="panel panel-single">
+            <h3>Compare</h3>
+            <CompareView />
           </div>
         )}
       </main>
