@@ -121,6 +121,7 @@ interface SimStore {
   enableAiNeighbors: () => Promise<void>;
   loadCachedAiNeighbors: () => Promise<void>;
   clearAiNeighbors: () => Promise<void>;
+  downloadAiModel: () => Promise<void>;
 }
 
 function initFromConfig(config: SimulationConfig) {
@@ -448,5 +449,38 @@ export const useSimStore = create<SimStore>((set, get) => ({
       aiNeighbors: {},
       aiStatus: { ready: false, progress: 0, text: "", error: null },
     });
+  },
+  downloadAiModel: async () => {
+    set({ aiStatus: { ready: false, progress: 0, text: "Starting…", error: null } });
+    try {
+      const { loadEngine, DEFAULT_LLM_CONFIG } = await import("../engine/semantics/llm");
+      await loadEngine(DEFAULT_LLM_CONFIG, (info) => {
+        set({
+          aiStatus: {
+            ready: false,
+            progress: info.progress,
+            text: info.text,
+            error: null,
+          },
+        });
+      });
+      set({
+        aiStatus: {
+          ready: true,
+          progress: 1,
+          text: "Model downloaded and ready.",
+          error: null,
+        },
+      });
+    } catch (e) {
+      set({
+        aiStatus: {
+          ready: false,
+          progress: 0,
+          text: "",
+          error: e instanceof Error ? e.message : String(e),
+        },
+      });
+    }
   },
 }));

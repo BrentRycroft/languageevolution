@@ -105,11 +105,23 @@ export function AiSemantics() {
       )}
 
       <section>
-        <h5 style={{ margin: "0 0 4px", color: "var(--muted)" }}>Model</h5>
-        <div style={{ color: "var(--muted)" }}>
+        <h5 style={{ margin: "0 0 4px", color: "var(--muted)" }}>
+          Model {aiStatus.ready && <span style={{ color: "#7be07b" }}>· ready</span>}
+        </h5>
+        <div style={{ color: "var(--muted)", marginBottom: 6 }}>
           Uses <strong>Ministral 3B Instruct</strong> via WebLLM. First load
           caches ~1.9 GB in IndexedDB. All inference is client-side; the
           simulator itself stays deterministic.
+        </div>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <button
+            onClick={() => useSimStore.getState().downloadAiModel()}
+            disabled={inProgress || aiStatus.ready}
+            className={aiStatus.ready ? "" : "primary"}
+          >
+            {aiStatus.ready ? "Model ready ✓" : inProgress ? "Downloading…" : "Download model"}
+          </button>
+          {aiStatus.ready && <button onClick={clear}>Clear model cache</button>}
         </div>
         {aiStatus.error && (
           <div style={{ color: "#ff6a7a", fontFamily: "var(--font-mono)", marginTop: 4 }}>
