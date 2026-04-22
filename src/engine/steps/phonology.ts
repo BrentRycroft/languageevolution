@@ -7,6 +7,7 @@ import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import { ageAndRetire, proposeOneRule, reinforce } from "../phonology/propose";
+import { matchSites } from "../phonology/generated";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 
@@ -105,11 +106,14 @@ export function stepPhonology(
 
   // Procedural rule lifecycle: reinforce rules that still have sites to
   // feed on, then age & retire the rest. Finally consider inventing a new
-  // rule every PROPOSAL_CADENCE generations.
+  // rule every PROPOSAL_CADENCE generations. We use the full context-aware
+  // matchSites here — not just the cheap "outputMap contains a phoneme in
+  // this word" check — so rules that have input phonemes but fail their
+  // contextual guard don't get falsely reinforced.
   if (lang.activeRules && lang.activeRules.length > 0) {
     lang.activeRules = lang.activeRules.map((rule) => {
       for (const m of Object.keys(lang.lexicon)) {
-        if (rule.outputMap && matchesSome(rule, lang.lexicon[m]!)) {
+        if (matchSites(rule, lang.lexicon[m]!).length > 0) {
           return reinforce(rule, generation);
         }
       }
@@ -143,18 +147,6 @@ export function stepPhonology(
       });
     }
   }
-}
-
-function matchesSome(
-  rule: { outputMap: Record<string, string>; from: unknown },
-  word: string[],
-): boolean {
-  // Cheap pre-check — the full matcher (contextMatches) is inside generated.ts
-  // but reinforcement only needs "was there any input phoneme still present?"
-  for (const p of word) {
-    if (p in rule.outputMap) return true;
-  }
-  return false;
 }
 
 function ruleShortId(id: string): string {
