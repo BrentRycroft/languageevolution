@@ -1,5 +1,5 @@
-import type { Language, SimulationConfig } from "../types";
-import { tryGenesis } from "../genesis/apply";
+import type { Language, SimulationConfig, SimulationState } from "../types";
+import { tryCoin } from "../genesis/apply";
 import { neighborsOf } from "../semantics/neighbors";
 import type { Rng } from "../rng";
 import { genesisRulesFor, pushEvent } from "./helpers";
@@ -7,6 +7,7 @@ import { genesisRulesFor, pushEvent } from "./helpers";
 export function stepGenesis(
   lang: Language,
   config: SimulationConfig,
+  state: SimulationState,
   rng: Rng,
   generation: number,
 ): void {
@@ -19,31 +20,29 @@ export function stepGenesis(
   const target = Math.max(1, Math.round(base * noise * lang.conservatism));
   if (!rng.chance(Math.min(1, 0.5 + 0.5 * lang.conservatism))) return;
   for (let i = 0; i < target; i++) {
-    const result = tryGenesis(
+    const outcome = tryCoin(
       lang,
+      state.tree,
       rules,
       config.genesis.ruleWeights,
       config.genesis.globalRate,
       rng,
     );
-    if (!result) break;
-    lang.wordFrequencyHints[result] = 0.4;
-    lang.wordOrigin[result] = result.includes("-")
-      ? /-(intens)$/.test(result)
-        ? "reduplication"
-        : /-(er|ness|ic|al|ine)$/.test(result)
-          ? "derivation"
-          : "compound"
-      : "coined";
-    // Freshly-coined words typically start colloquial (low register) before
-    // they settle into neutral usage.
-    if (lang.registerOf && !lang.registerOf[result]) {
-      lang.registerOf[result] = "low";
+    if (!outcome) break;
+    // Commit the coinage to the lexicon.
+    lang.lexicon[outcome.meaning] = outcome.form;
+    // Mid-range frequency for freshly-coined words.
+    lang.wordFrequencyHints[outcome.meaning] = 0.4;
+    // Origin tag from the mechanism.
+    lang.wordOrigin[outcome.meaning] = outcome.originTag;
+    // Register: mechanism-supplied tag wins, else low-register default.
+    if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
+      lang.registerOf[outcome.meaning] = outcome.register ?? "low";
     }
     pushEvent(lang, {
       generation,
       kind: "coinage",
-      description: `coined ${result}`,
+      description: `${outcome.originTag}: ${outcome.meaning}`,
     });
   }
 }
