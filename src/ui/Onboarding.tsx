@@ -66,6 +66,14 @@ export function WelcomeBanner() {
           <strong style={{ color: "var(--text)" }}>Timeline → rules</strong> view for their
           full lifecycle.
         </div>
+        <div style={{ color: "var(--muted)", marginBottom: 4 }}>
+          Other tabs worth exploring: <strong style={{ color: "var(--text)" }}>Compare</strong>{" "}
+          (lexicon + rule diff between two languages),{" "}
+          <strong style={{ color: "var(--text)" }}>Stemma</strong> (rule-similarity tree),{" "}
+          <strong style={{ color: "var(--text)" }}>Glossary</strong> (linguistic terms
+          this sim uses), <strong style={{ color: "var(--text)" }}>Quiz</strong> (guess
+          which sound law produced a form).
+        </div>
         <div style={{ color: "var(--muted)" }}>
           Shortcuts: <kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>F</kbd> fast-forward ·
           <kbd>?</kbd> help · <kbd>1–9</kbd> tabs.

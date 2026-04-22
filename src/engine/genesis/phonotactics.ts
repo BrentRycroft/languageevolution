@@ -3,10 +3,12 @@ import { isVowel } from "../phonology/ipa";
 
 /**
  * Estimate the phonotactic "fit" of a candidate form against a language's
- * current lexicon. Returns a score in roughly [0, 1].
+ * current lexicon. Returns a score clamped to [0, 1].
  *
  * Heuristic: penalises runs of consonants that never appear in the language
  * as a whole, and rewards CV alternation the language tends to favour.
+ * Not a probability — treat it as a relative score where callers compare
+ * two forms or threshold at ~0.25.
  */
 export function phonotacticFit(form: Phoneme[], lang: Language): number {
   if (form.length === 0) return 0;
@@ -32,7 +34,7 @@ export function phonotacticFit(form: Phoneme[], lang: Language): number {
   }
   const alternation = (cvHits + 1) / (cvHits + ccHits + 1);
   const clusterPenalty = trustBigrams ? Math.pow(0.7, badClusters) : 1;
-  return alternation * clusterPenalty;
+  return Math.max(0, Math.min(1, alternation * clusterPenalty));
 }
 
 function languageHasBigram(lang: Language, bigram: string): boolean {

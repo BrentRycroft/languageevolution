@@ -78,7 +78,7 @@ export function AiSemantics() {
         .map(([k, v]) => `${k} ×${v.toFixed(2)}`)
         .join(", ");
       setBiasLog(
-        `Applied bias to ${lang.name}: ${summary || "(no significant shifts)"} — new rule proposals will reflect this from the next generation onward.`,
+        `Applied bias to ${lang.name}: ${summary || "(no significant shifts)"}. A rule is being proposed now; the bias will also shape every future proposal cycle.`,
       );
     } catch (e) {
       setBiasLog(`Error: ${e instanceof Error ? e.message : String(e)}`);
