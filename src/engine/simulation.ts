@@ -13,6 +13,7 @@ import { CATALOG_BY_ID } from "./phonology/catalog";
 import { applyChangesToLexicon } from "./phonology/apply";
 import { parseRuleDsl, compileUserRule } from "./phonology/dsl";
 import { driftOrthography } from "./phonology/orthography";
+import { DEFAULT_OT_RANKING, maybeLearnOt } from "./phonology/ot";
 import { rateMultiplier } from "./phonology/rate";
 import { applyOneRegularChange } from "./phonology/regular";
 import { maybeSpreadTone } from "./phonology/tone_spread";
@@ -108,6 +109,8 @@ function buildInitialState(config: SimulationConfig): SimulationState {
     wordOrigin: {},
     customRules: (config.customRules ?? []).slice(),
     orthography: {},
+    otRanking: DEFAULT_OT_RANKING.slice(),
+    lastChangeGeneration: {},
   };
   const rootNode: LanguageNode = {
     language: rootLang,
@@ -146,11 +149,18 @@ function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, gener
   const changes = changesForLang(lang);
   // Per-language conservatism multiplies into every rate call.
   const mult = rateMultiplier(generation, lang.id) * lang.conservatism;
+  // Age-grading: compute generations-since-last-change per meaning.
+  const ages: Record<string, number> = {};
+  for (const m of Object.keys(before)) {
+    const last = lang.lastChangeGeneration[m];
+    ages[m] = last === undefined ? 99 : generation - last;
+  }
   const opts = {
     globalRate: config.phonology.globalRate,
     weights: lang.changeWeights,
     rateMultiplier: mult,
     frequencyHints: lang.wordFrequencyHints,
+    agesSinceChange: ages,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   // Affixes mutate in lockstep with the lexicon so morphology feels real.
@@ -169,7 +179,10 @@ function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, gener
   for (const m of Object.keys(before)) {
     const a = before[m]!.join("");
     const b = (lang.lexicon[m] ?? []).join("");
-    if (a !== b) mutated++;
+    if (a !== b) {
+      mutated++;
+      lang.lastChangeGeneration[m] = generation;
+    }
   }
   if (mutated > 0) {
     refreshInventory(lang);
@@ -212,6 +225,17 @@ function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, gener
       generation,
       kind: "grammar_shift",
       description: `orthography: ${ortho.phoneme} spelt "${ortho.from}" → "${ortho.to}"`,
+    });
+  }
+
+  // OT learning: occasionally swap a pair of adjacent constraints whose
+  // ordering conflicts with the language's observed phonotactics.
+  const ot = maybeLearnOt(lang, rng, 0.015 * lang.conservatism);
+  if (ot) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `OT rerank: ${ot.from} ↔ ${ot.to}`,
     });
   }
 }

@@ -86,6 +86,7 @@ export function App() {
   const togglePlay = useSimStore((s) => s.togglePlay);
   const step = useSimStore((s) => s.step);
   const stepN = useSimStore((s) => s.stepN);
+  const stepNAsync = useSimStore((s) => s.stepNAsync);
   const reset = useSimStore((s) => s.reset);
   const generation = useSimStore((s) => s.state.generation);
 
@@ -147,7 +148,9 @@ export function App() {
             <StepIcon size={16} />
           </button>
           <button
-            onClick={() => stepN(50)}
+            onClick={() => {
+              void stepNAsync(50);
+            }}
             disabled={playing}
             className="icon-only"
             aria-label="Fast-forward 50 generations"

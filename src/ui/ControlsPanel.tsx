@@ -345,6 +345,22 @@ export function ControlsPanel() {
         <ExportButtons />
       </Section>
 
+      <Section title="Performance" defaultOpen={false}>
+        <Toggle
+          label="Run fast-forward in a Web Worker"
+          value={!!config.useWorker}
+          onChange={(v) => {
+            const cfg = useSimStore.getState().config;
+            useSimStore.getState().updateConfig({ ...cfg, useWorker: v });
+          }}
+        />
+        <div style={{ fontSize: "var(--fs-1)", color: "var(--muted)", marginTop: 4 }}>
+          Off: the +50 button blocks the UI briefly. On: a Worker handles
+          the steps so the UI stays responsive. Results are identical (same
+          seed, same state).
+        </div>
+      </Section>
+
       <Section title="AI semantic drift" defaultOpen={false}>
         <AiSemantics />
       </Section>

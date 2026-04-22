@@ -62,7 +62,7 @@ describe("taboo replacement", () => {
       conservatism: 1,
       wordOrigin: {},
       customRules: [],
-      orthography: {},
+      orthography: {}, otRanking: [], lastChangeGeneration: {},
       ...overrides,
     };
   }

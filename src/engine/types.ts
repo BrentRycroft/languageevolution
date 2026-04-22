@@ -93,6 +93,17 @@ export interface Language {
    * pronunciation" divergence we see in real languages.
    */
   orthography: Record<string, string>;
+  /**
+   * OT-style phonotactic constraint ranking. Constraint ids in order of
+   * decreasing priority. Evolves via maybeLearnOt().
+   */
+  otRanking: string[];
+  /**
+   * Age-grading: generation in which each meaning's form was last adopted.
+   * Recently-changed words are more likely to shift again for a few
+   * generations (young speakers still refining the innovation).
+   */
+  lastChangeGeneration: Record<Meaning, number>;
 }
 
 export interface LanguageNode {
@@ -177,6 +188,11 @@ export interface SimulationConfig {
    * Applied to the proto language at seed time; daughters inherit via split.
    */
   customRules?: string[];
+  /**
+   * Opt-in: run fast-forward steps in a Web Worker so the UI thread
+   * stays responsive during long runs.
+   */
+  useWorker?: boolean;
   preset?: string;
   /** Evolution-speed profile id (conservative / standard / rapid / extreme). */
   evolutionSpeed?: string;

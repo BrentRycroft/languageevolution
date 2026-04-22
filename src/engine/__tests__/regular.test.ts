@@ -26,7 +26,7 @@ function makeLang(): Language {
     conservatism: 1,
     wordOrigin: {},
     customRules: [],
-    orthography: {},
+    orthography: {}, otRanking: [], lastChangeGeneration: {},
   };
 }
 
