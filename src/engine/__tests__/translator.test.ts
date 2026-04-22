@@ -24,6 +24,7 @@ function sampleLang(): Language {
       paradigms: { ...DEFAULT_MORPHOLOGY.paradigms },
     },
     localNeighbors: {},
+    conservatism: 1,
   };
 }
 

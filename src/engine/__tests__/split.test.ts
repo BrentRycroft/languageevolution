@@ -21,6 +21,7 @@ function makeTree(): LanguageTree {
     phonemeInventory: { segmental: [], tones: [], usesTones: false },
     morphology: { paradigms: {} },
     localNeighbors: {},
+    conservatism: 1,
   };
   const root: LanguageNode = {
     language: lang,

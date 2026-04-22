@@ -22,6 +22,7 @@ function makeLang(): Language {
     phonemeInventory: { segmental: [], tones: [], usesTones: false },
     morphology: { paradigms: {} },
     localNeighbors: {},
+    conservatism: 1,
   };
 }
 

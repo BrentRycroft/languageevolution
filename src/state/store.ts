@@ -32,10 +32,19 @@ interface SimStore {
   selectedLangId: string | null;
   selectedMeaning: Meaning | null;
   timelineMeanings: Meaning[];
-  /** Lexicon visibility filter: "alive" (default), "all", "starred". */
-  lexiconFilter: "alive" | "all" | "starred";
+  /** Lexicon visibility filter: "alive" (default), "all", "starred", "compare". */
+  lexiconFilter: "alive" | "all" | "starred" | "compare";
   /** Set of language ids the user has bookmarked. */
   starredLangIds: string[];
+  /** Language ids checked in the "compare" filter mode. */
+  compareLangIds: string[];
+  /** Substring search over meanings in the lexicon view. */
+  lexiconSearch: string;
+  /** Theme selection. "system" follows prefers-color-scheme. */
+  theme: "dark" | "light" | "system";
+  /** Timeline display mode. "meanings" = one language, many meanings.
+   *  "cognates" = one meaning, many languages. */
+  timelineMode: "meanings" | "cognates";
   history: HistoryByLangMeaning;
   seedFormsByMeaning: Record<Meaning, WordForm>;
   aiNeighbors: NeighborOverride;
@@ -64,8 +73,13 @@ interface SimStore {
   selectLanguage: (id: string | null) => void;
   selectMeaning: (m: Meaning | null) => void;
   toggleTimelineMeaning: (m: Meaning) => void;
-  setLexiconFilter: (filter: "alive" | "all" | "starred") => void;
+  setLexiconFilter: (filter: "alive" | "all" | "starred" | "compare") => void;
   toggleStarredLang: (id: string) => void;
+  toggleCompareLang: (id: string) => void;
+  clearCompareLangs: () => void;
+  setLexiconSearch: (q: string) => void;
+  setTheme: (theme: "dark" | "light" | "system") => void;
+  setTimelineMode: (mode: "meanings" | "cognates") => void;
   setSeed: (s: string) => void;
   loadConfig: (
     config: SimulationConfig,
@@ -125,6 +139,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
   timelineMeanings: ["water"],
   lexiconFilter: "alive",
   starredLangIds: [],
+  compareLangIds: [],
+  lexiconSearch: "",
+  theme: "dark",
+  timelineMode: "meanings",
   history: initial.history,
   seedFormsByMeaning: initial.seedForms,
   aiNeighbors: {},
@@ -239,6 +257,19 @@ export const useSimStore = create<SimStore>((set, get) => ({
           : [...s.starredLangIds, id],
       };
     }),
+  toggleCompareLang: (id) =>
+    set((s) => {
+      const has = s.compareLangIds.includes(id);
+      return {
+        compareLangIds: has
+          ? s.compareLangIds.filter((x) => x !== id)
+          : [...s.compareLangIds, id],
+      };
+    }),
+  clearCompareLangs: () => set({ compareLangIds: [] }),
+  setLexiconSearch: (q) => set({ lexiconSearch: q }),
+  setTheme: (theme) => set({ theme }),
+  setTimelineMode: (timelineMode) => set({ timelineMode }),
   setSeed: (s) => {
     const { config, updateConfig } = get();
     updateConfig({ ...config, seed: s });

@@ -14,6 +14,11 @@ export function LexiconView() {
   const setFilter = useSimStore((s) => s.setLexiconFilter);
   const starred = useSimStore((s) => s.starredLangIds);
   const toggleStar = useSimStore((s) => s.toggleStarredLang);
+  const compare = useSimStore((s) => s.compareLangIds);
+  const toggleCompare = useSimStore((s) => s.toggleCompareLang);
+  const clearCompare = useSimStore((s) => s.clearCompareLangs);
+  const search = useSimStore((s) => s.lexiconSearch);
+  const setSearch = useSimStore((s) => s.setLexiconSearch);
 
   const allLeaves = useMemo(() => leafIds(state.tree), [state.tree]);
   const aliveLeaves = useMemo(
@@ -21,13 +26,20 @@ export function LexiconView() {
     [allLeaves, state.tree],
   );
   const starredSet = useMemo(() => new Set(starred), [starred]);
+  const compareSet = useMemo(() => new Set(compare), [compare]);
   const visibleLeaves = useMemo(() => {
     if (filter === "alive") return aliveLeaves;
     if (filter === "starred") return allLeaves.filter((id) => starredSet.has(id));
+    if (filter === "compare") return allLeaves.filter((id) => compareSet.has(id));
     return allLeaves;
-  }, [filter, aliveLeaves, allLeaves, starredSet]);
+  }, [filter, aliveLeaves, allLeaves, starredSet, compareSet]);
 
-  const meanings = useMemo(() => Object.keys(seedForms).sort(), [seedForms]);
+  const allMeanings = useMemo(() => Object.keys(seedForms).sort(), [seedForms]);
+  const meanings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allMeanings;
+    return allMeanings.filter((m) => m.toLowerCase().includes(q));
+  }, [allMeanings, search]);
 
   const prevCellsRef = useRef<Map<string, string>>(new Map());
   const justChangedRef = useRef<Set<string>>(new Set());
@@ -78,17 +90,57 @@ export function LexiconView() {
           onClick={() => setFilter("starred")}
           count={starred.length}
         />
+        <FilterChip
+          label="Compare"
+          active={filter === "compare"}
+          onClick={() => setFilter("compare")}
+          count={compare.length}
+        />
+        {filter === "compare" && compare.length > 0 && (
+          <button
+            className="ghost"
+            style={{ fontSize: "var(--fs-1)", padding: "2px 8px", minHeight: 24 }}
+            onClick={clearCompare}
+          >
+            clear
+          </button>
+        )}
         {hiddenCount > 0 && (
-          <span className="lexicon-filter-hint">
-            {hiddenCount} hidden
-          </span>
+          <span className="lexicon-filter-hint">{hiddenCount} hidden</span>
         )}
       </div>
+      <div style={{ padding: "4px 0 8px" }}>
+        <input
+          type="text"
+          placeholder={`Search ${allMeanings.length} meanings…`}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search meanings"
+          style={{ width: "100%", fontSize: "var(--fs-2)" }}
+        />
+      </div>
+      {filter === "compare" && (
+        <div
+          style={{
+            fontSize: "var(--fs-1)",
+            color: "var(--muted)",
+            padding: "2px 0 6px",
+          }}
+        >
+          Pick 2–5 languages to compare. Column headers act as toggles.
+        </div>
+      )}
       <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-        {visibleLeaves.length === 0 ? (
-          <div style={{ color: "var(--muted)", fontSize: 12, padding: 12 }}>
+        {filter === "compare" && compare.length === 0 ? (
+          <CompareEmptyPicker
+            allLeaves={allLeaves}
+            state={state}
+            toggleCompare={toggleCompare}
+          />
+        ) : visibleLeaves.length === 0 ? (
+          <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
             {filter === "starred"
-              ? "No languages starred yet. Click ☆ next to a column header to star a language."
+              ? "No languages starred yet. Click ☆ on a column header to star one."
               : "No languages match this filter."}
           </div>
         ) : (
@@ -99,15 +151,17 @@ export function LexiconView() {
                 {visibleLeaves.map((lid) => {
                   const node = state.tree[lid]!;
                   const isStarred = starredSet.has(lid);
+                  const isCompared = compareSet.has(lid);
                   const isExtinct = !!node.language.extinct;
                   return (
                     <th
                       key={lid}
-                      onClick={() => selectLanguage(lid)}
-                      className={selectedLangId === lid ? "selected-col" : ""}
-                      style={{
-                        opacity: isExtinct ? 0.6 : 1,
+                      onClick={() => {
+                        if (filter === "compare") toggleCompare(lid);
+                        else selectLanguage(lid);
                       }}
+                      className={selectedLangId === lid ? "selected-col" : ""}
+                      style={{ opacity: isExtinct ? 0.6 : 1 }}
                     >
                       <span className="lexicon-col-header">
                         <button
@@ -122,6 +176,11 @@ export function LexiconView() {
                           {isStarred ? "★" : "☆"}
                         </button>
                         <span>{node.language.name}</span>
+                        {isCompared && filter !== "compare" && (
+                          <span style={{ fontSize: "var(--fs-1)", color: "var(--accent)" }}>
+                            ✓
+                          </span>
+                        )}
                         {isExtinct && <span className="lexicon-extinct-mark">×</span>}
                       </span>
                     </th>
@@ -158,6 +217,53 @@ export function LexiconView() {
             </tbody>
           </table>
         )}
+      </div>
+    </div>
+  );
+}
+
+function CompareEmptyPicker({
+  allLeaves,
+  state,
+  toggleCompare,
+}: {
+  allLeaves: string[];
+  state: ReturnType<typeof useSimStore.getState>["state"];
+  toggleCompare: (id: string) => void;
+}) {
+  return (
+    <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ fontSize: "var(--fs-2)", color: "var(--muted)" }}>
+        Tap any language to add it to the comparison. Up to 5 at a time works
+        well on narrow screens.
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 6,
+          marginTop: 4,
+        }}
+      >
+        {allLeaves.map((id) => {
+          const lang = state.tree[id]!.language;
+          return (
+            <button
+              key={id}
+              className="ghost"
+              style={{
+                padding: "6px 12px",
+                fontSize: "var(--fs-2)",
+                opacity: lang.extinct ? 0.5 : 1,
+                borderColor: "var(--border)",
+              }}
+              onClick={() => toggleCompare(id)}
+            >
+              {lang.name}
+              {lang.extinct ? " ×" : ""}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

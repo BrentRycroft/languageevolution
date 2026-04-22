@@ -1,0 +1,109 @@
+/* Design tokens — centralised so themes and platforms share the same vocabulary.
+   Values live on :root; .theme-light overrides for light mode; prefers-color-scheme
+   flips the system default when the user picks "system". */
+
+:root {
+  /* Spacing scale (4 px base) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* Radius */
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 10px;
+  --r-pill: 999px;
+
+  /* Typography scale */
+  --fs-1: 11px;
+  --fs-2: 13px;
+  --fs-3: 16px;
+  --fs-4: 20px;
+  --lh-tight: 1.2;
+  --lh-body: 1.45;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 320ms;
+
+  /* Colour palette — dark mode default */
+  --bg: #0f1115;
+  --bg-2: #131720;
+  --panel: #171a21;
+  --panel-2: #1f232c;
+  --panel-3: #252a35;
+  --border: #2a2f3a;
+  --border-strong: #3a414f;
+  --text: #e6e8ee;
+  --text-dim: #b8bdcb;
+  --muted: #8a93a6;
+  --muted-2: #5e6576;
+
+  --accent: #7cc4ff;
+  --accent-soft: #2a4e6e;
+  --accent-2: #ffcc66;
+  --accent-2-soft: #524119;
+  --danger: #ff6a7a;
+  --ok: #7be07b;
+  --change: #ffb347;
+
+  /* iOS-friendly focus ring */
+  --focus-ring: 2px solid var(--accent);
+
+  color-scheme: dark;
+}
+
+/* Light theme — opt-in via `.theme-light` on <html>. */
+.theme-light {
+  --bg: #f6f7f9;
+  --bg-2: #eceff3;
+  --panel: #ffffff;
+  --panel-2: #f2f4f7;
+  --panel-3: #e5e9ef;
+  --border: #d4d9e2;
+  --border-strong: #a6b0bf;
+  --text: #0f1115;
+  --text-dim: #2a2f3a;
+  --muted: #5e6576;
+  --muted-2: #8a93a6;
+
+  --accent: #336aa8;
+  --accent-soft: #cfdff0;
+  --accent-2: #b67a12;
+  --accent-2-soft: #f4e6cb;
+  --danger: #c83242;
+  --ok: #2f8a3b;
+  --change: #b66a12;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.10);
+  --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+  color-scheme: light;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}

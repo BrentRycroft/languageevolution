@@ -4,6 +4,7 @@ import type { Rng } from "../rng";
 import { isVowel, isConsonant } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { phonotacticFit } from "./phonotactics";
+import { complexityFor } from "../lexicon/complexity";
 
 function pickMeanings(lang: Language, rng: Rng, n: number): Meaning[] {
   const keys = Object.keys(lang.lexicon);
@@ -58,7 +59,14 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       const fa = lang.lexicon[a]!;
       const fb = lang.lexicon[b]!;
       if (fa.length + fb.length > 10) return null;
-      const form = [...fa, ...fb];
+      let form = [...fa, ...fb];
+      // Complexity-length bias: coinages for more abstract meanings stay
+      // longer. If the combined form is shorter than 2 + complexity, append
+      // a simple schwa to pad it.
+      const minLen = 2 + complexityFor(newMeaning);
+      if (form.length < minLen) {
+        form = [...form, "ə"];
+      }
       // Reject on obviously-bad phonotactics (score < 0.25).
       if (phonotacticFit(form, lang) < 0.25) return null;
       return { meaning: newMeaning, form };
