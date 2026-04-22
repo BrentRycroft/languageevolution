@@ -128,8 +128,7 @@ export async function translateWithAI(
   lang: Language,
   englishWord: string,
 ): Promise<TranslationResult> {
-  const { CreateMLCEngine } = await import("@mlc-ai/web-llm");
-  const engine = await CreateMLCEngine("gemma-2-2b-it-q4f16_1-MLC");
+  const { chatOnce } = await import("../semantics/llm");
   const examples = Object.keys(lang.lexicon)
     .slice(0, 10)
     .map((m) => `${m} = ${formToString(lang.lexicon[m]!)}`)
@@ -145,15 +144,8 @@ Example lexicon: ${examples}
 
 Invent a plausible word in ${lang.name} meaning "${englishWord}". Use only the phonemes listed above. Return the word as an IPA string only, no explanation.`;
 
-  const res = await engine.chat.completions.create({
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.6,
-    max_tokens: 24,
-  });
-  const raw = (res.choices[0]?.message.content ?? "").trim();
-  // Take the first non-empty line, ignoring blank lines.
+  const raw = (await chatOnce(prompt, { maxTokens: 24, temperature: 0.6 })).trim();
   const firstLine = raw.split(/\n+/).map((s) => s.trim()).find((s) => s.length > 0) ?? "";
-  // Strip leading/trailing punctuation and quotes; keep IPA diacritics attached.
   const cleaned = firstLine.replace(/^[\s"'`*_.-]+|[\s"'`*_.,;-]+$/g, "");
   const phonemes = Array.from(cleaned);
   return {
@@ -162,4 +154,119 @@ Invent a plausible word in ${lang.name} meaning "${englishWord}". Use only the p
     source: "ai",
     notes: `Invented by the on-device LLM using ${lang.name}'s inventory.`,
   };
+}
+
+export interface SentenceTranslation {
+  /** The full target-language sentence (space-separated IPA tokens). */
+  target: string;
+  /** Per-token (targetForm, englishGloss) pairs for display. */
+  tokens: Array<{ form: string; gloss: string }>;
+  /** Any English words the dictionary had to paraphrase or drop. */
+  missing: string[];
+  /** One-line free-text note from the model about grammatical choices. */
+  notes: string;
+}
+
+/**
+ * AI-assisted sentence-level translation from English into the evolved
+ * language. The model is given the language's full bilingual dictionary,
+ * grammar features, and morphology, then asked to produce a translation
+ * respecting word order + case markers. Output is parsed into aligned
+ * tokens so the UI can render a gloss row beneath the target sentence.
+ */
+export async function translateSentenceWithAI(
+  lang: Language,
+  english: string,
+): Promise<SentenceTranslation> {
+  const { chatOnce } = await import("../semantics/llm");
+  const sentence = english.trim();
+  if (!sentence) {
+    return { target: "", tokens: [], missing: [], notes: "Empty input." };
+  }
+
+  // Build the dictionary dump. Limit to 120 entries so the prompt stays small.
+  const entries = Object.keys(lang.lexicon)
+    .sort()
+    .slice(0, 120)
+    .map((m) => `${m}=${formToString(lang.lexicon[m]!)}`)
+    .join(" ; ");
+
+  // Morphology hints: list known paradigm keys and their affixes.
+  const paradigms = Object.entries(lang.morphology.paradigms)
+    .slice(0, 6)
+    .map(([cat, p]) => {
+      if (!p) return "";
+      const affix = p.affix.join("");
+      return `${cat}=${p.position === "prefix" ? affix + "-" : "-" + affix}`;
+    })
+    .filter(Boolean)
+    .join(" ; ");
+
+  const registerSummary = lang.registerOf
+    ? Object.values(lang.registerOf).reduce(
+        (acc, v) => {
+          acc[v] = (acc[v] ?? 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      )
+    : null;
+
+  const prompt = `You are a translator for a fictional evolved language called ${lang.name}.
+Word order: ${lang.grammar.wordOrder}. Affix position: ${lang.grammar.affixPosition}.
+Tense marking: ${lang.grammar.tenseMarking}. Case: ${lang.grammar.hasCase ? "yes" : "no"}. Gender count: ${lang.grammar.genderCount}.
+${paradigms ? `Paradigm hints: ${paradigms}.` : ""}
+${registerSummary ? `Register tags: ${JSON.stringify(registerSummary)}.` : ""}
+
+Bilingual dictionary (english=IPA form):
+${entries}
+
+Translate the following English sentence into ${lang.name}, using ONLY words from the dictionary above. Preserve the ${lang.grammar.wordOrder} word order. Add inflections where the paradigm hints suggest. If an English word is missing from the dictionary, pick the nearest available word and note it.
+
+English: "${sentence}"
+
+Respond in this exact JSON format (one line, no prose):
+{"target":"...","tokens":[{"form":"...","gloss":"..."}],"missing":["..."],"notes":"..."}`;
+
+  const raw = await chatOnce(prompt, { maxTokens: 240, temperature: 0.4 });
+  return parseSentenceResponse(raw);
+}
+
+/**
+ * Defensive parser: the LLM may wrap JSON in a code fence or add prose.
+ * Extract the first balanced JSON object and validate shape.
+ */
+export function parseSentenceResponse(raw: string): SentenceTranslation {
+  const fallback: SentenceTranslation = {
+    target: "",
+    tokens: [],
+    missing: [],
+    notes: "AI did not return a parseable response.",
+  };
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) return fallback;
+  try {
+    const parsed = JSON.parse(match[0]);
+    const target = typeof parsed.target === "string" ? parsed.target : "";
+    const tokens = Array.isArray(parsed.tokens)
+      ? parsed.tokens
+          .filter(
+            (t: unknown) =>
+              t !== null &&
+              typeof t === "object" &&
+              typeof (t as { form: unknown }).form === "string",
+          )
+          .map((t: { form: string; gloss?: string }) => ({
+            form: String(t.form),
+            gloss: String(t.gloss ?? ""),
+          }))
+      : [];
+    const missing = Array.isArray(parsed.missing)
+      ? parsed.missing.map((m: unknown) => String(m))
+      : [];
+    const notes = typeof parsed.notes === "string" ? parsed.notes : "";
+    return { target, tokens, missing, notes };
+  } catch {
+    return fallback;
+  }
 }
