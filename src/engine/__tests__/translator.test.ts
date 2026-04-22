@@ -25,6 +25,7 @@ function sampleLang(): Language {
     },
     localNeighbors: {},
     conservatism: 1,
+    wordOrigin: {},
   };
 }
 

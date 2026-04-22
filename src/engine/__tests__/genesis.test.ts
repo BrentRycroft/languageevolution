@@ -23,6 +23,7 @@ function makeLang(): Language {
     morphology: { paradigms: {} },
     localNeighbors: {},
     conservatism: 1,
+    wordOrigin: {},
   };
 }
 

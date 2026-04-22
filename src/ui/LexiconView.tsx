@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import { formToString } from "../engine/phonology/ipa";
+import { ReproduceForm } from "./ReproduceForm";
 
 export function LexiconView() {
   const state = useSimStore((s) => s.state);
@@ -19,6 +20,7 @@ export function LexiconView() {
   const clearCompare = useSimStore((s) => s.clearCompareLangs);
   const search = useSimStore((s) => s.lexiconSearch);
   const setSearch = useSimStore((s) => s.setLexiconSearch);
+  const [inspect, setInspect] = useState<{ langId: string; meaning: string } | null>(null);
 
   const allLeaves = useMemo(() => leafIds(state.tree), [state.tree]);
   const aliveLeaves = useMemo(
@@ -55,6 +57,23 @@ export function LexiconView() {
     }
     return m;
   }, [state, visibleLeaves, meanings]);
+
+  const originGlyph = (origin: string | undefined): string => {
+    if (!origin) return "";
+    if (origin.startsWith("borrow:")) return "⟶";
+    if (origin === "compound") return "+";
+    if (origin === "derivation") return "·";
+    if (origin === "reduplication") return "≈";
+    return "";
+  };
+  const originTitle = (origin: string | undefined): string => {
+    if (!origin) return "Inherited from proto seed";
+    if (origin.startsWith("borrow:")) return `Borrowed from ${origin.slice(7)}`;
+    if (origin === "compound") return "Compound coinage";
+    if (origin === "derivation") return "Derived with affix";
+    if (origin === "reduplication") return "Reduplicated form";
+    return origin;
+  };
 
   useEffect(() => {
     const changed = new Set<string>();
@@ -130,6 +149,13 @@ export function LexiconView() {
           Pick 2–5 languages to compare. Column headers act as toggles.
         </div>
       )}
+      {inspect && (
+        <ReproduceForm
+          langId={inspect.langId}
+          meaning={inspect.meaning}
+          onClose={() => setInspect(null)}
+        />
+      )}
       <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
         {filter === "compare" && compare.length === 0 ? (
           <CompareEmptyPicker
@@ -199,6 +225,8 @@ export function LexiconView() {
                     const form = currentCells.get(key) ?? "";
                     const isChanged = justChangedRef.current.has(key);
                     const isSelected = selectedLangId === lid && selectedMeaning === meaning;
+                    const origin = state.tree[lid]!.language.wordOrigin?.[meaning];
+                    const glyph = originGlyph(origin);
                     return (
                       <td
                         key={lid}
@@ -207,8 +235,19 @@ export function LexiconView() {
                           selectLanguage(lid);
                           selectMeaning(meaning);
                         }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          if (form) setInspect({ langId: lid, meaning });
+                        }}
+                        onDoubleClick={() => {
+                          if (form) setInspect({ langId: lid, meaning });
+                        }}
+                        title={`${originTitle(origin)} — right-click or double-tap to inspect history`}
                       >
                         {form}
+                        {glyph && (
+                          <span className="origin-glyph" aria-hidden>{glyph}</span>
+                        )}
                       </td>
                     );
                   })}
