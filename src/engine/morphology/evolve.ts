@@ -60,8 +60,15 @@ export function maybeGrammaticalize(
     category: target,
   };
   lang.morphology.paradigms[target] = pdm;
+  // Grammaticalization retires the source word — clean every per-meaning
+  // map so we don't leave orphan register tags / neighbours / origins
+  // behind (the 2000-gen smoke test caught ~1 per run here).
   delete lang.lexicon[candidate];
   delete lang.wordFrequencyHints[candidate];
+  delete lang.wordOrigin[candidate];
+  delete lang.localNeighbors[candidate];
+  delete lang.lastChangeGeneration[candidate];
+  if (lang.registerOf) delete lang.registerOf[candidate];
   return {
     kind: "grammaticalization",
     description: `"${candidate}" → ${target} ${pdm.position} /${form.join("")}/`,

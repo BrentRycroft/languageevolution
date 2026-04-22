@@ -37,6 +37,20 @@ export function stepPhonology(
     registerOf: lang.registerOf,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
+  // applyChangesToLexicon drops meanings whose forms became empty via
+  // deletion rules. Clean up every per-meaning auxiliary map so we don't
+  // accumulate dangling registerOf / wordOrigin / localNeighbors entries
+  // over long runs. Also stamp lastChangeGeneration only for meanings
+  // that still exist — the old loop would otherwise set a generation for
+  // a now-deleted slot.
+  for (const m of Object.keys(before)) {
+    if (lang.lexicon[m]) continue;
+    delete lang.wordFrequencyHints[m];
+    delete lang.lastChangeGeneration[m];
+    delete lang.wordOrigin[m];
+    delete lang.localNeighbors[m];
+    if (lang.registerOf) delete lang.registerOf[m];
+  }
   applyPhonologyToAffixes(lang.morphology, (form) => {
     return changes.reduce((acc, change) => {
       const base = change.probabilityFor(acc);
@@ -50,8 +64,11 @@ export function stepPhonology(
   });
   let mutated = 0;
   for (const m of Object.keys(before)) {
+    // Skip meanings that were dropped by applyChangesToLexicon above —
+    // they don't have a current form to compare against.
+    if (!lang.lexicon[m]) continue;
     const a = before[m]!.join("");
-    const b = (lang.lexicon[m] ?? []).join("");
+    const b = lang.lexicon[m]!.join("");
     if (a !== b) {
       mutated++;
       lang.lastChangeGeneration[m] = generation;
