@@ -4,6 +4,7 @@ import { leafIds } from "../engine/tree/split";
 import { formToString } from "../engine/phonology/ipa";
 import { romanize } from "../engine/phonology/orthography";
 import { ReproduceForm } from "./ReproduceForm";
+import { useDebounced } from "./hooks/useDebounced";
 
 export function LexiconView() {
   const state = useSimStore((s) => s.state);
@@ -40,11 +41,12 @@ export function LexiconView() {
   }, [filter, aliveLeaves, allLeaves, starredSet, compareSet]);
 
   const allMeanings = useMemo(() => Object.keys(seedForms).sort(), [seedForms]);
+  const debouncedSearch = useDebounced(search, 150);
   const meanings = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     if (!q) return allMeanings;
     return allMeanings.filter((m) => m.toLowerCase().includes(q));
-  }, [allMeanings, search]);
+  }, [allMeanings, debouncedSearch]);
 
   const prevCellsRef = useRef<Map<string, string>>(new Map());
   const justChangedRef = useRef<Set<string>>(new Set());

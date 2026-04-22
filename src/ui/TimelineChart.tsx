@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -28,6 +28,15 @@ export function TimelineChart() {
   const mode = useSimStore((s) => s.timelineMode);
   const setMode = useSimStore((s) => s.setTimelineMode);
   const starred = useSimStore((s) => s.starredLangIds);
+  const scrubGen = useSimStore((s) => s.timelineScrubGeneration);
+  const setScrubGen = useSimStore((s) => s.setTimelineScrubGeneration);
+  const effectiveGen = scrubGen ?? generation;
+
+  // If the live generation falls below the user's scrub point (e.g. reset),
+  // drop back to live so the scrubber doesn't show a stale value.
+  useEffect(() => {
+    if (scrubGen !== null && scrubGen > generation) setScrubGen(null);
+  }, [scrubGen, generation, setScrubGen]);
 
   // Series are either "meanings across one language" or "languages across one meaning".
   type Series = {
@@ -91,6 +100,7 @@ export function TimelineChart() {
     const byGen = new Map<number, Record<string, number | string>>();
     for (const s of series) {
       for (const p of s.points) {
+        if (scrubGen !== null && p.generation > scrubGen) continue;
         let row = byGen.get(p.generation);
         if (!row) {
           row = { generation: p.generation };
@@ -103,14 +113,15 @@ export function TimelineChart() {
     return Array.from(byGen.values()).sort(
       (a, b) => (a.generation as number) - (b.generation as number),
     );
-  }, [series]);
+  }, [series, scrubGen]);
 
+  const genLabel = scrubGen !== null ? `gen ${scrubGen} (of ${generation})` : `gen ${generation}`;
   const headerLabel =
     mode === "meanings"
       ? selectedLangId
-        ? `${meanings.length} meaning${meanings.length === 1 ? "" : "s"} in ${selectedLangId} @ gen ${generation}`
+        ? `${meanings.length} meaning${meanings.length === 1 ? "" : "s"} in ${selectedLangId} @ ${genLabel}`
         : "Pick a language from the tree or lexicon."
-      : `"${selectedMeaning ?? "water"}" across ${series.length} language${series.length === 1 ? "" : "s"} @ gen ${generation}`;
+      : `"${selectedMeaning ?? "water"}" across ${series.length} language${series.length === 1 ? "" : "s"} @ ${genLabel}`;
 
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
@@ -241,6 +252,33 @@ export function TimelineChart() {
               ))}
             </LineChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {generation >= 2 && (
+        <div className="timeline-scrubber">
+          <input
+            type="range"
+            min={0}
+            max={generation}
+            step={1}
+            value={effectiveGen}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setScrubGen(v >= generation ? null : v);
+            }}
+            aria-label="Scrub to past generation"
+          />
+          {scrubGen !== null && (
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => setScrubGen(null)}
+              title="Follow live generation"
+            >
+              live
+            </button>
+          )}
         </div>
       )}
     </div>

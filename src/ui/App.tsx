@@ -12,6 +12,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
 import { WelcomeBanner } from "./Onboarding";
 import { ActivityHeatmap } from "./ActivityHeatmap";
+import { GlobalSearch } from "./GlobalSearch";
 import {
   MenuIcon,
   PlayIcon,
@@ -134,6 +135,7 @@ export function App() {
         </button>
         <h1>Language Evolution</h1>
         <span className="generation">gen {generation}</span>
+        <GlobalSearch onJumpToLexicon={() => setActiveTab("lexicon")} />
         <div className="playback">
           <button className="primary icon-only" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
             {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
