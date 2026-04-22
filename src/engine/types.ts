@@ -87,6 +87,12 @@ export interface Language {
    * Parsed + compiled at runtime alongside catalog rules.
    */
   customRules: string[];
+  /**
+   * Romanization / orthography map: IPA phoneme → Latin-ish spelling.
+   * Drifts slower than phonology, producing the classic "spelling vs
+   * pronunciation" divergence we see in real languages.
+   */
+  orthography: Record<string, string>;
 }
 
 export interface LanguageNode {

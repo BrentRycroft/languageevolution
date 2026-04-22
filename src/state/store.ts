@@ -40,6 +40,8 @@ interface SimStore {
   compareLangIds: string[];
   /** Substring search over meanings in the lexicon view. */
   lexiconSearch: string;
+  /** Script mode for the Lexicon view: phonemic (IPA) / orthographic / both. */
+  lexiconScript: "ipa" | "roman" | "both";
   /** Theme selection. "system" follows prefers-color-scheme. */
   theme: "dark" | "light" | "system";
   /** Timeline display mode. "meanings" = one language, many meanings.
@@ -80,6 +82,7 @@ interface SimStore {
   toggleCompareLang: (id: string) => void;
   clearCompareLangs: () => void;
   setLexiconSearch: (q: string) => void;
+  setLexiconScript: (s: "ipa" | "roman" | "both") => void;
   setTheme: (theme: "dark" | "light" | "system") => void;
   setTimelineMode: (mode: "meanings" | "cognates") => void;
   setCustomRules: (rules: string[]) => void;
@@ -157,6 +160,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
   starredLangIds: [],
   compareLangIds: [],
   lexiconSearch: "",
+  lexiconScript: "ipa",
   theme: "dark",
   timelineMode: "meanings",
   activityHistory: [],
@@ -291,6 +295,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
     }),
   clearCompareLangs: () => set({ compareLangIds: [] }),
   setLexiconSearch: (q) => set({ lexiconSearch: q }),
+  setLexiconScript: (s) => set({ lexiconScript: s }),
   setTheme: (theme) => set({ theme }),
   setTimelineMode: (timelineMode) => set({ timelineMode }),
   setCustomRules: (rules) => {

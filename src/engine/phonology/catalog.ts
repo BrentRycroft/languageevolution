@@ -1,6 +1,7 @@
 import type { SoundChange, WordForm, Phoneme } from "../types";
 import { isVowel, isConsonant } from "./ipa";
 import { HIGH, LOW, stripTone, toneOf } from "./tone";
+import { UNSTRESSED_REDUCTION } from "./stress";
 
 const CLICKS = ["ǀ", "ǃ", "ǂ", "ǁ"] as const;
 const VOICED = new Set(["b", "d", "g", "v", "z", "ʒ", "dʒ", "dz"]);
@@ -733,6 +734,9 @@ export const CATALOG: SoundChange[] = [
     0.015,
     "Retroflex series emerges. Rare; when on, gradually retroflexes alveolars.",
   ),
+
+  // --- Stress-sensitive reduction (new) ---
+  UNSTRESSED_REDUCTION,
 ];
 
 export const CATALOG_BY_ID: Record<string, SoundChange> = Object.fromEntries(

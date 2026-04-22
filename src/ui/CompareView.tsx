@@ -5,6 +5,29 @@ import { formToString, levenshtein } from "../engine/phonology/ipa";
 import type { Language, LanguageEvent } from "../engine/types";
 
 /**
+ * Swadesh-style lexicostatistic similarity: for every shared meaning, count
+ * as "cognate" when the Levenshtein edit distance is ≤ 40% of the longer
+ * form. Returns a percentage 0–100 plus counts.
+ */
+function lexicalSimilarity(
+  a: Language,
+  b: Language,
+): { pct: number; shared: number; cognate: number } {
+  const shared = Object.keys(a.lexicon).filter((m) => b.lexicon[m]);
+  if (shared.length === 0) return { pct: 0, shared: 0, cognate: 0 };
+  let cognate = 0;
+  for (const m of shared) {
+    const fa = a.lexicon[m]!;
+    const fb = b.lexicon[m]!;
+    const d = levenshtein(fa, fb);
+    const longer = Math.max(fa.length, fb.length);
+    if (longer === 0) continue;
+    if (d / longer <= 0.4) cognate++;
+  }
+  return { pct: Math.round((cognate / shared.length) * 100), shared: shared.length, cognate };
+}
+
+/**
  * Two-column side-by-side comparison using the user's "compare" selection.
  * Shows lexicon, grammar features, morphology paradigms, and recent events
  * for the first two checked languages (or the selected + its sibling if no
@@ -45,11 +68,37 @@ export function CompareView() {
   const [a, b] = pair;
   const langA = state.tree[a!]!.language;
   const langB = state.tree[b!]!.language;
+  const sim = lexicalSimilarity(langA, langB);
 
   return (
-    <div className="compare-grid">
-      <CompareColumn lang={langA} otherLang={langB} />
-      <CompareColumn lang={langB} otherLang={langA} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, height: "100%", minHeight: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "6px 10px",
+          background: "var(--panel-2)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--r-2)",
+          fontSize: "var(--fs-1)",
+          color: "var(--muted)",
+        }}
+      >
+        <strong style={{ color: "var(--text)", fontSize: "var(--fs-2)" }}>
+          Lexical similarity
+        </strong>
+        <span style={{ fontFamily: "var(--font-mono)", color: "var(--accent)" }}>
+          {sim.pct}%
+        </span>
+        <span>
+          {sim.cognate}/{sim.shared} shared meanings classify as cognate (edit-dist ≤ 40% of longer form)
+        </span>
+      </div>
+      <div className="compare-grid" style={{ flex: 1, minHeight: 0 }}>
+        <CompareColumn lang={langA} otherLang={langB} />
+        <CompareColumn lang={langB} otherLang={langA} />
+      </div>
     </div>
   );
 }
