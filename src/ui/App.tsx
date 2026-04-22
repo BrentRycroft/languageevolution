@@ -6,6 +6,16 @@ import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
+import { WelcomeBanner } from "./Onboarding";
+import {
+  MenuIcon,
+  PlayIcon,
+  PauseIcon,
+  StepIcon,
+  FastForwardIcon,
+  ResetIcon,
+} from "./icons";
 
 // Lazy-split the two chart/tree views so d3-hierarchy + recharts stay out of
 // the initial bundle until their tab is opened.
@@ -16,10 +26,29 @@ const TimelineChart = lazy(() =>
   import("./TimelineChart").then((m) => ({ default: m.TimelineChart })),
 );
 
-function Loading() {
+function PanelSkeleton() {
   return (
-    <div style={{ color: "var(--muted)", fontSize: 12, padding: 12 }}>
-      Loading…
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "var(--muted)",
+        fontSize: "var(--fs-2)",
+      }}
+    >
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          border: "3px solid var(--border)",
+          borderTopColor: "var(--accent)",
+          borderRadius: "50%",
+          animation: "spin 0.9s linear infinite",
+        }}
+      />
     </div>
   );
 }
@@ -77,44 +106,65 @@ export function App() {
 
   return (
     <div className="app">
+      <ThemeEffect />
       <header className="header">
         <button
-          className="menu-toggle"
+          className="menu-toggle ghost icon-only"
           onClick={() => setControlsOpen((v) => !v)}
           aria-label="Toggle controls"
         >
-          ☰
+          <MenuIcon size={18} />
         </button>
         <h1>Language Evolution</h1>
         <span className="generation">gen {generation}</span>
         <div className="playback">
-          <button className="primary" onClick={togglePlay}>
-            {playing ? "Pause" : "Play"}
+          <button className="primary icon-only" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
+            {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
           </button>
-          <button onClick={step} disabled={playing}>Step</button>
+          <button
+            onClick={step}
+            disabled={playing}
+            className="icon-only"
+            aria-label="Step one generation"
+            title="Step one generation (→)"
+          >
+            <StepIcon size={16} />
+          </button>
           <button
             onClick={() => stepN(50)}
             disabled={playing}
-            title="Fast-forward 50 generations"
+            className="icon-only"
+            aria-label="Fast-forward 50 generations"
+            title="Fast-forward 50 generations (F)"
           >
-            +50
+            <FastForwardIcon size={16} />
           </button>
           <button
             onClick={() => {
-              if (confirm("Reset simulation to generation 0? This wipes the current run (saved runs are preserved).")) {
+              if (
+                confirm(
+                  "Reset simulation to generation 0? This wipes the current run (saved runs are preserved).",
+                )
+              ) {
                 reset();
               }
             }}
+            className="icon-only"
+            aria-label="Reset simulation"
+            title="Reset (Cmd/Ctrl+R)"
           >
-            Reset
+            <ResetIcon size={16} />
           </button>
+          <ThemeToggle />
         </div>
       </header>
 
-      <nav className="tab-bar">
+      <nav className="tab-bar" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={activeTab === t.id}
             className={activeTab === t.id ? "active" : ""}
             onClick={() => setActiveTab(t.id)}
           >
@@ -132,11 +182,12 @@ export function App() {
         <ControlsPanel />
       </aside>
 
-      <main className="main">
+      <main className="main" style={{ position: "relative" }}>
+        {activeTab === "tree" && <WelcomeBanner />}
         {activeTab === "tree" && (
           <div className="panel panel-single">
             <h3>Language Tree</h3>
-            <Suspense fallback={<Loading />}>
+            <Suspense fallback={<PanelSkeleton />}>
               <LanguageTreeView />
             </Suspense>
           </div>
@@ -150,7 +201,7 @@ export function App() {
         {activeTab === "timeline" && (
           <div className="panel panel-single">
             <h3>Timeline</h3>
-            <Suspense fallback={<Loading />}>
+            <Suspense fallback={<PanelSkeleton />}>
               <TimelineChart />
             </Suspense>
           </div>

@@ -70,6 +70,12 @@ export interface Language {
    * compound/derived meanings that are not in the static global table.
    */
   localNeighbors: Record<Meaning, string[]>;
+  /**
+   * Per-language tempo multiplier in [0.3, 1.8]. 1.0 = average.
+   * Multiplied into every change-rate call so some descendants are
+   * conservative ("turtle") and others innovative ("hare").
+   */
+  conservatism: number;
 }
 
 export interface LanguageNode {

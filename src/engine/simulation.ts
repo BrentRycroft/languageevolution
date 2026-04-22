@@ -16,6 +16,7 @@ import { applyOneRegularChange } from "./phonology/regular";
 import { maybeSpreadTone } from "./phonology/tone_spread";
 import { tryBorrow } from "./contact/borrow";
 import { levenshtein } from "./phonology/ipa";
+import { complexityFor } from "./lexicon/complexity";
 import { toneOf } from "./phonology/tone";
 import { GENESIS_BY_ID } from "./genesis/catalog";
 import type { GenesisRule } from "./genesis/types";
@@ -98,6 +99,9 @@ function buildInitialState(config: SimulationConfig): SimulationState {
     phonemeInventory: inventoryFromLexicon(seedLex),
     morphology: cloneMorphology(config.seedMorphology),
     localNeighbors: {},
+    // Proto starts at a deterministic 1.0 so base runs are reproducible;
+    // daughters jitter on split.
+    conservatism: 1.0,
   };
   const rootNode: LanguageNode = {
     language: rootLang,
@@ -128,7 +132,8 @@ function genesisRulesFor(config: SimulationConfig): GenesisRule[] {
 function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
   const before = lang.lexicon;
   const changes = changesForLang(lang);
-  const mult = rateMultiplier(generation, lang.id);
+  // Per-language conservatism multiplies into every rate call.
+  const mult = rateMultiplier(generation, lang.id) * lang.conservatism;
   const opts = {
     globalRate: config.phonology.globalRate,
     weights: lang.changeWeights,
@@ -206,10 +211,14 @@ function stepContact(
 
 function stepGenesis(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
   const rules = genesisRulesFor(config);
-  // Scale coinage count inversely with current lexicon size: small languages
-  // coin aggressively, large languages coin sporadically.
   const lexSize = Object.keys(lang.lexicon).length;
-  const target = Math.max(1, Math.ceil((200 - lexSize) / 30));
+  // Exponential decay: small languages coin aggressively, mature languages
+  // only rarely. Plus jitter so identical sizes don't all coin in lockstep.
+  const base = 5 * Math.exp(-lexSize / 40);
+  const noise = 0.5 + rng.next(); // [0.5, 1.5]
+  const target = Math.max(1, Math.round(base * noise * lang.conservatism));
+  // Conservatism gate: cautious languages sometimes skip the round entirely.
+  if (!rng.chance(Math.min(1, 0.5 + 0.5 * lang.conservatism))) return;
   for (let i = 0; i < target; i++) {
     const result = tryGenesis(lang, rules, config.genesis.ruleWeights, config.genesis.globalRate, rng);
     if (!result) break;
@@ -224,7 +233,8 @@ function stepGenesis(lang: Language, config: SimulationConfig, rng: Rng, generat
 }
 
 function stepGrammar(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
-  if (!rng.chance(config.grammar.driftProbabilityPerGeneration)) return;
+  const p = Math.min(1, config.grammar.driftProbabilityPerGeneration * lang.conservatism);
+  if (!rng.chance(p)) return;
   const shifts = driftGrammar(lang.grammar, rng);
   for (const s of shifts) {
     pushEvent(lang, {
@@ -242,7 +252,8 @@ function stepSemantics(
   generation: number,
   override?: NeighborOverride,
 ): void {
-  if (!rng.chance(config.semantics.driftProbabilityPerGeneration)) return;
+  const p = Math.min(1, config.semantics.driftProbabilityPerGeneration * lang.conservatism);
+  if (!rng.chance(p)) return;
   // Merge per-language compound overrides with the AI/static overrides.
   const merged: NeighborOverride = { ...(override ?? {}) };
   for (const [m, ns] of Object.entries(lang.localNeighbors)) {
@@ -265,7 +276,11 @@ function stepSemantics(
 }
 
 function stepMorphology(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
-  const gShift = maybeGrammaticalize(lang, rng, config.morphology.grammaticalizationProbability);
+  const gShift = maybeGrammaticalize(
+    lang,
+    rng,
+    config.morphology.grammaticalizationProbability * lang.conservatism,
+  );
   if (gShift) {
     pushEvent(lang, {
       generation,
@@ -273,7 +288,7 @@ function stepMorphology(lang: Language, config: SimulationConfig, rng: Rng, gene
       description: gShift.description,
     });
   }
-  const merge = maybeMergeParadigms(lang, rng, config.morphology.paradigmMergeProbability);
+  const merge = maybeMergeParadigms(lang, rng, config.morphology.paradigmMergeProbability * lang.conservatism);
   if (merge) {
     pushEvent(lang, {
       generation,
@@ -295,12 +310,14 @@ function stepObsolescence(lang: Language, config: SimulationConfig, rng: Rng, ge
     const fb = lang.lexicon[b]!;
     if (Math.abs(fa.length - fb.length) > 1) continue;
     if (levenshtein(fa, fb) > config.obsolescence.maxDistanceForRivalry) continue;
-    // Prefer retiring a derived / less-frequent entry.
-    const freqA = lang.wordFrequencyHints[a] ?? 0.5;
-    const freqB = lang.wordFrequencyHints[b] ?? 0.5;
-    const loser = freqA < freqB ? a : freqB < freqA ? b : rng.chance(0.5) ? a : b;
+    // Retention favours higher frequency AND higher semantic complexity:
+    // abstract words have less conversational pressure and resist loss.
+    const scoreA = (lang.wordFrequencyHints[a] ?? 0.5) + 0.1 * complexityFor(a);
+    const scoreB = (lang.wordFrequencyHints[b] ?? 0.5) + 0.1 * complexityFor(b);
+    const loser = scoreA < scoreB ? a : scoreB < scoreA ? b : rng.chance(0.5) ? a : b;
     const winner = loser === a ? b : a;
-    if (!rng.chance(config.obsolescence.probabilityPerPairPerGeneration)) return;
+    const p = config.obsolescence.probabilityPerPairPerGeneration * lang.conservatism;
+    if (!rng.chance(p)) return;
     delete lang.lexicon[loser];
     delete lang.wordFrequencyHints[loser];
     pushEvent(lang, {

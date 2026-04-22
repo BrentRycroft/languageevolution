@@ -10,9 +10,16 @@ export function EvolutionSpeedPicker() {
 
   const onChange = (id: string) => {
     const profile = findEvolutionSpeed(id);
-    if (!profile) return;
-    // Apply the speed profile to the current content preset, preserving seed
-    // lexicon and morphology. The simulation resets (rates changed).
+    if (!profile || id === current) return;
+    // Switching evolution speed changes every rate and therefore has to
+    // restart the simulation. Confirm so users don't lose their current run.
+    if (
+      !confirm(
+        `Switch to "${profile.label}"?\nThis resets the simulation to generation 0 because every rate changes.`,
+      )
+    ) {
+      return;
+    }
     const next = profile.apply(config);
     loadConfig({ ...next, evolutionSpeed: id });
   };

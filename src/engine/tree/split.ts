@@ -63,6 +63,13 @@ export function splitLeaf(
       localNeighbors: Object.fromEntries(
         Object.entries(parentLang.localNeighbors).map(([k, v]) => [k, v.slice()]),
       ),
+      // Daughters inherit parent's tempo with ±30% jitter, clamped to
+      // [0.3, 1.8]. So sister languages frequently diverge in tempo, not just
+      // form — one becomes the "turtle", the other the "hare".
+      conservatism: Math.max(
+        0.3,
+        Math.min(1.8, parentLang.conservatism * (0.7 + rng.next() * 0.6)),
+      ),
     };
   };
   const a = makeChild(false);

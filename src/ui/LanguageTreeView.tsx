@@ -56,23 +56,25 @@ export function LanguageTreeView() {
     const sample = selectedMeaning ?? "water";
     const data = buildHierarchy(state.tree, state.rootId, sample);
     const root = hierarchy(data);
-    const margin = 20;
+    const margin = 24;
+    // Vertical layout: x spreads horizontally, y is depth downward.
     const w = Math.max(200, size.w - margin * 2);
     const h = Math.max(160, size.h - margin * 2 - 20);
-    d3tree<NodeDatum>().size([h, w]).separation(() => 1.1)(root);
+    d3tree<NodeDatum>().size([w, h]).separation(() => 1.2)(root);
     return { root, margin };
   }, [state, selectedMeaning, size]);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 200 }}>
+    <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 220 }}>
       <svg className="tree-svg" width={size.w} height={size.h}>
         <g transform={`translate(${layout.margin},${layout.margin})`}>
           {layout.root.links().map((link, i) => {
             const s = link.source as unknown as { x: number; y: number };
             const t = link.target as unknown as { x: number; y: number };
             const targetExtinct = (link.target.data as NodeDatum).extinct;
-            const mid = (s.y + t.y) / 2;
-            const path = `M${s.y},${s.x} C${mid},${s.x} ${mid},${t.x} ${t.y},${t.x}`;
+            // Vertical orientation: route via midpoint Y.
+            const midY = (s.y + t.y) / 2;
+            const path = `M${s.x},${s.y} C${s.x},${midY} ${t.x},${midY} ${t.x},${t.y}`;
             return (
               <path
                 key={i}
@@ -90,8 +92,11 @@ export function LanguageTreeView() {
               (d.isLeaf ? "leaf" : "internal") +
               (d.extinct ? " extinct" : "") +
               (selectedLangId === d.id ? " selected" : "");
+            // Labels drop BELOW node for leaves (room), ABOVE for internals.
+            const labelY = d.isLeaf ? 18 : -10;
+            const sampleY = d.isLeaf ? 30 : -22;
             return (
-              <g key={d.id} transform={`translate(${pos.y},${pos.x})`}>
+              <g key={d.id} transform={`translate(${pos.x},${pos.y})`}>
                 <circle
                   r={d.isLeaf ? 7 : 4}
                   className={`tree-node-circle ${cls}`}
@@ -105,16 +110,18 @@ export function LanguageTreeView() {
                 )}
                 <text
                   className="tree-node-label"
-                  x={d.isLeaf ? 11 : 7}
-                  y={-2}
+                  x={0}
+                  y={labelY}
+                  textAnchor="middle"
                   opacity={d.extinct ? 0.5 : 1}
                 >
                   {d.name}
                 </text>
                 <text
                   className="tree-node-sample"
-                  x={d.isLeaf ? 11 : 7}
-                  y={11}
+                  x={0}
+                  y={sampleY}
+                  textAnchor="middle"
                   opacity={d.extinct ? 0.4 : 1}
                 >
                   {d.sample}

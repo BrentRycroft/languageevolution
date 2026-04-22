@@ -614,16 +614,22 @@ export const CATALOG: SoundChange[] = [
       if (VOICELESS.has(last)) return 0.04;
       return 0;
     },
-    apply: (word) => {
+    apply: (word, rng) => {
       if (word.length < 2) return word;
       const last = word[word.length - 1]!;
       const prev = word[word.length - 2]!;
       if (toneOf(prev)) return word;
       if (!isVowel(stripTone(prev))) return word;
-      let tone: string | null = null;
-      if (VOICED.has(last)) tone = LOW;
-      else if (VOICELESS.has(last)) tone = HIGH;
-      if (!tone) return word;
+      // Tonogenesis canonical mapping is: voiced → LOW, voiceless → HIGH.
+      // Probabilistic: 75% canonical, 20% reversed, 5% mid — gives languages
+      // unexpected tonal profiles rather than a deterministic rule.
+      const isVoicedCtx = VOICED.has(last);
+      const isVoicelessCtx = VOICELESS.has(last);
+      if (!isVoicedCtx && !isVoicelessCtx) return word;
+      const canonical = isVoicedCtx ? LOW : HIGH;
+      const reversed = isVoicedCtx ? HIGH : LOW;
+      const roll = rng.next();
+      const tone = roll < 0.75 ? canonical : roll < 0.95 ? reversed : "˧";
       const out = word.slice();
       out[out.length - 2] = prev + tone;
       return out;
@@ -656,15 +662,16 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "detonogenesis.tone_loss",
-    label: "V˥/V˩ → V",
+    label: "V˥/V˩ → V (sporadic)",
     category: "vowel",
     description:
-      "Detonogenesis (rare): every toned vowel collapses back to its plain form. Fires on the whole word at once.",
+      "Detonogenesis (rare): each toned vowel independently rolls to lose its tone. Some words keep tones longer than others.",
     probabilityFor: (w) => {
-      for (const p of w) if (toneOf(p)) return 0.01;
+      for (const p of w) if (toneOf(p)) return 0.04;
       return 0;
     },
-    apply: (word) => word.map((p) => (toneOf(p) ? stripTone(p) : p)),
+    apply: (word, rng) =>
+      word.map((p) => (toneOf(p) && rng.chance(0.35) ? stripTone(p) : p)),
     enabledByDefault: false,
     baseWeight: 1,
   },
