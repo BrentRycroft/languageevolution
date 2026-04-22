@@ -17,6 +17,17 @@ export function translate(
   options: { inflect?: MorphCategory } = {},
 ): TranslationResult {
   const key = englishWord.trim().toLowerCase();
+  if (!key) {
+    return { form: "", phonemes: [], source: "missing", notes: "Empty input." };
+  }
+  if (Object.keys(lang.lexicon).length === 0) {
+    return {
+      form: "—",
+      phonemes: [],
+      source: "missing",
+      notes: `${lang.name} has no surviving vocabulary.`,
+    };
+  }
 
   // 1. exact meaning match
   const exact = lang.lexicon[key];
@@ -85,6 +96,34 @@ export function translate(
  * Optional LLM-assisted translator. Lazy-imports WebLLM the same way the
  * semantic-drift module does; only called when the user clicks "Try AI".
  */
+/**
+ * Translate a form from one living language into another by tracing each
+ * known meaning. Returns a best-effort form using the target language's
+ * existing lexicon, or missing if no matching meaning can be found.
+ */
+export function translateBetween(
+  source: Language,
+  target: Language,
+  sourceForm: string,
+): TranslationResult {
+  let matchedMeaning: string | null = null;
+  for (const m of Object.keys(source.lexicon)) {
+    if (formToString(source.lexicon[m]!) === sourceForm) {
+      matchedMeaning = m;
+      break;
+    }
+  }
+  if (!matchedMeaning) {
+    return {
+      form: "—",
+      phonemes: [],
+      source: "missing",
+      notes: `"${sourceForm}" is not a word in ${source.name}.`,
+    };
+  }
+  return translate(target, matchedMeaning);
+}
+
 export async function translateWithAI(
   lang: Language,
   englishWord: string,
@@ -109,11 +148,13 @@ Invent a plausible word in ${lang.name} meaning "${englishWord}". Use only the p
   const res = await engine.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
     temperature: 0.6,
-    max_tokens: 20,
+    max_tokens: 24,
   });
   const raw = (res.choices[0]?.message.content ?? "").trim();
-  // Take the first whitespace-delimited token.
-  const cleaned = raw.split(/\s+/)[0] ?? "";
+  // Take the first non-empty line, ignoring blank lines.
+  const firstLine = raw.split(/\n+/).map((s) => s.trim()).find((s) => s.length > 0) ?? "";
+  // Strip leading/trailing punctuation and quotes; keep IPA diacritics attached.
+  const cleaned = firstLine.replace(/^[\s"'`*_.-]+|[\s"'`*_.,;-]+$/g, "");
   const phonemes = Array.from(cleaned);
   return {
     form: cleaned,

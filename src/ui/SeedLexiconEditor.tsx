@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { useSimStore } from "../state/store";
-import { asciiToIpa, formToString } from "../engine/phonology/ipa";
+import { asciiToIpa, formToString, isVowel, isConsonant } from "../engine/phonology/ipa";
+import { toneOf, stripTone } from "../engine/phonology/tone";
 import type { Lexicon, WordForm } from "../engine/types";
+
+function phonemeIsKnown(p: string): boolean {
+  const stripped = stripTone(p);
+  if (isVowel(stripped) || isConsonant(stripped)) return true;
+  // Tone-bearing vowel with tone mark.
+  if (toneOf(p) && isVowel(stripped)) return true;
+  return false;
+}
 
 function parseForm(input: string): WordForm {
   const tokens: string[] = [];
@@ -65,6 +74,21 @@ export function SeedLexiconEditor({ onClose }: { onClose: () => void }) {
   };
 
   const apply = () => {
+    const unknown: string[] = [];
+    for (const m of Object.keys(draft)) {
+      for (const p of draft[m]!) {
+        if (!phonemeIsKnown(p)) unknown.push(`${m}:${p}`);
+      }
+    }
+    if (unknown.length > 0) {
+      const sample = unknown.slice(0, 6).join(", ");
+      if (
+        !confirm(
+          `Warning: ${unknown.length} phoneme(s) not in the IPA inventory (${sample}${unknown.length > 6 ? ", ..." : ""}). Continue anyway?`,
+        )
+      )
+        return;
+    }
     if (!confirm("Applying a new seed lexicon will reset the simulation to generation 0.")) return;
     updateConfig({ seedLexicon: draft });
     onClose();

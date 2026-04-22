@@ -50,9 +50,16 @@ export function defaultConfig(): SimulationConfig {
       maxDistanceForRivalry: 1,
     },
     morphology: {
-      grammaticalizationProbability: 0.01,
+      grammaticalizationProbability: 0.02,
       paradigmMergeProbability: 0.01,
     },
+    contact: {
+      borrowProbabilityPerGeneration: 0.02,
+    },
+    phonology_lawful: {
+      regularChangeProbability: 0.03,
+    },
+    evolutionSpeed: "standard",
     seedLexicon: DEFAULT_LEXICON,
     seedFrequencyHints: DEFAULT_FREQUENCY_HINTS,
     seedMorphology: DEFAULT_MORPHOLOGY,

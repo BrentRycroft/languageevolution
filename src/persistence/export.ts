@@ -1,6 +1,6 @@
 import type { LanguageTree, SimulationState } from "../engine/types";
 import { leafIds } from "../engine/tree/split";
-import { formToString } from "../engine/phonology/ipa";
+import { formToString, sanitizeForNewick } from "../engine/phonology/ipa";
 
 function triggerDownload(filename: string, content: string, mime: string): void {
   const blob = new Blob([content], { type: mime });
@@ -59,7 +59,7 @@ export function exportLexiconsCSV(state: SimulationState): void {
 
 function toNewick(tree: LanguageTree, id: string): string {
   const node = tree[id]!;
-  const label = node.language.name.replace(/[(),:;]/g, "_");
+  const label = sanitizeForNewick(node.language.name);
   if (node.childrenIds.length === 0) return label;
   const children = node.childrenIds.map((cid) => toNewick(tree, cid)).join(",");
   return `(${children})${label}`;

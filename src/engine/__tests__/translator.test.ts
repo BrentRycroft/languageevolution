@@ -23,6 +23,7 @@ function sampleLang(): Language {
     morphology: {
       paradigms: { ...DEFAULT_MORPHOLOGY.paradigms },
     },
+    localNeighbors: {},
   };
 }
 

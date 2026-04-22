@@ -82,6 +82,9 @@ export function splitLeaf(
         usesTones: parentLang.phonemeInventory.usesTones,
       },
       morphology: cloneMorph(parentLang.morphology),
+      localNeighbors: Object.fromEntries(
+        Object.entries(parentLang.localNeighbors).map(([k, v]) => [k, v.slice()]),
+      ),
     };
   };
   const a = makeChild(false);

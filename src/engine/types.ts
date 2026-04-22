@@ -65,6 +65,11 @@ export interface Language {
    */
   phonemeInventory: PhonemeInventory;
   morphology: import("./morphology/types").Morphology;
+  /**
+   * Per-language semantic neighbor overrides, populated at runtime for
+   * compound/derived meanings that are not in the static global table.
+   */
+  localNeighbors: Record<Meaning, string[]>;
 }
 
 export interface LanguageNode {
@@ -126,10 +131,23 @@ export interface SimulationConfig {
     grammaticalizationProbability: number;
     paradigmMergeProbability: number;
   };
+  contact: {
+    borrowProbabilityPerGeneration: number;
+  };
+  phonology_lawful: {
+    /**
+     * Probability per generation that one enabled sound change fires
+     * "regularly" — applied to every matching site in every word at once,
+     * simulating a linguistic sound law rather than sporadic drift.
+     */
+    regularChangeProbability: number;
+  };
   seedLexicon: Lexicon;
   seedFrequencyHints?: Record<Meaning, number>;
   seedMorphology?: import("./morphology/types").Morphology;
   preset?: string;
+  /** Evolution-speed profile id (conservative / standard / rapid / extreme). */
+  evolutionSpeed?: string;
 }
 
 export interface SimulationState {
@@ -146,4 +164,9 @@ export interface SavedRun {
   createdAt: number;
   config: SimulationConfig;
   generationsRun: number;
+  /**
+   * Optional full-state checkpoint. If present, loading skips replay and
+   * restores this state directly. Otherwise the engine replays from seed.
+   */
+  stateSnapshot?: SimulationState;
 }

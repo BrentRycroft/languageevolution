@@ -148,6 +148,29 @@ body {
   color: var(--muted);
 }
 
+.collapsible-section > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.collapsible-section > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--muted);
+  transition: transform 0.15s;
+  transform: rotate(0deg);
+}
+
+.collapsible-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.collapsible-section > summary::-webkit-details-marker {
+  display: none;
+}
+
 button {
   background: var(--panel-2);
   color: var(--text);

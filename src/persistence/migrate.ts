@@ -55,6 +55,19 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
       defaults.seedFrequencyHints,
     preset:
       typeof oldConfig.preset === "string" ? (oldConfig.preset as string) : undefined,
+    evolutionSpeed:
+      typeof oldConfig.evolutionSpeed === "string"
+        ? (oldConfig.evolutionSpeed as string)
+        : "standard",
+    morphology:
+      (oldConfig.morphology as SimulationConfig["morphology"] | undefined) ??
+      defaults.morphology,
+    contact:
+      (oldConfig.contact as SimulationConfig["contact"] | undefined) ??
+      defaults.contact,
+    phonology_lawful:
+      (oldConfig.phonology_lawful as SimulationConfig["phonology_lawful"] | undefined) ??
+      defaults.phonology_lawful,
   };
   return {
     version: 3,

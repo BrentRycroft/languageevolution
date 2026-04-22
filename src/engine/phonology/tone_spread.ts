@@ -1,0 +1,50 @@
+import type { Language, WordForm } from "../types";
+import type { Rng } from "../rng";
+import { isToneBearing, stripTone, toneOf } from "./tone";
+
+/**
+ * Tone spreading: a toned vowel optionally copies its tone to a neighbouring
+ * untoned vowel. Fires on tonal languages only; each generation has a small
+ * probability of a single spreading event per word.
+ */
+export function maybeSpreadTone(
+  lang: Language,
+  rng: Rng,
+  probability: number,
+): number {
+  if (!lang.phonemeInventory.usesTones) return 0;
+  let changed = 0;
+  for (const m of Object.keys(lang.lexicon)) {
+    const form = lang.lexicon[m]!;
+    if (!rng.chance(probability)) continue;
+    const next = spreadOnce(form, rng);
+    if (next !== form) {
+      lang.lexicon[m] = next;
+      changed++;
+    }
+  }
+  return changed;
+}
+
+function spreadOnce(form: WordForm, rng: Rng): WordForm {
+  // Find a toned vowel adjacent (within 2 positions through consonants) to an untoned vowel.
+  const sites: Array<{ from: number; to: number; tone: string }> = [];
+  for (let i = 0; i < form.length; i++) {
+    const t = toneOf(form[i]!);
+    if (!t || !isToneBearing(form[i]!)) continue;
+    for (const d of [-2, -1, 1, 2]) {
+      const j = i + d;
+      if (j < 0 || j >= form.length) continue;
+      const target = form[j]!;
+      if (!isToneBearing(target)) continue;
+      if (toneOf(target)) continue;
+      sites.push({ from: i, to: j, tone: t });
+    }
+  }
+  if (sites.length === 0) return form;
+  const site = sites[rng.int(sites.length)]!;
+  const out = form.slice();
+  const base = stripTone(out[site.to]!);
+  out[site.to] = base + site.tone;
+  return out;
+}

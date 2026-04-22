@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useSimStore } from "../state/store";
 import { CATALOG } from "../engine/phonology/catalog";
 import { GENESIS_CATALOG } from "../engine/genesis/catalog";
@@ -8,6 +8,7 @@ import { ChangePreview } from "./ChangePreview";
 import { SeedLexiconEditor } from "./SeedLexiconEditor";
 import { AiSemantics } from "./AiSemantics";
 import { PresetPicker } from "./PresetPicker";
+import { EvolutionSpeedPicker } from "./EvolutionSpeedPicker";
 import {
   exportLexiconsJSON,
   exportLexiconsCSV,
@@ -69,6 +70,25 @@ function Toggle({
   );
 }
 
+function Section({
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="section collapsible-section" open={defaultOpen}>
+      <summary>
+        <h4 style={{ display: "inline-block", margin: 0 }}>{title}</h4>
+      </summary>
+      <div style={{ paddingTop: 6 }}>{children}</div>
+    </details>
+  );
+}
+
 export function ControlsPanel() {
   const config = useSimStore((s) => s.config);
   const speed = useSimStore((s) => s.speed);
@@ -79,6 +99,8 @@ export function ControlsPanel() {
   const updateGenesis = useSimStore((s) => s.updateGenesis);
   const updateGrammar = useSimStore((s) => s.updateGrammar);
   const updateSemantics = useSimStore((s) => s.updateSemantics);
+  const updateObsolescence = useSimStore((s) => s.updateObsolescence);
+  const updateMorphologyRates = useSimStore((s) => s.updateMorphologyRates);
   const setChangeEnabled = useSimStore((s) => s.setChangeEnabled);
   const setChangeWeight = useSimStore((s) => s.setChangeWeight);
   const setGenesisEnabled = useSimStore((s) => s.setGenesisEnabled);
@@ -90,13 +112,15 @@ export function ControlsPanel() {
 
   return (
     <div>
-      <div className="section">
-        <h4>Preset</h4>
+      <Section title="Preset" defaultOpen>
         <PresetPicker />
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Playback</h4>
+      <Section title="Evolution speed" defaultOpen>
+        <EvolutionSpeedPicker />
+      </Section>
+
+      <Section title="Playback" defaultOpen>
         <Slider
           label="Speed (steps/sec)"
           value={speed}
@@ -106,10 +130,9 @@ export function ControlsPanel() {
           onChange={setSpeed}
           format={(v) => `${v}/s`}
         />
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Modes</h4>
+      <Section title="Modes">
         <Toggle
           label="Phonological drift"
           value={config.modes.phonology}
@@ -140,10 +163,9 @@ export function ControlsPanel() {
           value={config.modes.semantics}
           onChange={(v) => updateModes({ semantics: v })}
         />
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Rates</h4>
+      <Section title="Rates" defaultOpen={false}>
         <Slider
           label="Global rate"
           value={config.phonology.globalRate}
@@ -201,15 +223,41 @@ export function ControlsPanel() {
           step={0.005}
           onChange={(v) => updateSemantics({ driftProbabilityPerGeneration: v })}
         />
-      </div>
+        <Slider
+          label="Obsolescence / pair"
+          value={config.obsolescence.probabilityPerPairPerGeneration}
+          min={0}
+          max={0.2}
+          step={0.005}
+          onChange={(v) => updateObsolescence({ probabilityPerPairPerGeneration: v })}
+        />
+        <Slider
+          label="Grammaticalization"
+          value={config.morphology.grammaticalizationProbability}
+          min={0}
+          max={0.1}
+          step={0.005}
+          onChange={(v) =>
+            updateMorphologyRates({ grammaticalizationProbability: v })
+          }
+        />
+        <Slider
+          label="Paradigm merge"
+          value={config.morphology.paradigmMergeProbability}
+          min={0}
+          max={0.1}
+          step={0.005}
+          onChange={(v) => updateMorphologyRates({ paradigmMergeProbability: v })}
+        />
+      </Section>
 
-      <div className="section">
-        <h4>Seed</h4>
+      <Section title="Seed" defaultOpen={false}>
         <input
           type="text"
           value={config.seed}
           onChange={(e) => setSeed(e.target.value)}
           placeholder="seed"
+          aria-label="Random seed"
         />
         <button
           style={{ marginTop: 6, width: "100%" }}
@@ -217,15 +265,13 @@ export function ControlsPanel() {
         >
           Edit seed lexicon ({Object.keys(config.seedLexicon).length})
         </button>
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Preview</h4>
+      <Section title="Preview" defaultOpen={false}>
         <ChangePreview />
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Sound changes</h4>
+      <Section title="Sound changes" defaultOpen={false}>
         <div className="change-catalog">
           {CATALOG.map((c) => {
             const enabled = enabledSet.has(c.id);
@@ -240,6 +286,7 @@ export function ControlsPanel() {
                   type="checkbox"
                   checked={enabled}
                   onChange={(e) => setChangeEnabled(c.id, e.target.checked)}
+                  aria-label={`${c.label} enabled`}
                 />
                 <span className="change-label">{c.label}</span>
                 <input
@@ -250,15 +297,15 @@ export function ControlsPanel() {
                   value={w}
                   onChange={(e) => setChangeWeight(c.id, Number(e.target.value))}
                   disabled={!enabled}
+                  aria-label={`${c.label} weight`}
                 />
               </div>
             );
           })}
         </div>
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Word genesis rules</h4>
+      <Section title="Word genesis rules" defaultOpen={false}>
         <div className="change-catalog">
           {GENESIS_CATALOG.map((g) => {
             const enabled = genesisSet.has(g.id);
@@ -273,33 +320,30 @@ export function ControlsPanel() {
                   type="checkbox"
                   checked={enabled}
                   onChange={(e) => setGenesisEnabled(g.id, e.target.checked)}
+                  aria-label={`${g.label} enabled`}
                 />
                 <span className="change-label">{g.label}</span>
               </div>
             );
           })}
         </div>
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Stats</h4>
+      <Section title="Stats" defaultOpen={false}>
         <StatsPanel />
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Export</h4>
+      <Section title="Export" defaultOpen={false}>
         <ExportButtons />
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>AI semantic drift</h4>
+      <Section title="AI semantic drift" defaultOpen={false}>
         <AiSemantics />
-      </div>
+      </Section>
 
-      <div className="section">
-        <h4>Saved runs</h4>
+      <Section title="Saved runs" defaultOpen={false}>
         <SavedRunsList />
-      </div>
+      </Section>
 
       {seedEditorOpen && <SeedLexiconEditor onClose={() => setSeedEditorOpen(false)} />}
     </div>

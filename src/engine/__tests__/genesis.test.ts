@@ -21,6 +21,7 @@ function makeLang(): Language {
     wordFrequencyHints: {},
     phonemeInventory: { segmental: [], tones: [], usesTones: false },
     morphology: { paradigms: {} },
+    localNeighbors: {},
   };
 }
 

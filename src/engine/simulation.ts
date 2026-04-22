@@ -12,6 +12,9 @@ import type {
 import { CATALOG_BY_ID } from "./phonology/catalog";
 import { applyChangesToLexicon } from "./phonology/apply";
 import { rateMultiplier } from "./phonology/rate";
+import { applyOneRegularChange } from "./phonology/regular";
+import { maybeSpreadTone } from "./phonology/tone_spread";
+import { tryBorrow } from "./contact/borrow";
 import { levenshtein } from "./phonology/ipa";
 import { toneOf } from "./phonology/tone";
 import { GENESIS_BY_ID } from "./genesis/catalog";
@@ -38,6 +41,7 @@ export interface Simulation {
   step: () => void;
   reset: () => void;
   setAiNeighbors: (n: NeighborOverride | undefined) => void;
+  restoreState: (snapshot: SimulationState) => void;
 }
 
 function cloneLexicon(lex: Lexicon): Lexicon {
@@ -116,6 +120,7 @@ function buildInitialState(config: SimulationConfig): SimulationState {
     wordFrequencyHints: { ...(config.seedFrequencyHints ?? {}) },
     phonemeInventory: inventoryFromLexicon(seedLex),
     morphology: cloneMorphology(config.seedMorphology),
+    localNeighbors: {},
   };
   const rootNode: LanguageNode = {
     language: rootLang,
@@ -180,6 +185,46 @@ function stepPhonology(lang: Language, config: SimulationConfig, rng: Rng, gener
       description: `${mutated} form${mutated === 1 ? "" : "s"} shifted (×${mult.toFixed(2)})`,
     });
   }
+
+  // Regular ("lawful") change: rare but applies to every matching site.
+  if (rng.chance(config.phonology_lawful.regularChangeProbability)) {
+    const ruleId = applyOneRegularChange(lang, changes, rng);
+    if (ruleId) {
+      refreshInventory(lang);
+      pushEvent(lang, {
+        generation,
+        kind: "sound_change",
+        description: `sound law: ${ruleId} applied exceptionlessly`,
+      });
+    }
+  }
+
+  // Tone spreading, only in tonal languages.
+  const spread = maybeSpreadTone(lang, rng, 0.02);
+  if (spread > 0) {
+    pushEvent(lang, {
+      generation,
+      kind: "sound_change",
+      description: `tone spread to ${spread} word${spread === 1 ? "" : "s"}`,
+    });
+  }
+}
+
+function stepContact(
+  state: SimulationState,
+  lang: Language,
+  config: SimulationConfig,
+  rng: Rng,
+  generation: number,
+): void {
+  const loan = tryBorrow(lang, state.tree, rng, config.contact.borrowProbabilityPerGeneration);
+  if (loan) {
+    pushEvent(lang, {
+      generation,
+      kind: "coinage",
+      description: `borrowed "${loan.meaning}" from ${loan.donor} (${loan.originalForm} → ${loan.adaptedForm})`,
+    });
+  }
 }
 
 function stepGenesis(lang: Language, config: SimulationConfig, rng: Rng, generation: number): void {
@@ -221,7 +266,12 @@ function stepSemantics(
   override?: NeighborOverride,
 ): void {
   if (!rng.chance(config.semantics.driftProbabilityPerGeneration)) return;
-  const drift = driftOneMeaning(lang, rng, override);
+  // Merge per-language compound overrides with the AI/static overrides.
+  const merged: NeighborOverride = { ...(override ?? {}) };
+  for (const [m, ns] of Object.entries(lang.localNeighbors)) {
+    if (!merged[m]) merged[m] = ns;
+  }
+  const drift = driftOneMeaning(lang, rng, merged);
   if (drift) {
     // Propagate frequency hint under the new name so it keeps evolving.
     const hint = lang.wordFrequencyHints[drift.from];
@@ -326,18 +376,33 @@ function stepDeath(
   }
 }
 
-// Bootstrap: if a newly coined meaning had no neighbors, seed some from a
-// semantically-proximate ancestor so semantic drift can still affect it.
+// Bootstrap: for each derived meaning (compound/affixed) that has no
+// entry in the static neighbor table, inherit neighbors from its parts so
+// semantic drift and the translator can still reach it.
 function bootstrapNeologismNeighbors(lang: Language, _rng: Rng): void {
   for (const m of Object.keys(lang.lexicon)) {
-    if (!m.includes("-")) continue;
-    if (neighborsOf(m).length > 0) continue;
+    if (!m.includes("-") && !/-(er|ness|ic|al|ine|intens)$/.test(m)) continue;
     const parts = m.split("-");
+    // Frequency inheritance.
     for (const p of parts) {
       const hint = lang.wordFrequencyHints[p];
       if (hint && !lang.wordFrequencyHints[m]) {
         lang.wordFrequencyHints[m] = Math.max(lang.wordFrequencyHints[m] ?? 0, hint * 0.7);
       }
+    }
+    // Neighbor inheritance: union of parent neighbors (global + local),
+    // filtered to meanings this language actually has.
+    if (neighborsOf(m).length > 0 || (lang.localNeighbors[m] ?? []).length > 0) continue;
+    const proposed = new Set<string>();
+    for (const p of parts) {
+      for (const n of neighborsOf(p)) proposed.add(n);
+      for (const n of lang.localNeighbors[p] ?? []) proposed.add(n);
+    }
+    const usable = Array.from(proposed).filter(
+      (n) => n !== m && lang.lexicon[n] !== undefined,
+    );
+    if (usable.length > 0) {
+      lang.localNeighbors[m] = usable.slice(0, 5);
     }
   }
 }
@@ -361,6 +426,9 @@ export function createSimulation(
       const lang = state.tree[leafId]!.language;
       if (lang.extinct) continue;
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen);
+      // Obsolescence runs BEFORE genesis so freshly-coined words are never
+      // retired in the same step they were born in.
+      stepObsolescence(lang, config, rng, nextGen);
       if (config.modes.genesis) {
         stepGenesis(lang, config, rng, nextGen);
         bootstrapNeologismNeighbors(lang, rng);
@@ -370,7 +438,7 @@ export function createSimulation(
         stepMorphology(lang, config, rng, nextGen);
       }
       if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen, aiNeighbors);
-      stepObsolescence(lang, config, rng, nextGen);
+      stepContact(state, lang, config, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
       if (config.modes.death) stepDeath(state, lang, config, rng);
     }
@@ -389,12 +457,23 @@ export function createSimulation(
     state = buildInitialState(config);
   };
 
+  const restoreState = (snapshot: SimulationState): void => {
+    state = {
+      generation: snapshot.generation,
+      rootId: snapshot.rootId,
+      rngState: snapshot.rngState,
+      // Deep clone so external mutation can't corrupt.
+      tree: JSON.parse(JSON.stringify(snapshot.tree)),
+    };
+  };
+
   return {
     getState: () => state,
     getConfig: () => config,
     step,
     reset,
     setAiNeighbors,
+    restoreState,
   };
 }
 

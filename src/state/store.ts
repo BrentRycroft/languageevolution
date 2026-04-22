@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import type { SimulationConfig, SimulationState, Meaning, WordForm } from "../engine/types";
+import type {
+  SimulationConfig,
+  SimulationState,
+  Meaning,
+  WordForm,
+} from "../engine/types";
 import { createSimulation, type Simulation } from "../engine/simulation";
 import { defaultConfig } from "../engine/config";
 import type { NeighborOverride } from "../engine/semantics/drift";
@@ -43,6 +48,8 @@ interface SimStore {
   updateGenesis: (patch: Partial<SimulationConfig["genesis"]>) => void;
   updateGrammar: (patch: Partial<SimulationConfig["grammar"]>) => void;
   updateSemantics: (patch: Partial<SimulationConfig["semantics"]>) => void;
+  updateObsolescence: (patch: Partial<SimulationConfig["obsolescence"]>) => void;
+  updateMorphologyRates: (patch: Partial<SimulationConfig["morphology"]>) => void;
   setChangeEnabled: (changeId: string, enabled: boolean) => void;
   setChangeWeight: (changeId: string, weight: number) => void;
   setGenesisEnabled: (ruleId: string, enabled: boolean) => void;
@@ -50,7 +57,11 @@ interface SimStore {
   selectMeaning: (m: Meaning | null) => void;
   toggleTimelineMeaning: (m: Meaning) => void;
   setSeed: (s: string) => void;
-  loadConfig: (config: SimulationConfig, generationsToReplay?: number) => void;
+  loadConfig: (
+    config: SimulationConfig,
+    generationsToReplay?: number,
+    stateSnapshot?: SimulationState,
+  ) => void;
   enableAiNeighbors: () => Promise<void>;
   loadCachedAiNeighbors: () => Promise<void>;
   clearAiNeighbors: () => Promise<void>;
@@ -169,6 +180,14 @@ export const useSimStore = create<SimStore>((set, get) => ({
     const { config, updateConfig } = get();
     updateConfig({ semantics: { ...config.semantics, ...patch } });
   },
+  updateObsolescence: (patch) => {
+    const { config, updateConfig } = get();
+    updateConfig({ obsolescence: { ...config.obsolescence, ...patch } });
+  },
+  updateMorphologyRates: (patch) => {
+    const { config, updateConfig } = get();
+    updateConfig({ morphology: { ...config.morphology, ...patch } });
+  },
   setGenesisEnabled: (ruleId, enabled) => {
     const { config, updateConfig } = get();
     const ids = new Set(config.genesis.enabledRuleIds);
@@ -219,10 +238,23 @@ export const useSimStore = create<SimStore>((set, get) => ({
     const { config, updateConfig } = get();
     updateConfig({ ...config, seed: s });
   },
-  loadConfig: (config, generationsToReplay) => {
+  loadConfig: (config, generationsToReplay, stateSnapshot) => {
     const init = initFromConfig(config);
     const { aiNeighbors } = get();
     init.sim.setAiNeighbors(aiNeighbors);
+    if (stateSnapshot) {
+      init.sim.restoreState(stateSnapshot);
+      set({
+        config,
+        sim: init.sim,
+        state: init.sim.getState(),
+        history: init.history,
+        seedFormsByMeaning: init.seedForms,
+        selectedLangId: init.sim.getState().rootId,
+        playing: false,
+      });
+      return;
+    }
     set({
       config,
       sim: init.sim,
