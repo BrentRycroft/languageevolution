@@ -45,7 +45,7 @@ export function createSimulation(
       stepObsolescence(lang, config, rng, nextGen);
       stepTaboo(lang, config, rng, nextGen);
       if (config.modes.genesis) {
-        stepGenesis(lang, config, rng, nextGen);
+        stepGenesis(lang, config, state, rng, nextGen);
         bootstrapNeologismNeighbors(lang);
       }
       if (config.modes.grammar) {
