@@ -1,6 +1,7 @@
 import type { Language } from "../types";
 import type { Rng } from "../rng";
 import { neighborsOf } from "./neighbors";
+import { relatedMeanings } from "./clusters";
 
 export interface SemanticDrift {
   from: string;
@@ -35,10 +36,15 @@ export function driftOneMeaning(
   }
   for (const m of shuffled) {
     const overrideNeighbors = override?.[m];
+    // Preference order: explicit override (AI) → semantic cluster →
+    // static neighbor table.
+    const related = relatedMeanings(m);
     const neighbors =
       overrideNeighbors && overrideNeighbors.length > 0
         ? overrideNeighbors
-        : neighborsOf(m);
+        : related.length > 0
+          ? related
+          : neighborsOf(m);
     if (neighbors.length === 0) continue;
     const target = neighbors[rng.int(neighbors.length)]!;
     if (lang.lexicon[target]) continue;

@@ -17,6 +17,7 @@ import { maybeSpreadTone } from "./phonology/tone_spread";
 import { tryBorrow } from "./contact/borrow";
 import { levenshtein } from "./phonology/ipa";
 import { complexityFor } from "./lexicon/complexity";
+import { maybeTabooReplace } from "./lexicon/taboo";
 import { toneOf } from "./phonology/tone";
 import { GENESIS_BY_ID } from "./genesis/catalog";
 import type { GenesisRule } from "./genesis/types";
@@ -433,6 +434,22 @@ export function createSimulation(
       // Obsolescence runs BEFORE genesis so freshly-coined words are never
       // retired in the same step they were born in.
       stepObsolescence(lang, config, rng, nextGen);
+      // Taboo replacement — rare, replaces a high-frequency meaning with a
+      // euphemism drawn from a related cluster-mate.
+      const taboo = maybeTabooReplace(
+        lang,
+        rng,
+        config.taboo.replacementProbability * lang.conservatism,
+      );
+      if (taboo) {
+        pushEvent(lang, {
+          generation: nextGen,
+          kind: "semantic_drift",
+          description: `taboo: "${taboo.meaning}" replaced ${taboo.oldForm} → ${taboo.newForm}${
+            taboo.donor ? ` (via ${taboo.donor})` : " (reduplication)"
+          }`,
+        });
+      }
       if (config.modes.genesis) {
         stepGenesis(lang, config, rng, nextGen);
         bootstrapNeologismNeighbors(lang, rng);

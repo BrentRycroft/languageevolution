@@ -59,6 +59,9 @@ export function defaultConfig(): SimulationConfig {
     phonology_lawful: {
       regularChangeProbability: 0.03,
     },
+    taboo: {
+      replacementProbability: 0.004,
+    },
     evolutionSpeed: "standard",
     seedLexicon: DEFAULT_LEXICON,
     seedFrequencyHints: DEFAULT_FREQUENCY_HINTS,

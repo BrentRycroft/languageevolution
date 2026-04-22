@@ -1,5 +1,6 @@
 import type { Lexicon, Meaning, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
+import { soundChangeSensitivity } from "../lexicon/expressive";
 
 export interface ApplyOptions {
   globalRate: number;
@@ -89,6 +90,13 @@ export function applyChangesToLexicon(
   const out: Lexicon = {};
   const meanings = Object.keys(lexicon).sort();
   for (const m of meanings) {
+    const sensitivity = soundChangeSensitivity(m);
+    // Expressive / ideophonic words skip the change pass most of the time,
+    // preserving their iconicity for many generations.
+    if (sensitivity < 1 && !rng.chance(sensitivity)) {
+      out[m] = lexicon[m]!.slice();
+      continue;
+    }
     out[m] = applyChangesToWord(lexicon[m]!, changes, rng, opts, m);
   }
   return out;

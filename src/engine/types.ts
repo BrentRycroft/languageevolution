@@ -154,6 +154,10 @@ export interface SimulationConfig {
      */
     regularChangeProbability: number;
   };
+  taboo: {
+    /** Per-generation probability of a taboo-replacement event per leaf. */
+    replacementProbability: number;
+  };
   seedLexicon: Lexicon;
   seedFrequencyHints?: Record<Meaning, number>;
   seedMorphology?: import("./morphology/types").Morphology;

@@ -68,6 +68,9 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
     phonology_lawful:
       (oldConfig.phonology_lawful as SimulationConfig["phonology_lawful"] | undefined) ??
       defaults.phonology_lawful,
+    taboo:
+      (oldConfig.taboo as SimulationConfig["taboo"] | undefined) ??
+      defaults.taboo,
   };
   return {
     version: 3,

@@ -3,6 +3,7 @@ import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isVowel, isConsonant } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
+import { relatedMeanings } from "../semantics/clusters";
 import { phonotacticFit } from "./phonotactics";
 import { complexityFor } from "../lexicon/complexity";
 
@@ -45,8 +46,14 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       if (meanings.length === 0) return null;
       if (rng.chance(0.7)) {
         a = meanings[rng.int(meanings.length)];
-        const neighbors = a ? neighborsOf(a).filter((n) => lang.lexicon[n]) : [];
-        if (a && neighbors.length > 0) b = neighbors[rng.int(neighbors.length)];
+        // Prefer a cluster-mate (body+body, environment+environment, etc.)
+        // Fall back to the static neighbor table, then random.
+        const pool = a
+          ? relatedMeanings(a).filter((n) => lang.lexicon[n])
+          : [];
+        const legacy = a ? neighborsOf(a).filter((n) => lang.lexicon[n]) : [];
+        const combined = pool.length > 0 ? pool : legacy;
+        if (a && combined.length > 0) b = combined[rng.int(combined.length)];
       }
       if (!a || !b || a === b) {
         const pick = pickMeanings(lang, rng, 2);
