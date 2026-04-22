@@ -12,6 +12,7 @@ import {
 import { useSimStore } from "../state/store";
 import { formToString, levenshtein } from "../engine/phonology/ipa";
 import { leafIds } from "../engine/tree/split";
+import { RulesTimeline } from "./RulesTimeline";
 
 const COLORS = ["#7cc4ff", "#ffcc66", "#c88dff", "#7be07b", "#ff8a9a", "#5fd6c5", "#ff9f5a", "#b8a4ff"];
 
@@ -32,13 +33,10 @@ export function TimelineChart() {
   const setScrubGen = useSimStore((s) => s.setTimelineScrubGeneration);
   const effectiveGen = scrubGen ?? generation;
 
-  // If the live generation falls below the user's scrub point (e.g. reset),
-  // drop back to live so the scrubber doesn't show a stale value.
   useEffect(() => {
     if (scrubGen !== null && scrubGen > generation) setScrubGen(null);
   }, [scrubGen, generation, setScrubGen]);
 
-  // Series are either "meanings across one language" or "languages across one meaning".
   type Series = {
     key: string;
     label: string;
@@ -47,6 +45,7 @@ export function TimelineChart() {
   };
 
   const series: Series[] = useMemo(() => {
+    if (mode === "rules") return [];
     if (mode === "meanings") {
       if (!selectedLangId) return [];
       return meanings.map((m, i) => {
@@ -66,13 +65,12 @@ export function TimelineChart() {
         };
       });
     }
-    // Cognates mode: one meaning, many languages.
+    // Cognates mode.
     const meaning = selectedMeaning ?? "water";
     const seed = seedForms[meaning];
     if (!seed) return [];
     const leaves = leafIds(state.tree);
     const starredSet = new Set(starred);
-    // Pin starred first, then the selected language, then up to 4 alive by age.
     const prioritised = new Set<string>();
     for (const id of starred) if (leaves.includes(id)) prioritised.add(id);
     if (selectedLangId && leaves.includes(selectedLangId)) prioritised.add(selectedLangId);
@@ -121,7 +119,11 @@ export function TimelineChart() {
       ? selectedLangId
         ? `${meanings.length} meaning${meanings.length === 1 ? "" : "s"} in ${selectedLangId} @ ${genLabel}`
         : "Pick a language from the tree or lexicon."
-      : `"${selectedMeaning ?? "water"}" across ${series.length} language${series.length === 1 ? "" : "s"} @ ${genLabel}`;
+      : mode === "cognates"
+        ? `"${selectedMeaning ?? "water"}" across ${series.length} language${series.length === 1 ? "" : "s"} @ ${genLabel}`
+        : selectedLangId
+          ? `sound-law history for ${selectedLangId} @ ${genLabel}`
+          : "Pick a language to see its sound-law timeline.";
 
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
@@ -142,20 +144,16 @@ export function TimelineChart() {
             overflow: "hidden",
           }}
         >
-          <button
-            className={mode === "meanings" ? "primary" : "ghost"}
-            style={{ minHeight: 28, fontSize: "var(--fs-1)", borderRadius: 0 }}
-            onClick={() => setMode("meanings")}
-          >
-            meanings
-          </button>
-          <button
-            className={mode === "cognates" ? "primary" : "ghost"}
-            style={{ minHeight: 28, fontSize: "var(--fs-1)", borderRadius: 0 }}
-            onClick={() => setMode("cognates")}
-          >
-            cognates
-          </button>
+          {(["meanings", "cognates", "rules"] as const).map((m) => (
+            <button
+              key={m}
+              className={mode === m ? "primary" : "ghost"}
+              style={{ minHeight: 28, fontSize: "var(--fs-1)", borderRadius: 0 }}
+              onClick={() => setMode(m)}
+            >
+              {m}
+            </button>
+          ))}
         </div>
         <span
           style={{
@@ -206,7 +204,12 @@ export function TimelineChart() {
         </details>
       )}
 
-      {chartData.length === 0 ? (
+      {mode === "rules" ? (
+        <RulesTimeline
+          langId={selectedLangId}
+          maxGen={effectiveGen}
+        />
+      ) : chartData.length === 0 ? (
         <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
           No history yet — run the simulation for a few generations.
         </div>

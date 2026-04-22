@@ -1,36 +1,61 @@
 import { useSimStore } from "../state/store";
 
 /**
- * Slim strip of recent per-generation change counts. Placed above the Tree
- * view so the user can see the rhythm of the simulation at a glance —
- * burst windows (rapid-change periods) pulse; quiet generations are dark.
+ * Two-row strip of recent per-generation activity.
+ *   Top: total form mutations (background hue = blue).
+ *   Bottom: procedurally-invented sound laws (red pulses).
+ * Placed above the Tree view so users can read the rhythm at a glance.
  */
 export function ActivityHeatmap() {
   const history = useSimStore((s) => s.activityHistory);
   if (history.length === 0) return null;
-  const max = Math.max(1, ...history.map((h) => h.count));
+  const maxCount = Math.max(1, ...history.map((h) => h.count));
+  const maxBirths = Math.max(1, ...history.map((h) => h.ruleBirths ?? 0));
+  const last = history[history.length - 1];
+  const latestBirths = last?.ruleBirths ?? 0;
   return (
     <div
-      className="activity-heatmap"
+      className="activity-heatmap-wrap"
       aria-label="Per-generation change activity"
-      title={`Latest: ${history[history.length - 1]?.count ?? 0} changes (peak ${max})`}
+      title={`Latest: ${last?.count ?? 0} form changes + ${latestBirths} new sound law${latestBirths === 1 ? "" : "s"} (peaks ${maxCount} / ${maxBirths})`}
     >
-      {history.map((h) => {
-        const intensity = h.count / max;
-        return (
-          <span
-            key={h.generation}
-            className="activity-bar"
-            style={{
-              height: `${12 + intensity * 16}px`,
-              background:
-                intensity === 0
-                  ? "var(--panel-3)"
-                  : `hsla(var(--activity-hue, 200), 70%, ${40 + intensity * 35}%, ${0.4 + intensity * 0.6})`,
-            }}
-          />
-        );
-      })}
+      <div className="activity-heatmap">
+        {history.map((h) => {
+          const intensity = h.count / maxCount;
+          return (
+            <span
+              key={h.generation}
+              className="activity-bar"
+              style={{
+                height: `${12 + intensity * 16}px`,
+                background:
+                  intensity === 0
+                    ? "var(--panel-3)"
+                    : `hsla(var(--activity-hue, 200), 70%, ${40 + intensity * 35}%, ${0.4 + intensity * 0.6})`,
+              }}
+            />
+          );
+        })}
+      </div>
+      <div className="activity-heatmap rule-births">
+        {history.map((h) => {
+          const births = h.ruleBirths ?? 0;
+          const intensity = births / maxBirths;
+          return (
+            <span
+              key={h.generation}
+              className="activity-bar"
+              style={{
+                height: `${4 + intensity * 10}px`,
+                background:
+                  births === 0
+                    ? "var(--panel-3)"
+                    : `hsla(0, 70%, ${45 + intensity * 30}%, ${0.5 + intensity * 0.5})`,
+              }}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

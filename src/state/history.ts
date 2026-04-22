@@ -17,7 +17,10 @@ export interface HistoryByLangMeaning {
 
 export interface ActivityPoint {
   generation: number;
+  /** Total form-mutations in the generation across all leaves. */
   count: number;
+  /** Number of procedural rules that were born this generation. */
+  ruleBirths?: number;
 }
 
 export function recordHistory(
@@ -58,9 +61,34 @@ export function recordActivity(
   history: ActivityPoint[],
   generation: number,
   count: number,
+  ruleBirths = 0,
 ): ActivityPoint[] {
-  const next = [...history, { generation, count }];
+  const next = [...history, { generation, count, ruleBirths }];
   return next.length > MAX_ACTIVITY ? next.slice(next.length - MAX_ACTIVITY) : next;
+}
+
+/**
+ * Count how many "new sound law" events landed on `generation` across the
+ * state's tree. Used to populate ActivityPoint.ruleBirths.
+ */
+export function countRuleBirthsAt(
+  state: import("../engine/types").SimulationState,
+  generation: number,
+): number {
+  let n = 0;
+  for (const id of Object.keys(state.tree)) {
+    const lang = state.tree[id]!.language;
+    for (const e of lang.events) {
+      if (
+        e.generation === generation &&
+        e.kind === "sound_change" &&
+        e.description.startsWith("new sound law:")
+      ) {
+        n++;
+      }
+    }
+  }
+  return n;
 }
 
 /**

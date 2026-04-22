@@ -9,6 +9,9 @@ import { CompareView } from "./CompareView";
 import { NarrativeView } from "./NarrativeView";
 import { MapView } from "./MapView";
 import { SoundLawsView } from "./SoundLawsView";
+import { StemmaView } from "./StemmaView";
+import { Glossary } from "./Glossary";
+import { ReconstructionQuiz } from "./ReconstructionQuiz";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
 import { WelcomeBanner } from "./Onboarding";
@@ -66,10 +69,13 @@ type Tab =
   | "timeline"
   | "grammar"
   | "laws"
+  | "stemma"
   | "events"
   | "translate"
   | "compare"
-  | "narrative";
+  | "narrative"
+  | "quiz"
+  | "glossary";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tree", label: "Tree" },
@@ -78,10 +84,13 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "timeline", label: "Timeline" },
   { id: "grammar", label: "Grammar" },
   { id: "laws", label: "Sound laws" },
+  { id: "stemma", label: "Stemma" },
   { id: "events", label: "History" },
   { id: "translate", label: "Translate" },
   { id: "compare", label: "Compare" },
   { id: "narrative", label: "Narrative" },
+  { id: "quiz", label: "Quiz" },
+  { id: "glossary", label: "Glossary" },
 ];
 
 export function App() {
@@ -241,6 +250,24 @@ export function App() {
           <div className="panel panel-single">
             <h3>Sound laws</h3>
             <SoundLawsView />
+          </div>
+        )}
+        {activeTab === "stemma" && (
+          <div className="panel panel-single">
+            <h3>Stemma</h3>
+            <StemmaView />
+          </div>
+        )}
+        {activeTab === "quiz" && (
+          <div className="panel panel-single">
+            <h3>Reconstruction quiz</h3>
+            <ReconstructionQuiz />
+          </div>
+        )}
+        {activeTab === "glossary" && (
+          <div className="panel panel-single">
+            <h3>Glossary</h3>
+            <Glossary />
           </div>
         )}
         {activeTab === "events" && (
