@@ -71,6 +71,7 @@ export function splitLeaf(
         Math.min(1.8, parentLang.conservatism * (0.7 + rng.next() * 0.6)),
       ),
       wordOrigin: { ...parentLang.wordOrigin },
+      customRules: parentLang.customRules.slice(),
     };
   };
   const a = makeChild(false);

@@ -82,6 +82,11 @@ export interface Language {
    * genesis catalog ids; "borrow:LangName" marks contact loans.
    */
   wordOrigin: Record<Meaning, string>;
+  /**
+   * User-defined sound-change rules as DSL strings (e.g. "p -> f / _V").
+   * Parsed + compiled at runtime alongside catalog rules.
+   */
+  customRules: string[];
 }
 
 export interface LanguageNode {
@@ -161,6 +166,11 @@ export interface SimulationConfig {
   seedLexicon: Lexicon;
   seedFrequencyHints?: Record<Meaning, number>;
   seedMorphology?: import("./morphology/types").Morphology;
+  /**
+   * User-authored sound-change rules (DSL strings, e.g. "p -> f / _V").
+   * Applied to the proto language at seed time; daughters inherit via split.
+   */
+  customRules?: string[];
   preset?: string;
   /** Evolution-speed profile id (conservative / standard / rapid / extreme). */
   evolutionSpeed?: string;

@@ -82,6 +82,7 @@ interface SimStore {
   setLexiconSearch: (q: string) => void;
   setTheme: (theme: "dark" | "light" | "system") => void;
   setTimelineMode: (mode: "meanings" | "cognates") => void;
+  setCustomRules: (rules: string[]) => void;
   setSeed: (s: string) => void;
   loadConfig: (
     config: SimulationConfig,
@@ -292,6 +293,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
   setLexiconSearch: (q) => set({ lexiconSearch: q }),
   setTheme: (theme) => set({ theme }),
   setTimelineMode: (timelineMode) => set({ timelineMode }),
+  setCustomRules: (rules) => {
+    const { config, updateConfig } = get();
+    updateConfig({ ...config, customRules: rules });
+  },
   setSeed: (s) => {
     const { config, updateConfig } = get();
     updateConfig({ ...config, seed: s });

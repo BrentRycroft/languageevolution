@@ -9,6 +9,7 @@ import { SeedLexiconEditor } from "./SeedLexiconEditor";
 import { AiSemantics } from "./AiSemantics";
 import { PresetPicker } from "./PresetPicker";
 import { EvolutionSpeedPicker } from "./EvolutionSpeedPicker";
+import { CustomRulesEditor } from "./CustomRulesEditor";
 import {
   exportLexiconsJSON,
   exportLexiconsCSV,
@@ -272,6 +273,10 @@ export function ControlsPanel() {
 
       <Section title="Preview" defaultOpen={false}>
         <ChangePreview />
+      </Section>
+
+      <Section title="Custom rules" defaultOpen={false}>
+        <CustomRulesEditor />
       </Section>
 
       <Section title="Sound changes" defaultOpen={false}>
