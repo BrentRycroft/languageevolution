@@ -1,0 +1,178 @@
+import type { Lexicon, Meaning, Phoneme, WordForm } from "../types";
+
+/**
+ * Expanded basic vocabulary — ~240 meanings spanning body parts, kinship,
+ * environment, animals, plants, actions, qualities, function words, numbers,
+ * and abstract/cultural concepts. Replaces the original 44-entry Swadesh
+ * core. Each preset provides hand-authored IPA for a "core" subset and uses
+ * `fillMissing` for the rest, which generates phonotactically-plausible
+ * forms from the preset's own inventory via a deterministic hash.
+ */
+
+export const CLUSTERS = {
+  body: [
+    "hand", "foot", "heart", "head", "eye", "ear", "mouth", "tooth",
+    "bone", "blood", "hair", "skin", "finger", "knee", "elbow",
+    "shoulder", "neck", "back", "belly", "liver", "lung", "arm",
+    "leg", "nose", "tongue", "chin", "cheek", "nail", "breast", "throat",
+  ],
+  kinship: [
+    "mother", "father", "son", "daughter", "brother", "sister", "uncle",
+    "aunt", "grandparent", "child", "parent", "husband", "wife", "friend",
+    "cousin",
+  ],
+  environment: [
+    "water", "fire", "stone", "tree", "sun", "moon", "star", "night",
+    "day", "sky", "cloud", "rain", "snow", "wind", "sea", "river",
+    "mountain", "hill", "forest", "cave", "earth", "grass", "ice",
+    "smoke", "dust", "shadow", "light", "thunder", "sand", "mud", "salt",
+    "metal", "wood", "leaf", "root", "stream", "swamp", "island",
+    "valley", "lake", "coast", "shore", "horizon", "field", "path",
+  ],
+  animals: [
+    "dog", "wolf", "horse", "cow", "fish", "bird", "snake", "cat", "bear",
+    "deer", "rabbit", "mouse", "fox", "boar", "ox", "sheep", "goat",
+    "chicken", "duck", "eagle", "hawk", "pig", "lion", "tiger", "frog",
+    "lizard", "bee", "ant", "spider", "worm", "fly", "mosquito", "turtle",
+    "whale", "shark",
+  ],
+  plants: [
+    "flower", "seed", "berry", "apple", "oak", "pine", "bush", "moss",
+    "vine", "herb", "mushroom", "reed", "grain", "fruit", "nut",
+  ],
+  motion: ["go", "come", "walk", "run", "fly", "swim", "climb", "fall", "rise"],
+  perception: ["see", "know", "hear", "feel"],
+  metabolism: ["eat", "drink", "sleep", "die", "breathe"],
+  action: [
+    "sit", "stand", "lie", "stay", "give", "take", "throw", "break",
+    "cut", "kill", "sing", "speak", "fight", "hunt", "gather", "plant",
+    "harvest", "cook", "wash", "wear", "tie", "push", "pull", "carry",
+    "build", "dig", "drop", "hold", "work",
+  ],
+  quality: [
+    "big", "small", "new", "old", "good", "bad", "hot", "cold", "wet",
+    "dry", "long", "short", "hard", "soft", "heavy", "light", "round",
+    "sharp", "sweet", "sour", "strong", "weak", "fast", "slow", "deep",
+  ],
+  pronoun: [
+    "i", "you", "they", "we", "he-she", "this", "that", "here", "there",
+    "what", "who", "where", "when", "why", "how",
+  ],
+  numbers: [
+    "one", "two", "three", "four", "five", "six", "seven", "eight",
+    "nine", "ten", "hundred", "thousand", "many", "few", "half",
+  ],
+  abstract: [
+    "name", "word", "song", "story", "year", "love", "fear", "hope",
+    "peace", "war", "dream", "spirit", "god", "law", "gift", "trade",
+    "home", "road", "village", "town", "king", "servant", "free",
+    "game", "joy", "grief", "truth", "lie", "honour", "meaning",
+  ],
+} as const;
+
+/** Ordered flat list of all meanings, with duplicates removed. A meaning
+ * that appears in multiple clusters (e.g. "fly" as animal + motion) is
+ * kept at its first occurrence and `clusterOfBasic240` returns that cluster.
+ */
+export const BASIC_240: readonly Meaning[] = (() => {
+  const seen = new Set<Meaning>();
+  const out: Meaning[] = [];
+  for (const members of Object.values(CLUSTERS)) {
+    for (const m of members) {
+      if (seen.has(m)) continue;
+      seen.add(m);
+      out.push(m);
+    }
+  }
+  return out;
+})();
+
+/** Cluster name for any Basic-240 meaning, or undefined. */
+const MEANING_TO_CLUSTER: Record<Meaning, string> = (() => {
+  const out: Record<Meaning, string> = {};
+  for (const [name, members] of Object.entries(CLUSTERS)) {
+    for (const m of members) out[m] = name;
+  }
+  return out;
+})();
+
+export function clusterOfBasic240(meaning: Meaning): string | undefined {
+  return MEANING_TO_CLUSTER[meaning];
+}
+
+// ---------------------------------------------------------------------------
+// Deterministic form generator
+// ---------------------------------------------------------------------------
+
+function fnv1a(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h >>> 0;
+}
+
+export interface FormPhonology {
+  /** Consonants allowed in onset position. */
+  onsets: Phoneme[];
+  /** Vowels (short). */
+  vowels: Phoneme[];
+  /** Consonants allowed in coda position. Empty = strict CV. */
+  codas?: Phoneme[];
+  /** Phoneme appended to every generated form ("suffix flavor"), optional. */
+  flavour?: Phoneme[];
+  /** Minimum / maximum syllable count. */
+  minSyllables?: number;
+  maxSyllables?: number;
+}
+
+/**
+ * Given a language's inventory + a meaning string, produce a deterministic
+ * phonotactically-valid form. The same (phonology, meaning) input always
+ * gives the same output; two different languages gave different forms.
+ */
+export function generateForm(
+  meaning: Meaning,
+  phonology: FormPhonology,
+): WordForm {
+  const h = fnv1a(meaning);
+  const minS = phonology.minSyllables ?? 2;
+  const maxS = phonology.maxSyllables ?? 3;
+  const syllables = minS + ((h >>> 1) % Math.max(1, maxS - minS + 1));
+  const out: Phoneme[] = [];
+  let cursor = h;
+  const bits = () => {
+    cursor = (cursor * 1103515245 + 12345) >>> 0;
+    return cursor;
+  };
+  for (let i = 0; i < syllables; i++) {
+    const c = phonology.onsets[bits() % Math.max(1, phonology.onsets.length)]!;
+    const v = phonology.vowels[bits() % Math.max(1, phonology.vowels.length)]!;
+    out.push(c, v);
+    // 40% coda for non-final, 20% for final if codas allowed.
+    if (phonology.codas && phonology.codas.length > 0) {
+      const codaOdds = i === syllables - 1 ? 0.2 : 0.4;
+      if ((bits() % 100) / 100 < codaOdds) {
+        out.push(phonology.codas[bits() % phonology.codas.length]!);
+      }
+    }
+  }
+  if (phonology.flavour) {
+    for (const p of phonology.flavour) out.push(p);
+  }
+  return out;
+}
+
+/**
+ * Build a full 240-entry lexicon by filling any missing meanings with
+ * deterministic forms. Hand-authored entries in `core` are kept verbatim;
+ * anything else is generated from `phonology`.
+ */
+export function fillMissing(core: Lexicon, phonology: FormPhonology): Lexicon {
+  const out: Lexicon = { ...core };
+  for (const m of BASIC_240) {
+    if (!out[m]) out[m] = generateForm(m, phonology);
+  }
+  return out;
+}
