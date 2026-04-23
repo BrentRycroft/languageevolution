@@ -1,31 +1,30 @@
 import type { Language, WordForm } from "../types";
-import { formToString } from "./ipa";
 import { romanize } from "./orthography";
+import { narrowTranscribe } from "./narrow";
 
 export type DisplayScript = "ipa" | "roman" | "both";
 
 /**
  * Format a word form according to the user's script preference.
- *   "ipa"   → phonemic IPA string wrapped in slashes (e.g. /korpus/).
+ *   "ipa"   → narrow IPA in brackets (e.g. [ˈkɔr.pʊs]): syllable break,
+ *             primary stress, laxed mid/high vowels. See
+ *             `phonology/narrow.ts` for the rendering rules.
  *   "roman" → the language's drifted Latin-ish orthography.
- *   "both"  → "/IPA/ · Aa" joined.
+ *   "both"  → "[narrow IPA] · Aa" joined.
  *
- * The `/…/` delimiters are the standard linguistic convention for
- * phonemic transcription and are there so users don't mistake an IPA
- * string like /korpus/ for ordinary spelling. Romanised output is
- * shown bare — that's where the language's drifted writing lives.
- *
- * Shared across Lexicon, Timeline tooltips, Narrative, Translator,
- * Compare, and any view that shows word-level phonology.
+ * Engine storage stays broad — just `/k/ /o/ /r/ /p/ /u/ /s/` in the
+ * phoneme array — so this helper enriches at display time without
+ * touching the lexicon. Bracket convention: `[…]` is the linguistic
+ * mark for narrow phonetic transcription (vs `/…/` for broad phonemic).
  */
 export function formatForm(
   form: WordForm,
   lang: Language,
   script: DisplayScript,
 ): string {
-  const ipa = formToString(form);
-  if (script === "ipa") return `/${ipa}/`;
+  const ipa = narrowTranscribe(form, lang);
+  if (script === "ipa") return `[${ipa}]`;
   const roman = romanize(form, lang);
   if (script === "roman") return roman;
-  return `/${ipa}/ · ${roman}`;
+  return `[${ipa}] · ${roman}`;
 }
