@@ -1,8 +1,9 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { hierarchy, tree as d3tree } from "d3-hierarchy";
 import { useSimStore } from "../state/store";
-import { formToString } from "../engine/phonology/ipa";
+import { formatForm, type DisplayScript } from "../engine/phonology/display";
 import type { LanguageTree } from "../engine/types";
+import { ScriptPicker } from "./ScriptPicker";
 
 interface NodeDatum {
   id: string;
@@ -19,6 +20,7 @@ function buildTooltip(
   tree: LanguageTree,
   id: string,
   generation: number,
+  script: DisplayScript,
 ): string {
   const node = tree[id]!;
   const lang = node.language;
@@ -31,7 +33,7 @@ function buildTooltip(
   const samples = ["water", "fire", "mother", "go"]
     .map((m) => {
       const f = lang.lexicon[m];
-      return f ? `${m}=${formToString(f)}` : null;
+      return f ? `${m}=${formatForm(f, lang, script)}` : null;
     })
     .filter(Boolean)
     .slice(0, 3)
@@ -51,6 +53,7 @@ function buildHierarchy(
   rootId: string,
   sampleMeaning: string,
   generation: number,
+  script: DisplayScript,
 ): NodeDatum {
   const build = (id: string): NodeDatum => {
     const node = tree[id]!;
@@ -59,10 +62,10 @@ function buildHierarchy(
     return {
       id,
       name: lang.name,
-      sample: form ? formToString(form) : "—",
+      sample: form ? formatForm(form, lang, script) : "—",
       isLeaf: node.childrenIds.length === 0,
       extinct: !!lang.extinct,
-      tooltip: buildTooltip(tree, id, generation),
+      tooltip: buildTooltip(tree, id, generation, script),
       children: node.childrenIds.length
         ? node.childrenIds.map((cid) => build(cid))
         : undefined,
@@ -76,6 +79,7 @@ export function LanguageTreeView() {
   const selectedLangId = useSimStore((s) => s.selectedLangId);
   const selectLanguage = useSimStore((s) => s.selectLanguage);
   const selectedMeaning = useSimStore((s) => s.selectedMeaning);
+  const script = useSimStore((s) => s.displayScript);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 600, h: 400 });
@@ -93,7 +97,7 @@ export function LanguageTreeView() {
 
   const layout = useMemo(() => {
     const sample = selectedMeaning ?? "water";
-    const data = buildHierarchy(state.tree, state.rootId, sample, state.generation);
+    const data = buildHierarchy(state.tree, state.rootId, sample, state.generation, script);
     const root = hierarchy(data);
     const margin = 24;
     // Vertical layout: x spreads horizontally, y is depth downward.
@@ -101,10 +105,13 @@ export function LanguageTreeView() {
     const h = Math.max(160, size.h - margin * 2 - 20);
     d3tree<NodeDatum>().size([w, h]).separation(() => 1.2)(root);
     return { root, margin };
-  }, [state, selectedMeaning, size]);
+  }, [state, selectedMeaning, size, script]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 220 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 0 4px" }}>
+        <ScriptPicker />
+      </div>
       <svg className="tree-svg" width={size.w} height={size.h}>
         <g transform={`translate(${layout.margin},${layout.margin})`}>
           {layout.root.links().map((link, i) => {

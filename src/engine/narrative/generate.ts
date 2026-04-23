@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { makeRng, type Rng } from "../rng";
 import { formToString } from "../phonology/ipa";
+import { formatForm, type DisplayScript } from "../phonology/display";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 
@@ -126,12 +127,21 @@ export interface NarrativeLine {
 }
 
 /**
- * Produce a short narrative as lines. Each line includes the IPA rendering
- * and an English gloss in square brackets showing the meanings used.
+ * Produce a short narrative as lines. Each line includes the rendered
+ * word-forms in the caller's chosen script (default IPA, can be Roman
+ * orthography or both) and an English gloss in square brackets showing
+ * the meanings used.
  */
-export function generateNarrative(lang: Language, seedStr: string, lines = 5): NarrativeLine[] {
+export function generateNarrative(
+  lang: Language,
+  seedStr: string,
+  lines = 5,
+  script: DisplayScript = "ipa",
+): NarrativeLine[] {
   const rng = makeRng(seedStr + ":" + lang.id + ":" + lang.birthGeneration);
   const out: NarrativeLine[] = [];
+  const render = (form: WordForm): string =>
+    script === "ipa" ? formToString(form) : formatForm(form, lang, script);
   for (let i = 0; i < lines; i++) {
     const sentence = pickSentence(lang, rng);
     if (!sentence) break;
@@ -139,9 +149,9 @@ export function generateNarrative(lang: Language, seedStr: string, lines = 5): N
     const vForm = lang.lexicon[sentence.verb];
     const oForm = lang.lexicon[sentence.objectNoun];
     if (!sForm || !vForm || !oForm) continue;
-    const S = formToString(inflectNoun(sForm, lang, "S"));
-    const V = formToString(inflectVerb(vForm, lang));
-    const O = formToString(inflectNoun(oForm, lang, "O"));
+    const S = render(inflectNoun(sForm, lang, "S"));
+    const V = render(inflectVerb(vForm, lang));
+    const O = render(inflectNoun(oForm, lang, "O"));
     const arranged = arrange(lang.grammar.wordOrder, S, V, O);
 
     // Distinct templates produce different surface strings.
@@ -152,7 +162,7 @@ export function generateNarrative(lang: Language, seedStr: string, lines = 5): N
     if (pattern.needsObject && pattern.needsAdj && sentence.adjective) {
       const adjForm = lang.lexicon[sentence.adjective];
       if (!adjForm) continue;
-      const A = formToString(adjForm);
+      const A = render(adjForm);
       text = `${arranged.first} ${arranged.second} ${arranged.third} · ${A}`;
       gloss = `[${sentence.subjectNoun}—${sentence.verb}—${sentence.adjective} ${sentence.objectNoun}]`;
     } else if (pattern.needsObject) {
@@ -161,7 +171,7 @@ export function generateNarrative(lang: Language, seedStr: string, lines = 5): N
     } else if (pattern.needsAdj && sentence.adjective) {
       const adjForm = lang.lexicon[sentence.adjective];
       if (!adjForm) continue;
-      const A = formToString(adjForm);
+      const A = render(adjForm);
       text = `${A} ${S} ${V}`;
       gloss = `[${sentence.adjective} ${sentence.subjectNoun}—${sentence.verb}]`;
     } else {

@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
-import { formToString, levenshtein } from "../engine/phonology/ipa";
+import { levenshtein } from "../engine/phonology/ipa";
+import { formatForm } from "../engine/phonology/display";
 import type { Language, LanguageEvent } from "../engine/types";
 import { diffActiveRules, diffOtRankings } from "../engine/analysis/ruleDiff";
+import { ScriptPicker } from "./ScriptPicker";
 
 /**
  * Swadesh-style lexicostatistic similarity: for every shared meaning, count
@@ -94,6 +96,9 @@ export function CompareView() {
         </span>
         <span>
           {sim.cognate}/{sim.shared} shared meanings classify as cognate (edit-dist ≤ 40% of longer form)
+        </span>
+        <span style={{ marginLeft: "auto" }}>
+          <ScriptPicker />
         </span>
       </div>
       <RuleDiffBanner a={langA} b={langB} />
@@ -194,6 +199,7 @@ function RuleDiffBanner({ a, b }: { a: Language; b: Language }) {
 }
 
 function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Language }) {
+  const script = useSimStore((s) => s.displayScript);
   const meanings = useMemo(
     () => Array.from(new Set([...Object.keys(lang.lexicon), ...Object.keys(otherLang.lexicon)])).sort(),
     [lang, otherLang],
@@ -233,7 +239,7 @@ function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Languag
               >
                 <span className="compare-lex-meaning">{m}</span>
                 <span className="compare-lex-form">
-                  {f ? formToString(f) : <span style={{ color: "var(--muted-2)" }}>—</span>}
+                  {f ? formatForm(f, lang, script) : <span style={{ color: "var(--muted-2)" }}>—</span>}
                 </span>
               </div>
             );

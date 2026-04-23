@@ -3,6 +3,8 @@ import { leafIds } from "../engine/tree/split";
 import { inflect } from "../engine/morphology/evolve";
 import type { MorphCategory } from "../engine/morphology/types";
 import { formToString } from "../engine/phonology/ipa";
+import { formatForm } from "../engine/phonology/display";
+import { ScriptPicker } from "./ScriptPicker";
 
 export function GrammarView() {
   const state = useSimStore((s) => s.state);
@@ -22,10 +24,16 @@ export function GrammarView() {
               marginBottom: 8,
               fontSize: 13,
               color: selected.extinct ? "var(--muted)" : "var(--text)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
             <strong>{selected.name}</strong>{" "}
             {selected.extinct && <span style={{ color: "var(--danger)" }}>(extinct)</span>}
+            <span style={{ marginLeft: "auto" }}>
+              <ScriptPicker />
+            </span>
           </div>
           <GrammarFeatureList grammar={selected.grammar} />
           <InventoryDisplay lang={selected} />
@@ -83,6 +91,7 @@ function InventoryDisplay({ lang }: { lang: import("../engine/types").Language }
 }
 
 function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
+  const script = useSimStore((s) => s.displayScript);
   const paradigms = lang.morphology.paradigms;
   const cats = Object.keys(paradigms) as MorphCategory[];
   if (cats.length === 0) {
@@ -119,7 +128,7 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
           {cats.map((cat) => {
             const p = paradigms[cat];
             if (!p) return null;
-            const inflected = demoForm ? formToString(inflect(demoForm, p)) : "—";
+            const inflected = demoForm ? formatForm(inflect(demoForm, p), lang, script) : "—";
             return (
               <tr key={cat}>
                 <td style={{ padding: "2px 6px", color: "var(--muted)" }}>{cat}</td>

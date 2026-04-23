@@ -10,12 +10,15 @@ import {
   type TranslationResult,
 } from "../engine/translator/translate";
 import { findCognates, traceEtymology } from "../engine/translator/cognates";
+import { formatForm } from "../engine/phonology/display";
 import type { MorphCategory } from "../engine/morphology/types";
+import { ScriptPicker } from "./ScriptPicker";
 
 type Mode = "en-to-lang" | "lang-to-lang" | "ai-sentence" | "cognates" | "etymology";
 
 export function Translator() {
   const state = useSimStore((s) => s.state);
+  const script = useSimStore((s) => s.displayScript);
   const leaves = useMemo(() => leafIds(state.tree), [state.tree]);
   const alive = leaves.filter((id) => !state.tree[id]!.language.extinct);
 
@@ -77,7 +80,7 @@ export function Translator() {
 
   return (
     <div style={{ fontSize: 13, maxWidth: 720 }}>
-      <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
         {(["en-to-lang", "ai-sentence", "lang-to-lang", "cognates", "etymology"] as const).map((m) => (
           <button
             key={m}
@@ -92,6 +95,9 @@ export function Translator() {
             {label(m)}
           </button>
         ))}
+        <span style={{ marginLeft: "auto" }}>
+          <ScriptPicker />
+        </span>
       </div>
 
       {(mode === "en-to-lang" || mode === "lang-to-lang" || mode === "etymology" || mode === "ai-sentence") && (
@@ -304,7 +310,13 @@ export function Translator() {
               color: "var(--accent)",
             }}
           >
-            {result.form}
+            {mode === "lang-to-lang" && langB
+              ? result.phonemes.length > 0
+                ? formatForm(result.phonemes, langB, script)
+                : result.form
+              : lang && result.phonemes.length > 0
+                ? formatForm(result.phonemes, lang, script)
+                : result.form}
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
             source: {result.source} — {result.notes}
@@ -332,7 +344,11 @@ function label(m: Mode): string {
 }
 
 function CognatesTable({ meaning, tree }: { meaning: string; tree: import("../engine/types").LanguageTree }) {
-  const rows = useMemo(() => findCognates(tree, meaning), [tree, meaning]);
+  const script = useSimStore((s) => s.displayScript);
+  const rows = useMemo(
+    () => findCognates(tree, meaning, script),
+    [tree, meaning, script],
+  );
   return (
     <table
       style={{
@@ -366,7 +382,11 @@ function CognatesTable({ meaning, tree }: { meaning: string; tree: import("../en
 
 function EtymologyTrace({ leafId, meaning }: { leafId: string; meaning: string }) {
   const state = useSimStore((s) => s.state);
-  const steps = useMemo(() => traceEtymology(state.tree, leafId, meaning), [state.tree, leafId, meaning]);
+  const script = useSimStore((s) => s.displayScript);
+  const steps = useMemo(
+    () => traceEtymology(state.tree, leafId, meaning, script),
+    [state.tree, leafId, meaning, script],
+  );
   return (
     <div
       style={{

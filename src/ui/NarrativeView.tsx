@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import { generateNarrative } from "../engine/narrative/generate";
+import { ScriptPicker } from "./ScriptPicker";
 
 export function NarrativeView() {
   const state = useSimStore((s) => s.state);
+  const script = useSimStore((s) => s.displayScript);
   const leaves = useMemo(() => leafIds(state.tree), [state.tree]);
   const alive = leaves.filter((id) => !state.tree[id]!.language.extinct);
   const [langId, setLangId] = useState<string>(alive[0] ?? leaves[0] ?? "");
@@ -14,8 +16,8 @@ export function NarrativeView() {
   const lang = langId ? state.tree[langId]?.language : undefined;
   const narrative = useMemo(() => {
     if (!lang) return [];
-    return generateNarrative(lang, seed, lineCount);
-  }, [lang, seed, lineCount, state.generation]);
+    return generateNarrative(lang, seed, lineCount, script);
+  }, [lang, seed, lineCount, script, state.generation]);
 
   return (
     <div style={{ fontSize: "var(--fs-2)", maxWidth: 720 }}>
@@ -49,6 +51,9 @@ export function NarrativeView() {
             <option key={n} value={n}>{n} lines</option>
           ))}
         </select>
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+        <ScriptPicker />
       </div>
 
       {!lang ? (

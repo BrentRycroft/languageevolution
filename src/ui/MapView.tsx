@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { computeGeoLayout, boundingBox } from "../engine/geo";
-import { formToString } from "../engine/phonology/ipa";
+import { formatForm } from "../engine/phonology/display";
 
 /**
  * 2-D "world map" of the language family. Each node gets a deterministic
@@ -15,6 +15,7 @@ export function MapView() {
   const selectedLangId = useSimStore((s) => s.selectedLangId);
   const selectLanguage = useSimStore((s) => s.selectLanguage);
   const selectedMeaning = useSimStore((s) => s.selectedMeaning);
+  const script = useSimStore((s) => s.displayScript);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 600, h: 400 });
@@ -138,7 +139,7 @@ export function MapView() {
           const r = isLeaf ? 6 : 3;
           const sample =
             selectedMeaning && lang.lexicon[selectedMeaning]
-              ? formToString(lang.lexicon[selectedMeaning]!)
+              ? formatForm(lang.lexicon[selectedMeaning]!, lang, script)
               : "";
           return (
             <g

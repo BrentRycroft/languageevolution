@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { useSimStore } from "../state/store";
 import { formToString } from "../engine/phonology/ipa";
+import { formatForm } from "../engine/phonology/display";
 import { CloseIcon } from "./icons";
 import { speakForm, ttsAvailable } from "./audio";
+import { ScriptPicker } from "./ScriptPicker";
 
 interface Props {
   langId: string;
@@ -14,6 +16,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
   const state = useSimStore((s) => s.state);
   const seedForms = useSimStore((s) => s.seedFormsByMeaning);
   const history = useSimStore((s) => s.history);
+  const script = useSimStore((s) => s.displayScript);
 
   const lang = state.tree[langId]?.language;
 
@@ -37,13 +40,14 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
     type Row = { generation: number; languageName: string; form: string };
     const rows: Row[] = [];
     for (const id of ancestry) {
-      const langName = state.tree[id]?.language.name ?? id;
+      const chainLang = state.tree[id]?.language;
+      const langName = chainLang?.name ?? id;
       const entries = history[id]?.[meaning] ?? [];
       for (const e of entries) {
         rows.push({
           generation: e.generation,
           languageName: langName,
-          form: formToString(e.form),
+          form: chainLang ? formatForm(e.form, chainLang, script) : e.form.join(""),
         });
       }
     }
@@ -55,7 +59,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
       if (!last || last.form !== r.form) collapsed.push(r);
     }
     return collapsed;
-  }, [ancestry, history, meaning, state.tree]);
+  }, [ancestry, history, meaning, state.tree, script]);
 
   // Sound-change events from the language's own log that we can list as the
   // most likely culprits for the most recent change.
@@ -108,10 +112,11 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
           overflow: "auto",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 8, gap: 8 }}>
           <h3 style={{ margin: 0, fontSize: "var(--fs-3)" }}>
-            How did "{meaning}" become {currentForm ? formToString(currentForm) : "—"}?
+            How did "{meaning}" become {currentForm && lang ? formatForm(currentForm, lang, script) : "—"}?
           </h3>
+          <ScriptPicker />
           {currentForm && ttsAvailable() && (
             <button
               onClick={() => speakForm(formToString(currentForm))}
@@ -149,12 +154,15 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
         {stitchedHistory.length === 0 ? (
           <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)" }}>
             No recorded form changes — the form is unchanged from{" "}
-            {seedForm ? `the proto seed (${formToString(seedForm)})` : "this language's first appearance"}.
+            {seedForm && lang
+              ? `the proto seed (${formatForm(seedForm, lang, script)})`
+              : "this language's first appearance"}
+            .
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {seedForm && (
-              <Row generation={0} language="Proto seed" form={formToString(seedForm)} accent />
+            {seedForm && lang && (
+              <Row generation={0} language="Proto seed" form={formatForm(seedForm, lang, script)} accent />
             )}
             {stitchedHistory.map((r, i) => (
               <Row

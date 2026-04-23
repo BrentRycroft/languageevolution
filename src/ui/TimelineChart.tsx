@@ -10,7 +10,8 @@ import {
   Legend,
 } from "recharts";
 import { useSimStore } from "../state/store";
-import { formToString, levenshtein } from "../engine/phonology/ipa";
+import { levenshtein } from "../engine/phonology/ipa";
+import { formatForm } from "../engine/phonology/display";
 import { leafIds } from "../engine/tree/split";
 import { RulesTimeline } from "./RulesTimeline";
 
@@ -29,6 +30,7 @@ export function TimelineChart() {
   const mode = useSimStore((s) => s.timelineMode);
   const setMode = useSimStore((s) => s.setTimelineMode);
   const starred = useSimStore((s) => s.starredLangIds);
+  const script = useSimStore((s) => s.displayScript);
   const scrubGen = useSimStore((s) => s.timelineScrubGeneration);
   const setScrubGen = useSimStore((s) => s.setTimelineScrubGeneration);
   const effectiveGen = scrubGen ?? generation;
@@ -48,6 +50,7 @@ export function TimelineChart() {
     if (mode === "rules") return [];
     if (mode === "meanings") {
       if (!selectedLangId) return [];
+      const selLang = state.tree[selectedLangId]?.language;
       return meanings.map((m, i) => {
         const entries = history[selectedLangId]?.[m] ?? [];
         const seed = seedForms[m];
@@ -55,11 +58,11 @@ export function TimelineChart() {
           key: m,
           label: m,
           color: COLORS[i % COLORS.length]!,
-          points: seed
+          points: seed && selLang
             ? entries.map((e) => ({
                 generation: e.generation,
                 distance: levenshtein(e.form, seed),
-                form: formToString(e.form),
+                form: formatForm(e.form, selLang, script),
               }))
             : [],
         };
@@ -80,19 +83,19 @@ export function TimelineChart() {
     }
     return Array.from(prioritised).map((id, i) => {
       const entries = history[id]?.[meaning] ?? [];
+      const lang = state.tree[id]!.language;
       return {
         key: id,
-        label:
-          state.tree[id]!.language.name + (starredSet.has(id) ? " ★" : ""),
+        label: lang.name + (starredSet.has(id) ? " ★" : ""),
         color: COLORS[i % COLORS.length]!,
         points: entries.map((e) => ({
           generation: e.generation,
           distance: levenshtein(e.form, seed),
-          form: formToString(e.form),
+          form: formatForm(e.form, lang, script),
         })),
       };
     });
-  }, [mode, selectedLangId, selectedMeaning, meanings, history, seedForms, state, starred]);
+  }, [mode, selectedLangId, selectedMeaning, meanings, history, seedForms, state, starred, script]);
 
   const chartData = useMemo(() => {
     const byGen = new Map<number, Record<string, number | string>>();
