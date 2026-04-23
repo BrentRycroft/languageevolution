@@ -141,13 +141,37 @@ let enginePromise: Promise<EngineLike> | null = null;
 async function getEngine(config: LlmConfig, onProgress?: ProgressCallback): Promise<EngineLike> {
   if (!enginePromise) {
     enginePromise = (async () => {
-      const mod = await import("@mlc-ai/web-llm");
-      const engine = await mod.CreateMLCEngine(config.modelId, {
-        initProgressCallback: (info: { text: string; progress: number }) => {
-          onProgress?.(info);
-        },
-      });
-      return engine as unknown as EngineLike;
+      let mod: typeof import("@mlc-ai/web-llm");
+      try {
+        mod = await import("@mlc-ai/web-llm");
+      } catch (err) {
+        // If the WebLLM chunk fetch fails (network, SW misroute, CORS,
+        // anything), the default dynamic-import error message is opaque
+        // and — critically — was previously being intercepted by the
+        // PWA's navigateFallback rule, which served `index.html` in its
+        // place and triggered a full page reload that wiped the running
+        // simulation. We reset the cached promise and re-throw with a
+        // user-legible message so the UI can surface it via aiStatus.
+        enginePromise = null;
+        throw new Error(
+          `Could not load the WebLLM runtime (${(err as Error).message}). Check your network; the AI module is ~6 MB.`,
+        );
+      }
+      try {
+        const engine = await mod.CreateMLCEngine(config.modelId, {
+          initProgressCallback: (info: { text: string; progress: number }) => {
+            onProgress?.(info);
+          },
+        });
+        return engine as unknown as EngineLike;
+      } catch (err) {
+        // Model initialisation failure (bad model id, WebGPU missing,
+        // storage quota exhausted, etc.). Clear the cached promise so
+        // the user can retry once they've addressed the underlying
+        // issue without hitting the stale rejection.
+        enginePromise = null;
+        throw err;
+      }
     })();
   }
   return enginePromise;
