@@ -33,8 +33,28 @@ export interface SoundChange {
 
 export interface LanguageEvent {
   generation: number;
-  kind: "sound_change" | "coinage" | "grammar_shift" | "semantic_drift";
+  kind:
+    | "sound_change"
+    | "coinage"
+    | "grammar_shift"
+    | "semantic_drift"
+    | "borrow"
+    | "grammaticalize"
+    | "chain_shift";
   description: string;
+  /**
+   * Optional structured metadata. Populated by the newer mechanic-depth
+   * steps (borrow, grammaticalize, chain_shift) so the UI can render
+   * arrows / etymology chips without regex-scraping `description`.
+   */
+  meta?: {
+    donorId?: string;
+    recipientId?: string;
+    meaning?: string;
+    category?: string;
+    pathway?: string;
+    pairedRuleId?: string;
+  };
 }
 
 export interface PhonemeInventory {

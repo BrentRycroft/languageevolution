@@ -6,7 +6,7 @@ import { rateMultiplier } from "../phonology/rate";
 import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
-import { ageAndRetire, proposeOneRule, reinforce } from "../phonology/propose";
+import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../phonology/propose";
 import { matchSites } from "../phonology/generated";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
@@ -163,6 +163,20 @@ export function stepPhonology(
         kind: "sound_change",
         description: `new sound law: ${rule.description}`,
       });
+      // Chain-shift coupling: if a single-vowel raise would crash into a
+      // phoneme the inventory already uses, paire-generate a push rule
+      // that moves that pre-existing vowel one step further. Emit a
+      // distinct chain_shift event linking the two by id.
+      const pushRule = proposePushChain(lang, rule, generation);
+      if (pushRule) {
+        lang.activeRules.push(pushRule);
+        pushEvent(lang, {
+          generation,
+          kind: "chain_shift",
+          description: `chain shift: ${rule.description} → ${pushRule.description}`,
+          meta: { pairedRuleId: rule.id },
+        });
+      }
     }
   }
 }

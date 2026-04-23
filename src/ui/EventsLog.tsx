@@ -6,6 +6,9 @@ const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   coinage: "var(--accent-2)",
   grammar_shift: "var(--change)",
   semantic_drift: "#c88dff",
+  borrow: "#ffb473",
+  grammaticalize: "#7be0b5",
+  chain_shift: "#ff8fd4",
 };
 
 const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
@@ -13,6 +16,9 @@ const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
   coinage: "coin",
   grammar_shift: "grammar",
   semantic_drift: "meaning",
+  borrow: "borrow",
+  grammaticalize: "gram",
+  chain_shift: "chain",
 };
 
 export function EventsLog() {

@@ -122,6 +122,14 @@ export function matchSites(rule: GeneratedRule, word: WordForm): number[] {
  * the rule's strength. Returns the original array (by reference) if nothing
  * changed, so callers can detect no-op easily. Empty-string outputs delete
  * the segment; the result is compacted.
+ *
+ * Deletion sites are refused when firing them would leave the word
+ * either empty OR in a phonotactically illegal shape — specifically, a
+ * single lone consonant (e.g. /r/, /k/). A single lone vowel (/a/, /i/)
+ * is permitted since syllabic-nucleus-only words are attested (cf.
+ * French "a", "y"; English "a", "I"). The practical effect: cascading
+ * deletion rules no longer collapse distinct short words like "water",
+ * "beer", "before" all into /r/.
  */
 export function applyGeneratedRule(
   rule: GeneratedRule,
@@ -137,11 +145,33 @@ export function applyGeneratedRule(
     const from = word[i]!;
     const to = rule.outputMap[from];
     if (to === undefined || to === from) continue;
+    if (to === "" && !deletionIsLegal(out, i)) continue;
     changed = true;
     out[i] = to === "" ? null : to;
   }
   if (!changed) return word;
   return out.filter((p): p is string => p !== null && p.length > 0);
+}
+
+/**
+ * True when deleting `out[i]` would leave at least one phoneme remaining,
+ * and if it leaves exactly one, that phoneme is a vowel. Called with
+ * `out` in its in-progress (pre-compact) state; `null` entries mean
+ * previous sites in this same rule-firing already deleted them.
+ */
+function deletionIsLegal(out: (string | null)[], i: number): boolean {
+  let vowelSurvivors = 0;
+  let consonantSurvivors = 0;
+  for (let j = 0; j < out.length; j++) {
+    if (j === i) continue;
+    const p = out[j];
+    if (p == null) continue;
+    if (isVowel(p)) vowelSurvivors++;
+    else consonantSurvivors++;
+  }
+  if (vowelSurvivors + consonantSurvivors === 0) return false;
+  if (vowelSurvivors === 0 && consonantSurvivors === 1) return false;
+  return true;
 }
 
 /**

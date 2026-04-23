@@ -30,6 +30,12 @@ export interface Paradigm {
   affix: Phoneme[];
   position: "prefix" | "suffix";
   category: MorphCategory;
+  /**
+   * If this paradigm was born via grammaticalization, the source meaning
+   * and pathway tag. Lets the Grammar UI show etymologies like
+   * "fut ← motion verb 'go'".
+   */
+  source?: { meaning: string; pathway: string };
 }
 
 export interface Morphology {

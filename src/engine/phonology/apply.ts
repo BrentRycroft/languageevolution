@@ -1,6 +1,48 @@
 import type { Lexicon, Meaning, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
+import { isVowel } from "./ipa";
+
+/**
+ * Meanings allowed to shrink to a single phoneme. In real languages the
+ * only surface forms that get away with one segment are pronouns,
+ * deictics, and the bare-minimum grammatical particles — e.g. English
+ * "a", "I"; French "a", "y"; Italian "a", "o", "e". Content words have
+ * a minimum of two segments; this prevents cascading deletion rules
+ * from collapsing "water", "beer", "before" etc. all into /r/.
+ */
+const ALLOWED_MONOSYLLABIC: ReadonlySet<Meaning> = new Set([
+  "i",
+  "you",
+  "we",
+  "they",
+  "he",
+  "she",
+  "it",
+  "this",
+  "that",
+  "here",
+  "there",
+  "a",
+  "the",
+  "and",
+  "or",
+  "of",
+  "to",
+  "in",
+  "at",
+  "on",
+]);
+
+function isMonosyllabicLegal(meaning: Meaning, form: WordForm): boolean {
+  if (form.length >= 2) return true;
+  if (form.length === 0) return false;
+  // Length 1: must be a basic-word meaning AND the single segment must
+  // be a vowel. A lone consonant is never legal; a lone vowel on a
+  // content word is also not legal.
+  if (!ALLOWED_MONOSYLLABIC.has(meaning)) return false;
+  return isVowel(form[0]!);
+}
 
 export interface ApplyOptions {
   globalRate: number;
@@ -99,6 +141,12 @@ export function applyChangesToWord(
     for (let i = 0; i < hits; i++) {
       const next = change.apply(current, rng);
       if (next === current) break;
+      // Minimum-word guard. Content words keep a two-segment floor;
+      // pronouns / deictics / function words may shrink to a single
+      // vowel. A deletion that produces an illegal short form is
+      // reverted for this iteration only (the rule may still succeed
+      // at another site next generation).
+      if (!isMonosyllabicLegal(meaning, next)) break;
       current = next;
     }
   }
@@ -145,6 +193,35 @@ export function applyChangesToLexicon(
     // entries accumulate and break downstream consumers.
     if (next.length === 0) continue;
     out[m] = next;
+  }
+
+  // Anti-homophony guard. If two distinct meanings collapsed to the
+  // same surface form, restore the lower-frequency one from the input
+  // lexicon — in real languages, functional-load pressure blocks or
+  // undoes merges that would erase a meaningful contrast. Without this,
+  // cascading deletions produce near-universal homophones like "water"
+  // and "beer" both reducing to /r/.
+  const freq = opts.frequencyHints ?? {};
+  const byForm = new Map<string, string[]>();
+  for (const m of Object.keys(out)) {
+    const key = out[m]!.join(" ");
+    const bucket = byForm.get(key);
+    if (bucket) bucket.push(m);
+    else byForm.set(key, [m]);
+  }
+  for (const [, meanings] of byForm) {
+    if (meanings.length < 2) continue;
+    // Keep the highest-frequency member; revert the rest to their
+    // pre-change forms (still phonotactically valid since we're
+    // copying the prior generation).
+    meanings.sort((a, b) => (freq[b] ?? 0.5) - (freq[a] ?? 0.5));
+    for (let i = 1; i < meanings.length; i++) {
+      const loser = meanings[i]!;
+      const revert = lexicon[loser];
+      if (revert && revert.length > 0) {
+        out[loser] = revert.slice();
+      }
+    }
   }
   return out;
 }

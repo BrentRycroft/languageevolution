@@ -8,7 +8,7 @@ import {
   type GeneratedRule,
   type RuleFamily,
 } from "./generated";
-import { featuresOf } from "./features";
+import { featuresOf, shiftHeight } from "./features";
 
 const INITIAL_STRENGTH = 0.3;
 /** Strength below which a rule is retired. */
@@ -125,6 +125,43 @@ export function proposeOneRule(
     return candidate;
   }
   return null;
+}
+
+/**
+ * If a freshly-proposed single-vowel raise would merge the source vowel
+ * into a phoneme the language already has, generate a companion "push"
+ * rule moving that pre-existing vowel one step further — the core of a
+ * chain shift (cf. Labov / Martinet). Returns null when the seed isn't
+ * a single-vowel raise, when there's no collision, or when no valid
+ * push target exists.
+ */
+export function proposePushChain(
+  lang: Language,
+  seed: GeneratedRule,
+  generation: number,
+): GeneratedRule | null {
+  if (seed.templateId !== "vowel_shift.single_raise") return null;
+  const entries = Object.entries(seed.outputMap);
+  if (entries.length !== 1) return null;
+  const [, target] = entries[0]!;
+  if (!lang.phonemeInventory.segmental.includes(target)) return null;
+  // The target vowel already exists — pressure it to push further.
+  const pushed = shiftHeight(target, 1);
+  if (!pushed || pushed === target) return null;
+  // Avoid circular or no-op chains.
+  if (seed.outputMap[pushed] !== undefined) return null;
+  return {
+    id: `${seed.id}.push`,
+    family: "vowel_shift",
+    templateId: "vowel_shift.push_chain",
+    description: `push-chain: /${target}/ → /${pushed}/ (avoids collision from ${seed.description})`,
+    from: { type: "vowel" },
+    context: { locus: "any" },
+    outputMap: { [target]: pushed },
+    birthGeneration: generation,
+    lastFireGeneration: generation,
+    strength: INITIAL_STRENGTH,
+  };
 }
 
 /**
