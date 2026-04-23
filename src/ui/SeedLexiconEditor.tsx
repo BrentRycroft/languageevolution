@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSimStore } from "../state/store";
-import { asciiToIpa, formToString, isVowel, isConsonant } from "../engine/phonology/ipa";
+import { formToString, isVowel, isConsonant, textToIpa } from "../engine/phonology/ipa";
 import { toneOf, stripTone } from "../engine/phonology/tone";
 import type { Lexicon, WordForm } from "../engine/types";
 
@@ -12,28 +12,15 @@ function phonemeIsKnown(p: string): boolean {
   return false;
 }
 
+/**
+ * Parse a user-entered form. If the input already contains IPA-only
+ * characters (θ, ð, ʃ, …) or a combining-diacritic cluster (m̩, á), it's
+ * treated as authoritative and passed through grapheme-by-grapheme.
+ * Plain ASCII letters run through `textToIpa` so users can type "think"
+ * and have the engine receive /θ/ /i/ /n/ /k/.
+ */
 function parseForm(input: string): WordForm {
-  const tokens: string[] = [];
-  let i = 0;
-  while (i < input.length) {
-    if (i + 1 < input.length) {
-      const pair = input.slice(i, i + 2).toLowerCase();
-      const ipa = asciiToIpa(pair);
-      if (ipa !== pair) {
-        tokens.push(ipa);
-        i += 2;
-        continue;
-      }
-    }
-    const ch = input[i]!;
-    if (/\s/.test(ch)) {
-      i++;
-      continue;
-    }
-    tokens.push(ch);
-    i++;
-  }
-  return tokens;
+  return textToIpa(input);
 }
 
 export function SeedLexiconEditor({ onClose }: { onClose: () => void }) {

@@ -72,8 +72,33 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   "pʰ": { type: "consonant", place: "labial", manner: "stop", voice: false, aspirated: true },
   "tʰ": { type: "consonant", place: "alveolar", manner: "stop", voice: false, aspirated: true },
   "kʰ": { type: "consonant", place: "velar", manner: "stop", voice: false, aspirated: true },
+  "bʰ": { type: "consonant", place: "labial", manner: "stop", voice: true, aspirated: true },
+  "dʰ": { type: "consonant", place: "alveolar", manner: "stop", voice: true, aspirated: true },
+  "gʰ": { type: "consonant", place: "velar", manner: "stop", voice: true, aspirated: true },
   "ʈ": { type: "consonant", place: "retroflex", manner: "stop", voice: false },
   "ɖ": { type: "consonant", place: "retroflex", manner: "stop", voice: true },
+
+  // IPA-style palatalised velars (preferred notation for new presets).
+  "kʲ": { type: "consonant", place: "velar", manner: "stop", voice: false, palatalised: true },
+  "gʲ": { type: "consonant", place: "velar", manner: "stop", voice: true, palatalised: true },
+  "gʲʰ": { type: "consonant", place: "velar", manner: "stop", voice: true, palatalised: true, aspirated: true },
+  // PIE studies notation — kept as aliases so legacy presets still
+  // typecheck. Reflexes in daughter languages vary by satem/centum.
+  "ḱ": { type: "consonant", place: "velar", manner: "stop", voice: false, palatalised: true },
+  "ǵ": { type: "consonant", place: "velar", manner: "stop", voice: true, palatalised: true },
+  "ǵʰ": { type: "consonant", place: "velar", manner: "stop", voice: true, palatalised: true, aspirated: true },
+  // PIE labiovelars — velar stops with secondary labialisation.
+  "kʷ": { type: "consonant", place: "velar", manner: "stop", voice: false, labialised: true },
+  "gʷ": { type: "consonant", place: "velar", manner: "stop", voice: true, labialised: true },
+  "gʷʰ": { type: "consonant", place: "velar", manner: "stop", voice: true, labialised: true, aspirated: true },
+
+  // PIE laryngeals. Phonetic value is debated; conventional feature
+  // assignments place h₁ as a neutral glottal (cf. [ʔ/h]), h₂ as a
+  // pharyngeal fricative, h₃ as a labialised pharyngeal. We use these
+  // so vowel-colouring rules can single them out by feature query.
+  "h₁": { type: "consonant", place: "glottal", manner: "fricative", voice: false },
+  "h₂": { type: "consonant", place: "pharyngeal", manner: "fricative", voice: false },
+  "h₃": { type: "consonant", place: "pharyngeal", manner: "fricative", voice: true, labialised: true },
 
   // Fricatives
   f: { type: "consonant", place: "labiodental", manner: "fricative", voice: false },
@@ -104,6 +129,16 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   "ɲ": { type: "consonant", place: "palatal", manner: "nasal", voice: true },
   "ŋ": { type: "consonant", place: "velar", manner: "nasal", voice: true },
   "ɳ": { type: "consonant", place: "retroflex", manner: "nasal", voice: true },
+  // Syllabic resonants. Two conventions are accepted: U+0329
+  // (combining vertical line below) is standard IPA for syllabicity;
+  // U+0325 (combining ring below) is Indo-European-studies convention.
+  // Share the non-syllabic counterpart's place/manner/voice — the
+  // "syllabic" property is prosodic, not featural, so we leave it
+  // implicit. Nucleus checks live in `ipa.ts::isSyllabic`.
+  "m̩": { type: "consonant", place: "labial", manner: "nasal", voice: true },
+  "n̩": { type: "consonant", place: "alveolar", manner: "nasal", voice: true },
+  "m̥": { type: "consonant", place: "labial", manner: "nasal", voice: true },
+  "n̥": { type: "consonant", place: "alveolar", manner: "nasal", voice: true },
 
   // Liquids
   l: { type: "consonant", place: "alveolar", manner: "liquid", voice: true },
@@ -111,11 +146,17 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   "ɾ": { type: "consonant", place: "alveolar", manner: "tap", voice: true },
   "ɹ": { type: "consonant", place: "alveolar", manner: "approximant", voice: true },
   "ʀ": { type: "consonant", place: "uvular", manner: "trill", voice: true },
+  "l̩": { type: "consonant", place: "alveolar", manner: "liquid", voice: true },
+  "r̩": { type: "consonant", place: "alveolar", manner: "trill", voice: true },
+  "l̥": { type: "consonant", place: "alveolar", manner: "liquid", voice: true },
+  "r̥": { type: "consonant", place: "alveolar", manner: "trill", voice: true },
 
   // Glides
   w: { type: "consonant", place: "velar", manner: "glide", voice: true, labialised: true },
   j: { type: "consonant", place: "palatal", manner: "glide", voice: true },
   "ɥ": { type: "consonant", place: "palatal", manner: "glide", voice: true, labialised: true },
+  "w̥": { type: "consonant", place: "velar", manner: "glide", voice: true, labialised: true },
+  "y̥": { type: "consonant", place: "palatal", manner: "glide", voice: true },
 
   // Vowels
   i: { type: "vowel", height: "high", backness: "front", round: false },
@@ -131,6 +172,22 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   "œ": { type: "vowel", height: "mid-low", backness: "front", round: true },
   "ɔ": { type: "vowel", height: "mid-low", backness: "back", round: true },
   a: { type: "vowel", height: "low", backness: "central", round: false },
+  // Accented vowels (PIE stress / reconstruction convention) — same as
+  // their bare counterparts but let feature queries targeting "vowel"
+  // still match them. Stress / tone don't propagate through `featuresOf`
+  // since the feature system doesn't track them separately.
+  "á": { type: "vowel", height: "low", backness: "central", round: false },
+  "é": { type: "vowel", height: "mid-high", backness: "front", round: false },
+  "í": { type: "vowel", height: "high", backness: "front", round: false },
+  "ó": { type: "vowel", height: "mid-high", backness: "back", round: true },
+  "ú": { type: "vowel", height: "high", backness: "back", round: true },
+  // Long vowels (macron / IPA length mark).
+  "ā": { type: "vowel", height: "low", backness: "central", round: false, long: true },
+  "ē": { type: "vowel", height: "mid-high", backness: "front", round: false, long: true },
+  "ī": { type: "vowel", height: "high", backness: "front", round: false, long: true },
+  "ō": { type: "vowel", height: "mid-high", backness: "back", round: true, long: true },
+  "ū": { type: "vowel", height: "high", backness: "back", round: true, long: true },
+  "ḗ": { type: "vowel", height: "mid-high", backness: "front", round: false, long: true },
 };
 
 /**
@@ -157,6 +214,42 @@ export function featuresOf(p: Phoneme): FeatureBundle | undefined {
     const base = p.slice(0, -1);
     const f = PHONE_FEATURES[base];
     if (f && f.type === "vowel") return { ...f, long: true };
+  }
+  // Diacritic fall-throughs so the PIE preset isn't silently stripped
+  // of sound-change coverage. Each branch returns a feature bundle
+  // derived from the bare segment + the diacritic's phonological effect.
+  //
+  // Aspiration (U+02B0): bare + aspirated=true.
+  if (p.endsWith("ʰ")) {
+    const base = p.slice(0, -1);
+    const f = PHONE_FEATURES[base];
+    if (f && f.type === "consonant") return { ...f, aspirated: true };
+  }
+  // Labialisation (U+02B7): bare + labialised=true.
+  if (p.endsWith("ʷ")) {
+    const base = p.slice(0, -1);
+    const f = PHONE_FEATURES[base];
+    if (f && f.type === "consonant") return { ...f, labialised: true };
+  }
+  // Palatalisation (U+02B2): bare + palatalised=true.
+  if (p.endsWith("ʲ")) {
+    const base = p.slice(0, -1);
+    const f = PHONE_FEATURES[base];
+    if (f && f.type === "consonant") return { ...f, palatalised: true };
+  }
+  // Combining below: U+0325 (ring, IE convention) or U+0329 (vertical
+  // line, IPA "syllabic"). Same underlying features; `isSyllabic`
+  // handles the nucleus question downstream.
+  if (p.length >= 2 && (p.endsWith("̥") || p.endsWith("̩"))) {
+    const base = p.slice(0, -1);
+    const f = PHONE_FEATURES[base];
+    if (f) return f;
+  }
+  // Combining acute (U+0301): stress marker — no featural effect.
+  if (p.length >= 2 && p.endsWith("́")) {
+    const base = p.slice(0, -1);
+    const f = PHONE_FEATURES[base];
+    if (f) return f;
   }
   // Don't fake feature bundles for opaque segments — callers should treat
   // unknowns as "won't match any feature query".

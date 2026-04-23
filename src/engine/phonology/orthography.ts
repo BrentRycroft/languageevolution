@@ -3,7 +3,12 @@ import type { Rng } from "../rng";
 import { stripTone } from "./tone";
 
 /**
- * Default orthography: IPA phonemes romanised into ASCII / near-ASCII.
+ * Default orthography: IPA phonemes romanised into the 26 basic Latin
+ * letters + common diacritics (acute, grave, circumflex, macron, caron,
+ * tilde, diaeresis). Nothing outside that — clicks and glottal stops
+ * get their nearest Latin approximation rather than punctuation so the
+ * output is always legible as writing.
+ *
  * The goal isn't perfect transliteration — it's a visibly distinct
  * spelling stratum that can drift independently of the phonology.
  */
@@ -37,16 +42,26 @@ export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "ɹ": "r",
   "ɾ": "r",
   "β": "v",
-  "ʔ": "'",
+  // Glottal stop: use "q" as its Latin-letter stand-in (attested in
+  // Polynesian-style romanisations of the glottal stop) rather than
+  // apostrophe, which isn't a letter.
+  "ʔ": "q",
   "ⁿ": "n",
-  "ǀ": "|",
-  "ǃ": "!",
-  "ǂ": "+",
-  "ǁ": "||",
-  "ʘ": "o",
+  // Clicks are rare; give each a one-letter Latin stand-in rather than
+  // punctuation. Users in click-bearing languages can remap via the
+  // per-language `orthography` field.
+  "ǀ": "c",
+  "ǃ": "q",
+  "ǂ": "ch",
+  "ǁ": "x",
+  "ʘ": "p",
   "h₁": "h",
   "h₂": "h",
   "h₃": "h",
+  "r̩": "r",
+  "l̩": "l",
+  "m̩": "m",
+  "n̩": "n",
   "r̥": "r",
   "l̥": "l",
   "m̥": "m",
@@ -55,6 +70,9 @@ export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "y̥": "y",
   "ḱ": "k",
   "ǵ": "g",
+  "kʲ": "ky",
+  "gʲ": "gy",
+  "gʲʰ": "gyh",
   "kʷ": "kw",
   "gʷ": "gw",
   "g̑": "g",
@@ -62,6 +80,13 @@ export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "gj": "gy",
   "tj": "ty",
   "dj": "dy",
+  // PIE aspirated stops: Romanised with digraph <h> as is traditional.
+  "bʰ": "bh",
+  "dʰ": "dh",
+  "gʰ": "gh",
+  "ǵʰ": "gh",
+  "gʷʰ": "gwh",
+  // Long vowels.
   "aː": "aa",
   "eː": "ee",
   "iː": "ii",
@@ -69,17 +94,88 @@ export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "uː": "uu",
 };
 
-/** Produce the romanized string for a form using the language's orthography. */
+/**
+ * Map an IPA tone mark onto a Latin combining diacritic so the
+ * romanisation stays within the 26-letter alphabet plus diacritics.
+ * Returns an empty string for unknown tones so we never leak a raw
+ * IPA glyph.
+ */
+function toneToLatinDiacritic(tone: string): string {
+  switch (tone) {
+    case "˥":
+      return "́"; // combining acute → high
+    case "˩":
+      return "̀"; // combining grave → low
+    case "˧":
+      return ""; // mid tone: unmarked
+    case "˧˥":
+      return "̌"; // caron → rising
+    case "˥˩":
+      return "̂"; // circumflex → falling
+    default:
+      return "";
+  }
+}
+
+/**
+ * Final pass over the romanised string: anything outside the 26-letter
+ * Latin alphabet (plus the combining diacritics we explicitly use and
+ * ASCII whitespace/punctuation) is stripped. Without this, unmapped
+ * phonemes would leak raw IPA into the romanisation.
+ */
+const LATIN_LETTER = /[A-Za-z]/;
+const COMBINING_DIACRITIC = /[̀-ͯ]/; // combining marks block
+function sanitizeLatin(s: string): string {
+  let out = "";
+  // Iterate by code point so we don't cleave multi-unit combining chars.
+  for (const ch of s) {
+    if (LATIN_LETTER.test(ch)) {
+      out += ch;
+      continue;
+    }
+    if (COMBINING_DIACRITIC.test(ch)) {
+      out += ch;
+      continue;
+    }
+    // Precomposed Latin letters + diacritic (À, é, ñ, ū, ǎ…) live in
+    // the Latin-1 Supplement / Latin Extended-A/B blocks.
+    const code = ch.codePointAt(0) ?? 0;
+    if (
+      (code >= 0x00c0 && code <= 0x024f) ||
+      (code >= 0x1e00 && code <= 0x1eff)
+    ) {
+      out += ch;
+      continue;
+    }
+    // Drop everything else (IPA blocks, clicks, tone marks we haven't
+    // rewritten, arrows, punctuation that doesn't belong in a word).
+  }
+  return out;
+}
+
+/**
+ * Produce the romanized string for a form using the language's
+ * orthography. The output is constrained to the 26 basic Latin letters
+ * plus combining diacritics (acute, grave, circumflex, macron, caron,
+ * tilde, diaeresis, etc.). Any residual IPA that slips through
+ * `DEFAULT_ORTHOGRAPHY` is stripped by the final `sanitizeLatin` pass.
+ */
 export function romanize(form: WordForm, lang: Language): string {
   let out = "";
   for (const p of form) {
     const base = stripTone(p);
-    // Honour tone in the romanization only with an accent if present.
-    const tone = p.length > base.length ? p.slice(base.length) : "";
+    const rawTone = p.length > base.length ? p.slice(base.length) : "";
+    const diacritic = toneToLatinDiacritic(rawTone);
     const letter = lang.orthography[base] ?? DEFAULT_ORTHOGRAPHY[base] ?? base;
-    out += letter + tone;
+    // Attach the tone diacritic to the FIRST letter of the romanised
+    // segment (so "tá˥" → "tá", not "táˊ" at the end).
+    if (diacritic && letter.length > 0) {
+      out += letter.charAt(0) + diacritic + letter.slice(1);
+    } else {
+      out += letter;
+    }
   }
-  return out;
+  return sanitizeLatin(out);
 }
 
 /**

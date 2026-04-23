@@ -1,7 +1,7 @@
 import type { Lexicon, Meaning, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
-import { isVowel } from "./ipa";
+import { isSyllabic } from "./ipa";
 
 /**
  * Meanings allowed to shrink to a single phoneme. In real languages the
@@ -35,13 +35,27 @@ const ALLOWED_MONOSYLLABIC: ReadonlySet<Meaning> = new Set([
 ]);
 
 function isMonosyllabicLegal(meaning: Meaning, form: WordForm): boolean {
-  if (form.length >= 2) return true;
+  if (form.length >= 2) return hasSyllabicNucleus(form);
   if (form.length === 0) return false;
   // Length 1: must be a basic-word meaning AND the single segment must
-  // be a vowel. A lone consonant is never legal; a lone vowel on a
-  // content word is also not legal.
+  // be a syllable nucleus (vowel or syllabic resonant like /m̥/ in
+  // Czech "strč"). A lone consonant is never legal; a lone content-word
+  // vowel isn't legal either.
   if (!ALLOWED_MONOSYLLABIC.has(meaning)) return false;
-  return isVowel(form[0]!);
+  return isSyllabic(form[0]!);
+}
+
+/**
+ * True when a form contains at least one segment that can carry a
+ * syllable — i.e. a vowel or an explicitly-syllabic resonant. This is
+ * the core "is this a word?" constraint: every spoken form needs a
+ * nucleus. Languages that appear to have vowel-less words (Nuxalk,
+ * Czech "strč prst skrz krk") express this by having the syllabic
+ * variant of the sonorant in their inventory — /r̥/ counts, /r/ does not.
+ */
+function hasSyllabicNucleus(form: WordForm): boolean {
+  for (const p of form) if (isSyllabic(p)) return true;
+  return false;
 }
 
 export interface ApplyOptions {
@@ -192,6 +206,15 @@ export function applyChangesToLexicon(
     // the word has effectively been erased. Without this, empty lexicon
     // entries accumulate and break downstream consumers.
     if (next.length === 0) continue;
+    // Syllabicity guard. Every word needs at least one nucleus — a
+    // vowel or an explicitly-syllabic resonant. Rules firing in
+    // pathological orders can otherwise strip all vowels from a short
+    // word (e.g. "water" → "wtr"). When that happens we discard the
+    // change for this generation and keep the prior form.
+    if (!hasSyllabicNucleus(next)) {
+      out[m] = lexicon[m]!.slice();
+      continue;
+    }
     out[m] = next;
   }
 

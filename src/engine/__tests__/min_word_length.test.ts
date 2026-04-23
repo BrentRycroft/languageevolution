@@ -105,6 +105,61 @@ describe("minimum-word-length constraint", () => {
     expect(next.i!.length).toBe(1);
   });
 
+  it("syllabicity guard reverts a word whose last vowel was stripped", () => {
+    // A rule that deletes every vowel but leaves consonants. Without
+    // the syllabicity guard, "water" would become "wtr" — pronouncable
+    // by no one. The post-pass check reverts the meaning to its prior
+    // form when the new form has no syllabic nucleus.
+    const vowelless: SoundChange = {
+      id: "kill-vowels",
+      label: "delete vowels",
+      category: "deletion",
+      description: "drop every vowel",
+      enabledByDefault: true,
+      baseWeight: 1,
+      probabilityFor: () => 1,
+      apply: (word) =>
+        word.filter((p) => !"aeiou".includes(p) && p !== "aː" && p !== "eː"),
+    };
+    const lex = { water: ["w", "a", "t", "e", "r"] };
+    const rng = makeRng("syllabicity");
+    const next = applyChangesToLexicon(lex, [vowelless], rng, {
+      globalRate: 1,
+      weights: { "kill-vowels": 1 },
+      frequencyHints: { water: 0.9 },
+    });
+    // "water" must still have at least one vowel — the post-pass
+    // syllabicity check reverted the change.
+    const form = next.water!;
+    const hasVowel = form.some((p) => "aeiou".includes(p));
+    expect(hasVowel).toBe(true);
+  });
+
+  it("syllabicity guard accepts a word whose nucleus is a syllabic resonant", () => {
+    // /r̩/-only word ("str̩č"-style). No vowel, but the syllabic variant
+    // of /r/ counts as a nucleus, so the word is legal.
+    const noop: SoundChange = {
+      id: "noop",
+      label: "no-op",
+      category: "deletion",
+      description: "",
+      enabledByDefault: true,
+      baseWeight: 1,
+      probabilityFor: () => 0,
+      apply: (w) => w,
+    };
+    const lex = { r_word: ["s", "t", "r̩", "k"] };
+    const rng = makeRng("syl-resonant");
+    const next = applyChangesToLexicon(lex, [noop], rng, {
+      globalRate: 1,
+      weights: { noop: 1 },
+      frequencyHints: { r_word: 0.5 },
+    });
+    expect(next.r_word).toBeDefined();
+    // Preserved because the form already has /r̩/ as a nucleus.
+    expect(next.r_word!.join("")).toBe("str̩k");
+  });
+
   it("reverts the lower-frequency member when two meanings collide", () => {
     // Deletion rule that strips every segment that isn't /r/.
     const change: SoundChange = {

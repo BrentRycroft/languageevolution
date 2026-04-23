@@ -40,7 +40,8 @@ export interface LanguageEvent {
     | "semantic_drift"
     | "borrow"
     | "grammaticalize"
-    | "chain_shift";
+    | "chain_shift"
+    | "taboo";
   description: string;
   /**
    * Optional structured metadata. Populated by the newer mechanic-depth

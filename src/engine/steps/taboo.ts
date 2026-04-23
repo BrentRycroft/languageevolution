@@ -17,9 +17,12 @@ export function stepTaboo(
   if (!taboo) return;
   pushEvent(lang, {
     generation,
-    kind: "semantic_drift",
+    kind: "taboo",
     description: `taboo: "${taboo.meaning}" replaced ${taboo.oldForm} → ${taboo.newForm}${
       taboo.donor ? ` (via ${taboo.donor})` : " (reduplication)"
     }`,
+    meta: {
+      meaning: taboo.meaning,
+    },
   });
 }

@@ -66,17 +66,34 @@ export function LexiconView() {
   const originGlyph = (origin: string | undefined): string => {
     if (!origin) return "";
     if (origin.startsWith("borrow:")) return "⟶";
+    if (origin.startsWith("taboo:")) return "†";
     if (origin === "compound") return "+";
     if (origin === "derivation") return "·";
     if (origin === "reduplication") return "≈";
+    if (origin === "ideophone") return "♪";
+    if (origin === "blending") return "⋈";
+    if (origin === "clipping") return "✂";
+    if (origin === "calque") return "≡";
+    if (origin === "conversion") return "↺";
     return "";
   };
   const originTitle = (origin: string | undefined): string => {
     if (!origin) return "Inherited from proto seed";
     if (origin.startsWith("borrow:")) return `Borrowed from ${origin.slice(7)}`;
+    if (origin.startsWith("taboo:")) {
+      const donor = origin.slice(6);
+      return donor && donor !== "self"
+        ? `Taboo replacement (via ${donor})`
+        : "Taboo replacement (self-reduplication)";
+    }
     if (origin === "compound") return "Compound coinage";
     if (origin === "derivation") return "Derived with affix";
     if (origin === "reduplication") return "Reduplicated form";
+    if (origin === "ideophone") return "Ideophone — iconic form that resists regular sound change";
+    if (origin === "blending") return "Blend of two existing words";
+    if (origin === "clipping") return "Clipped from a longer form";
+    if (origin === "calque") return "Calque (loan translation)";
+    if (origin === "conversion") return "Zero-derivation from a cluster mate";
     return origin;
   };
 

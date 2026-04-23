@@ -9,6 +9,7 @@ const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   borrow: "#ffb473",
   grammaticalize: "#7be0b5",
   chain_shift: "#ff8fd4",
+  taboo: "#ff6363",
 };
 
 const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
@@ -19,6 +20,7 @@ const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
   borrow: "borrow",
   grammaticalize: "gram",
   chain_shift: "chain",
+  taboo: "taboo",
 };
 
 export function EventsLog() {
