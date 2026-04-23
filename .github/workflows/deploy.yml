@@ -21,6 +21,12 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  # Deploy-only pipeline. Tests live in `pr.yml` and run on every PR
+  # into `main`, so anything that reaches this workflow is already
+  # green. Re-running the full suite here (property tests alone take
+  # ~4 minutes) was pushing deploys past 10 minutes for no safety gain.
+  # If we ever need belt-and-braces post-merge coverage, add a
+  # separate `main-checks.yml` that runs alongside this one.
   build:
     runs-on: ubuntu-latest
     steps:
@@ -31,9 +37,15 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      # `npm ci` is fast when the setup-node cache hits; the lockfile
+      # hash keys the cache so a dependency bump invalidates cleanly.
       - run: npm ci
 
-      - run: npm test
+      # Typecheck + production build. Vite's build surfaces its own
+      # parse / type / bundling errors, and `tsc --noEmit` catches
+      # type regressions the PR check also gates — keeping it here is
+      # a cheap last-mile sanity check (< 10 s).
+      - run: npx tsc --noEmit
 
       - run: npm run build
 
