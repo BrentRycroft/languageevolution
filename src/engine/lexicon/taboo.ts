@@ -2,6 +2,7 @@ import type { Language, Meaning } from "../types";
 import type { Rng } from "../rng";
 import { relatedMeanings } from "../semantics/clusters";
 import { neighborsOf } from "../semantics/neighbors";
+import { isSyllabic } from "../phonology/ipa";
 
 export interface TabooEvent {
   meaning: Meaning;
@@ -62,6 +63,9 @@ export function maybeTabooReplace(
 
   // Cap length to keep things speakable.
   if (newForm.length > 9) newForm = newForm.slice(0, 9);
+  // Syllabicity: a taboo replacement still has to be pronounceable;
+  // if the generated euphemism lost its nucleus somehow, bail.
+  if (!newForm.some((p) => isSyllabic(p))) return null;
 
   delete lang.lexicon[target];
   lang.lexicon[target] = newForm;

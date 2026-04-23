@@ -13,6 +13,8 @@ import { StemmaView } from "./StemmaView";
 import { Glossary } from "./Glossary";
 import { ReconstructionQuiz } from "./ReconstructionQuiz";
 import { AchievementToast } from "./Achievements";
+import { UpdateBanner } from "./UpdateBanner";
+import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
 import { readShareFromLocation, clearShareFromLocation } from "../share/url";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -71,6 +73,7 @@ type Tab =
   | "lexicon"
   | "timeline"
   | "grammar"
+  | "phonemes"
   | "laws"
   | "stemma"
   | "events"
@@ -86,6 +89,7 @@ const TABS: { id: Tab; label: string; title: string }[] = [
   { id: "lexicon", label: "Lexicon", title: "Full word-by-meaning table for every language" },
   { id: "timeline", label: "Timeline", title: "Form changes + sound-law lifecycles over time" },
   { id: "grammar", label: "Grammar", title: "Grammar features of the selected language" },
+  { id: "phonemes", label: "Phonemes", title: "Segmental + tonal inventory for the selected language" },
   { id: "laws", label: "Sound laws", title: "Procedurally-invented sound laws per language" },
   { id: "stemma", label: "Stemma", title: "Rule-similarity tree (vs phylogeny)" },
   { id: "events", label: "History", title: "Event log for the selected language" },
@@ -184,6 +188,7 @@ export function App() {
         Skip to content
       </a>
       <AchievementToast />
+      <UpdateBanner />
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       <header className="header">
         <button
@@ -299,6 +304,12 @@ export function App() {
           <div className="panel panel-single">
             <h3>Grammar</h3>
             <GrammarView />
+          </div>
+        )}
+        {activeTab === "phonemes" && (
+          <div className="panel panel-single">
+            <h3>Phoneme inventory</h3>
+            <PhonemeInventoryView />
           </div>
         )}
         {activeTab === "laws" && (

@@ -4,6 +4,7 @@ import { lexicalNeed } from "../genesis/need";
 import { neighborsOf } from "../semantics/neighbors";
 import type { Rng } from "../rng";
 import { genesisRulesFor, pushEvent } from "./helpers";
+import { isSyllabic } from "../phonology/ipa";
 
 export function stepGenesis(
   lang: Language,
@@ -34,6 +35,10 @@ export function stepGenesis(
       need,
     );
     if (!outcome) break;
+    // Syllabicity gate: refuse coinages that came out without a nucleus
+    // (a cluster mechanism can occasionally produce a run of
+    // consonants). The need loop will reroll next step.
+    if (!outcome.form.some((p) => isSyllabic(p))) continue;
     // Commit the coinage to the lexicon.
     lang.lexicon[outcome.meaning] = outcome.form;
     // Mid-range frequency for freshly-coined words.

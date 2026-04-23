@@ -9,8 +9,14 @@ import { migrateSavedRun } from "./migrate";
  * have labels, appear in the UI list, and are retained indefinitely.
  * The autosave is invisible and overwritten on every step.
  */
-const AUTOSAVE_KEY = "lev.autosave.v1";
-const AUTOSAVE_VERSION = 4;
+// Bumping the key forces every client to discard their old autosave on
+// first load after a schema change. The "v2" suffix reflects PR 4's IPA
+// rewrite of the presets: autosaves from the old PIE/Germanic/Bantu
+// notation (ḱ ǵ m̥ þ ō ē á etc.) would otherwise rehydrate on top of
+// the new engine and hide the updated lexicon. Increment when the
+// seed/serialization semantics change in a user-visible way.
+const AUTOSAVE_KEY = "lev.autosave.v2";
+const AUTOSAVE_VERSION = 5;
 
 interface AutosavePayload {
   version: number;

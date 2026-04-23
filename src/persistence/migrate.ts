@@ -11,7 +11,7 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   const version = typeof obj.version === "number" ? obj.version : 1;
-  if (version > 4) return null;
+  if (version > 5) return null;
   if (!obj.config || typeof obj.config !== "object") return null;
 
   const defaults = defaultConfig();
@@ -77,7 +77,7 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
       typeof oldConfig.useWorker === "boolean" ? (oldConfig.useWorker as boolean) : false,
   };
   return {
-    version: 4,
+    version: 5,
     id: String(obj.id ?? ""),
     label: String(obj.label ?? "unlabeled"),
     createdAt: typeof obj.createdAt === "number" ? obj.createdAt : Date.now(),
