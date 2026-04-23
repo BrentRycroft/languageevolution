@@ -15,8 +15,13 @@ export function stepContact(
     lang.wordOrigin[loan.meaning] = `borrow:${loan.donor}`;
     pushEvent(lang, {
       generation,
-      kind: "coinage",
-      description: `borrowed "${loan.meaning}" from ${loan.donor} (${loan.originalForm} → ${loan.adaptedForm})`,
+      kind: "borrow",
+      description: `borrowed "${loan.meaning}" from ${loan.donor} (${loan.originalForm} → ${loan.adaptedForm}) @ ${Math.round(loan.distance)}`,
+      meta: {
+        donorId: loan.donorId,
+        recipientId: lang.id,
+        meaning: loan.meaning,
+      },
     });
   }
 }

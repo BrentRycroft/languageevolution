@@ -1,10 +1,16 @@
 import type { Morphology, MorphCategory, Paradigm } from "./types";
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
+import { semanticTagOf, pathwayTargets } from "../semantics/grammaticalization";
 
 export interface MorphShift {
   kind: "affix_erode" | "category_merge" | "grammaticalization";
   description: string;
+  /**
+   * Set when this shift was a grammaticalization — lets callers record
+   * the source meaning + pathway tag in the resulting language event.
+   */
+  source?: { meaning: string; pathway: string; category: MorphCategory };
 }
 
 /**
@@ -24,7 +30,10 @@ export function applyPhonologyToAffixes(
 }
 
 /**
- * Rare: a common lexeme transitions into a grammatical affix.
+ * Rare: a common lexeme transitions into a grammatical affix. Selection
+ * is pathway-driven (Heine & Kuteva) — only meanings with a semantic tag
+ * that maps onto a vacant grammatical slot are candidates. So English's
+ * "going to" → future is plausible; a random noun → future is not.
  * Returns a description of the shift, or null if nothing happened.
  */
 export function maybeGrammaticalize(
@@ -35,34 +44,43 @@ export function maybeGrammaticalize(
   if (!rng.chance(probability)) return null;
   const meanings = Object.keys(lang.lexicon);
   if (meanings.length === 0) return null;
-  // Pick a reasonably common short word that doesn't already correspond to a paradigm.
-  const candidate = meanings[rng.int(meanings.length)]!;
-  const form = lang.lexicon[candidate]!;
-  if (form.length === 0 || form.length > 4) return null;
-  const freq = lang.wordFrequencyHints[candidate] ?? 0.5;
-  if (freq < 0.6) return null;
 
-  // Target category: pick an unfilled grammatical slot.
-  const options: MorphCategory[] = [
-    "verb.tense.past",
-    "verb.tense.fut",
-    "verb.aspect.pfv",
-    "verb.aspect.ipfv",
-    "noun.case.loc",
-    "noun.case.dat",
-  ];
-  const vacant = options.filter((cat) => !lang.morphology.paradigms[cat]);
-  if (vacant.length === 0) return null;
-  const target = vacant[rng.int(vacant.length)]!;
-  const pdm: Paradigm = {
-    affix: form.slice(),
-    position: lang.grammar.affixPosition,
-    category: target,
+  // Enumerate all (meaning, targetCategory) pairs allowed by the
+  // grammaticalization-pathway table, skipping anything already filled
+  // or anything whose source-form is unfit (too long, too rare, empty).
+  type Candidate = {
+    meaning: string;
+    tag: string;
+    target: MorphCategory;
+    form: WordForm;
   };
-  lang.morphology.paradigms[target] = pdm;
+  const candidates: Candidate[] = [];
+  for (const m of meanings) {
+    const tag = semanticTagOf(m);
+    if (!tag) continue;
+    const form = lang.lexicon[m]!;
+    if (form.length === 0 || form.length > 4) continue;
+    const freq = lang.wordFrequencyHints[m] ?? 0.5;
+    if (freq < 0.6) continue;
+    for (const target of pathwayTargets(tag)) {
+      if (lang.morphology.paradigms[target]) continue;
+      candidates.push({ meaning: m, tag, target, form });
+    }
+  }
+  if (candidates.length === 0) return null;
+
+  const chosen = candidates[rng.int(candidates.length)]!;
+  const pdm: Paradigm = {
+    affix: chosen.form.slice(),
+    position: lang.grammar.affixPosition,
+    category: chosen.target,
+    source: { meaning: chosen.meaning, pathway: chosen.tag },
+  };
+  lang.morphology.paradigms[chosen.target] = pdm;
   // Grammaticalization retires the source word — clean every per-meaning
   // map so we don't leave orphan register tags / neighbours / origins
   // behind (the 2000-gen smoke test caught ~1 per run here).
+  const candidate = chosen.meaning;
   delete lang.lexicon[candidate];
   delete lang.wordFrequencyHints[candidate];
   delete lang.wordOrigin[candidate];
@@ -71,7 +89,12 @@ export function maybeGrammaticalize(
   if (lang.registerOf) delete lang.registerOf[candidate];
   return {
     kind: "grammaticalization",
-    description: `"${candidate}" → ${target} ${pdm.position} /${form.join("")}/`,
+    description: `"${candidate}" (${chosen.tag}) → ${chosen.target} ${pdm.position} /${chosen.form.join("")}/`,
+    source: {
+      meaning: candidate,
+      pathway: chosen.tag,
+      category: chosen.target,
+    },
   };
 }
 

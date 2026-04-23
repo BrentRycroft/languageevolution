@@ -134,6 +134,14 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
                 <td style={{ padding: "2px 6px", color: "var(--muted)" }}>{cat}</td>
                 <td style={{ padding: "2px 6px", color: "var(--muted)" }}>
                   /{formToString(p.affix)}/ ({p.position})
+                  {p.source && (
+                    <span
+                      style={{ marginLeft: 6, color: "#7be0b5" }}
+                      title={`grammaticalized from "${p.source.meaning}" via ${p.source.pathway} pathway`}
+                    >
+                      ← {p.source.meaning}
+                    </span>
+                  )}
                 </td>
                 <td style={{ padding: "2px 6px" }}>{inflected}</td>
               </tr>

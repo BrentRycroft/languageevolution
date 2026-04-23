@@ -156,6 +156,41 @@ export function MapView() {
         (a, b) => (b.deathGeneration ?? 0) - (a.deathGeneration ?? 0),
       );
   }, [state]);
+
+  /**
+   * Recent borrow arrows: scan every language's events ring-buffer for
+   * "borrow" events in the last RECENT_BORROW_WINDOW generations, so we
+   * can draw a fading donor→recipient arrow. Opacity is proportional to
+   * recency (a fresh borrow is bright; a ~10-gen-old one is dim).
+   */
+  const RECENT_BORROW_WINDOW = 12;
+  const recentBorrows = useMemo(() => {
+    const out: Array<{
+      donorId: string;
+      recipientId: string;
+      meaning: string;
+      age: number;
+    }> = [];
+    const now = state.generation;
+    for (const id of Object.keys(state.tree)) {
+      const lang = state.tree[id]!.language;
+      for (const e of lang.events) {
+        if (e.kind !== "borrow") continue;
+        const age = now - e.generation;
+        if (age < 0 || age > RECENT_BORROW_WINDOW) continue;
+        const donorId = e.meta?.donorId;
+        const recipientId = e.meta?.recipientId ?? id;
+        if (!donorId) continue;
+        out.push({
+          donorId,
+          recipientId,
+          meaning: e.meta?.meaning ?? "",
+          age,
+        });
+      }
+    }
+    return out;
+  }, [state]);
   // Project a data-space (x, y) into pixel coordinates inside the svg.
   const project = (x: number, y: number) => ({
     px: (x - cx) * scale + size.w / 2 + view.x,
@@ -204,6 +239,46 @@ export function MapView() {
               strokeDasharray={extinct ? "3 3" : undefined}
               opacity={extinct ? 0.5 : 1}
             />
+          );
+        })}
+
+        {/* Recent borrow arrows: donor → recipient, fading with age. */}
+        <defs>
+          <marker
+            id="borrow-arrowhead"
+            viewBox="0 0 6 6"
+            refX="5"
+            refY="3"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto"
+          >
+            <path d="M 0 0 L 6 3 L 0 6 Z" fill="#ffb473" />
+          </marker>
+        </defs>
+        {recentBorrows.map((b, i) => {
+          const donorPos = layout[b.donorId];
+          const recipPos = layout[b.recipientId];
+          if (!donorPos || !recipPos) return null;
+          const a = project(donorPos.x, donorPos.y);
+          const q = project(recipPos.x, recipPos.y);
+          const fade = 1 - b.age / RECENT_BORROW_WINDOW;
+          return (
+            <line
+              key={`b${i}`}
+              x1={a.px}
+              y1={a.py}
+              x2={q.px}
+              y2={q.py}
+              stroke="#ffb473"
+              strokeWidth={1.2}
+              opacity={Math.max(0.1, fade * 0.8)}
+              markerEnd="url(#borrow-arrowhead)"
+            >
+              <title>
+                borrow: "{b.meaning}" ({b.age} gens ago)
+              </title>
+            </line>
           );
         })}
 

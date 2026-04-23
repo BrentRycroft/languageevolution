@@ -2,13 +2,29 @@ import type { Language, LanguageTree } from "../types";
 import type { Rng } from "../rng";
 import { leafIds } from "../tree/split";
 import { isVowel } from "../phonology/ipa";
+import { geoDistance } from "../geo";
 
 export interface LoanEvent {
   donor: string;
+  donorId: string;
   meaning: string;
   originalForm: string;
   adaptedForm: string;
+  /**
+   * Map-space distance between donor and recipient at the moment of
+   * borrowing. Used by the UI to scale the borrow-arrow length and by
+   * tests to verify the distance-decay weighting.
+   */
+  distance: number;
 }
+
+/**
+ * Distance at which borrow affinity drops to half. Split-step size at
+ * generation 0 is 80 px (see `tree/split.ts`), so this keeps sister-to-
+ * sister borrows common while making great-great-aunt contact rare —
+ * roughly how cultural borrowing falls off in real geography.
+ */
+const BORROW_HALF_LIFE = 200;
 
 /**
  * Attempt one loanword event: pick a living sibling language, copy one of its
@@ -22,7 +38,6 @@ export function tryBorrow(
   rng: Rng,
   probability: number,
 ): LoanEvent | null {
-  if (!rng.chance(probability)) return null;
   const donors = leafIds(tree).filter(
     (id) =>
       id !== recipient.id &&
@@ -30,8 +45,39 @@ export function tryBorrow(
       !isAncestor(tree, id, recipient.id),
   );
   if (donors.length === 0) return null;
-  const donorId = donors[rng.int(donors.length)]!;
+
+  // Weight each candidate donor by its map-space proximity to the
+  // recipient: affinity = half-life / (half-life + d). At d=0 this is 1;
+  // at d=half-life it's 0.5; at d→∞ it decays to 0. If none of the
+  // donors have coords yet (pre-Update-1 saves), fall back to uniform.
+  const recipCoords = recipient.coords;
+  const weighted: Array<{ id: string; weight: number }> = donors.map((id) => {
+    const donorCoords = tree[id]!.language.coords;
+    if (!recipCoords || !donorCoords) {
+      return { id, weight: 1 };
+    }
+    const d = geoDistance(recipCoords, donorCoords);
+    return { id, weight: BORROW_HALF_LIFE / (BORROW_HALF_LIFE + d) };
+  });
+  // Scale the Poisson-gated probability by the best available affinity
+  // so a tribe with no nearby neighbours borrows rarely — distance
+  // throttles the event rate, not just the donor pick.
+  const maxWeight = weighted.reduce((m, w) => (w.weight > m ? w.weight : m), 0);
+  if (!rng.chance(probability * maxWeight)) return null;
+
+  const totalWeight = weighted.reduce((s, w) => s + w.weight, 0);
+  let r = rng.next() * totalWeight;
+  let donorId = weighted[0]!.id;
+  for (const w of weighted) {
+    r -= w.weight;
+    if (r <= 0) {
+      donorId = w.id;
+      break;
+    }
+  }
   const donor = tree[donorId]!.language;
+  const distance =
+    recipCoords && donor.coords ? geoDistance(recipCoords, donor.coords) : 0;
 
   // Prefer meanings that exist in the donor but not in the recipient —
   // that's the canonical "cultural loanword" case.
@@ -51,9 +97,11 @@ export function tryBorrow(
   );
   return {
     donor: donor.name,
+    donorId,
     meaning,
     originalForm: originalForm.join(""),
     adaptedForm: adapted.join(""),
+    distance,
   };
 }
 

@@ -239,6 +239,45 @@ const VOWEL_LOWERING: RuleTemplate = {
   },
 };
 
+/**
+ * Single-vowel raising. Picks exactly one vowel from the inventory and
+ * raises it, in contrast to `VOWEL_RAISING` (which raises all vowels in
+ * lockstep). The post-proposal chain-shift helper looks for this
+ * template specifically so it can generate a push-pair rule when the
+ * target vowel already exists in the inventory.
+ */
+const VOWEL_SINGLE_RAISE: RuleTemplate = {
+  id: "vowel_shift.single_raise",
+  family: "vowel_shift",
+  propose(lang, rng) {
+    const vowels = lang.phonemeInventory.segmental.filter(
+      (p) => featuresOf(p)?.type === "vowel",
+    );
+    if (vowels.length < 2) return null;
+    // Shuffle so we don't always pick the same phoneme.
+    const shuffled = vowels.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = rng.int(i + 1);
+      const tmp = shuffled[i]!;
+      shuffled[i] = shuffled[j]!;
+      shuffled[j] = tmp;
+    }
+    for (const v of shuffled) {
+      const raised = shiftHeight(v, 1);
+      if (!raised || raised === v) continue;
+      return {
+        family: "vowel_shift",
+        templateId: this.id,
+        description: `/${v}/ raises to /${raised}/`,
+        from: { type: "vowel" },
+        context: { locus: "any" },
+        outputMap: { [v]: raised },
+      };
+    }
+    return null;
+  },
+};
+
 const SCHWA_REDUCTION: RuleTemplate = {
   id: "vowel_reduction.unstressed_to_schwa",
   family: "vowel_reduction",
@@ -490,6 +529,7 @@ export const TEMPLATES: readonly RuleTemplate[] = [
   PALATALIZATION_BEFORE_FRONT,
   VOWEL_RAISING,
   VOWEL_LOWERING,
+  VOWEL_SINGLE_RAISE,
   SCHWA_REDUCTION,
   NASAL_ASSIMILATION,
   FINAL_C_DELETION,

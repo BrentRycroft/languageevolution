@@ -36,8 +36,15 @@ export function stepMorphology(
   if (gShift) {
     pushEvent(lang, {
       generation,
-      kind: "grammar_shift",
+      kind: gShift.source ? "grammaticalize" : "grammar_shift",
       description: gShift.description,
+      meta: gShift.source
+        ? {
+            meaning: gShift.source.meaning,
+            category: gShift.source.category,
+            pathway: gShift.source.pathway,
+          }
+        : undefined,
     });
   }
   const merge = maybeMergeParadigms(
