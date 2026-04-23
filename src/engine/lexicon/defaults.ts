@@ -43,7 +43,7 @@ const CORE: Lexicon = {
   blood: ["k", "r", "u"],
   hair: ["p", "i", "l"],
   dog: ["k", "u", "n"],
-  wolf: ["w", "l", "k"],
+  wolf: ["w", "u", "l", "k"],
   horse: ["e", "k", "w", "o"],
   cow: ["g", "w", "o"],
   fish: ["p", "i", "s", "k"],
