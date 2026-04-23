@@ -16,6 +16,22 @@ import {
   type ActivityPoint,
 } from "./history";
 import { detectNewAchievements } from "../engine/achievements/detect";
+import { makeRng } from "../engine/rng";
+import { proposeOneRule } from "../engine/phonology/propose";
+
+/**
+ * Tiny FNV-1a hash for mixing a language id into a numeric RNG seed.
+ * Used by applyRuleBiasToLanguage so every language gets a deterministic
+ * but distinct sub-seed when proposing an immediate post-bias rule.
+ */
+function fnv1aTinyHash(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h >>> 0;
+}
 
 const ACHIEVEMENTS_KEY = "lev-achievements-v1";
 
@@ -347,38 +363,37 @@ export const useSimStore = create<SimStore>((set, get) => ({
     // Bias lives on the language and is read by the procedural proposer
     // each generation. We mutate the engine's state directly (the engine
     // treats its state as owned-mutable inside step()), then hand React a
-    // fresh top-level wrapper so selectors re-run. The bias persists on
-    // the engine's internal state across subsequent steps.
+    // fresh top-level wrapper so selectors re-run.
     //
     // We also fire a one-off rule proposal right away so the user sees
-    // an immediate effect — without this, the next proposal cycle only
-    // lands at PROPOSAL_CADENCE gens, which was surprising per the
-    // post-Update-6 review.
+    // an immediate effect. Previously this was async (dynamic import +
+    // separately-seeded Rng) which (a) raced with concurrent set() calls
+    // and (b) broke export/import determinism. Now we use the engine's
+    // current rngState directly so the proposal sits on the deterministic
+    // RNG stream — the same proposal would have fired had the user
+    // exported, then re-imported and stepped to the same generation.
     const { sim } = get();
     const state = sim.getState();
     const node = state.tree[langId];
     if (!node) return;
     node.language.ruleBias = { ...(node.language.ruleBias ?? {}), ...bias };
-    (async () => {
-      try {
-        const { makeRng } = await import("../engine/rng");
-        const { proposeOneRule } = await import("../engine/phonology/propose");
-        const rng = makeRng(`bias-${langId}-${state.generation}`);
-        const rule = proposeOneRule(node.language, rng, state.generation);
-        if (rule) {
-          node.language.activeRules = node.language.activeRules ?? [];
-          node.language.activeRules.push(rule);
-          node.language.events.push({
-            generation: state.generation,
-            kind: "sound_change",
-            description: `new sound law (bias): ${rule.description}`,
-          });
-        }
-      } catch {
-        // non-fatal — bias still takes effect for the next cadence.
+    try {
+      // makeRng accepts a number; consume one tick from the live state so
+      // the proposal advances rngState predictably from the user's seed.
+      const rng = makeRng(state.rngState ^ fnv1aTinyHash(langId));
+      const rule = proposeOneRule(node.language, rng, state.generation);
+      if (rule) {
+        node.language.activeRules = node.language.activeRules ?? [];
+        node.language.activeRules.push(rule);
+        node.language.events.push({
+          generation: state.generation,
+          kind: "sound_change",
+          description: `new sound law (bias): ${rule.description}`,
+        });
       }
-      set({ state: { ...state, tree: { ...state.tree } } });
-    })();
+    } catch {
+      // non-fatal — bias still takes effect for the next cadence.
+    }
     set({ state: { ...state, tree: { ...state.tree } } });
   },
   dismissAchievementToast: () => set({ lastAchievement: null }),

@@ -76,9 +76,11 @@ export function parseBias(raw: string): BiasVector | null {
     let acceptedKeys = 0;
     for (const [key, v] of Object.entries(obj)) {
       if (!LOWER_FAMILY.has(key.toLowerCase())) continue;
-      const num = Number(v);
-      if (!Number.isFinite(num)) continue;
-      out[key.toLowerCase()] = Math.max(0.2, Math.min(2.5, num));
+      // Strict type check: Number(null) === 0, Number(true) === 1, etc.
+      // Without this, a malformed LLM output like {"lenition": null}
+      // would silently become a 0 (clamped to 0.2) bias multiplier.
+      if (typeof v !== "number" || !Number.isFinite(v)) continue;
+      out[key.toLowerCase()] = Math.max(0.2, Math.min(2.5, v));
       acceptedKeys++;
     }
     // Reject an output that doesn't map any family — a model that returned

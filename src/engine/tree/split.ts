@@ -11,13 +11,40 @@ export function leafIds(tree: LanguageTree): string[] {
     .sort();
 }
 
+/**
+ * Pairs of catalog rule ids that compose into runaway loops if both are
+ * enabled in the same language. Currently the only known offender is
+ * gemination.emphatic (V_C_V → V_CC_V) plus insertion.anaptyxis
+ * (CC → CəC) — they feed each other on the new ə, blowing form length
+ * up by ~2 phonemes per generation. The 2000-gen smoke test surfaced
+ * this with germanic forms reaching 15,000+ phonemes.
+ *
+ * `perturbChangeSet` consults this list before adding a disabled rule
+ * to a daughter language so the daughter never inherits a cascade pair.
+ */
+const INCOMPATIBLE_RULE_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ["gemination.emphatic", "insertion.anaptyxis"],
+];
+
+function wouldCascade(set: Set<string>, candidate: string): boolean {
+  for (const [a, b] of INCOMPATIBLE_RULE_PAIRS) {
+    if (candidate === a && set.has(b)) return true;
+    if (candidate === b && set.has(a)) return true;
+  }
+  return false;
+}
+
 function perturbChangeSet(
   parentEnabled: string[],
   rng: Rng,
 ): string[] {
   const set = new Set(parentEnabled);
   const all = CATALOG.map((c) => c.id);
-  const disabled = all.filter((id) => !set.has(id));
+  // Only consider candidates that wouldn't form a cascade pair with
+  // anything already in the set.
+  const disabled = all.filter(
+    (id) => !set.has(id) && !wouldCascade(set, id),
+  );
   if (rng.chance(0.5) && disabled.length > 0) {
     set.add(disabled[rng.int(disabled.length)]!);
   } else if (set.size > 1) {

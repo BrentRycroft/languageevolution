@@ -43,16 +43,24 @@ export function recordHistory(
     if (!next[id]) next[id] = {};
     const byMeaning = (next[id] = { ...next[id] });
     // Build a quick lookup of events on this generation, keyed by meaning.
-    // Events are already ordered by time so the last matching one wins,
-    // which is what we want (latest event describes the current form).
+    // The simulator's event descriptions follow predictable shapes:
+    //   "compound: water-fire", "metonymy: hand → foot",
+    //   "metonymy (takeover): hand → foot", "coinage: foo".
+    // We try to extract the affected meaning from the trailing token
+    // (after "→" if present, otherwise the last token after ": ").
+    // For drift events where the meaning is the *new* slot, that's the
+    // arrow target. For coinage and the unannotated "N forms shifted"
+    // case, the description doesn't carry a per-meaning annotation —
+    // the kind alone wins, applied as the default origin below.
     const eventsByMeaning: Record<string, string> = {};
     for (const e of node.language.events) {
       if (e.generation !== state.generation) continue;
-      // Derive a meaning-ish key from the event description. Not perfect
-      // but covers the common shapes: "coinage: foo", "metonymy: foo → bar",
-      // "sound_change: N forms shifted" (no meaning — so kind wins).
-      const match = e.description.match(/([a-z-]+)\s*(?:→|$)/i);
-      const token = match ? match[1] : undefined;
+      const arrow = e.description.split("→").map((s) => s.trim());
+      const tail =
+        arrow.length > 1
+          ? arrow[arrow.length - 1]!
+          : e.description.split(":").map((s) => s.trim()).pop() ?? "";
+      const token = tail.toLowerCase().match(/[a-z][a-z0-9-]*/)?.[0];
       if (token && lex[token]) {
         eventsByMeaning[token] = e.kind;
       }

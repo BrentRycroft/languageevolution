@@ -156,7 +156,18 @@ export interface SimulationConfig {
   };
   tree: {
     splitProbabilityPerGeneration: number;
+    /**
+     * Hard cap on simultaneously-alive leaves. Ignored when
+     * `unlimitedLeaves` is true.
+     */
     maxLeaves: number;
+    /**
+     * When true, the simulator removes the cap entirely — splits keep
+     * happening as long as splitProbabilityPerGeneration fires. Useful
+     * for users who want to grow trees freely. Adds proportional CPU
+     * cost since every leaf gets stepped each generation.
+     */
+    unlimitedLeaves?: boolean;
     minGenerationsBetweenSplits: number;
     deathProbabilityPerGeneration: number;
     minGenerationsBeforeDeath: number;

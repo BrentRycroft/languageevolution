@@ -121,9 +121,15 @@ export function driftOneMeaning(
       }
       if (lang.registerOf?.[m] !== undefined) delete lang.registerOf[m];
       // Clean the remaining auxiliary maps so the old meaning leaves no
-      // orphans. wordOrigin is preserved on the target if not already set.
+      // orphans. wordOrigin and lastChangeGeneration are preserved on the
+      // target if not already set — the takeover inherits the form's
+      // age-grading + origin so age-sensitive change rates are correct.
       if (lang.wordOrigin[m] !== undefined && !lang.wordOrigin[target]) {
         lang.wordOrigin[target] = lang.wordOrigin[m]!;
+      }
+      const lastChange = lang.lastChangeGeneration[m];
+      if (lastChange !== undefined && lang.lastChangeGeneration[target] === undefined) {
+        lang.lastChangeGeneration[target] = lastChange;
       }
       delete lang.wordOrigin[m];
       delete lang.localNeighbors[m];

@@ -185,15 +185,22 @@ export function ControlsPanel() {
           step={0.01}
           onChange={(v) => updateTree({ splitProbabilityPerGeneration: v })}
         />
-        <Slider
-          label="Max leaves"
-          value={config.tree.maxLeaves}
-          min={1}
-          max={12}
-          step={1}
-          onChange={(v) => updateTree({ maxLeaves: Math.round(v) })}
-          format={(v) => String(Math.round(v))}
+        <Toggle
+          label="Unlimited languages (no cap)"
+          value={!!config.tree.unlimitedLeaves}
+          onChange={(v) => updateTree({ unlimitedLeaves: v })}
         />
+        {!config.tree.unlimitedLeaves && (
+          <Slider
+            label="Max living languages"
+            value={config.tree.maxLeaves}
+            min={1}
+            max={60}
+            step={1}
+            onChange={(v) => updateTree({ maxLeaves: Math.round(v) })}
+            format={(v) => String(Math.round(v))}
+          />
+        )}
         <Slider
           label="Death prob. / gen"
           value={config.tree.deathProbabilityPerGeneration}

@@ -42,6 +42,14 @@ describe("parseBias", () => {
     expect(parseBias("{missing brackets")).toBeNull();
   });
 
+  it("rejects non-number values (null, boolean, string)", () => {
+    // null: Number(null) === 0 — without strict type check this would
+    // become 0.2 (clamped). String/bool also coerce sneakily.
+    expect(parseBias(`{"lenition": null}`)).toBeNull();
+    expect(parseBias(`{"lenition": true, "fortition": false}`)).toBeNull();
+    expect(parseBias(`{"lenition": "1.5"}`)).toBeNull();
+  });
+
   it("ignores unknown keys but still validates", () => {
     const raw = `{"foo":9,"lenition":1.4,"bar":2}`;
     const bias = parseBias(raw);
