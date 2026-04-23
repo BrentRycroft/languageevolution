@@ -71,10 +71,20 @@ export function RulesTimeline({
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ rule, status }) => {
-            const birth = rule.birthGeneration;
-            const death =
+          {rows
+            // Hide rules that hadn't been born yet at the scrub point —
+            // previously they'd render at a negative `left` %, pushing
+            // the bar off-screen and confusing the reader. Retired
+            // rules whose death was also after the scrub point keep
+            // showing; their bar is clamped below.
+            .filter(({ rule }) => rule.birthGeneration <= maxGen)
+            .map(({ rule, status }) => {
+            const birth = Math.max(0, rule.birthGeneration);
+            const rawDeath =
               status === "retired" ? rule.deathGeneration ?? maxGen : maxGen;
+            // Clamp death at the scrub point so lifetimes don't spill
+            // past the visible window.
+            const death = Math.min(rawDeath, maxGen);
             const left = (birth / span) * 100;
             const width = Math.max(0.5, ((death - birth) / span) * 100);
             const color = FAMILY_COLORS[rule.family] ?? "#888";

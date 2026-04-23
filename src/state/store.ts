@@ -496,7 +496,17 @@ export const useSimStore = create<SimStore>((set, get) => ({
   downloadAiModel: async () => {
     set({ aiStatus: { ready: false, progress: 0, text: "Starting…", error: null } });
     try {
-      const { loadEngine, DEFAULT_LLM_CONFIG } = await import("../engine/semantics/llm");
+      const { loadEngine, DEFAULT_LLM_CONFIG, validateModelAvailable } = await import("../engine/semantics/llm");
+      // Fail fast with a clear error if the configured id isn't in the
+      // prebuilt list, rather than letting WebLLM throw "Cannot find
+      // model record in appConfig" mid-download.
+      const validation = await validateModelAvailable(DEFAULT_LLM_CONFIG);
+      if (validation) {
+        set({
+          aiStatus: { ready: false, progress: 0, text: "", error: validation },
+        });
+        return;
+      }
       await loadEngine(DEFAULT_LLM_CONFIG, (info) => {
         set({
           aiStatus: {
