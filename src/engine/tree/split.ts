@@ -88,12 +88,32 @@ function jitterBias(
   return out;
 }
 
+/**
+ * Pick how many daughters this split produces. Most splits are binary
+ * (two languages diverging from a common ancestor); occasionally a
+ * proto-community fragments into three, four, or rarely more lineages
+ * at once (cf. the Austronesian dispersals or the Proto-Germanic →
+ * East/West/North Germanic break-up). Bias heavily low so the average
+ * tree still looks mostly binary, with rare bursts of polytomy.
+ */
+function pickChildCount(rng: Rng): number {
+  const r = rng.next();
+  if (r < 0.6) return 2;
+  if (r < 0.85) return 3;
+  if (r < 0.93) return 4;
+  if (r < 0.97) return 5;
+  if (r < 0.99) return 6;
+  if (r < 0.995) return 7;
+  if (r < 0.998) return 8;
+  return 9;
+}
+
 export function splitLeaf(
   tree: LanguageTree,
   parentId: string,
   generation: number,
   rng: Rng,
-): [string, string] {
+): string[] {
   const parent = tree[parentId]!;
   const parentLang = parent.language;
   let nextCounter = Object.keys(tree).length;
@@ -148,42 +168,45 @@ export function splitLeaf(
       lastChangeGeneration: { ...parentLang.lastChangeGeneration },
     };
   };
-  const a = makeChild(false);
-  const b = makeChild(true);
-  // Persistent map coordinates: place the two daughters on either side
-  // of the parent at a distance that decays with depth, in directions
-  // determined by a deterministic hash of their ids. Once written the
-  // coords stay frozen unless the user drags the node in MapView.
+
+  const childCount = pickChildCount(rng);
+  // First daughter inherits the parent's change set verbatim (keeps the
+  // conservative branch); the rest perturb so sisters diverge from the
+  // first generation on.
+  const children: Language[] = [];
+  for (let i = 0; i < childCount; i++) {
+    children.push(makeChild(i !== 0));
+  }
+
+  // Persistent map coordinates: fan the daughters evenly around the
+  // parent, with a deterministic base angle so the layout doesn't
+  // jump around if you rerun the same split. Per-daughter jitter keeps
+  // sister clusters from sitting in perfect regular polygons. Step
+  // size decays with tree depth so deeper splits stay visually
+  // grouped.
   const parentCoords = parentLang.coords ?? { x: 0, y: 0 };
   const depth = depthOf(tree, parentId);
   const step = 80 / Math.sqrt(1 + depth);
-  const baseAngle = (fnv1aFloat(parentId + ":" + generation) * Math.PI * 2);
-  const jitterA = (rng.next() - 0.5) * 0.6;
-  const jitterB = (rng.next() - 0.5) * 0.6;
-  const angleA = baseAngle + jitterA;
-  const angleB = baseAngle + Math.PI + jitterB;
-  a.coords = {
-    x: parentCoords.x + Math.cos(angleA) * step,
-    y: parentCoords.y + Math.sin(angleA) * step,
-  };
-  b.coords = {
-    x: parentCoords.x + Math.cos(angleB) * step,
-    y: parentCoords.y + Math.sin(angleB) * step,
-  };
-  const childA: LanguageNode = {
-    language: a,
-    parentId,
-    childrenIds: [],
-    splitGeneration: generation,
-  };
-  const childB: LanguageNode = {
-    language: b,
-    parentId,
-    childrenIds: [],
-    splitGeneration: generation,
-  };
-  tree[a.id] = childA;
-  tree[b.id] = childB;
-  parent.childrenIds = [a.id, b.id];
-  return [a.id, b.id];
+  const baseAngle = fnv1aFloat(parentId + ":" + generation) * Math.PI * 2;
+  for (let i = 0; i < childCount; i++) {
+    const angle = baseAngle + (i / childCount) * Math.PI * 2 + (rng.next() - 0.5) * 0.4;
+    children[i]!.coords = {
+      x: parentCoords.x + Math.cos(angle) * step,
+      y: parentCoords.y + Math.sin(angle) * step,
+    };
+  }
+
+  const childIds: string[] = [];
+  for (const child of children) {
+    const node: LanguageNode = {
+      language: child,
+      parentId,
+      childrenIds: [],
+      splitGeneration: generation,
+    };
+    tree[child.id] = node;
+    childIds.push(child.id);
+  }
+  parent.childrenIds = childIds;
+  return childIds;
 }

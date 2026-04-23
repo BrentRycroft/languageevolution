@@ -28,7 +28,13 @@ export function defaultConfig(): SimulationConfig {
       changeWeights: weights,
     },
     tree: {
-      splitProbabilityPerGeneration: 0.05,
+      // Lowered from 0.05 → 0.015 now that each split can produce up
+      // to 9 daughters rather than strictly two. With an unchanged
+      // rate the tree was fanning out far faster than real language
+      // families; at 0.015 an average leaf splits every ~60 gens,
+      // which matches the pacing of attested proto-language
+      // subgroupings.
+      splitProbabilityPerGeneration: 0.015,
       maxLeaves: 8,
       // unlimitedLeaves left undefined (false) by default — the cap stays
       // until the user opts out of it from the controls panel.

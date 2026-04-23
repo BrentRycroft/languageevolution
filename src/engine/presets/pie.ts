@@ -57,7 +57,9 @@ const LEXICON: Lexicon = {
   season: ["s", "e", "m", "h₂"],
   winter: ["gʲʰ", "e", "i", "m"],
   summer: ["s", "a", "m", "h₂"],
-  time: ["t", "e", "m", "p", "o", "s"],
+  // PIE *déh₂-mn̩ "time, turn" (cf. Greek δῆμος, Lat. tempus is actually
+  // from *tempos, so avoid it as the PIE source and use *deh₂-).
+  time: ["d", "e", "h₂", "m", "n̩"],
   // — flora / fauna —
   tree: ["d", "o", "r", "u"],
   wood: ["d", "o", "r", "u"],
@@ -86,7 +88,8 @@ const LEXICON: Lexicon = {
   fish: ["p", "i", "s", "kʲ"],
   bird: ["h₂", "e", "w", "i"],
   eagle: ["h₃", "o", "r", "n̩"],
-  snake: ["s", "e", "r", "p"],
+  // PIE *h₁ógʷʰis "snake".
+  snake: ["h₁", "o", "gʷʰ", "i", "s"],
   worm: ["w", "r̩", "m", "i"],
   louse: ["l", "u", "s"],
   bee: ["bʰ", "e", "i"],
@@ -96,13 +99,16 @@ const LEXICON: Lexicon = {
   horn: ["kʲ", "e", "r", "n"],
   tail: ["p", "u", "kʲ", "n"],
   // — body —
-  body: ["k", "o", "r", "p", "u", "s"],
+  // PIE *kʷr̩p- "body" (source of Lat. corpus, Skt. kr̩p-). The Latin
+  // nominative "korpus" was a bad seed — use the bare root.
+  body: ["kʷ", "r̩", "p"],
   head: ["kʲ", "e", "r", "h₂"],
   hair: ["p", "u", "l", "h₂"],
   face: ["p", "r", "o", "kʷ", "p"],
   eye: ["h₃", "o", "kʷ"],
   ear: ["h₂", "o", "w", "s"],
-  nose: ["n", "a", "s"],
+  // PIE *neh₂s- "nose".
+  nose: ["n", "e", "h₂", "s"],
   mouth: ["h₁", "o", "s"],
   tooth: ["h₁", "d", "o", "n", "t"],
   tongue: ["d", "n̩", "gʲʰ", "w", "e", "h₂"],
@@ -113,7 +119,8 @@ const LEXICON: Lexicon = {
   hand: ["gʲʰ", "e", "s", "r"],
   finger: ["d", "i", "g", "i", "t"],
   nail: ["h₃", "n", "o", "gʰ"],
-  chest: ["p", "e", "k", "t", "u", "s"],
+  // PIE *bʰerǵʰ- "high, chest" — the Lat. pectus form was wrong.
+  chest: ["bʰ", "e", "r", "gʲʰ"],
   back: ["t", "e", "r", "g", "o"],
   belly: ["gʲʰ", "o", "l", "k", "o"],
   heart: ["kʲ", "e", "r", "d"],
@@ -130,7 +137,8 @@ const LEXICON: Lexicon = {
   person: ["dʰ", "gʲʰ", "m", "oː"],
   man: ["w", "i", "h₁", "r", "o"],
   woman: ["gʷ", "e", "n", "h₂"],
-  child: ["p", "o", "t", "l", "o"],
+  // PIE *putlós "young one, child".
+  child: ["p", "u", "t", "l", "o", "s"],
   baby: ["s", "u", "n", "u"],
   mother: ["m", "a", "h₂", "t", "eː", "r"],
   father: ["p", "h₂", "t", "eː", "r"],
@@ -153,16 +161,19 @@ const LEXICON: Lexicon = {
   wheel: ["kʷ", "e", "kʷ", "l", "o"],
   axle: ["a", "kʲ", "s", "i"],
   boat: ["n", "e", "h₂", "u"],
-  knife: ["k", "u", "l", "t", "r", "o"],
+  // PIE *(s)ker- "cut" → knife.
+  knife: ["s", "k", "e", "r"],
   axe: ["s", "e", "k", "u", "r", "i"],
   spear: ["gʰ", "a", "i", "s", "o"],
-  bow: ["a", "r", "k", "u"],
+  // PIE *h₂erkʷ-o- "bow" (source of Lat. arcus).
+  bow: ["h₂", "e", "r", "kʷ", "o"],
   arrow: ["i", "s", "u"],
   rope: ["w", "e", "y", "o"],
   cloth: ["w", "e", "s"],
   wool: ["w", "l̩", "h₂", "n", "h₂"],
   // — food / drink —
-  bread: ["a", "r", "t", "o"],
+  // PIE *bʰrew- "to ferment, bake" — the root behind English "bread".
+  bread: ["bʰ", "r", "e", "w"],
   meat: ["m", "eː", "m", "s", "o"],
   milk: ["gʷ", "l", "a", "k", "t"],
   honey: ["m", "e", "l", "i", "t"],

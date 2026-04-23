@@ -39,11 +39,12 @@ describe("procedural sound-change integration", () => {
     }));
     root.activeRules = fakeRules;
     const rng = makeRng("split");
-    const [idA, idB] = splitLeaf(state.tree, state.rootId, state.generation + 1, rng);
-    const a = state.tree[idA]!.language.activeRules ?? [];
-    const b = state.tree[idB]!.language.activeRules ?? [];
-    expect(a.length).toBeLessThanOrEqual(fakeRules.length);
-    expect(b.length).toBeLessThanOrEqual(fakeRules.length);
+    const childIds = splitLeaf(state.tree, state.rootId, state.generation + 1, rng);
+    expect(childIds.length).toBeGreaterThanOrEqual(2);
+    for (const id of childIds) {
+      const rules = state.tree[id]!.language.activeRules ?? [];
+      expect(rules.length).toBeLessThanOrEqual(fakeRules.length);
+    }
   });
 
   it("semantic drift events carry a taxonomy prefix", () => {

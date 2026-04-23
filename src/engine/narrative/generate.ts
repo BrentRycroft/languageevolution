@@ -6,19 +6,21 @@ import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 
 /**
- * Sentence templates work against placeholder roles the language must be able
- * to fill — nouns from the body / animals / kinship clusters; verbs from
- * motion / metabolism; adjectives from the evaluation cluster.
+ * Narrative generation is split into two stages so the Narrative view's
+ * compare mode can render the same skeleton across two languages:
  *
- * Order of constituents is rearranged according to the language's current
- * word order (SOV / SVO / VSO / ...).
+ *  1. `planSkeleton(seedStr, lines)` deterministically picks the pattern
+ *     index + meaning slots for each sentence from a seed that does NOT
+ *     depend on any particular language. Both columns in compare mode
+ *     call this with the same seed and get identical skeletons.
+ *  2. `realizeSkeleton(lang, skeleton)` plugs each language's own
+ *     lexicon, morphology, and word order into the skeleton to produce
+ *     the rendered text + gloss.
+ *
+ * The user-visible consequence: "the {S} {V} the {adj} {O}" is the same
+ * template in both columns; only the specific forms, affixes, and
+ * surface order vary by language. That's the apple-to-apple comparison.
  */
-interface Sentence {
-  subjectNoun: Meaning;
-  verb: Meaning;
-  objectNoun: Meaning;
-  adjective?: Meaning;
-}
 
 const NOUN_POOL = [
   "mother", "father", "dog", "wolf", "horse", "cow", "bird", "fish",
@@ -29,7 +31,13 @@ const VERB_POOL = ["go", "come", "see", "know", "eat", "drink", "sleep", "die"] 
 
 const ADJECTIVE_POOL = ["big", "small", "new", "old", "good", "bad"] as const;
 
-const SENTENCE_PATTERNS: Array<{ template: string; needsObject: boolean; needsAdj: boolean }> = [
+interface SentencePattern {
+  template: string;
+  needsObject: boolean;
+  needsAdj: boolean;
+}
+
+const SENTENCE_PATTERNS: SentencePattern[] = [
   { template: "The {adj} {S} {V}.", needsObject: false, needsAdj: true },
   { template: "The {S} {V} the {O}.", needsObject: true, needsAdj: false },
   { template: "The {S} {V} the {adj} {O}.", needsObject: true, needsAdj: true },
@@ -37,45 +45,76 @@ const SENTENCE_PATTERNS: Array<{ template: string; needsObject: boolean; needsAd
 ];
 
 /**
- * Pick a meaning from `pool` that the language actually has a form for.
- * Falls back to any available meaning from the pool, or to any lexeme at all.
+ * Language-agnostic sentence skeleton. Meanings are picked from fixed
+ * pools using a seed-only RNG so every language that's asked to
+ * realize this skeleton starts from the same structural choice. Each
+ * language then falls back to its own lexicon when a meaning isn't
+ * there.
  */
-function pickFromPool(lang: Language, pool: readonly string[], rng: Rng): Meaning | null {
-  const available = pool.filter((m) => lang.lexicon[m]);
-  if (available.length > 0) return available[rng.int(available.length)]!;
-  // Pool missing; fall back to any noun-like meaning in the lexicon.
-  const all = Object.keys(lang.lexicon).filter((m) => !m.includes("-"));
-  if (all.length > 0) return all[rng.int(all.length)]!;
-  return null;
+export interface Skeleton {
+  patternIdx: number;
+  subjectNoun: Meaning;
+  verb: Meaning;
+  objectNoun: Meaning;
+  adjective: Meaning | null;
 }
 
-function pickSentence(lang: Language, rng: Rng): Sentence | null {
-  const pattern = SENTENCE_PATTERNS[rng.int(SENTENCE_PATTERNS.length)]!;
-  const subject = pickFromPool(lang, NOUN_POOL, rng);
-  const verb = pickFromPool(lang, VERB_POOL, rng);
-  if (!subject || !verb) return null;
-  const object = pattern.needsObject ? pickFromPool(lang, NOUN_POOL, rng) : null;
-  const adjective = pattern.needsAdj ? pickFromPool(lang, ADJECTIVE_POOL, rng) : null;
-  return {
-    subjectNoun: subject,
-    verb,
-    objectNoun: object ?? subject,
-    adjective: adjective ?? undefined,
-  };
+function pickFromPoolByIndex<T extends string>(pool: readonly T[], rng: Rng): T {
+  return pool[rng.int(pool.length)]!;
+}
+
+export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
+  // Seed depends only on the user seed string + line count — not on
+  // any language — so both compare-mode columns get the same plan.
+  const rng = makeRng(`narrative:${seedStr}:${lines}`);
+  const out: Skeleton[] = [];
+  for (let i = 0; i < lines; i++) {
+    const patternIdx = rng.int(SENTENCE_PATTERNS.length);
+    const pattern = SENTENCE_PATTERNS[patternIdx]!;
+    const subject = pickFromPoolByIndex(NOUN_POOL, rng);
+    const verb = pickFromPoolByIndex(VERB_POOL, rng);
+    // Still consume an RNG step for object + adjective even when the
+    // pattern doesn't need them, so the stream stays deterministic
+    // regardless of pattern choice. The unused values just get
+    // dropped.
+    const objectCand = pickFromPoolByIndex(NOUN_POOL, rng);
+    const adjCand = pickFromPoolByIndex(ADJECTIVE_POOL, rng);
+    out.push({
+      patternIdx,
+      subjectNoun: subject,
+      verb,
+      objectNoun: pattern.needsObject ? objectCand : subject,
+      adjective: pattern.needsAdj ? adjCand : null,
+    });
+  }
+  return out;
 }
 
 /**
- * Apply the language's paradigms to give a noun a plural form and a verb
- * a tense suffix. Keeps it simple: past-tense affix if the grammar has one,
- * otherwise bare stem. Plural marking applied to the subject when the
- * language has that paradigm.
+ * Per-language fallback: if the planned meaning isn't in this
+ * language's lexicon, walk the pool in a stable order looking for
+ * something that is. As a last resort fall back to any non-compound
+ * lexeme the language has. Returns null only if the language's
+ * lexicon is effectively empty.
  */
+function resolveMeaning(
+  lang: Language,
+  planned: Meaning,
+  pool: readonly string[],
+): Meaning | null {
+  if (lang.lexicon[planned]) return planned;
+  for (const m of pool) {
+    if (lang.lexicon[m]) return m;
+  }
+  const all = Object.keys(lang.lexicon).filter((m) => !m.includes("-")).sort();
+  return all.length > 0 ? all[0]! : null;
+}
+
 function inflectNoun(form: WordForm, lang: Language, role: "S" | "O"): WordForm {
   if (role === "S" && lang.grammar.pluralMarking === "affix") {
     const p = lang.morphology.paradigms["noun.num.pl"];
     if (p) return inflect(form, p);
   }
-  // Case inflection on the object if the language has cases.
   if (role === "O" && lang.grammar.hasCase) {
     const acc = lang.morphology.paradigms["noun.case.acc"];
     if (acc) return inflect(form, acc);
@@ -84,7 +123,6 @@ function inflectNoun(form: WordForm, lang: Language, role: "S" | "O"): WordForm 
 }
 
 function inflectVerb(form: WordForm, lang: Language): WordForm {
-  // Prefer past > future > imperfective > perfective > 3sg.
   const order: MorphCategory[] = [
     "verb.tense.past",
     "verb.tense.fut",
@@ -99,11 +137,6 @@ function inflectVerb(form: WordForm, lang: Language): WordForm {
   return form;
 }
 
-/**
- * Reorder the three surface constituents according to the language's word
- * order. We always emit them in lowercase IPA; the template just stitches
- * them together with any fixed bits (like "the").
- */
 function arrange(
   order: Language["grammar"]["wordOrder"],
   S: string,
@@ -126,11 +159,71 @@ export interface NarrativeLine {
   text: string;
 }
 
+function realizeSkeleton(
+  lang: Language,
+  skeleton: Skeleton,
+  script: DisplayScript,
+): NarrativeLine | null {
+  const pattern = SENTENCE_PATTERNS[skeleton.patternIdx]!;
+  const subjectMeaning = resolveMeaning(lang, skeleton.subjectNoun, NOUN_POOL);
+  const verbMeaning = resolveMeaning(lang, skeleton.verb, VERB_POOL);
+  if (!subjectMeaning || !verbMeaning) return null;
+  const objectMeaning = pattern.needsObject
+    ? resolveMeaning(lang, skeleton.objectNoun, NOUN_POOL) ?? subjectMeaning
+    : subjectMeaning;
+  const adjectiveMeaning =
+    pattern.needsAdj && skeleton.adjective
+      ? resolveMeaning(lang, skeleton.adjective, ADJECTIVE_POOL)
+      : null;
+
+  const sForm = lang.lexicon[subjectMeaning];
+  const vForm = lang.lexicon[verbMeaning];
+  const oForm = lang.lexicon[objectMeaning];
+  if (!sForm || !vForm || !oForm) return null;
+
+  const render = (form: WordForm): string =>
+    script === "ipa" ? formToString(form) : formatForm(form, lang, script);
+
+  const S = render(inflectNoun(sForm, lang, "S"));
+  const V = render(inflectVerb(vForm, lang));
+  const O = render(inflectNoun(oForm, lang, "O"));
+  const arranged = arrange(lang.grammar.wordOrder, S, V, O);
+
+  if (pattern.needsObject && pattern.needsAdj && adjectiveMeaning) {
+    const adjForm = lang.lexicon[adjectiveMeaning];
+    if (!adjForm) return null;
+    const A = render(adjForm);
+    return {
+      text: `${arranged.first} ${arranged.second} ${arranged.third} · ${A}`,
+      gloss: `[${subjectMeaning}—${verbMeaning}—${adjectiveMeaning} ${objectMeaning}]`,
+    };
+  }
+  if (pattern.needsObject) {
+    return {
+      text: `${arranged.first} ${arranged.second} ${arranged.third}`,
+      gloss: `[${subjectMeaning}—${verbMeaning}—${objectMeaning}]`,
+    };
+  }
+  if (pattern.needsAdj && adjectiveMeaning) {
+    const adjForm = lang.lexicon[adjectiveMeaning];
+    if (!adjForm) return null;
+    const A = render(adjForm);
+    return {
+      text: `${A} ${S} ${V}`,
+      gloss: `[${adjectiveMeaning} ${subjectMeaning}—${verbMeaning}]`,
+    };
+  }
+  return {
+    text: `${S} ${V}`,
+    gloss: `[${subjectMeaning}—${verbMeaning}]`,
+  };
+}
+
 /**
- * Produce a short narrative as lines. Each line includes the rendered
- * word-forms in the caller's chosen script (default IPA, can be Roman
- * orthography or both) and an English gloss in square brackets showing
- * the meanings used.
+ * Produce a short narrative. Pass the same `seedStr` to two languages
+ * in compare mode and the two outputs share their skeleton — same
+ * sentence patterns, same meaning slots — with only the realized
+ * forms varying per language.
  */
 export function generateNarrative(
   lang: Language,
@@ -138,47 +231,11 @@ export function generateNarrative(
   lines = 5,
   script: DisplayScript = "ipa",
 ): NarrativeLine[] {
-  const rng = makeRng(seedStr + ":" + lang.id + ":" + lang.birthGeneration);
+  const skeletons = planSkeleton(seedStr, lines);
   const out: NarrativeLine[] = [];
-  const render = (form: WordForm): string =>
-    script === "ipa" ? formToString(form) : formatForm(form, lang, script);
-  for (let i = 0; i < lines; i++) {
-    const sentence = pickSentence(lang, rng);
-    if (!sentence) break;
-    const sForm = lang.lexicon[sentence.subjectNoun];
-    const vForm = lang.lexicon[sentence.verb];
-    const oForm = lang.lexicon[sentence.objectNoun];
-    if (!sForm || !vForm || !oForm) continue;
-    const S = render(inflectNoun(sForm, lang, "S"));
-    const V = render(inflectVerb(vForm, lang));
-    const O = render(inflectNoun(oForm, lang, "O"));
-    const arranged = arrange(lang.grammar.wordOrder, S, V, O);
-
-    // Distinct templates produce different surface strings.
-    const patternIdx = rng.int(SENTENCE_PATTERNS.length);
-    const pattern = SENTENCE_PATTERNS[patternIdx]!;
-    let text: string;
-    let gloss: string;
-    if (pattern.needsObject && pattern.needsAdj && sentence.adjective) {
-      const adjForm = lang.lexicon[sentence.adjective];
-      if (!adjForm) continue;
-      const A = render(adjForm);
-      text = `${arranged.first} ${arranged.second} ${arranged.third} · ${A}`;
-      gloss = `[${sentence.subjectNoun}—${sentence.verb}—${sentence.adjective} ${sentence.objectNoun}]`;
-    } else if (pattern.needsObject) {
-      text = `${arranged.first} ${arranged.second} ${arranged.third}`;
-      gloss = `[${sentence.subjectNoun}—${sentence.verb}—${sentence.objectNoun}]`;
-    } else if (pattern.needsAdj && sentence.adjective) {
-      const adjForm = lang.lexicon[sentence.adjective];
-      if (!adjForm) continue;
-      const A = render(adjForm);
-      text = `${A} ${S} ${V}`;
-      gloss = `[${sentence.adjective} ${sentence.subjectNoun}—${sentence.verb}]`;
-    } else {
-      text = `${S} ${V}`;
-      gloss = `[${sentence.subjectNoun}—${sentence.verb}]`;
-    }
-    out.push({ gloss, text });
+  for (const skel of skeletons) {
+    const line = realizeSkeleton(lang, skel, script);
+    if (line) out.push(line);
   }
   return out;
 }
