@@ -65,7 +65,7 @@ export function saveRun(
   const hash = fnv1a(`${label}|${config.seed}|${generationsRun}|${now}`);
   const id = `run-${now.toString(36)}-${hash.toString(36).padStart(7, "0").slice(0, 7)}`;
   const run: SavedRun = {
-    version: 4,
+    version: 5,
     id,
     label,
     createdAt: Date.now(),

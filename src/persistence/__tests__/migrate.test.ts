@@ -29,7 +29,7 @@ describe("migrateSavedRun", () => {
     const migrated = migrateSavedRun(v1);
     expect(migrated).not.toBeNull();
     if (!migrated) return;
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(5);
     expect(migrated.id).toBe("run-old");
     expect(migrated.generationsRun).toBe(42);
     expect(migrated.config.genesis).toBeDefined();
@@ -53,7 +53,7 @@ describe("migrateSavedRun", () => {
     };
     const migrated = migrateSavedRun(latest);
     expect(migrated).not.toBeNull();
-    expect(migrated?.version).toBe(4);
+    expect(migrated?.version).toBe(5);
     expect(migrated?.config.modes.grammar).toBe(cfg.modes.grammar);
   });
 

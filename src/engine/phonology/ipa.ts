@@ -46,12 +46,16 @@ export const CONSONANTS: ReadonlySet<Phoneme> = new Set([
 
 export function isVowel(p: Phoneme): boolean {
   if (VOWELS.has(p)) return true;
+  // Strip IPA length mark and re-check (/aː/, /ɛː/, etc.).
+  if (p.endsWith("ː") && VOWELS.has(p.slice(0, -1))) return true;
   // Handle tone-marked vowels: strip trailing tone mark and re-check.
   const toneMarks = ["˥", "˧", "˩", "˧˥", "˥˩"];
   for (const m of toneMarks) {
     if (p.endsWith(m)) {
       const base = p.slice(0, -m.length);
       if (VOWELS.has(base)) return true;
+      // Length + tone: `/aː˥/`.
+      if (base.endsWith("ː") && VOWELS.has(base.slice(0, -1))) return true;
     }
   }
   return false;

@@ -1,5 +1,6 @@
 import type { Language, Lexicon, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
+import { isSyllabic } from "./ipa";
 
 /**
  * Apply one sound change to every word in the lexicon simultaneously, at
@@ -26,12 +27,24 @@ export function applyOneRegularChange(
   const next: Lexicon = {};
   const dropped: string[] = [];
   for (const m of Object.keys(lang.lexicon)) {
-    let form = lang.lexicon[m]!;
+    const original = lang.lexicon[m]!;
+    let form = original;
     // Apply repeatedly until no more sites match (exception-less).
     for (let safety = 0; safety < form.length; safety++) {
       if (picked.probabilityFor(form) <= 0) break;
       const after = picked.apply(form, rng);
       if (after === form || after.join("") === form.join("")) break;
+      // Syllabicity gate: if the next step would strip this word of
+      // every nucleus, stop here. The exception-less loop is otherwise
+      // capable of chaining a substitution through a syllabic resonant
+      // into a lone consonant. Mirrors the guard in
+      // `applyChangesToLexicon`'s post-pass.
+      if (
+        original.some((p) => isSyllabic(p)) &&
+        !after.some((p) => isSyllabic(p))
+      ) {
+        break;
+      }
       form = after as WordForm;
     }
     // Drop meanings whose form collapsed to zero segments — same policy

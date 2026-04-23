@@ -737,6 +737,42 @@ export const CATALOG: SoundChange[] = [
 
   // --- Stress-sensitive reduction (new) ---
   UNSTRESSED_REDUCTION,
+
+  // --- Compensatory lengthening ---
+  // When a word-final consonant deletes after a short vowel, the vowel
+  // lengthens in compensation. Classic sound change: Latin `noctem` →
+  // French `nuit`, Proto-Germanic `*gansiz` → Old English `gōs`. Modeled
+  // as a single opportunistic step — if the last phoneme is a consonant
+  // and the one before is a short vowel, delete the coda and mark the
+  // vowel long.
+  {
+    id: "compensatory.final_coda_lengthening",
+    label: "VC# → Vː#",
+    category: "deletion",
+    description:
+      "Word-final consonant deletes and lengthens the preceding short vowel.",
+    enabledByDefault: true,
+    baseWeight: 0.6,
+    probabilityFor: (w) => {
+      if (w.length < 2) return 0;
+      const last = w[w.length - 1]!;
+      const prev = w[w.length - 2]!;
+      if (!isConsonant(last)) return 0;
+      if (!isVowel(prev)) return 0;
+      // Skip already-long vowels — nothing to lengthen.
+      if (prev.endsWith("ː")) return 0;
+      return 0.05;
+    },
+    apply: (word) => {
+      if (word.length < 2) return word;
+      const last = word[word.length - 1]!;
+      const prev = word[word.length - 2]!;
+      if (!isConsonant(last) || !isVowel(prev) || prev.endsWith("ː")) return word;
+      const out = word.slice(0, -1);
+      out[out.length - 1] = prev + "ː";
+      return out;
+    },
+  },
 ];
 
 export const CATALOG_BY_ID: Record<string, SoundChange> = Object.fromEntries(
