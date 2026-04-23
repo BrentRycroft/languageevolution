@@ -134,9 +134,20 @@ export function App() {
     if (payload.aiNeighbors && Object.keys(payload.aiNeighbors).length > 0) {
       // Seed the AI-neighbor map directly on the sim so drift behaves the
       // same as the sender without needing to download the model.
-      const { sim } = useSimStore.getState();
-      sim.setAiNeighbors(payload.aiNeighbors);
-      useSimStore.setState({ aiNeighbors: payload.aiNeighbors });
+      // Filter to meanings that exist in the current seed lexicon — if
+      // the sender used a different preset/seed, the receiver's lexicon
+      // may not contain the foreign meanings, and we don't want stale
+      // hints attaching to nothing.
+      const { sim, config } = useSimStore.getState();
+      const validMeanings = new Set(Object.keys(config.seedLexicon));
+      const filtered: Record<string, string[]> = {};
+      for (const [m, ns] of Object.entries(payload.aiNeighbors)) {
+        if (!validMeanings.has(m)) continue;
+        const okNs = ns.filter((n) => validMeanings.has(n));
+        if (okNs.length > 0) filtered[m] = okNs;
+      }
+      sim.setAiNeighbors(filtered);
+      useSimStore.setState({ aiNeighbors: filtered });
     }
     clearShareFromLocation();
   }, []);

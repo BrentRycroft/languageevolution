@@ -30,6 +30,8 @@ export function defaultConfig(): SimulationConfig {
     tree: {
       splitProbabilityPerGeneration: 0.05,
       maxLeaves: 8,
+      // unlimitedLeaves left undefined (false) by default — the cap stays
+      // until the user opts out of it from the controls panel.
       minGenerationsBetweenSplits: 12,
       deathProbabilityPerGeneration: 0.01,
       minGenerationsBeforeDeath: 20,

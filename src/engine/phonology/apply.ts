@@ -67,15 +67,20 @@ export function applyChangesToWord(
 ): WordForm {
   const mult = opts.rateMultiplier ?? 1;
   const freq = frequencyFor(meaning, opts.frequencyHints);
+  // Register effect: formal-register words resist change. We fold it
+  // into the frequency exponent rather than the post-hoc lambda
+  // multiplier so it interacts coherently with frequency: a high-
+  // register, high-frequency word should still resist change. The old
+  // post-multiplier let frequency bypass register on common formal
+  // words.
+  const register = opts.registerOf?.[meaning];
+  const registerShift = register === "high" ? -0.15 : register === "low" ? 0.05 : 0;
   // High-frequency words: exponent > 1 keeps probability closer to base.
   // Low-frequency words: exponent < 1 suppresses small probabilities.
-  const freqExponent = 0.4 + freq * 1.2;
+  // Register lowers (high) or raises (low) the effective frequency.
+  const freqExponent = 0.4 + Math.max(0.05, Math.min(1, freq + registerShift)) * 1.2;
   const age = opts.agesSinceChange?.[meaning];
   const ageMult = ageBoost(age);
-  // Register effect on sound change: formal register words resist change
-  // (~30 % dampening), colloquial words change slightly faster (~10 %).
-  const register = opts.registerOf?.[meaning];
-  const registerMult = register === "high" ? 0.7 : register === "low" ? 1.1 : 1;
 
   let current = word;
   for (const change of changes) {
@@ -87,7 +92,7 @@ export function applyChangesToWord(
     const adjusted = Math.pow(base, 1 / Math.max(0.01, freqExponent));
     const lambda = Math.min(
       3,
-      adjusted * weight * opts.globalRate * mult * ageMult * registerMult,
+      adjusted * weight * opts.globalRate * mult * ageMult,
     );
 
     const hits = samplePoissonBounded(lambda, rng);

@@ -110,10 +110,22 @@ function coinViaLegacy(
 }
 
 /**
- * Run each of the language's active sound changes once over the form so
- * that the coinage respects the language's current phonological character.
- * Bounded iteration: we stop early if no rule fires, at most MAX_PASSES
- * applications overall, so feeding/bleeding stacks can't loop.
+ * Run up to three of the language's active sound changes serially over
+ * the form so the coinage takes on the language's current phonological
+ * character.
+ *
+ * Important semantics:
+ *  - Each rule is tried once in catalog order; we stop as soon as
+ *    MAX_SMOOTHING_APPLICATIONS rules have fired.
+ *  - Rules CAN feed each other: rule B sees the form rule A produced.
+ *    That's intentional — real coinages do compose multiple changes
+ *    (e.g. an English compound that gets reduced AND voiced). What we
+ *    avoid is the same rule firing repeatedly on the new form, which
+ *    is what would let insertion-style rules inflate the form.
+ *  - Cascade pairs that loop unbounded (gemination + anaptyxis) are
+ *    structurally prevented in `tree/split.ts::perturbChangeSet` —
+ *    they can't both be enabled in the same language.
+ *
  * Deterministic under rng; doesn't modify the lexicon.
  */
 const MAX_SMOOTHING_APPLICATIONS = 3;
