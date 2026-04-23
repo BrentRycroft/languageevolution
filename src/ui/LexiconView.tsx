@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
-import { formToString } from "../engine/phonology/ipa";
-import { romanize } from "../engine/phonology/orthography";
+import { formatForm } from "../engine/phonology/display";
 import { ReproduceForm } from "./ReproduceForm";
 import { useDebounced } from "./hooks/useDebounced";
+import { ScriptPicker } from "./ScriptPicker";
 
 export function LexiconView() {
   const state = useSimStore((s) => s.state);
@@ -22,8 +22,7 @@ export function LexiconView() {
   const clearCompare = useSimStore((s) => s.clearCompareLangs);
   const search = useSimStore((s) => s.lexiconSearch);
   const setSearch = useSimStore((s) => s.setLexiconSearch);
-  const script = useSimStore((s) => s.lexiconScript);
-  const setScript = useSimStore((s) => s.setLexiconScript);
+  const script = useSimStore((s) => s.displayScript);
   const [inspect, setInspect] = useState<{ langId: string; meaning: string } | null>(null);
 
   const allLeaves = useMemo(() => leafIds(state.tree), [state.tree]);
@@ -58,11 +57,7 @@ export function LexiconView() {
       for (const meaning of meanings) {
         const form = lang.lexicon[meaning];
         if (!form) continue;
-        const ipa = formToString(form);
-        const roman = romanize(form, lang);
-        const display =
-          script === "ipa" ? ipa : script === "roman" ? roman : `${ipa} · ${roman}`;
-        m.set(`${lid}|${meaning}`, display);
+        m.set(`${lid}|${meaning}`, formatForm(form, lang, script));
       }
     }
     return m;
@@ -137,29 +132,8 @@ export function LexiconView() {
         {hiddenCount > 0 && (
           <span className="lexicon-filter-hint">{hiddenCount} hidden</span>
         )}
-        <div style={{ marginLeft: "auto", display: "inline-flex", gap: 2 }}>
-          {(["ipa", "roman", "both"] as const).map((s) => (
-            <button
-              key={s}
-              className={script === s ? "primary" : "ghost"}
-              style={{
-                minHeight: 24,
-                padding: "2px 8px",
-                fontSize: "var(--fs-1)",
-                borderRadius: "var(--r-pill)",
-              }}
-              onClick={() => setScript(s)}
-              title={
-                s === "ipa"
-                  ? "Phonemic IPA"
-                  : s === "roman"
-                    ? "Orthographic romanization"
-                    : "Both side by side"
-              }
-            >
-              {s === "ipa" ? "IPA" : s === "roman" ? "Aa" : "both"}
-            </button>
-          ))}
+        <div style={{ marginLeft: "auto" }}>
+          <ScriptPicker />
         </div>
       </div>
       <div style={{ padding: "4px 0 8px" }}>

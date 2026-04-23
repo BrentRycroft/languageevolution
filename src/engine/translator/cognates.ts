@@ -1,6 +1,6 @@
 import type { LanguageTree, Meaning } from "../types";
 import { leafIds } from "../tree/split";
-import { formToString } from "../phonology/ipa";
+import { formatForm, type DisplayScript } from "../phonology/display";
 
 export interface CognateEntry {
   languageId: string;
@@ -11,10 +11,15 @@ export interface CognateEntry {
 
 /**
  * Trace a meaning across every language in the tree (alive and extinct).
- * Returns the form in each one, or "—" if the word has been retired or
- * semantically shifted out of that language.
+ * Returns the form in each one, rendered in the caller's chosen script
+ * (IPA by default, also roman / both), or "—" if the word has been
+ * retired or semantically shifted out of that language.
  */
-export function findCognates(tree: LanguageTree, meaning: Meaning): CognateEntry[] {
+export function findCognates(
+  tree: LanguageTree,
+  meaning: Meaning,
+  script: DisplayScript = "ipa",
+): CognateEntry[] {
   const result: CognateEntry[] = [];
   for (const id of Object.keys(tree).sort()) {
     const node = tree[id]!;
@@ -22,7 +27,7 @@ export function findCognates(tree: LanguageTree, meaning: Meaning): CognateEntry
     result.push({
       languageId: id,
       languageName: node.language.name,
-      form: form ? formToString(form) : "—",
+      form: form ? formatForm(form, node.language, script) : "—",
       extinct: !!node.language.extinct,
     });
   }
@@ -44,6 +49,7 @@ export function traceEtymology(
   tree: LanguageTree,
   leafId: string,
   meaning: Meaning,
+  script: DisplayScript = "ipa",
 ): EtymologyStep[] {
   const chain: string[] = [];
   let cur: string | null = leafId;
@@ -57,7 +63,7 @@ export function traceEtymology(
     const form = node.language.lexicon[meaning];
     steps.push({
       generation: node.splitGeneration ?? node.language.birthGeneration,
-      form: form ? formToString(form) : "—",
+      form: form ? formatForm(form, node.language, script) : "—",
       languageId: id,
       languageName: node.language.name,
     });
