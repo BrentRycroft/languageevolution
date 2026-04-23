@@ -35,43 +35,57 @@ function makeTree(): LanguageTree {
 }
 
 describe("tree split", () => {
-  it("splitting a leaf creates two new leaves and makes parent internal", () => {
+  it("splitting a leaf creates new leaves and makes parent internal", () => {
     const tree = makeTree();
     const rng = makeRng("x");
     const leavesBefore = leafIds(tree);
     expect(leavesBefore).toEqual(["L-0"]);
-    const [a, b] = splitLeaf(tree, "L-0", 10, rng);
-    expect(a).not.toBe(b);
-    expect(tree[a]!.parentId).toBe("L-0");
-    expect(tree[b]!.parentId).toBe("L-0");
-    expect(tree["L-0"]!.childrenIds).toEqual([a, b]);
+    const children = splitLeaf(tree, "L-0", 10, rng);
+    expect(children.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(children).size).toBe(children.length);
+    for (const c of children) {
+      expect(tree[c]!.parentId).toBe("L-0");
+    }
+    expect(tree["L-0"]!.childrenIds).toEqual(children);
     const leavesAfter = leafIds(tree);
-    expect(leavesAfter.sort()).toEqual([a, b].sort());
+    expect(leavesAfter.sort()).toEqual(children.slice().sort());
+  });
+
+  it("child count is bounded in [2, 9]", () => {
+    // Sample many splits with different seeds to sanity-check the
+    // biased distribution stays inside the documented range.
+    for (let i = 0; i < 40; i++) {
+      const tree = makeTree();
+      const rng = makeRng("n-" + i);
+      const children = splitLeaf(tree, "L-0", 1, rng);
+      expect(children.length).toBeGreaterThanOrEqual(2);
+      expect(children.length).toBeLessThanOrEqual(9);
+    }
   });
 
   it("child lexicons are deep copies", () => {
     const tree = makeTree();
     const rng = makeRng("x");
-    const [a, b] = splitLeaf(tree, "L-0", 1, rng);
+    const children = splitLeaf(tree, "L-0", 1, rng);
+    const a = children[0]!;
+    const b = children[1]!;
     tree[a]!.language.lexicon["water"] = ["X"];
     expect(tree[b]!.language.lexicon["water"]).not.toEqual(["X"]);
     expect(tree["L-0"]!.language.lexicon["water"]).not.toEqual(["X"]);
   });
 
-  it("one child's change set is perturbed from the parent's", () => {
+  it("at least one child's change set differs from the parent's", () => {
     const tree = makeTree();
     const rng = makeRng("perturb-test");
-    const [a, b] = splitLeaf(tree, "L-0", 1, rng);
+    const children = splitLeaf(tree, "L-0", 1, rng);
     const parentSet = new Set(tree["L-0"]!.language.enabledChangeIds);
-    const aSet = new Set(tree[a]!.language.enabledChangeIds);
-    const bSet = new Set(tree[b]!.language.enabledChangeIds);
-    const aMatches =
-      aSet.size === parentSet.size &&
-      Array.from(aSet).every((v) => parentSet.has(v));
-    const bMatches =
-      bSet.size === parentSet.size &&
-      Array.from(bSet).every((v) => parentSet.has(v));
-    // At least one child should differ from the parent.
-    expect(aMatches && bMatches).toBe(false);
+    const allMatch = children.every((c) => {
+      const cSet = new Set(tree[c]!.language.enabledChangeIds);
+      return (
+        cSet.size === parentSet.size &&
+        Array.from(cSet).every((v) => parentSet.has(v))
+      );
+    });
+    expect(allMatch).toBe(false);
   });
 });
