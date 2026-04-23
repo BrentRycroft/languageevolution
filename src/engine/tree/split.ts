@@ -54,6 +54,27 @@ function perturbChangeSet(
   return Array.from(set).sort();
 }
 
+function depthOf(tree: LanguageTree, id: string): number {
+  let depth = 0;
+  let cur: string | null = id;
+  while (cur) {
+    const parent: string | null = tree[cur]?.parentId ?? null;
+    if (!parent) break;
+    cur = parent;
+    depth++;
+  }
+  return depth;
+}
+
+function fnv1aFloat(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return (h >>> 0) / 0xffffffff;
+}
+
 function jitterBias(
   parent: Record<string, number>,
   rng: Rng,
@@ -129,6 +150,26 @@ export function splitLeaf(
   };
   const a = makeChild(false);
   const b = makeChild(true);
+  // Persistent map coordinates: place the two daughters on either side
+  // of the parent at a distance that decays with depth, in directions
+  // determined by a deterministic hash of their ids. Once written the
+  // coords stay frozen unless the user drags the node in MapView.
+  const parentCoords = parentLang.coords ?? { x: 0, y: 0 };
+  const depth = depthOf(tree, parentId);
+  const step = 80 / Math.sqrt(1 + depth);
+  const baseAngle = (fnv1aFloat(parentId + ":" + generation) * Math.PI * 2);
+  const jitterA = (rng.next() - 0.5) * 0.6;
+  const jitterB = (rng.next() - 0.5) * 0.6;
+  const angleA = baseAngle + jitterA;
+  const angleB = baseAngle + Math.PI + jitterB;
+  a.coords = {
+    x: parentCoords.x + Math.cos(angleA) * step,
+    y: parentCoords.y + Math.sin(angleA) * step,
+  };
+  b.coords = {
+    x: parentCoords.x + Math.cos(angleB) * step,
+    y: parentCoords.y + Math.sin(angleB) * step,
+  };
   const childA: LanguageNode = {
     language: a,
     parentId,

@@ -59,6 +59,8 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     retiredRules: [],
     ruleBias: { ...DEFAULT_RULE_BIAS },
     registerOf: seedRegister(seedLex, rng),
+    // Proto sits at the map origin; daughters get coords at split time.
+    coords: { x: 0, y: 0 },
     orthography: {},
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},

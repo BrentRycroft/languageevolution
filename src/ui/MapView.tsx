@@ -32,7 +32,19 @@ export function MapView() {
     return () => ro.disconnect();
   }, []);
 
-  const layout = useMemo(() => computeGeoLayout(state), [state]);
+  // Prefer per-language persistent coords (seeded at split time), falling
+  // back to the deterministic id-hash layout for older saves where the
+  // `language.coords` field is missing.
+  const layout = useMemo(() => {
+    const ids = Object.keys(state.tree);
+    const missing = ids.some((id) => !state.tree[id]!.language.coords);
+    const fallback = missing ? computeGeoLayout(state) : null;
+    const out: Record<string, { x: number; y: number }> = {};
+    for (const id of ids) {
+      out[id] = state.tree[id]!.language.coords ?? fallback![id]!;
+    }
+    return out;
+  }, [state]);
   const bb = useMemo(() => boundingBox(layout), [layout]);
   const dataW = Math.max(1, bb.maxX - bb.minX);
   const dataH = Math.max(1, bb.maxY - bb.minY);
@@ -46,6 +58,25 @@ export function MapView() {
   const scale = Math.max(0.05, fitScale * view.zoom);
   const cx = (bb.minX + bb.maxX) / 2;
   const cy = (bb.minY + bb.maxY) / 2;
+
+  // When selection changes from elsewhere (Tree / Lexicon / Timeline), pan
+  // the map so the selected node is centered. Only do this if we've laid
+  // out the selected node and the user hasn't actively been dragging.
+  const lastFocusedId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedLangId || selectedLangId === lastFocusedId.current) return;
+    const pos = layout[selectedLangId];
+    if (!pos) return;
+    lastFocusedId.current = selectedLangId;
+    // Convert the node's data-space position into the pan offset that would
+    // place it at the svg center at the current zoom.
+    const targetX = -((pos.x - cx) * scale);
+    const targetY = -((pos.y - cy) * scale);
+    setView((v) => ({ ...v, x: targetX, y: targetY }));
+    // We intentionally don't depend on `cx`, `cy`, `scale` — pan only when
+    // the selection changes, not on every layout tweak.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLangId]);
 
   // Drag-to-pan
   const drag = useRef<{ startX: number; startY: number; vx: number; vy: number } | null>(null);
@@ -75,6 +106,56 @@ export function MapView() {
   };
 
   const ids = useMemo(() => Object.keys(layout), [layout]);
+
+  // Walk up the tree to produce a "ProtoX > Y > Z" family path for the
+  // tooltip. Caps at 4 ancestors so the text doesn't overflow.
+  const familyPath = (id: string): string => {
+    const chain: string[] = [];
+    let cur: string | null = id;
+    while (cur !== null) {
+      const ancestor: import("../engine/types").LanguageNode | undefined =
+        state.tree[cur];
+      if (!ancestor) break;
+      chain.unshift(ancestor.language.name);
+      cur = ancestor.parentId;
+    }
+    if (chain.length > 5) {
+      return [chain[0], "…", ...chain.slice(-3)].join(" › ");
+    }
+    return chain.join(" › ");
+  };
+
+  // Three sample words for a language's tooltip — prefer the selected
+  // meaning first, then fall back to a short, stable slice.
+  const tooltipSamples = (id: string): string => {
+    const lang = state.tree[id]!.language;
+    const out: string[] = [];
+    const seen = new Set<string>();
+    if (selectedMeaning && lang.lexicon[selectedMeaning]) {
+      out.push(
+        `${selectedMeaning}: ${formatForm(lang.lexicon[selectedMeaning]!, lang, script)}`,
+      );
+      seen.add(selectedMeaning);
+    }
+    for (const m of Object.keys(lang.lexicon).sort()) {
+      if (out.length >= 3) break;
+      if (seen.has(m)) continue;
+      out.push(`${m}: ${formatForm(lang.lexicon[m]!, lang, script)}`);
+    }
+    return out.join("\n");
+  };
+
+  const extinctLeaves = useMemo(() => {
+    return Object.keys(state.tree)
+      .filter((id) => {
+        const n = state.tree[id]!;
+        return n.language.extinct && n.childrenIds.length === 0;
+      })
+      .map((id) => state.tree[id]!.language)
+      .sort(
+        (a, b) => (b.deathGeneration ?? 0) - (a.deathGeneration ?? 0),
+      );
+  }, [state]);
   // Project a data-space (x, y) into pixel coordinates inside the svg.
   const project = (x: number, y: number) => ({
     px: (x - cx) * scale + size.w / 2 + view.x,
@@ -149,8 +230,15 @@ export function MapView() {
               style={{ cursor: "pointer" }}
             >
               <title>
-                {lang.name}
-                {isExtinct ? " (extinct)" : ""} — {Object.keys(lang.lexicon).length} words
+                {familyPath(id)}
+                {"\n"}
+                {isExtinct
+                  ? `extinct (gen ${lang.deathGeneration ?? "?"})`
+                  : `alive — born gen ${lang.birthGeneration}`}
+                {"\n"}
+                {Object.keys(lang.lexicon).length} words · pace {lang.conservatism < 0.75 ? "🐇" : lang.conservatism > 1.25 ? "🐢" : "—"} {lang.conservatism.toFixed(2)}
+                {"\n"}
+                {tooltipSamples(id)}
               </title>
               <circle
                 r={r}
@@ -215,6 +303,59 @@ export function MapView() {
       >
         drag to pan · scroll to zoom · zoom {view.zoom.toFixed(2)}×
       </div>
+      {extinctLeaves.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 10,
+            maxHeight: "60%",
+            width: 180,
+            overflow: "auto",
+            background: "var(--panel)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--r-2)",
+            padding: 8,
+            fontSize: "var(--fs-1)",
+          }}
+        >
+          <div style={{ color: "var(--muted)", marginBottom: 4 }}>
+            extinct ({extinctLeaves.length})
+          </div>
+          {extinctLeaves.slice(0, 12).map((l) => (
+            <button
+              key={l.id}
+              onClick={() => selectLanguage(l.id)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "2px 4px",
+                marginBottom: 1,
+                background:
+                  selectedLangId === l.id ? "var(--panel-2)" : "transparent",
+                color: "var(--text)",
+                border: "none",
+                borderRadius: "var(--r-1)",
+                fontFamily: "var(--font-mono)",
+                cursor: "pointer",
+                fontSize: "var(--fs-1)",
+              }}
+              title={`died gen ${l.deathGeneration ?? "?"}, born gen ${l.birthGeneration}`}
+            >
+              {l.name}{" "}
+              <span style={{ color: "var(--muted)" }}>
+                †{l.deathGeneration ?? "?"}
+              </span>
+            </button>
+          ))}
+          {extinctLeaves.length > 12 && (
+            <div style={{ color: "var(--muted)", marginTop: 4 }}>
+              +{extinctLeaves.length - 12} more
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

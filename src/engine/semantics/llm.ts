@@ -18,12 +18,39 @@ export interface LlmConfig {
 }
 
 export const DEFAULT_LLM_CONFIG: LlmConfig = {
-  // Ministral 3B Instruct, quantized. ~1.9 GB first download.
-  // Switched from Gemma 2 2B for better structured-output quality and
-  // slightly better handling of IPA glyphs.
-  // See https://github.com/mlc-ai/web-llm for available models.
-  modelId: "Ministral-3B-Instruct-2410-q4f16_1-MLC",
+  // Ministral 3B Instruct, 2512 release, quantized q4f16_1 with BF16
+  // residual. Confirmed against @mlc-ai/web-llm's prebuiltAppConfig in
+  // this repo's node_modules. Previous id ("Ministral-3B-Instruct-
+  // 2410-q4f16_1-MLC") is not in the prebuilt list and throws a
+  // "Cannot find model record in appConfig" error on download.
+  modelId: "Ministral-3-3B-Instruct-2512-BF16-q4f16_1-MLC",
 };
+
+/**
+ * Check whether the configured model id is actually present in WebLLM's
+ * prebuiltAppConfig. We do this before triggering a download so the UI
+ * can show a clear error instead of the cryptic "Cannot find model
+ * record in appConfig" that WebLLM throws at load time.
+ * Returns null if validation succeeds, or an error string otherwise.
+ */
+export async function validateModelAvailable(
+  config: LlmConfig = DEFAULT_LLM_CONFIG,
+): Promise<string | null> {
+  try {
+    const mod = await import("@mlc-ai/web-llm");
+    const prebuilt = (mod as unknown as {
+      prebuiltAppConfig?: { model_list?: Array<{ model_id: string }> };
+    }).prebuiltAppConfig;
+    const ids = prebuilt?.model_list?.map((m) => m.model_id) ?? [];
+    if (ids.length === 0) return null; // if we can't read the list, let WebLLM try.
+    if (!ids.includes(config.modelId)) {
+      return `Model "${config.modelId}" is not in the installed WebLLM's prebuilt list. Available Ministral ids: ${ids.filter((i) => i.includes("Ministral")).join(", ") || "none"}.`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Expose the engine loader so other AI-backed features (translation,

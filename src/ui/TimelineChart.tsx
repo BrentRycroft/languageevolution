@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import { useSimStore } from "../state/store";
 import { levenshtein } from "../engine/phonology/ipa";
@@ -21,6 +22,7 @@ export function TimelineChart() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);
   const selectedMeaning = useSimStore((s) => s.selectedMeaning);
+  const selectMeaning = useSimStore((s) => s.selectMeaning);
   const meanings = useSimStore((s) => s.timelineMeanings);
   const history = useSimStore((s) => s.history);
   const seedForms = useSimStore((s) => s.seedFormsByMeaning);
@@ -68,8 +70,10 @@ export function TimelineChart() {
         };
       });
     }
-    // Cognates mode.
-    const meaning = selectedMeaning ?? "water";
+    // Cognates mode. No silent "water" fallback — caller shows an
+    // inline picker if selectedMeaning is nullish.
+    if (!selectedMeaning) return [];
+    const meaning = selectedMeaning;
     const seed = seedForms[meaning];
     if (!seed) return [];
     const leaves = leafIds(state.tree);
@@ -116,6 +120,64 @@ export function TimelineChart() {
     );
   }, [series, scrubGen]);
 
+  // Oldest-retained generation across all visible series — lets us warn
+  // the user when the 500-entry-per-meaning history ring buffer has
+  // rolled over and the earliest recorded form is no longer gen 0.
+  const oldestRetainedGen = useMemo(() => {
+    let min = Infinity;
+    for (const s of series) {
+      for (const p of s.points) if (p.generation < min) min = p.generation;
+    }
+    return Number.isFinite(min) ? min : 0;
+  }, [series]);
+
+  // Compute Y-domain from the CLIPPED chart data (not the full history)
+  // so scrubbing back doesn't leave the axis scaled for a future
+  // divergence that hasn't happened yet at the scrub point.
+  const yMax = useMemo(() => {
+    let max = 0;
+    for (const row of chartData) {
+      for (const [k, v] of Object.entries(row)) {
+        if (k === "generation") continue;
+        if (typeof v === "number" && v > max) max = v;
+      }
+    }
+    // Pad by ~15% and round up to an integer so the top tick reads cleanly.
+    return Math.max(1, Math.ceil(max * 1.15));
+  }, [chartData]);
+
+  // Collect event markers within the scrub window for the vertical-guide
+  // overlay. Shows rule births/retirements + taboo events on the selected
+  // language (meanings/rules modes) or across all displayed languages
+  // (cognates mode).
+  const eventMarkers = useMemo(() => {
+    if (chartData.length === 0) return [] as Array<{ generation: number; kind: string; description: string }>;
+    const gens: Array<{ generation: number; kind: string; description: string }> = [];
+    const cap = scrubGen ?? generation;
+    const visit = (langId: string) => {
+      const lang = state.tree[langId]?.language;
+      if (!lang) return;
+      for (const e of lang.events) {
+        if (e.generation > cap) continue;
+        if (
+          e.kind === "sound_change" &&
+          (e.description.startsWith("new sound law") ||
+            e.description.startsWith("sound law retired"))
+        ) {
+          gens.push({ generation: e.generation, kind: "rule", description: e.description });
+        } else if (e.kind === "semantic_drift" && e.description.startsWith("taboo:")) {
+          gens.push({ generation: e.generation, kind: "taboo", description: e.description });
+        }
+      }
+    };
+    if (mode === "meanings" && selectedLangId) visit(selectedLangId);
+    if (mode === "cognates") {
+      for (const s of series) visit(s.key);
+    }
+    // Keep at most 40 markers to avoid overplotting.
+    return gens.slice(-40);
+  }, [chartData.length, mode, selectedLangId, series, state.tree, scrubGen, generation]);
+
   const genLabel = scrubGen !== null ? `gen ${scrubGen} (of ${generation})` : `gen ${generation}`;
   const headerLabel =
     mode === "meanings"
@@ -123,7 +185,9 @@ export function TimelineChart() {
         ? `${meanings.length} meaning${meanings.length === 1 ? "" : "s"} in ${selectedLangId} @ ${genLabel}`
         : "Pick a language from the tree or lexicon."
       : mode === "cognates"
-        ? `"${selectedMeaning ?? "water"}" across ${series.length} language${series.length === 1 ? "" : "s"} @ ${genLabel}`
+        ? selectedMeaning
+          ? `"${selectedMeaning}" across ${series.length} language${series.length === 1 ? "" : "s"} @ ${genLabel}`
+          : "Pick a meaning to see how it diverged across languages."
         : selectedLangId
           ? `sound-law history for ${selectedLangId} @ ${genLabel}`
           : "Pick a language to see its sound-law timeline.";
@@ -167,6 +231,21 @@ export function TimelineChart() {
         >
           {headerLabel}
         </span>
+        {oldestRetainedGen > 0 && mode !== "rules" && (
+          <span
+            title={`Per-meaning history is capped at 500 entries. Earlier form changes (before gen ${oldestRetainedGen}) have been dropped from this view.`}
+            style={{
+              fontSize: 10,
+              color: "#ffcc66",
+              border: "1px solid #ffcc66",
+              borderRadius: "var(--r-pill)",
+              padding: "1px 6px",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            history clipped before gen {oldestRetainedGen}
+          </span>
+        )}
       </div>
 
       {mode === "meanings" && (
@@ -207,6 +286,42 @@ export function TimelineChart() {
         </details>
       )}
 
+      {mode === "cognates" && (
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            alignItems: "center",
+            marginBottom: 6,
+            fontSize: "var(--fs-1)",
+          }}
+        >
+          <label style={{ color: "var(--muted)" }}>Meaning:</label>
+          <select
+            value={selectedMeaning ?? ""}
+            onChange={(e) => selectMeaning(e.target.value || null)}
+            aria-label="Meaning to trace across languages"
+            style={{
+              fontSize: "var(--fs-1)",
+              padding: "2px 6px",
+              minHeight: 24,
+            }}
+          >
+            <option value="">— pick a meaning —</option>
+            {allMeanings.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+          {!selectedMeaning && (
+            <span style={{ color: "#ffcc66" }}>
+              No meaning selected — pick one above to draw cognate divergence lines.
+            </span>
+          )}
+        </div>
+      )}
+
       {mode === "rules" ? (
         <RulesTimeline
           langId={selectedLangId}
@@ -222,7 +337,27 @@ export function TimelineChart() {
             <LineChart data={chartData} margin={{ top: 5, right: 12, bottom: 5, left: 0 }}>
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
               <XAxis dataKey="generation" stroke="var(--muted)" fontSize={11} />
-              <YAxis stroke="var(--muted)" fontSize={11} allowDecimals={false} />
+              <YAxis
+                stroke="var(--muted)"
+                fontSize={11}
+                allowDecimals={false}
+                domain={[0, yMax]}
+              />
+              {eventMarkers.map((e, i) => (
+                <ReferenceLine
+                  key={`ev-${i}-${e.generation}`}
+                  x={e.generation}
+                  stroke={
+                    e.kind === "rule"
+                      ? "var(--accent)"
+                      : e.kind === "taboo"
+                        ? "#ffcc66"
+                        : "var(--muted)"
+                  }
+                  strokeDasharray="2 2"
+                  strokeOpacity={0.35}
+                />
+              ))}
               <Tooltip
                 contentStyle={{
                   background: "var(--panel-2)",
@@ -251,7 +386,11 @@ export function TimelineChart() {
                   name={s.label}
                   stroke={s.color}
                   strokeWidth={2}
-                  dot={false}
+                  // Small dots on every recorded generation so users can
+                  // pinpoint individual form changes. Active dot grows on
+                  // hover — drives the tooltip.
+                  dot={{ r: 2, stroke: s.color, fill: s.color }}
+                  activeDot={{ r: 5 }}
                   isAnimationActive={false}
                   connectNulls={false}
                 />

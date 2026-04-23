@@ -103,6 +103,13 @@ export interface Language {
    */
   registerOf?: Record<string, "high" | "low">;
   /**
+   * Persistent 2D map coordinates. Set once at language birth and frozen
+   * thereafter (users may also drag a node in MapView, which writes here).
+   * Optional for back-compat — if undefined, MapView falls back to a
+   * deterministic id-hash layout.
+   */
+  coords?: { x: number; y: number };
+  /**
    * Romanization / orthography map: IPA phoneme → Latin-ish spelling.
    * Drifts slower than phonology, producing the classic "spelling vs
    * pronunciation" divergence we see in real languages.

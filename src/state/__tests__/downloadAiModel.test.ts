@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 vi.mock("../../engine/semantics/llm", () => ({
   DEFAULT_LLM_CONFIG: { modelId: "mock" },
+  validateModelAvailable: vi.fn(async () => null),
   loadEngine: vi.fn(async (_cfg, onProgress) => {
     if (onProgress) {
       onProgress({ text: "Loading", progress: 0.5 });
@@ -35,6 +36,7 @@ describe("downloadAiModel", () => {
   it("captures errors into aiStatus.error", async () => {
     vi.doMock("../../engine/semantics/llm", () => ({
       DEFAULT_LLM_CONFIG: { modelId: "mock" },
+      validateModelAvailable: vi.fn(async () => null),
       loadEngine: vi.fn(async () => {
         throw new Error("offline");
       }),
