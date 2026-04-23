@@ -1,6 +1,6 @@
 import type { SimulationConfig, SimulationState } from "./types";
 import type { NeighborOverride } from "./semantics/drift";
-import { leafIds } from "./tree/split";
+import { leafIds, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
 import { buildInitialState } from "./steps/init";
 import { stepPhonology } from "./steps/phonology";
@@ -34,8 +34,22 @@ export function createSimulation(
 
   const step = (): void => {
     const rng = makeRng(state.rngState);
-    const leaves = leafIds(state.tree);
     const nextGen = state.generation + 1;
+
+    // Proto preservation: on the very first step (gen 0 → gen 1),
+    // automatically split the root into two daughters. The proto itself
+    // becomes a non-leaf node — its lexicon is frozen at the seed state
+    // and never receives further evolution — so it stays preserved as a
+    // reference. Subsequent generations evolve the two daughters.
+    // We do this regardless of minGenerationsBetweenSplits / maxLeaves
+    // because it's the canonical "start" of the tree, not an ordinary
+    // speciation. When tree mode is off we skip this so a single-language
+    // run stays single.
+    if (state.generation === 0 && config.modes.tree) {
+      splitLeaf(state.tree, state.rootId, nextGen, rng);
+    }
+
+    const leaves = leafIds(state.tree);
     for (const leafId of leaves) {
       const lang = state.tree[leafId]!.language;
       if (lang.extinct) continue;
