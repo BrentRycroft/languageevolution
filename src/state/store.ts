@@ -18,6 +18,11 @@ import {
 import { detectNewAchievements } from "../engine/achievements/detect";
 import { makeRng } from "../engine/rng";
 import { proposeOneRule } from "../engine/phonology/propose";
+import {
+  loadAutosave,
+  saveAutosave,
+  clearAutosave,
+} from "../persistence/autosave";
 
 /**
  * Tiny FNV-1a hash for mixing a language id into a numeric RNG seed.
@@ -129,6 +134,7 @@ interface SimStore {
   applyRuleBiasToLanguage: (langId: string, bias: Record<string, number>) => void;
   dismissAchievementToast: () => void;
   clearAchievements: () => void;
+  clearAutosave: () => void;
   loadConfig: (
     config: SimulationConfig,
     generationsToReplay?: number,
@@ -160,8 +166,54 @@ function makeRandomSeed(): string {
   return out;
 }
 
-const initialConfig = defaultConfig();
-const initial = initFromConfig(initialConfig);
+/**
+ * Boot-time state: if an autosave exists, rehydrate it so the user's
+ * progress survives reloads (including reloads caused by a WebLLM chunk
+ * failure or SW misroute). Otherwise start fresh from defaultConfig.
+ */
+function bootState(): {
+  config: SimulationConfig;
+  sim: Simulation;
+  state: SimulationState;
+  history: HistoryByLangMeaning;
+  seedForms: Record<Meaning, WordForm>;
+  resumed: boolean;
+} {
+  const loaded = loadAutosave();
+  if (loaded) {
+    const { sim, seedForms } = initFromConfig(loaded.config);
+    try {
+      sim.restoreState(loaded.state);
+      const restored = sim.getState();
+      const { next: rehydrated } = recordHistory({}, restored);
+      return {
+        config: loaded.config,
+        sim,
+        state: restored,
+        history: rehydrated,
+        seedForms,
+        resumed: true,
+      };
+    } catch {
+      // Restoration failed — corrupt or migrated-out snapshot. Fall
+      // through to the fresh boot path.
+    }
+  }
+  const cfg = defaultConfig();
+  const fresh = initFromConfig(cfg);
+  return {
+    config: cfg,
+    sim: fresh.sim,
+    state: fresh.state,
+    history: fresh.history,
+    seedForms: fresh.seedForms,
+    resumed: false,
+  };
+}
+
+const booted = bootState();
+const initialConfig = booted.config;
+const initial = booted;
 
 export const useSimStore = create<SimStore>((set, get) => ({
   sim: initial.sim,
@@ -188,7 +240,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
   unlockedAchievements: loadPersistedAchievements(),
   lastAchievement: null,
   step: () => {
-    const { sim, history, activityHistory, unlockedAchievements } = get();
+    const { sim, history, activityHistory, unlockedAchievements, config } = get();
     sim.step();
     const state = sim.getState();
     const { next: newHistory, changeCount } = recordHistory(history, state);
@@ -209,6 +261,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
       unlockedAchievements: nextUnlocked,
       lastAchievement: fresh[0] ?? get().lastAchievement,
     });
+    // Throttled autosave so the running simulation survives an
+    // accidental reload (or a WebLLM chunk-load failure). Saved every
+    // MIN_SAVE_INTERVAL_MS at most — no-op during fast playback.
+    saveAutosave({ config, state, generationsRun: state.generation });
   },
   stepN: (n) => {
     const s = get();
@@ -269,6 +325,12 @@ export const useSimStore = create<SimStore>((set, get) => ({
       timelineScrubGeneration: null,
       playing: false,
     });
+    // Overwrite autosave with the fresh state so a page reload after a
+    // reset doesn't resurrect the old simulation.
+    saveAutosave(
+      { config, state: init.state, generationsRun: init.state.generation },
+      { force: true },
+    );
   },
   updateConfig: (patch) => {
     const { config } = get();
@@ -285,6 +347,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
       timelineScrubGeneration: null,
       playing: false,
     });
+    saveAutosave(
+      { config: next, state: init.state, generationsRun: init.state.generation },
+      { force: true },
+    );
   },
   updateModes: (patch) => get().patchConfigKey("modes", patch),
   updatePhonology: (patch) => get().patchConfigKey("phonology", patch),
@@ -407,16 +473,23 @@ export const useSimStore = create<SimStore>((set, get) => ({
     init.sim.setAiNeighbors(aiNeighbors);
     if (stateSnapshot) {
       init.sim.restoreState(stateSnapshot);
+      const restored = init.sim.getState();
       set({
         config,
         sim: init.sim,
-        state: init.sim.getState(),
+        state: restored,
         history: init.history,
         seedFormsByMeaning: init.seedForms,
-        selectedLangId: init.sim.getState().rootId,
+        selectedLangId: restored.rootId,
         timelineScrubGeneration: null,
         playing: false,
       });
+      // Loading an explicit save/run replaces the autosave slot so a
+      // subsequent reload resumes where the user just landed.
+      saveAutosave(
+        { config, state: restored, generationsRun: restored.generation },
+        { force: true },
+      );
       return;
     }
     set({
@@ -433,7 +506,24 @@ export const useSimStore = create<SimStore>((set, get) => ({
     if (generationsToReplay && generationsToReplay > 0) {
       const s = get();
       for (let i = 0; i < generationsToReplay; i++) s.step();
+    } else {
+      saveAutosave(
+        {
+          config,
+          state: init.state,
+          generationsRun: init.state.generation,
+        },
+        { force: true },
+      );
     }
+  },
+  /**
+   * Hard-reset: drop the autosave entirely so the next mount starts
+   * from defaultConfig. Exposed for the "Start over" UI affordance we
+   * may add later; not called by any normal reset path.
+   */
+  clearAutosave: () => {
+    clearAutosave();
   },
   loadCachedAiNeighbors: async () => {
     const { config } = get();

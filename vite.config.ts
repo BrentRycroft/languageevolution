@@ -49,6 +49,17 @@ export default defineConfig(({ command }) => ({
       },
       workbox: {
         navigateFallback: "index.html",
+        // Hard denylist so Workbox never serves `index.html` in place of a
+        // JS / WASM / asset fetch. Without this, a slow or failed WebLLM
+        // chunk load (6+ MB) would be intercepted by the navigate-fallback
+        // rule and the browser would see text/html where it expected a
+        // script, triggering a full page reload — which wipes the running
+        // simulation in memory. See issue surfaced in PR 3 autosave work.
+        navigateFallbackDenylist: [
+          /\/assets\//,
+          /\.(?:js|css|wasm|bin|json|map)$/,
+          /webllm/,
+        ],
         globPatterns: ["**/*.{js,css,html,svg,png,ico,webp,woff,woff2}"],
         // The WebLLM chunk is 6+ MB and only loaded when the user opts in.
         // Exclude it from the precache manifest; Workbox will still cache it

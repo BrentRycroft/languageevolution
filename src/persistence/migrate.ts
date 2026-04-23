@@ -84,6 +84,14 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
     config: mergedConfig,
     generationsRun:
       typeof obj.generationsRun === "number" ? obj.generationsRun : 0,
+    // Preserve the snapshot across migrations. Earlier versions didn't
+    // carry it so it stays optional, but when present (v3+ user runs,
+    // autosave) the consumer needs it or they'll silently re-play the
+    // simulation from scratch.
+    stateSnapshot:
+      obj.stateSnapshot && typeof obj.stateSnapshot === "object"
+        ? (obj.stateSnapshot as import("../engine/types").SimulationState)
+        : undefined,
   };
 }
 
