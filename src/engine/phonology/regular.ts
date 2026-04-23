@@ -1,6 +1,6 @@
 import type { Language, Lexicon, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
-import { isSyllabic } from "./ipa";
+import { isFormLegal } from "./wordShape";
 
 /**
  * Apply one sound change to every word in the lexicon simultaneously, at
@@ -34,17 +34,16 @@ export function applyOneRegularChange(
       if (picked.probabilityFor(form) <= 0) break;
       const after = picked.apply(form, rng);
       if (after === form || after.join("") === form.join("")) break;
-      // Syllabicity gate: if the next step would strip this word of
-      // every nucleus, stop here. The exception-less loop is otherwise
-      // capable of chaining a substitution through a syllabic resonant
-      // into a lone consonant. Mirrors the guard in
-      // `applyChangesToLexicon`'s post-pass.
-      if (
-        original.some((p) => isSyllabic(p)) &&
-        !after.some((p) => isSyllabic(p))
-      ) {
-        break;
-      }
+      // Word-shape gate: the exception-less loop is otherwise capable
+      // of compressing a content word down to a single vowel (via
+      // compensatory lengthening on a 2-phoneme form) or a single lone
+      // consonant (via a substitution that strips the last nucleus).
+      // `isFormLegal` encodes the full rule:
+      //   - length ≥ 2 + has nucleus: fine
+      //   - length 1: only pronouns/deictics, and only if the segment
+      //     is a nucleus
+      //   - length 0: never
+      if (!isFormLegal(m, after as WordForm)) break;
       form = after as WordForm;
     }
     // Drop meanings whose form collapsed to zero segments — same policy

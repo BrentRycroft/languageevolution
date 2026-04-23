@@ -1,62 +1,7 @@
 import type { Lexicon, Meaning, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
-import { isSyllabic } from "./ipa";
-
-/**
- * Meanings allowed to shrink to a single phoneme. In real languages the
- * only surface forms that get away with one segment are pronouns,
- * deictics, and the bare-minimum grammatical particles — e.g. English
- * "a", "I"; French "a", "y"; Italian "a", "o", "e". Content words have
- * a minimum of two segments; this prevents cascading deletion rules
- * from collapsing "water", "beer", "before" etc. all into /r/.
- */
-const ALLOWED_MONOSYLLABIC: ReadonlySet<Meaning> = new Set([
-  "i",
-  "you",
-  "we",
-  "they",
-  "he",
-  "she",
-  "it",
-  "this",
-  "that",
-  "here",
-  "there",
-  "a",
-  "the",
-  "and",
-  "or",
-  "of",
-  "to",
-  "in",
-  "at",
-  "on",
-]);
-
-function isMonosyllabicLegal(meaning: Meaning, form: WordForm): boolean {
-  if (form.length >= 2) return hasSyllabicNucleus(form);
-  if (form.length === 0) return false;
-  // Length 1: must be a basic-word meaning AND the single segment must
-  // be a syllable nucleus (vowel or syllabic resonant like /m̥/ in
-  // Czech "strč"). A lone consonant is never legal; a lone content-word
-  // vowel isn't legal either.
-  if (!ALLOWED_MONOSYLLABIC.has(meaning)) return false;
-  return isSyllabic(form[0]!);
-}
-
-/**
- * True when a form contains at least one segment that can carry a
- * syllable — i.e. a vowel or an explicitly-syllabic resonant. This is
- * the core "is this a word?" constraint: every spoken form needs a
- * nucleus. Languages that appear to have vowel-less words (Nuxalk,
- * Czech "strč prst skrz krk") express this by having the syllabic
- * variant of the sonorant in their inventory — /r̥/ counts, /r/ does not.
- */
-function hasSyllabicNucleus(form: WordForm): boolean {
-  for (const p of form) if (isSyllabic(p)) return true;
-  return false;
-}
+import { isFormLegal } from "./wordShape";
 
 export interface ApplyOptions {
   globalRate: number;
@@ -160,7 +105,7 @@ export function applyChangesToWord(
       // vowel. A deletion that produces an illegal short form is
       // reverted for this iteration only (the rule may still succeed
       // at another site next generation).
-      if (!isMonosyllabicLegal(meaning, next)) break;
+      if (!isFormLegal(meaning, next)) break;
       current = next;
     }
   }
@@ -206,12 +151,16 @@ export function applyChangesToLexicon(
     // the word has effectively been erased. Without this, empty lexicon
     // entries accumulate and break downstream consumers.
     if (next.length === 0) continue;
-    // Syllabicity guard. Every word needs at least one nucleus — a
-    // vowel or an explicitly-syllabic resonant. Rules firing in
-    // pathological orders can otherwise strip all vowels from a short
-    // word (e.g. "water" → "wtr"). When that happens we discard the
-    // change for this generation and keep the prior form.
-    if (!hasSyllabicNucleus(next)) {
+    // Word-shape guard. Every word needs a nucleus (vowel or syllabic
+    // resonant), and content words specifically need ≥ 2 segments.
+    // Pronouns and deictics on the `ALLOWED_MONOSYLLABIC` list may
+    // shrink to a single vowel. Rules firing in pathological orders
+    // can produce shapes that pass the per-step iteration guard but
+    // still end up illegal by the time all changes have been applied
+    // — compensatory lengthening on a 2-phoneme form, for instance,
+    // yields a single long vowel [Vː]. Revert those to the prior
+    // generation's form instead of committing.
+    if (!isFormLegal(m, next)) {
       out[m] = lexicon[m]!.slice();
       continue;
     }

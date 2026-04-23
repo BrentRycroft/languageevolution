@@ -4,7 +4,7 @@ import { lexicalNeed } from "../genesis/need";
 import { neighborsOf } from "../semantics/neighbors";
 import type { Rng } from "../rng";
 import { genesisRulesFor, pushEvent } from "./helpers";
-import { isSyllabic } from "../phonology/ipa";
+import { isFormLegal } from "../phonology/wordShape";
 
 export function stepGenesis(
   lang: Language,
@@ -35,10 +35,11 @@ export function stepGenesis(
       need,
     );
     if (!outcome) break;
-    // Syllabicity gate: refuse coinages that came out without a nucleus
-    // (a cluster mechanism can occasionally produce a run of
-    // consonants). The need loop will reroll next step.
-    if (!outcome.form.some((p) => isSyllabic(p))) continue;
+    // Word-shape gate: refuse coinages that are phonotactically bad —
+    // missing a nucleus, too short for a content word, or a lone
+    // consonant. `isFormLegal` encodes the full rule (see
+    // `phonology/wordShape.ts`). The need loop will reroll next step.
+    if (!isFormLegal(outcome.meaning, outcome.form)) continue;
     // Commit the coinage to the lexicon.
     lang.lexicon[outcome.meaning] = outcome.form;
     // Mid-range frequency for freshly-coined words.

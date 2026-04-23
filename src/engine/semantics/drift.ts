@@ -4,6 +4,7 @@ import { neighborsOf } from "./neighbors";
 import { relatedMeanings, clusterOf } from "./clusters";
 import { nearestMeanings, embed, cosine } from "./embeddings";
 import { complexityFor } from "../lexicon/complexity";
+import { isFormLegal } from "../phonology/wordShape";
 
 export type SemanticShiftKind =
   | "metonymy"
@@ -107,6 +108,11 @@ export function driftOneMeaning(
       const targetOccupied = !!lang.lexicon[target];
       if (strict && targetOccupied) continue;
       const form = lang.lexicon[m]!;
+      // Word-shape gate: a form that's legal for `m` (e.g. a length-1
+      // vowel on the pronoun "i") may be illegal for `target` (any
+      // content word). Skip the drift in that case — a subsequent
+      // generation with a longer form is free to carry it over.
+      if (!isFormLegal(target, form)) continue;
       lang.lexicon[target] = form;
       // Transfer frequency + register from the old slot so the new
       // incarnation keeps its usage profile. Without this, a takeover

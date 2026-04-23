@@ -1,7 +1,8 @@
 import type { Language, LanguageTree } from "../types";
 import type { Rng } from "../rng";
 import { leafIds } from "../tree/split";
-import { isVowel, isSyllabic } from "../phonology/ipa";
+import { isVowel } from "../phonology/ipa";
+import { isFormLegal } from "../phonology/wordShape";
 import { geoDistance } from "../geo";
 
 export interface LoanEvent {
@@ -89,10 +90,10 @@ export function tryBorrow(
   const originalForm = donor.lexicon[meaning]!;
   const adapted = adaptPhonemes(originalForm, recipient, rng);
   if (adapted.length === 0) return null;
-  // Syllabicity gate: a borrowed form must still be pronounceable. If
-  // adaptation stripped every nucleus, abort rather than ship a lone-
-  // consonant borrowing (/kʲ/ on its own, etc.).
-  if (!adapted.some((p) => isSyllabic(p))) return null;
+  // Word-shape gate: a borrowed form must still be pronounceable and
+  // long enough for a content word. Full rule in
+  // `phonology/wordShape.ts::isFormLegal`.
+  if (!isFormLegal(meaning, adapted)) return null;
   recipient.lexicon[meaning] = adapted;
   // Loanwords typically enter with medium frequency.
   recipient.wordFrequencyHints[meaning] = Math.max(
