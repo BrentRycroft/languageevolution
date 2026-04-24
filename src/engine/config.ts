@@ -58,9 +58,10 @@ export function defaultConfig(): SimulationConfig {
       maxDistanceForRivalry: 1,
     },
     morphology: {
-      grammaticalizationProbability: 0.02,
+      grammaticalizationProbability: 0.025,
       paradigmMergeProbability: 0.01,
       analogyProbability: 0.015,
+      cliticizationProbability: 0.02,
     },
     contact: {
       borrowProbabilityPerGeneration: 0.02,

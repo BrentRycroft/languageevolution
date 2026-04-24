@@ -95,10 +95,26 @@ export function tryBorrow(
   // `phonology/wordShape.ts::isFormLegal`.
   if (!isFormLegal(meaning, adapted)) return null;
   recipient.lexicon[meaning] = adapted;
-  // Loanwords typically enter with medium frequency.
+  // Loanword prestige. Donors with substantially more speakers than
+  // the recipient count as "superstrate" — they contribute high-
+  // register prestige loans (Latin into medieval English,
+  // Sanskrit into Javanese). Equal or smaller donors contribute
+  // low-register adstrate borrowings (neighbour-community
+  // vocabulary). We encode this via the existing `registerOf` tag so
+  // downstream change rates naturally treat prestige loans as
+  // conservative (high register) and adstrate loans as more drift-
+  // prone (low register).
+  const donorPop = donor.speakers ?? 10000;
+  const recipPop = recipient.speakers ?? 10000;
+  const prestige: "high" | "low" = donorPop > recipPop * 2 ? "high" : "low";
+  if (!recipient.registerOf) recipient.registerOf = {};
+  recipient.registerOf[meaning] = prestige;
+  // Loanwords typically enter with medium frequency. High-prestige
+  // loans enter a bit higher (0.55) since they're used in formal /
+  // learned contexts widely; adstrate loans at the usual 0.45.
   recipient.wordFrequencyHints[meaning] = Math.max(
     recipient.wordFrequencyHints[meaning] ?? 0,
-    0.45,
+    prestige === "high" ? 0.55 : 0.45,
   );
   return {
     donor: donor.name,

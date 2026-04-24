@@ -1,6 +1,7 @@
 import type { Lexicon, Meaning, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
+import { corenessResistance } from "../lexicon/coreness";
 import { isFormLegal } from "./wordShape";
 
 export interface ApplyOptions {
@@ -82,6 +83,13 @@ export function applyChangesToWord(
   const freqExponent = 0.4 + Math.max(0.05, Math.min(1, freq + registerShift)) * 1.2;
   const age = opts.agesSinceChange?.[meaning];
   const ageMult = ageBoost(age);
+  // Swadesh-tier protection. Core vocabulary (water, mother, eye,
+  // two…) is measurably more stable than Zipf frequency alone
+  // captures — replacement rates on Swadesh-100 items are a fraction
+  // of those on rarer vocabulary with the same surface frequency.
+  // `corenessResistance` returns a multiplier in (0, 1] that divides
+  // the baseline lambda.
+  const coreMult = corenessResistance(meaning);
 
   let current = word;
   for (const change of changes) {
@@ -91,9 +99,21 @@ export function applyChangesToWord(
     if (base <= 0) continue;
 
     const adjusted = Math.pow(base, 1 / Math.max(0.01, freqExponent));
+    // Attrition slowdown. Already-short words resist further
+    // deletion — a 2-phoneme form barely reduces, a 7-phoneme form
+    // has normal drift. Real languages preserve their minimum-word
+    // forms aggressively after a certain point (English kept /dɒg/
+    // and /kæt/ stable for 1000 years). Linear in length, clipped.
+    const lenFactor = Math.min(1, Math.max(0.25, (current.length - 1) / 4));
     const lambda = Math.min(
       3,
-      adjusted * weight * opts.globalRate * mult * ageMult,
+      adjusted *
+        weight *
+        opts.globalRate *
+        mult *
+        ageMult *
+        coreMult *
+        lenFactor,
     );
 
     const hits = samplePoissonBounded(lambda, rng);

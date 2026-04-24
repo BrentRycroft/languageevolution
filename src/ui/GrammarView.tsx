@@ -137,9 +137,27 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
                   {p.source && (
                     <span
                       style={{ marginLeft: 6, color: "#7be0b5" }}
-                      title={`grammaticalized from "${p.source.meaning}" via ${p.source.pathway} pathway`}
+                      title={`grammaticalized from "${p.source.meaning}" via ${p.source.pathway} pathway${
+                        p.source.pathway === "deixis" && cat.startsWith("noun.case.nom")
+                          ? " — this is the classic demonstrative → article pathway"
+                          : ""
+                      }`}
                     >
                       ← {p.source.meaning}
+                      {p.source.pathway === "deixis" &&
+                        cat.startsWith("noun.case.nom") && (
+                          <span
+                            style={{
+                              marginLeft: 4,
+                              padding: "0 4px",
+                              borderRadius: "var(--r-pill)",
+                              background: "rgba(123, 224, 181, 0.15)",
+                              fontSize: "0.85em",
+                            }}
+                          >
+                            article
+                          </span>
+                        )}
                     </span>
                   )}
                 </td>

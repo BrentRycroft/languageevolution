@@ -5,6 +5,8 @@ import { relatedMeanings, clusterOf } from "./clusters";
 import { nearestMeanings, embed, cosine } from "./embeddings";
 import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
+import { samePOS } from "../lexicon/pos";
+import { corenessResistance } from "../lexicon/coreness";
 
 export type SemanticShiftKind =
   | "metonymy"
@@ -86,6 +88,11 @@ export function driftOneMeaning(
       // Default (no register tag) passes through.
       const reg = lang.registerOf?.[m];
       if (reg === "high" && rng.chance(0.5)) continue;
+      // Swadesh tier: core vocabulary (water, mother, two…) resists
+      // meaning shift. `corenessResistance` returns a factor in (0,1];
+      // treat it as a skip probability so Swadesh-100 items drift at
+      // roughly half the rate of ordinary words.
+      if (rng.chance(1 - corenessResistance(m))) continue;
       const overrideNeighbors = override?.[m];
       // Preference order:
       //   1. Explicit override (AI-generated LLM neighbors if enabled).
@@ -103,7 +110,14 @@ export function driftOneMeaning(
               ? related
               : neighborsOf(m);
       if (neighbors.length === 0) continue;
-      const target = neighbors[rng.int(neighbors.length)]!;
+      // Filter the neighbour list to keep only POS-compatible
+      // targets. Without this, a form for "water" (noun) could drift
+      // into the "drink" (verb) slot — semantically adjacent but
+      // part-of-speech-crossing, which real languages basically
+      // never do without an intermediate derivation step.
+      const posCompatible = neighbors.filter((n) => samePOS(m, n));
+      const pool = posCompatible.length > 0 ? posCompatible : neighbors;
+      const target = pool[rng.int(pool.length)]!;
       if (target === m) continue;
       const targetOccupied = !!lang.lexicon[target];
       if (strict && targetOccupied) continue;

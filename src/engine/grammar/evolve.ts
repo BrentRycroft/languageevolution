@@ -45,7 +45,30 @@ const DRIFT_RULES: readonly DriftRule[] = [
     feature: "wordOrder",
     probability: 0.2,
     shift: (g, rng) => {
-      const options = ADJACENT[g.wordOrder];
+      // Caseless languages get pulled toward rigid SVO/SOV — without
+      // morphological case, word order is the only way to keep
+      // subject and object apart, so the "free" orders (OVS/OSV/VOS)
+      // are unstable. A language with case can drift among any
+      // adjacent orders freely.
+      //
+      // Empirical: WALS shows ~86 % of caseless languages are SVO or
+      // SOV; ~56 % of case-rich languages are SOV with many OV-type
+      // permutations attested.
+      let options = ADJACENT[g.wordOrder];
+      if (!g.hasCase) {
+        const rigid: GrammarFeatures["wordOrder"][] = ["SVO", "SOV"];
+        const pullTargets = options.filter((o) => rigid.includes(o));
+        if (pullTargets.length > 0 && !rigid.includes(g.wordOrder)) {
+          // Free → rigid: restrict to the rigid targets.
+          options = pullTargets;
+        } else if (pullTargets.length > 0 && rigid.includes(g.wordOrder)) {
+          // Rigid → rigid: allowed, but bias the pick toward other
+          // rigid orders (weight ×3).
+          options = [...pullTargets, ...pullTargets, ...pullTargets, ...options];
+        }
+        // If no rigid target is adjacent, fall through with the
+        // regular adjacency list (rare).
+      }
       const pick = options[rng.int(options.length)]!;
       const shift = { feature: "wordOrder", from: g.wordOrder, to: pick };
       g.wordOrder = pick;
