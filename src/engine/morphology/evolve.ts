@@ -46,8 +46,10 @@ export function maybeGrammaticalize(
   if (meanings.length === 0) return null;
 
   // Enumerate all (meaning, targetCategory) pairs allowed by the
-  // grammaticalization-pathway table, skipping anything already filled
-  // or anything whose source-form is unfit (too long, too rare, empty).
+  // grammaticalization-pathway table. Clitics (words with
+  // `wordOrigin === "clitic:<pathway>"`) are weighted 3× since
+  // real grammaticalization proceeds free-word → clitic → affix and
+  // the clitic stage is the natural launch pad into the paradigm.
   type Candidate = {
     meaning: string;
     tag: string;
@@ -60,11 +62,20 @@ export function maybeGrammaticalize(
     if (!tag) continue;
     const form = lang.lexicon[m]!;
     if (form.length === 0 || form.length > 4) continue;
+    // Triple-weight the clitic stage. We just push the candidate
+    // three times so the uniform `rng.int(candidates.length)` pick
+    // below selects it with the right prior.
+    const isClitic = (lang.wordOrigin?.[m] ?? "").startsWith("clitic:");
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
     if (freq < 0.6) continue;
     for (const target of pathwayTargets(tag)) {
       if (lang.morphology.paradigms[target]) continue;
-      candidates.push({ meaning: m, tag, target, form });
+      const entry: Candidate = { meaning: m, tag, target, form };
+      candidates.push(entry);
+      if (isClitic) {
+        candidates.push(entry);
+        candidates.push(entry);
+      }
     }
   }
   if (candidates.length === 0) return null;
@@ -95,6 +106,58 @@ export function maybeGrammaticalize(
       pathway: chosen.tag,
       category: chosen.target,
     },
+  };
+}
+
+/**
+ * Cliticization: the stage between free word and bound affix. A
+ * high-frequency word with a pathway-compatible semantic tag gets
+ * phonologically compressed (tail segment shaved, frequency dropped
+ * toward 0.45) and tagged `wordOrigin = "clitic:<pathway>"`. The
+ * word stays in the lexicon — it's still a lexeme, just more bound
+ * in use. `maybeGrammaticalize` later picks clitics 3× as often as
+ * bare free words when promoting into a paradigm.
+ *
+ * This models the attested free → clitic → affix cline — English
+ * `is not → isn't → *n-t`, Romance definite articles, Germanic
+ * auxiliaries all went through an identifiable clitic phase before
+ * fully bonding to a host.
+ */
+export function maybeCliticize(
+  lang: Language,
+  rng: Rng,
+  probability: number,
+): { meaning: string; from: string; to: string; pathway: string } | null {
+  if (!rng.chance(probability)) return null;
+  const meanings = Object.keys(lang.lexicon);
+  if (meanings.length === 0) return null;
+  type Cand = { m: string; tag: string; form: WordForm };
+  const candidates: Cand[] = [];
+  for (const m of meanings) {
+    const tag = semanticTagOf(m);
+    if (!tag) continue;
+    // Skip words that are already clitics.
+    if ((lang.wordOrigin?.[m] ?? "").startsWith("clitic:")) continue;
+    const form = lang.lexicon[m]!;
+    if (form.length < 2 || form.length > 5) continue;
+    const freq = lang.wordFrequencyHints[m] ?? 0.5;
+    if (freq < 0.7) continue;
+    candidates.push({ m, tag, form });
+  }
+  if (candidates.length === 0) return null;
+  const chosen = candidates[rng.int(candidates.length)]!;
+  // Shave the final segment so the clitic is visibly shorter than
+  // its free-word source. Keeping at least 2 phonemes left.
+  const next = chosen.form.slice(0, -1);
+  if (next.length < 2) return null;
+  lang.lexicon[chosen.m] = next;
+  lang.wordOrigin[chosen.m] = `clitic:${chosen.tag}`;
+  lang.wordFrequencyHints[chosen.m] = 0.45;
+  return {
+    meaning: chosen.m,
+    from: chosen.form.join(""),
+    to: next.join(""),
+    pathway: chosen.tag,
   };
 }
 

@@ -1,6 +1,10 @@
 import type { Language, SimulationConfig } from "../types";
 import { driftGrammar } from "../grammar/evolve";
-import { maybeGrammaticalize, maybeMergeParadigms } from "../morphology/evolve";
+import {
+  maybeGrammaticalize,
+  maybeMergeParadigms,
+  maybeCliticize,
+} from "../morphology/evolve";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
@@ -59,6 +63,19 @@ export function stepMorphology(
       kind: "grammar_shift",
       description: merge.description,
     });
+  }
+  const cliticRate =
+    (config.morphology.cliticizationProbability ?? 0) * lang.conservatism;
+  if (cliticRate > 0) {
+    const clit = maybeCliticize(lang, rng, cliticRate);
+    if (clit) {
+      pushEvent(lang, {
+        generation,
+        kind: "grammaticalize",
+        description: `cliticization: "${clit.meaning}" (${clit.pathway}) /${clit.from}/ → /${clit.to}/`,
+        meta: { meaning: clit.meaning, pathway: clit.pathway },
+      });
+    }
   }
   const analogyRate =
     (config.morphology.analogyProbability ?? 0) * lang.conservatism;

@@ -232,6 +232,13 @@ export interface SimulationConfig {
      * (an outlier form gets reshaped toward its cluster mean).
      */
     analogyProbability?: number;
+    /**
+     * Per-gen probability of cliticization — a high-frequency
+     * content word gets phonologically compressed and tagged as a
+     * clitic, the intermediate stage on the way to becoming an
+     * affix via `maybeGrammaticalize`.
+     */
+    cliticizationProbability?: number;
   };
   contact: {
     borrowProbabilityPerGeneration: number;

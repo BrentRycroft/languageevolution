@@ -68,6 +68,21 @@ export function createSimulation(
         const drift = Math.exp((rng.next() - 0.5) * 0.08);
         lang.speakers = Math.max(50, Math.round(lang.speakers * drift));
       }
+      // Migration. Each alive community drifts on the map at a slow
+      // rate — real language groups don't stay at the exact point
+      // where they diverged, they spread. Step size scales down with
+      // population (big populations are more anchored) and with
+      // generation depth (fine-grained late drift vs bold early
+      // dispersals). Independent of phylogenetic distance so sisters
+      // can grow apart or draw closer.
+      if (lang.coords) {
+        const pop = lang.speakers ?? 10000;
+        const anchorFactor = Math.min(1, 10000 / Math.max(100, pop));
+        const step = 1.2 * anchorFactor;
+        const dx = (rng.next() - 0.5) * 2 * step;
+        const dy = (rng.next() - 0.5) * 2 * step;
+        lang.coords = { x: lang.coords.x + dx, y: lang.coords.y + dy };
+      }
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
       // Obsolescence runs BEFORE genesis so freshly-coined words are never
       // retired in the same step they were born in.
