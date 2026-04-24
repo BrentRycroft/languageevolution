@@ -108,11 +108,47 @@ function pickChildCount(rng: Rng): number {
   return 9;
 }
 
+/**
+ * Distribution used for the proto-language's *first* split — the
+ * bootstrap event that breaks the proto into its initial daughters.
+ * Real proto-communities tend to fragment into more than two lineages
+ * right away (Proto-Austronesian → 10+ primary branches; Proto-Bantu
+ * → 3 or 4), so this distribution sits wider and more even than the
+ * regular binary-dominant one used for later speciations:
+ *
+ *   2 / 3 / 4  — normal        (85 % combined)
+ *   5 / 6 / 7  — rare          (12.5 % combined)
+ *   8          — exceedingly rare (2.5 %)
+ *
+ * Capped at 8 so the bootstrap doesn't produce 9-way splits (which
+ * are attested but genuinely unusual).
+ */
+export function pickFirstSplitChildCount(rng: Rng): number {
+  const r = rng.next();
+  if (r < 0.35) return 2;
+  if (r < 0.65) return 3;
+  if (r < 0.85) return 4;
+  if (r < 0.91) return 5;
+  if (r < 0.95) return 6;
+  if (r < 0.975) return 7;
+  return 8;
+}
+
+export interface SplitOptions {
+  /**
+   * Override the child-count sampler. Used by the bootstrap split
+   * (`firstSplit`) to pull from a wider distribution than the default
+   * binary-dominant one. Any positive integer works.
+   */
+  childCount?: number;
+}
+
 export function splitLeaf(
   tree: LanguageTree,
   parentId: string,
   generation: number,
   rng: Rng,
+  opts: SplitOptions = {},
 ): string[] {
   const parent = tree[parentId]!;
   const parentLang = parent.language;
@@ -169,7 +205,7 @@ export function splitLeaf(
     };
   };
 
-  const childCount = pickChildCount(rng);
+  const childCount = opts.childCount ?? pickChildCount(rng);
   // First daughter inherits the parent's change set verbatim (keeps the
   // conservative branch); the rest perturb so sisters diverge from the
   // first generation on.

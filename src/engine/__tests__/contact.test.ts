@@ -39,14 +39,20 @@ describe("contact / loanwords", () => {
     // different RNG seeds and check the nearby donor wins more often.
     const cfg = { ...defaultConfig(), seed: "geo-bias" };
     const sim = createSimulation(cfg);
-    // Step once so the proto splits into two leaves.
+    // Step once so the proto splits into daughters. The bootstrap
+    // distribution is now multi-way (2–8), so the returned tree may
+    // have more than two leaves. We keep only two of them alive for
+    // the near-vs-far competition and mark the rest extinct so they
+    // don't dilute the donor pool.
     sim.step();
-    // Inject a third leaf as a sibling of one of them for the test.
     const state = sim.getState();
     const leaves = leafIds(state.tree);
     expect(leaves.length).toBeGreaterThanOrEqual(2);
     const recipientId = leaves[0]!;
     const nearId = leaves[1]!;
+    for (let k = 2; k < leaves.length; k++) {
+      state.tree[leaves[k]!]!.language.extinct = true;
+    }
     const recipient = state.tree[recipientId]!.language;
     const nearLang = state.tree[nearId]!.language;
     // Seed coords deliberately: recipient at origin, near 10 away, far 500 away.
