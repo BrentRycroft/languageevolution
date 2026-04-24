@@ -62,6 +62,7 @@ export function defaultConfig(): SimulationConfig {
       paradigmMergeProbability: 0.01,
       analogyProbability: 0.015,
       cliticizationProbability: 0.02,
+      suppletionProbability: 0.008,
     },
     contact: {
       borrowProbabilityPerGeneration: 0.02,

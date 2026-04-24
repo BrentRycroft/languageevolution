@@ -110,19 +110,24 @@ function resolveMeaning(
   return all.length > 0 ? all[0]! : null;
 }
 
-function inflectNoun(form: WordForm, lang: Language, role: "S" | "O"): WordForm {
+function inflectNoun(
+  form: WordForm,
+  lang: Language,
+  role: "S" | "O",
+  meaning: string,
+): WordForm {
   if (role === "S" && lang.grammar.pluralMarking === "affix") {
     const p = lang.morphology.paradigms["noun.num.pl"];
-    if (p) return inflect(form, p);
+    if (p) return inflect(form, p, lang, meaning);
   }
   if (role === "O" && lang.grammar.hasCase) {
     const acc = lang.morphology.paradigms["noun.case.acc"];
-    if (acc) return inflect(form, acc);
+    if (acc) return inflect(form, acc, lang, meaning);
   }
   return form;
 }
 
-function inflectVerb(form: WordForm, lang: Language): WordForm {
+function inflectVerb(form: WordForm, lang: Language, meaning: string): WordForm {
   const order: MorphCategory[] = [
     "verb.tense.past",
     "verb.tense.fut",
@@ -132,7 +137,7 @@ function inflectVerb(form: WordForm, lang: Language): WordForm {
   ];
   for (const cat of order) {
     const p = lang.morphology.paradigms[cat];
-    if (p) return inflect(form, p);
+    if (p) return inflect(form, p, lang, meaning);
   }
   return form;
 }
@@ -184,9 +189,9 @@ function realizeSkeleton(
   const render = (form: WordForm): string =>
     script === "ipa" ? formToString(form) : formatForm(form, lang, script);
 
-  const S = render(inflectNoun(sForm, lang, "S"));
-  const V = render(inflectVerb(vForm, lang));
-  const O = render(inflectNoun(oForm, lang, "O"));
+  const S = render(inflectNoun(sForm, lang, "S", subjectMeaning));
+  const V = render(inflectVerb(vForm, lang, verbMeaning));
+  const O = render(inflectNoun(oForm, lang, "O", objectMeaning));
   const arranged = arrange(lang.grammar.wordOrder, S, V, O);
 
   if (pattern.needsObject && pattern.needsAdj && adjectiveMeaning) {

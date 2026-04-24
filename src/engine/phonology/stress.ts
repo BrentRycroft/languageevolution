@@ -15,15 +15,35 @@ export function vowelIndices(form: WordForm): number[] {
   return idxs;
 }
 
+export type StressPattern = "initial" | "penult" | "final";
+
 /**
- * Given a form, return the index of the vowel that carries primary stress
- * under a default penultimate-stress rule. Returns -1 if no vowels.
+ * Given a form and a stress pattern, return the index of the vowel that
+ * carries primary stress. Returns -1 if the form has no vowels.
+ * Default pattern is "penult" (back-compat with the old hardcoded rule).
  */
-export function penultimateStressIndex(form: WordForm): number {
+export function stressIndex(form: WordForm, pattern: StressPattern = "penult"): number {
   const vs = vowelIndices(form);
   if (vs.length === 0) return -1;
   if (vs.length === 1) return vs[0]!;
-  return vs[vs.length - 2]!;
+  switch (pattern) {
+    case "initial":
+      return vs[0]!;
+    case "final":
+      return vs[vs.length - 1]!;
+    case "penult":
+    default:
+      return vs[vs.length - 2]!;
+  }
+}
+
+/**
+ * Legacy penultimate-only alias — kept for callers that don't yet thread
+ * a language's stress pattern through. New code should prefer
+ * `stressIndex(form, pattern)`.
+ */
+export function penultimateStressIndex(form: WordForm): number {
+  return stressIndex(form, "penult");
 }
 
 /**
@@ -32,8 +52,12 @@ export function penultimateStressIndex(form: WordForm): number {
  *   "pretonic"   — one before stressed, mildly protected
  *   "unstressed" — everything else (prime target for reduction)
  */
-export function stressClass(form: WordForm, vowelIdx: number): "stressed" | "pretonic" | "unstressed" {
-  const stress = penultimateStressIndex(form);
+export function stressClass(
+  form: WordForm,
+  vowelIdx: number,
+  pattern: StressPattern = "penult",
+): "stressed" | "pretonic" | "unstressed" {
+  const stress = stressIndex(form, pattern);
   if (vowelIdx === stress) return "stressed";
   if (vowelIdx === stress - 1 || vowelIdx === stress - 2) return "pretonic";
   return "unstressed";
@@ -45,10 +69,14 @@ export function stressClass(form: WordForm, vowelIdx: number): "stressed" | "pre
  * already computed by the change rule. Only applies to vowels; consonants
  * default to 1.0.
  */
-export function stressSensitivity(form: WordForm, i: number): number {
+export function stressSensitivity(
+  form: WordForm,
+  i: number,
+  pattern: StressPattern = "penult",
+): number {
   const p = form[i];
   if (!p || !isVowel(stripTone(p))) return 1.0;
-  const cls = stressClass(form, i);
+  const cls = stressClass(form, i, pattern);
   if (cls === "stressed") return 0.35;
   if (cls === "pretonic") return 0.85;
   return 1.25;

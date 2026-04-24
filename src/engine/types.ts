@@ -156,6 +156,40 @@ export interface Language {
    * generations (young speakers still refining the innovation).
    */
   lastChangeGeneration: Record<Meaning, number>;
+  /**
+   * Primary word-stress pattern. Drifts slowly between initial (Finnish,
+   * Czech), penultimate (Polish, Swahili — also the simulator default
+   * when unspecified, back-compat), and final (French, Turkish).
+   * Protected vowels (those under stress) reduce less, so a stress-
+   * shift can reshape vowel-reduction patterns across the lexicon.
+   */
+  stressPattern?: "initial" | "penult" | "final";
+  /**
+   * Suppletive paradigm entries. Keyed by meaning → morph category →
+   * full surface form that overrides the usual `stem + affix` inflection.
+   * Models the go/went, be/is/was type of paradigm-internal
+   * root-alternation. Only ever populated for a handful of high-
+   * frequency verbs; normal inflection is the fallback when a slot
+   * isn't present here. Import type avoids pulling `MorphCategory`
+   * into `types.ts` directly.
+   */
+  suppletion?: Record<
+    Meaning,
+    Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
+  >;
+  /**
+   * Language-specific productive derivational suffixes. Seeded at
+   * language birth from the phoneme inventory so every descendant has
+   * its own family of "affixes that mean agent / quality / place /
+   * instrument / diminutive". Used by the genesis.derivation rule
+   * in preference to the global fallback; also gains new members
+   * over time via grammaticalisation.
+   *
+   * `tag` is a semantic label ("-er", "-ness", "-dim"…); `affix` is
+   * the actual phoneme sequence. Missing or empty ⇒ the global
+   * fallback list in `genesis/catalog.ts` is used.
+   */
+  derivationalSuffixes?: Array<{ affix: WordForm; tag: string }>;
 }
 
 export interface LanguageNode {
@@ -239,6 +273,12 @@ export interface SimulationConfig {
      * affix via `maybeGrammaticalize`.
      */
     cliticizationProbability?: number;
+    /**
+     * Per-gen probability of a suppletion event: a high-frequency
+     * verb fills one of its inflected slots (past / perfective /
+     * 1sg …) with an unrelated root drawn from another verb.
+     */
+    suppletionProbability?: number;
   };
   contact: {
     borrowProbabilityPerGeneration: number;

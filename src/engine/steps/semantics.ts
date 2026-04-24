@@ -20,12 +20,13 @@ export function stepSemantics(
   if (drift) {
     // Frequency + register transfer now happens inside driftOneMeaning
     // so takeovers preserve the old usage profile too.
+    let tag = drift.kind as string;
+    if (drift.takeover) tag = `${drift.kind} (takeover)`;
+    else if (drift.polysemous) tag = `${drift.kind} (polysemy)`;
     pushEvent(lang, {
       generation,
       kind: "semantic_drift",
-      description: drift.takeover
-        ? `${drift.kind} (takeover): ${drift.from} → ${drift.to}`
-        : `${drift.kind}: ${drift.from} → ${drift.to}`,
+      description: `${tag}: ${drift.from} → ${drift.to}`,
     });
   }
 }

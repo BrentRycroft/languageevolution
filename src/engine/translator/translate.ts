@@ -34,7 +34,7 @@ export function translate(
   if (exact) {
     const inflected =
       options.inflect && lang.morphology.paradigms[options.inflect]
-        ? inflect(exact, lang.morphology.paradigms[options.inflect])
+        ? inflect(exact, lang.morphology.paradigms[options.inflect], lang, key)
         : exact;
     return {
       form: formToString(inflected),

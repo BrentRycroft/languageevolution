@@ -14,6 +14,10 @@ export const VOWELS: ReadonlySet<Phoneme> = new Set([
 export const CONSONANTS: ReadonlySet<Phoneme> = new Set([
   "p", "b", "t", "d", "k", "g", "q", "ʔ",
   "pʰ", "tʰ", "kʰ",
+  // Ejectives (Caucasian, Salishan, Ethio-Semitic, Andean).
+  "pʼ", "tʼ", "kʼ", "qʼ", "tsʼ", "tʃʼ",
+  // Preglottalised stops (Vietnamese, SE Asian, Cockney).
+  "ʔp", "ʔt", "ʔk",
   "f", "v", "θ", "ð", "s", "z", "ʃ", "ʒ", "h", "ħ", "ɣ", "x", "β",
   "m", "n", "ŋ", "ɲ", "ɳ",
   "l", "r", "ɾ", "ɹ", "ʀ",

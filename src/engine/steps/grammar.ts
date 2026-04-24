@@ -4,10 +4,21 @@ import {
   maybeGrammaticalize,
   maybeMergeParadigms,
   maybeCliticize,
+  maybeSuppletion,
 } from "../morphology/evolve";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
+
+/** Stress-pattern drift adjacencies — avoid teleporting initial↔final. */
+const STRESS_ADJACENT: Record<
+  NonNullable<Language["stressPattern"]>,
+  NonNullable<Language["stressPattern"]>[]
+> = {
+  initial: ["penult"],
+  penult: ["initial", "final"],
+  final: ["penult"],
+};
 
 export function stepGrammar(
   lang: Language,
@@ -24,6 +35,24 @@ export function stepGrammar(
       kind: "grammar_shift",
       description: `${s.feature}: ${String(s.from)} → ${String(s.to)}`,
     });
+  }
+  // Stress pattern drifts independently, at roughly a third of the
+  // grammar-drift rate — it's a deeper feature (reshapes the whole
+  // rhythm of the language) and real languages only flip every few
+  // millennia (proto-Germanic initial → Old English initial → Middle
+  // English mixed → Modern English mixed).
+  if (rng.chance(0.3)) {
+    const current = lang.stressPattern ?? "penult";
+    const options = STRESS_ADJACENT[current];
+    const next = options[rng.int(options.length)]!;
+    if (next !== current) {
+      lang.stressPattern = next;
+      pushEvent(lang, {
+        generation,
+        kind: "grammar_shift",
+        description: `stress pattern: ${current} → ${next}`,
+      });
+    }
   }
 }
 
@@ -86,6 +115,19 @@ export function stepMorphology(
         generation,
         kind: "grammar_shift",
         description: `analogy: "${ana.meaning}" reshaped ${ana.from} → ${ana.to}`,
+      });
+    }
+  }
+  const suppletionRate =
+    (config.morphology.suppletionProbability ?? 0) * lang.conservatism;
+  if (suppletionRate > 0) {
+    const sup = maybeSuppletion(lang, rng, suppletionRate);
+    if (sup) {
+      pushEvent(lang, {
+        generation,
+        kind: "grammar_shift",
+        description: `suppletion: "${sup.meaning}" (${sup.category}) adopts root of "${sup.donorMeaning}"`,
+        meta: { meaning: sup.meaning, category: sup.category },
       });
     }
   }
