@@ -111,26 +111,25 @@ function pickChildCount(rng: Rng): number {
 /**
  * Distribution used for the proto-language's *first* split — the
  * bootstrap event that breaks the proto into its initial daughters.
- * Real proto-communities tend to fragment into more than two lineages
- * right away (Proto-Austronesian → 10+ primary branches; Proto-Bantu
- * → 3 or 4), so this distribution sits wider and more even than the
- * regular binary-dominant one used for later speciations:
+ * A proto-dispersal never goes strictly binary in practice (Proto-
+ * Austronesian → 10+ primary branches; Proto-Bantu → 3–4; even the
+ * most constrained families show multi-way primary splits), so we
+ * start at three:
  *
- *   2 / 3 / 4  — normal        (85 % combined)
- *   5 / 6 / 7  — rare          (12.5 % combined)
- *   8          — exceedingly rare (2.5 %)
+ *   3 / 4     — normal           (75 % combined)
+ *   5 / 6 / 7 — rare             (23 % combined)
+ *   8         — exceedingly rare (2 %)
  *
- * Capped at 8 so the bootstrap doesn't produce 9-way splits (which
- * are attested but genuinely unusual).
+ * Capped at 8 to keep the bootstrap from producing genuinely unusual
+ * 9-way splits.
  */
 export function pickFirstSplitChildCount(rng: Rng): number {
   const r = rng.next();
-  if (r < 0.35) return 2;
-  if (r < 0.65) return 3;
-  if (r < 0.85) return 4;
-  if (r < 0.91) return 5;
-  if (r < 0.95) return 6;
-  if (r < 0.975) return 7;
+  if (r < 0.45) return 3;
+  if (r < 0.75) return 4;
+  if (r < 0.87) return 5;
+  if (r < 0.94) return 6;
+  if (r < 0.98) return 7;
   return 8;
 }
 

@@ -15,8 +15,13 @@ const INITIAL_STRENGTH = 0.3;
 const DEATH_STRENGTH = 0.04;
 /** Generations without a successful fire before retirement. */
 const MAX_DORMANT_GENERATIONS = 60;
-/** Max active rules per language. */
-const MAX_ACTIVE_RULES = 8;
+/**
+ * Centre of soft-cap pressure for active rules. Below this, proposals
+ * fire at their normal rate; above it, the probability falls off
+ * logistically so a language can still invent new laws when many are
+ * already active — just rarer. Never a hard wall.
+ */
+const ACTIVE_RULE_CAP_CENTRE = 8;
 
 /**
  * Default per-family bias. A language's actual `ruleBias` is seeded around 1.0
@@ -77,7 +82,14 @@ export function proposeOneRule(
   generation: number,
 ): GeneratedRule | null {
   const active = lang.activeRules ?? [];
-  if (active.length >= MAX_ACTIVE_RULES) return null;
+  // Soft cap: a language with `ACTIVE_RULE_CAP_CENTRE` active rules
+  // proposes new laws at half the normal rate; the rate keeps falling
+  // as the stack grows but never hits zero. A truly over-stacked
+  // language might still speciate a rare new law — that matches real
+  // languages with dense sound-law histories (e.g. Old Irish, Russian).
+  const pSoft =
+    1 / (1 + Math.exp((active.length - ACTIVE_RULE_CAP_CENTRE) / 1.5));
+  if (!rng.chance(pSoft)) return null;
   // 3 attempts; templates may return null if the inventory can't support them.
   for (let attempt = 0; attempt < 3; attempt++) {
     const template = pickTemplate(lang, rng, active);

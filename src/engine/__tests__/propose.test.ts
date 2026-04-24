@@ -76,11 +76,10 @@ describe("phonology/propose", () => {
     expect(grown.lastFireGeneration).toBe(5);
   });
 
-  it("proposeOneRule returns null when activeRules is saturated", () => {
-    const rng = makeRng("sat");
+  it("proposeOneRule softly attenuates when activeRules is saturated", () => {
     const lang = sampleLang();
-    // Fill the active-rules buffer with junk.
-    lang.activeRules = Array.from({ length: 9 }, (_v, i) => ({
+    // Fill the active-rules buffer well past the soft-cap centre.
+    lang.activeRules = Array.from({ length: 30 }, (_v, i) => ({
       id: `x.${i}`,
       family: "lenition",
       templateId: "x",
@@ -92,6 +91,14 @@ describe("phonology/propose", () => {
       context: {},
       outputMap: {},
     }));
-    expect(proposeOneRule(lang, rng, 1)).toBeNull();
+    // Soft cap: at 30 active rules the gate fires with
+    // probability ≈ 1/(1+e^((30-8)/1.5)) ≈ 8e-7. Sampling 1000 times
+    // should yield essentially no successes.
+    let hits = 0;
+    for (let i = 0; i < 1000; i++) {
+      const rule = proposeOneRule(lang, makeRng("sat-" + i), 1);
+      if (rule) hits++;
+    }
+    expect(hits).toBeLessThanOrEqual(5);
   });
 });
