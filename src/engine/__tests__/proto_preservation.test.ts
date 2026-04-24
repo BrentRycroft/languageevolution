@@ -13,15 +13,20 @@ describe("proto preservation", () => {
 
     const after = sim.getState();
     const root = after.tree[after.rootId]!;
-    expect(root.childrenIds.length).toBe(2);
+    // Bootstrap split is now multi-way (2–8 daughters, 2–4 normal);
+    // see `pickFirstSplitChildCount`. We assert the shape invariants
+    // — proto became internal, ≥ 2 daughters appeared, daughters are
+    // leaves — rather than pinning to exactly 2.
+    expect(root.childrenIds.length).toBeGreaterThanOrEqual(2);
+    expect(root.childrenIds.length).toBeLessThanOrEqual(8);
     // The proto's lexicon is frozen — it's the seed lexicon verbatim.
     const proto = root.language;
     for (const [m, form] of Object.entries(defaultConfig().seedLexicon)) {
       expect(proto.lexicon[m]?.join("")).toBe(form.join(""));
     }
-    // The two daughters are the live leaves now.
+    // The daughters are the live leaves now.
     const leaves = leafIds(after.tree);
-    expect(leaves.length).toBe(2);
+    expect(leaves.length).toBe(root.childrenIds.length);
     expect(leaves).not.toContain(after.rootId);
   });
 

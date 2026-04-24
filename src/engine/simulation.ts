@@ -1,6 +1,6 @@
 import type { SimulationConfig, SimulationState } from "./types";
 import type { NeighborOverride } from "./semantics/drift";
-import { leafIds, splitLeaf } from "./tree/split";
+import { leafIds, pickFirstSplitChildCount, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
 import { buildInitialState } from "./steps/init";
 import { stepPhonology } from "./steps/phonology";
@@ -46,7 +46,13 @@ export function createSimulation(
     // speciation. When tree mode is off we skip this so a single-language
     // run stays single.
     if (state.generation === 0 && config.modes.tree) {
-      splitLeaf(state.tree, state.rootId, nextGen, rng);
+      // Bootstrap split draws from a wider distribution than later
+      // speciations — 2–4 daughters is normal, 5–7 rare, 8 exceedingly
+      // rare. Proto-communities historically fragment into more than
+      // two lineages at the first dispersal (Proto-Bantu → 3-4,
+      // Proto-Austronesian → many more). See `pickFirstSplitChildCount`.
+      const childCount = pickFirstSplitChildCount(rng);
+      splitLeaf(state.tree, state.rootId, nextGen, rng, { childCount });
     }
 
     const leaves = leafIds(state.tree);
