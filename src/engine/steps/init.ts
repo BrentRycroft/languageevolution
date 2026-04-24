@@ -12,6 +12,7 @@ import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon } from "./helpers";
+import { seedDerivationalSuffixes } from "../lexicon/derivation";
 
 /**
  * Assign a register ("high" / "low") to ~15% of seed meanings so the
@@ -65,7 +66,14 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     orthography: {},
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},
+    // Proto-languages default to penultimate stress — it's the
+    // typologically commonest pattern worldwide and a neutral
+    // starting point for drift in either direction.
+    stressPattern: "penult",
   };
+  // Seed derivational suffixes after the rest of the Language is
+  // assembled so we can read the phoneme inventory off it.
+  rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   const rootNode: LanguageNode = {
     language: rootLang,
     parentId: null,

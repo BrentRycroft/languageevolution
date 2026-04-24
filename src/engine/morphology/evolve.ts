@@ -2,6 +2,7 @@ import type { Morphology, MorphCategory, Paradigm } from "./types";
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargets } from "../semantics/grammaticalization";
+import { posOf } from "../lexicon/pos";
 
 export interface MorphShift {
   kind: "affix_erode" | "category_merge" | "grammaticalization";
@@ -193,9 +194,80 @@ export function maybeMergeParadigms(
 /**
  * Inflect a bare form according to a paradigm. Useful for the Grammar/Translator UIs.
  */
-export function inflect(base: WordForm, paradigm: Paradigm | undefined): WordForm {
+export function inflect(
+  base: WordForm,
+  paradigm: Paradigm | undefined,
+  lang?: Language,
+  meaning?: string,
+): WordForm {
+  // Suppletion check: a few high-frequency lexemes override the usual
+  // stem+affix computation for certain slots (go/went, be/was). The
+  // map is small so the lookup is cheap.
+  if (paradigm && lang?.suppletion && meaning) {
+    const forMeaning = lang.suppletion[meaning];
+    const override = forMeaning?.[paradigm.category];
+    if (override && override.length > 0) return override.slice();
+  }
   if (!paradigm) return base;
   return paradigm.position === "prefix"
     ? [...paradigm.affix, ...base]
     : [...base, ...paradigm.affix];
+}
+
+/**
+ * High-frequency verbs sometimes develop suppletion: the past/perfective
+ * slot fills with an unrelated root (OE *wend-* > *went* as the past of
+ * *go*; Latin *fuī* as the perfect of *sum*). Low-rate event — fires
+ * only when the lexicon has ≥2 verbs, one of which is high-frequency
+ * (≥ 0.6 hint) and doesn't already have a suppletive form for the
+ * chosen category. Returns the meaning + category + donor for the
+ * caller to log.
+ */
+export function maybeSuppletion(
+  lang: Language,
+  rng: Rng,
+  probability: number,
+): { meaning: string; category: MorphCategory; donorMeaning: string } | null {
+  if (!rng.chance(probability)) return null;
+  const verbMeanings = Object.keys(lang.lexicon).filter(
+    (m) => posOf(m) === "verb",
+  );
+  if (verbMeanings.length < 2) return null;
+  // Pick a high-frequency verb. Suppletion is a high-freq-only
+  // phenomenon: rare verbs can't sustain an irregular paradigm because
+  // speakers don't hear them often enough to memorise the alternation.
+  const highFreq = verbMeanings.filter(
+    (m) => (lang.wordFrequencyHints[m] ?? 0.4) >= 0.6,
+  );
+  if (highFreq.length === 0) return null;
+  const meaning = highFreq[rng.int(highFreq.length)]!;
+  // Pick a category eligible for suppletion. Past / perfective / future
+  // are the typologically likely slots; 1sg person too (Romance go: voy
+  // / vas / va / vamos — mixed roots).
+  const ELIGIBLE_CATS: MorphCategory[] = [
+    "verb.tense.past",
+    "verb.aspect.pfv",
+    "verb.tense.fut",
+    "verb.person.1sg",
+    "verb.person.3sg",
+  ];
+  const availableCats = ELIGIBLE_CATS.filter((c) => lang.morphology.paradigms[c]);
+  if (availableCats.length === 0) return null;
+  const category = availableCats[rng.int(availableCats.length)]!;
+  // Ensure we're not overwriting an existing suppletive entry.
+  const existing = lang.suppletion?.[meaning]?.[category];
+  if (existing) return null;
+  // Donor: another verb, ideally one that shares some semantic neighbourhood.
+  // Simplest rule — pick any other verb whose form is ≥ 2 phonemes long.
+  const donors = verbMeanings.filter(
+    (m) => m !== meaning && (lang.lexicon[m]?.length ?? 0) >= 2,
+  );
+  if (donors.length === 0) return null;
+  const donorMeaning = donors[rng.int(donors.length)]!;
+  const donorForm = lang.lexicon[donorMeaning]!;
+  // Write into the suppletion map, lazily initialising.
+  if (!lang.suppletion) lang.suppletion = {};
+  if (!lang.suppletion[meaning]) lang.suppletion[meaning] = {};
+  lang.suppletion[meaning]![category] = donorForm.slice();
+  return { meaning, category, donorMeaning };
 }

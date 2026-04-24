@@ -27,13 +27,21 @@ function pickMeanings(lang: Language, rng: Rng, n: number): Meaning[] {
   return chosen;
 }
 
-const SUFFIXES: ReadonlyArray<{ affix: WordForm; semanticSuffix: string }> = [
+const FALLBACK_SUFFIXES: ReadonlyArray<{ affix: WordForm; semanticSuffix: string }> = [
   { affix: ["e", "r"], semanticSuffix: "-er" },
   { affix: ["n", "e", "s"], semanticSuffix: "-ness" },
   { affix: ["i", "k"], semanticSuffix: "-ic" },
   { affix: ["a", "l"], semanticSuffix: "-al" },
   { affix: ["i", "n"], semanticSuffix: "-ine" },
 ];
+
+function suffixPool(lang: Language): ReadonlyArray<{ affix: WordForm; semanticSuffix: string }> {
+  const custom = lang.derivationalSuffixes;
+  if (custom && custom.length > 0) {
+    return custom.map((s) => ({ affix: s.affix, semanticSuffix: s.tag }));
+  }
+  return FALLBACK_SUFFIXES;
+}
 
 export const GENESIS_CATALOG: GenesisRule[] = [
   {
@@ -96,7 +104,8 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       const meanings = Object.keys(lang.lexicon);
       if (meanings.length === 0) return null;
       const base = meanings[rng.int(meanings.length)]!;
-      const suffix = SUFFIXES[rng.int(SUFFIXES.length)]!;
+      const pool = suffixPool(lang);
+      const suffix = pool[rng.int(pool.length)]!;
       const newMeaning: Meaning = `${base}${suffix.semanticSuffix}`;
       if (lang.lexicon[newMeaning]) return null;
       const baseForm = lang.lexicon[base]!;

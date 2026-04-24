@@ -866,6 +866,103 @@ export const CATALOG: SoundChange[] = [
       return out;
     },
   },
+
+  // --- Preglottalisation of word-final voiceless stops ---
+  // Final /p t k/ pick up a glottal onset (/ʔp ʔt ʔk/). Attested
+  // trajectory in Cockney English, colloquial Vietnamese, many Austro-
+  // Asiatic languages. Often the intermediate step toward full glottal
+  // replacement (t → ʔ in Estuary English). Left off by default so only
+  // languages that organically drift into it pick it up.
+  {
+    id: "glottalization.preglottal_final_stop",
+    label: "p/t/k → ʔp/ʔt/ʔk / _#",
+    category: "fortition",
+    description:
+      "Word-final voiceless stops gain a glottal onset (preglottalisation).",
+    enabledByDefault: false,
+    baseWeight: 0.5,
+    probabilityFor: (w) => {
+      const last = w[w.length - 1];
+      return last === "p" || last === "t" || last === "k" ? 0.08 : 0;
+    },
+    apply: (word) => {
+      const last = word[word.length - 1];
+      const map: Record<string, string> = { p: "ʔp", t: "ʔt", k: "ʔk" };
+      if (!last || !(last in map)) return word;
+      const out = word.slice();
+      out[out.length - 1] = map[last]!;
+      return out;
+    },
+  },
+
+  // --- Ejectivisation of initial voiceless stops ---
+  // Word-initial /p t k/ acquire a glottalic-egressive release,
+  // surfacing as /pʼ tʼ kʼ/. The emergence pathway is typologically
+  // well-attested in NW Caucasian, Salishan, Ethio-Semitic, and
+  // Quechuan. Often triggered by areal contact — the areal-diffusion
+  // machinery will carry it across sister languages when it fires.
+  {
+    id: "glottalization.initial_ejective",
+    label: "p/t/k → pʼ/tʼ/kʼ / #_",
+    category: "fortition",
+    description:
+      "Word-initial voiceless stops become ejectives (glottalic egressive).",
+    enabledByDefault: false,
+    baseWeight: 0.4,
+    probabilityFor: (w) => {
+      const first = w[0];
+      return first === "p" || first === "t" || first === "k" ? 0.06 : 0;
+    },
+    apply: (word) => {
+      const first = word[0];
+      const map: Record<string, string> = { p: "pʼ", t: "tʼ", k: "kʼ" };
+      if (!first || !(first in map)) return word;
+      const out = word.slice();
+      out[0] = map[first]!;
+      return out;
+    },
+  },
+
+  // --- Debuccalisation of ejectives and preglottals to bare glottal ---
+  // The tail of the glottalic cycle: preglottalised and ejective stops
+  // collapse to plain /ʔ/ (Estuary English "bu'er" for "butter",
+  // widespread in Polynesian and Melanesian histories). Left off by
+  // default; languages pick it up only if they've already undergone
+  // preglottalisation or ejectivisation and want to simplify.
+  {
+    id: "glottalization.debuccalise_to_glottal",
+    label: "ʔp/ʔt/ʔk/pʼ/tʼ/kʼ → ʔ",
+    category: "lenition",
+    description:
+      "Glottalised stops debuccalise to bare /ʔ/ (loss of oral closure).",
+    enabledByDefault: false,
+    baseWeight: 0.3,
+    probabilityFor: (w) => {
+      let n = 0;
+      for (const p of w) {
+        if (
+          p === "ʔp" || p === "ʔt" || p === "ʔk" ||
+          p === "pʼ" || p === "tʼ" || p === "kʼ"
+        ) n++;
+      }
+      return n === 0 ? 0 : Math.min(0.25, 0.1 * n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length; i++) {
+        const p = word[i]!;
+        if (
+          p === "ʔp" || p === "ʔt" || p === "ʔk" ||
+          p === "pʼ" || p === "tʼ" || p === "kʼ"
+        ) sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = "ʔ";
+      return out;
+    },
+  },
 ];
 
 /**

@@ -2,7 +2,7 @@ import type { Language, SimulationConfig, SimulationState } from "../types";
 import { applyChangesToLexicon } from "../phonology/apply";
 import { driftOrthography } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
-import { rateMultiplier, speakerFactor } from "../phonology/rate";
+import { rateMultiplier, speakerFactor, isolationFactor } from "../phonology/rate";
 import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
@@ -38,7 +38,8 @@ export function stepPhonology(
   const mult =
     rateMultiplier(generation, lang.id) *
     lang.conservatism *
-    speakerFactor(lang.speakers);
+    speakerFactor(lang.speakers) *
+    isolationFactor(nearestNeighborDistance(state, lang));
   const ages: Record<string, number> = {};
   for (const m of Object.keys(before)) {
     const last = lang.lastChangeGeneration[m];
@@ -254,6 +255,30 @@ function propagateArealRule(
       description: `areal diffusion from ${donor.name}: ${rule.description}`,
     });
   }
+}
+
+/**
+ * Minimum map-space distance from `lang` to any other alive leaf.
+ * Returns undefined if we can't compute it (no state, no coords, or
+ * `lang` is the sole surviving leaf) so callers can fall back to a
+ * neutral factor.
+ */
+function nearestNeighborDistance(
+  state: SimulationState | undefined,
+  lang: Language,
+): number | undefined {
+  if (!state || !lang.coords) return undefined;
+  const leaves = leafIds(state.tree).filter(
+    (id) => id !== lang.id && !state.tree[id]!.language.extinct,
+  );
+  let minDist = Infinity;
+  for (const id of leaves) {
+    const other = state.tree[id]!.language;
+    if (!other.coords) continue;
+    const d = geoDistance(lang.coords, other.coords);
+    if (d < minDist) minDist = d;
+  }
+  return isFinite(minDist) ? minDist : undefined;
 }
 
 function ruleShortId(id: string): string {

@@ -108,12 +108,24 @@ function renderSyllable(s: Syllable, laxVowels: boolean): string {
   return s.onset.join("") + nucleus + s.coda.join("");
 }
 
-export function narrowTranscribe(form: WordForm, _lang?: Language): string {
+export function narrowTranscribe(form: WordForm, lang?: Language): string {
   if (form.length === 0) return "";
   const sylls = syllabify(form);
   if (sylls.length === 0) return form.join("");
-  // Primary stress = first syllable (simple default).
-  const stressedIdx = 0;
+  // Primary stress position follows the language's stressPattern
+  // (default penult for back-compat when the field is absent). For
+  // single-syllable words the stress mark is suppressed.
+  const pattern = lang?.stressPattern ?? "penult";
+  let stressedIdx: number;
+  if (sylls.length <= 1) {
+    stressedIdx = 0;
+  } else if (pattern === "initial") {
+    stressedIdx = 0;
+  } else if (pattern === "final") {
+    stressedIdx = sylls.length - 1;
+  } else {
+    stressedIdx = sylls.length - 2;
+  }
   const parts = sylls.map((s, i) => {
     const body = renderSyllable(s, true);
     return (i === stressedIdx && sylls.length > 1 ? "ˈ" : "") + body;

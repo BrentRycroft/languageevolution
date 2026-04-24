@@ -215,6 +215,28 @@ export function splitLeaf(
       orthography: { ...parentLang.orthography },
       otRanking: parentLang.otRanking.slice(),
       lastChangeGeneration: { ...parentLang.lastChangeGeneration },
+      // Stress pattern is inherited; daughters only diverge on this
+      // axis through the grammar-drift step, not at split time.
+      stressPattern: parentLang.stressPattern,
+      // Suppletion tables are deep-cloned so daughter paradigms can
+      // diverge independently. The whole map is usually tiny (a
+      // handful of verbs), so the copy cost is negligible.
+      suppletion: parentLang.suppletion
+        ? Object.fromEntries(
+            Object.entries(parentLang.suppletion).map(([m, slots]) => [
+              m,
+              { ...slots },
+            ]),
+          )
+        : undefined,
+      // Daughters inherit the parent's productive derivational
+      // suffixes but each drops a random ~20% so sisters diverge in
+      // which derivational routes remain productive. The universal
+      // catalog fallback still exists, so a daughter with zero
+      // inherited suffixes isn't stranded.
+      derivationalSuffixes: (parentLang.derivationalSuffixes ?? [])
+        .filter(() => rng.chance(0.8))
+        .map((s) => ({ affix: s.affix.slice(), tag: s.tag })),
     };
   };
 

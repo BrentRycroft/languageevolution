@@ -128,7 +128,9 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
           {cats.map((cat) => {
             const p = paradigms[cat];
             if (!p) return null;
-            const inflected = demoForm ? formatForm(inflect(demoForm, p), lang, script) : "—";
+            const inflected = demoForm
+              ? formatForm(inflect(demoForm, p, lang, demo), lang, script)
+              : "—";
             return (
               <tr key={cat}>
                 <td style={{ padding: "2px 6px", color: "var(--muted)" }}>{cat}</td>

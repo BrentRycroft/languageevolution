@@ -20,6 +20,12 @@ export interface SemanticDrift {
   kind: SemanticShiftKind;
   /** True when the target slot already held a form; the drift displaced it. */
   takeover?: boolean;
+  /**
+   * True when the source meaning was retained rather than deleted, so
+   * the form now carries both meanings (classic polysemy, as in
+   * English "foot" of body / "foot" of mountain).
+   */
+  polysemous?: boolean;
 }
 
 /**
@@ -127,19 +133,33 @@ export function driftOneMeaning(
       // content word). Skip the drift in that case — a subsequent
       // generation with a longer form is free to carry it over.
       if (!isFormLegal(target, form)) continue;
+      const kind = classifyShift(m, target);
+      // Polysemy: with some probability, the source meaning is NOT
+      // deleted — the form acquires the new meaning alongside the
+      // old one (English "foot" / "foot of mountain"; "mouth" /
+      // "mouth of river"; Spanish "pierna" / "pierna de mesa"). We
+      // only allow this for metaphor and metonymy — narrowing and
+      // broadening are by definition replacements, not parallel
+      // senses. Takeover drifts (already-occupied target) also
+      // skip polysemy because we want a clean winner there.
+      const polysemous =
+        !targetOccupied &&
+        (kind === "metaphor" || kind === "metonymy") &&
+        rng.chance(0.3);
       lang.lexicon[target] = form;
       // Transfer frequency + register from the old slot so the new
       // incarnation keeps its usage profile. Without this, a takeover
-      // silently reset the word's frequency hint to default.
+      // silently reset the word's frequency hint to default. For
+      // polysemy, *copy* rather than *move* so both senses retain it.
       const oldFreq = lang.wordFrequencyHints[m];
       if (oldFreq !== undefined) {
         lang.wordFrequencyHints[target] = oldFreq;
       }
-      delete lang.wordFrequencyHints[m];
+      if (!polysemous) delete lang.wordFrequencyHints[m];
       if (lang.registerOf?.[m] !== undefined) {
         lang.registerOf[target] = lang.registerOf[m]!;
       }
-      if (lang.registerOf?.[m] !== undefined) delete lang.registerOf[m];
+      if (!polysemous && lang.registerOf?.[m] !== undefined) delete lang.registerOf[m];
       // Clean the remaining auxiliary maps so the old meaning leaves no
       // orphans. wordOrigin and lastChangeGeneration are preserved on the
       // target if not already set — the takeover inherits the form's
@@ -151,15 +171,18 @@ export function driftOneMeaning(
       if (lastChange !== undefined && lang.lastChangeGeneration[target] === undefined) {
         lang.lastChangeGeneration[target] = lastChange;
       }
-      delete lang.wordOrigin[m];
-      delete lang.localNeighbors[m];
-      delete lang.lastChangeGeneration[m];
-      delete lang.lexicon[m];
+      if (!polysemous) {
+        delete lang.wordOrigin[m];
+        delete lang.localNeighbors[m];
+        delete lang.lastChangeGeneration[m];
+        delete lang.lexicon[m];
+      }
       return {
         from: m,
         to: target,
-        kind: classifyShift(m, target),
+        kind,
         takeover: targetOccupied,
+        polysemous: polysemous || undefined,
       };
     }
   }

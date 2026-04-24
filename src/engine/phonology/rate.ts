@@ -44,3 +44,24 @@ export function speakerFactor(speakers: number | undefined): number {
   const factor = Math.pow(0.8, log10 - 4);
   return Math.max(0.4, Math.min(2.2, factor));
 }
+
+/**
+ * Geographic-isolation modulator. Languages separated from every other
+ * living sister by a wide map gap innovate faster: founder populations
+ * with no neighbouring prestige variety don't get their idiosyncratic
+ * innovations corrected externally, and pushed-to-the-fringe
+ * communities tend to develop unique features (Icelandic is a counter-
+ * example but most islanders, highlanders, and desert-edge languages
+ * drift idiosyncratically — e.g. Papuan isolates, Andamanese, Khoisan).
+ *
+ * Input: minimum map-space distance from this language to any other
+ * alive sister. Output: 1.0 at d=0 (dense contact), rising to 1.5 at
+ * d ≈ 800, capped at 1.6. Returns 1.0 if the distance is unknown
+ * (the sole surviving leaf, or pre-map saves).
+ */
+export function isolationFactor(nearestNeighborDistance: number | undefined): number {
+  if (nearestNeighborDistance === undefined || !isFinite(nearestNeighborDistance)) return 1;
+  const d = Math.max(0, nearestNeighborDistance);
+  // Linear climb with a soft cap. 1000 gives +1.0 before cap.
+  return 1 + Math.min(0.6, d / 1000);
+}
