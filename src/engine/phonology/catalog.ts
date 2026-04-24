@@ -773,7 +773,193 @@ export const CATALOG: SoundChange[] = [
       return out;
     },
   },
+
+  // --- Vowel harmony (front / back) ---
+  // Classic harmony: every vowel in a word matches the FIRST vowel's
+  // backness. Turkish / Finnish / Hungarian flavour. Disabled by
+  // default; a language can turn it on via the controls panel or by
+  // per-language change-weights reaching it during split jitter.
+  {
+    id: "harmony.backness",
+    label: "V harmony by backness",
+    category: "assimilation",
+    description:
+      "Every vowel in a word aligns its backness with the first vowel " +
+      "(Turkish-style harmony).",
+    enabledByDefault: false,
+    baseWeight: 0.4,
+    probabilityFor: (w) => {
+      // Fire when there are ≥ 2 vowels whose backness disagrees with
+      // the first vowel — i.e. there's work to do. Scale by count.
+      let disagree = 0;
+      let firstBack: "front" | "back" | null = null;
+      for (const p of w) {
+        if (!isVowel(p)) continue;
+        const back = vowelBackness(p);
+        if (back === null) continue;
+        if (firstBack === null) firstBack = back;
+        else if (back !== firstBack) disagree++;
+      }
+      return disagree === 0 ? 0 : Math.min(0.25, 0.05 * disagree);
+    },
+    apply: (word) => {
+      // Find first vowel's backness; rewrite every subsequent vowel.
+      let firstBack: "front" | "back" | null = null;
+      const out = word.slice();
+      for (let i = 0; i < out.length; i++) {
+        if (!isVowel(out[i]!)) continue;
+        const back = vowelBackness(out[i]!);
+        if (back === null) continue;
+        if (firstBack === null) {
+          firstBack = back;
+          continue;
+        }
+        if (back !== firstBack) {
+          const shifted = harmonizeVowel(out[i]!, firstBack);
+          if (shifted !== out[i]) out[i] = shifted;
+        }
+      }
+      return out;
+    },
+  },
+
+  // --- Umlaut / i-mutation ---
+  // A back vowel becomes fronted when a /i/ or /j/ appears within two
+  // segments to its right. Models Germanic umlaut (foot → feet type):
+  // the triggering /i/ may later delete via another rule, leaving
+  // only the fronted vowel as surface evidence of the original plural
+  // suffix. On by default — cheap to gate, produces strikingly
+  // realistic morphophonological alternations.
+  {
+    id: "umlaut.front_before_front_vowel",
+    label: "V → V̈ / _…[i,j]",
+    category: "assimilation",
+    description:
+      "Back vowels front when followed by /i/ or /j/ within two " +
+      "segments — classic umlaut / i-mutation.",
+    enabledByDefault: true,
+    baseWeight: 0.6,
+    probabilityFor: (w) => {
+      let sites = 0;
+      for (let i = 0; i < w.length - 1; i++) {
+        if (!isBackVowel(w[i]!)) continue;
+        const a = w[i + 1];
+        const b = w[i + 2];
+        if (a === "i" || a === "j" || b === "i" || b === "j") sites++;
+      }
+      return sites === 0 ? 0 : Math.min(0.3, 0.07 * sites);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length - 1; i++) {
+        if (!isBackVowel(word[i]!)) continue;
+        const a = word[i + 1];
+        const b = word[i + 2];
+        if (a === "i" || a === "j" || b === "i" || b === "j") sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const fronted = frontCounterpart(word[idx]!);
+      if (!fronted || fronted === word[idx]) return word;
+      const out = word.slice();
+      out[idx] = fronted;
+      return out;
+    },
+  },
 ];
+
+/**
+ * Return the IPA backness of a vowel, or `null` for segments we can't
+ * classify. Used by the harmony rule to check "does this disagree
+ * with the word's first vowel?".
+ */
+function vowelBackness(p: Phoneme): "front" | "back" | null {
+  // Strip tone + length suffixes for the lookup.
+  let base = p;
+  while (
+    base.length > 1 &&
+    /[ːˈˌ˥˧˩]/.test(base.charAt(base.length - 1))
+  ) {
+    base = base.slice(0, -1);
+  }
+  const front = new Set([
+    "i", "y", "e", "ɛ", "æ", "ø", "œ", "ɪ",
+    "á", "é", "í", "à", "è", "ì", "â", "ê", "î", "ā", "ē", "ī", "ã", "ẽ", "ĩ",
+  ]);
+  const back = new Set([
+    "u", "o", "ɔ", "ɒ", "ɑ", "a", "ɯ", "ʊ",
+    "ú", "ó", "ù", "ò", "û", "ô", "ū", "ō", "ũ", "õ",
+  ]);
+  if (front.has(base)) return "front";
+  if (back.has(base)) return "back";
+  // /ə/ and /ɨ/ are central — treat as neutral by returning null so
+  // the harmony rule doesn't flip them either way.
+  return null;
+}
+
+function isBackVowel(p: Phoneme): boolean {
+  return vowelBackness(p) === "back";
+}
+
+/**
+ * For harmony: turn a vowel into its counterpart of the requested
+ * backness, preserving height and rounding where possible.
+ */
+function harmonizeVowel(p: Phoneme, want: "front" | "back"): Phoneme {
+  const map: Record<string, { front: string; back: string }> = {
+    i: { front: "i", back: "ɯ" },
+    e: { front: "e", back: "o" },
+    ɛ: { front: "ɛ", back: "ɔ" },
+    a: { front: "æ", back: "a" },
+    æ: { front: "æ", back: "a" },
+    o: { front: "e", back: "o" },
+    ɔ: { front: "ɛ", back: "ɔ" },
+    u: { front: "y", back: "u" },
+    y: { front: "y", back: "u" },
+    ø: { front: "ø", back: "o" },
+    ɯ: { front: "i", back: "ɯ" },
+  };
+  // Preserve trailing length / tone suffix.
+  let base = p;
+  let suffix = "";
+  while (
+    base.length > 1 &&
+    /[ːˈˌ˥˧˩]/.test(base.charAt(base.length - 1))
+  ) {
+    suffix = base.charAt(base.length - 1) + suffix;
+    base = base.slice(0, -1);
+  }
+  const swap = map[base];
+  if (!swap) return p;
+  return swap[want] + suffix;
+}
+
+/**
+ * For umlaut: pick the front counterpart of a back vowel.
+ */
+function frontCounterpart(p: Phoneme): Phoneme | null {
+  const map: Record<string, string> = {
+    a: "æ",
+    o: "ø",
+    u: "y",
+    ɔ: "œ",
+    ɑ: "æ",
+    ɯ: "i",
+    ʊ: "ʏ",
+  };
+  let base = p;
+  let suffix = "";
+  while (
+    base.length > 1 &&
+    /[ːˈˌ˥˧˩]/.test(base.charAt(base.length - 1))
+  ) {
+    suffix = base.charAt(base.length - 1) + suffix;
+    base = base.slice(0, -1);
+  }
+  const fronted = map[base];
+  if (!fronted) return null;
+  return fronted + suffix;
+}
 
 export const CATALOG_BY_ID: Record<string, SoundChange> = Object.fromEntries(
   CATALOG.map((c) => [c.id, c]),
