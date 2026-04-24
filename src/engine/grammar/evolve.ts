@@ -22,7 +22,11 @@ export interface GrammarShift {
   to: string | boolean | number;
 }
 
-type Shifter = (g: GrammarFeatures, rng: Rng) => GrammarShift | null;
+type Shifter = (
+  g: GrammarFeatures,
+  rng: Rng,
+  simplification?: number,
+) => GrammarShift | null;
 
 interface DriftRule {
   feature: keyof GrammarFeatures;
@@ -108,7 +112,30 @@ const DRIFT_RULES: readonly DriftRule[] = [
   {
     feature: "hasCase",
     probability: 0.08,
-    shift: (g) => {
+    shift: (g, _rng, simplification = 1) => {
+      // Trudgill-effect bias: when simplification > 1 (large
+      // language) and case is currently present, the flip skews
+      // toward losing case. When simplification < 1 (small
+      // language) and case is absent, the flip skews toward
+      // gaining case (small isolated communities accumulate
+      // morphology). At simplification = 1 the flip is symmetric.
+      const wantsLoss = g.hasCase && simplification > 1;
+      const wantsGain = !g.hasCase && simplification < 1;
+      const flipBias = wantsLoss
+        ? Math.min(0.95, 0.5 + 0.2 * (simplification - 1))
+        : wantsGain
+          ? Math.min(0.95, 0.5 + 0.2 * (1 / simplification - 1))
+          : 0.5;
+      // Use the rng held by the closure-bound deterministic shifter
+      // — driftGrammar will pass it. Use chance() with the bias.
+      // Fall through: when bias = 0.5, original symmetric behaviour.
+      // Otherwise, only flip when the random sample agrees with the
+      // bias direction (toward loss for big langs / gain for small).
+      // Implemented as: with prob `flipBias` flip, otherwise no-op.
+      // (This means the per-call probability already gates whether
+      // we even get here, so this is the second-stage gate.)
+      const r = (_rng as Rng).next();
+      if (r > flipBias) return null;
       const shift = { feature: "hasCase", from: g.hasCase, to: !g.hasCase };
       g.hasCase = !g.hasCase;
       return shift;
@@ -117,8 +144,20 @@ const DRIFT_RULES: readonly DriftRule[] = [
   {
     feature: "genderCount",
     probability: 0.05,
-    shift: (g, rng) => {
-      const next = pickOther(GENDER_COUNTS, g.genderCount, rng);
+    shift: (g, rng, simplification = 1) => {
+      // Big communities preferentially drop genders (English lost
+      // grammatical gender entirely; modern Persian dropped from
+      // PIE 3-gender to none). Small communities can pick up
+      // distinctions over time.
+      let next = pickOther(GENDER_COUNTS, g.genderCount, rng);
+      if (simplification > 1.2 && g.genderCount > 0 && rng.chance(0.7)) {
+        // Force a step toward zero.
+        next = (g.genderCount === 3 ? 2 : 0) as GrammarFeatures["genderCount"];
+      } else if (simplification < 0.8 && g.genderCount === 0 && rng.chance(0.7)) {
+        // Force a step toward more.
+        next = 2;
+      }
+      if (next === g.genderCount) return null;
       const shift = { feature: "genderCount", from: g.genderCount, to: next };
       g.genderCount = next;
       return shift;
@@ -127,14 +166,21 @@ const DRIFT_RULES: readonly DriftRule[] = [
 ];
 
 /**
- * One-step grammar drift. Each feature has a small independent probability
- * of drifting per call; returns the list of shifts that actually fired.
+ * One-step grammar drift. Each feature has a small independent
+ * probability of drifting per call; returns the list of shifts that
+ * actually fired. `simplification` (default 1) biases simplification-
+ * direction events (case loss, gender drop) — see the Trudgill
+ * effect comments on individual rules.
  */
-export function driftGrammar(grammar: GrammarFeatures, rng: Rng): GrammarShift[] {
+export function driftGrammar(
+  grammar: GrammarFeatures,
+  rng: Rng,
+  simplification: number = 1,
+): GrammarShift[] {
   const shifts: GrammarShift[] = [];
   for (const rule of DRIFT_RULES) {
     if (rng.chance(rule.probability)) {
-      const applied = rule.shift(grammar, rng);
+      const applied = rule.shift(grammar, rng, simplification);
       if (applied) shifts.push(applied);
     }
   }

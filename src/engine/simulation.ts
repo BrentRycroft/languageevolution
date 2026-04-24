@@ -11,9 +11,10 @@ import { stepObsolescence } from "./steps/obsolescence";
 import { stepContact } from "./steps/contact";
 import { stepTreeSplit, stepDeath } from "./steps/tree";
 import { stepTaboo } from "./steps/taboo";
-import { computeTierCandidate, lexicalCapacity } from "./lexicon/tier";
+import { computeTierCandidate, lexicalCapacity, populationCap } from "./lexicon/tier";
 import { pushEvent } from "./steps/helpers";
 import { TIER_LABELS } from "./lexicon/concepts";
+import { applyKinshipSimplification } from "./semantics/recarve";
 
 export interface Simulation {
   getState: () => SimulationState;
@@ -62,13 +63,22 @@ export function createSimulation(
     for (const leafId of leaves) {
       const lang = state.tree[leafId]!.language;
       if (lang.extinct) continue;
-      // Population random-walk. ±4 % per generation on a log scale so
-      // the drift is multiplicative and symmetric. Floor at 50 so
-      // near-extinct communities don't underflow; no ceiling — a very
-      // successful language can keep growing. Small populations drive
-      // fast drift via `speakerFactor` in `phonology/rate.ts`.
+      // Population dynamics: Malthusian logistic growth toward the
+      // tier-determined carrying capacity, plus multiplicative noise.
+      //   dlog(N)/dt ≈ r·(1 - N/K) + ε
+      // r = 0.012 / gen — calibrated so that a freshly-split daughter
+      // can recover toward its tier cap inside ~600 generations
+      // (slower and splits dilute populations to the floor faster
+      // than they regrow, which kept tier advancement starved).
+      // K = populationCap(tier). The tier-determined cap creates a
+      // feedback loop: tier 0 → ~6k, advance to tier 1 → cap jumps
+      // to 100k → population grows → triggers further tier advances.
       if (lang.speakers !== undefined) {
-        const drift = Math.exp((rng.next() - 0.5) * 0.08);
+        const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
+        const cap = populationCap(tier);
+        const malthusian = 0.012 * (1 - lang.speakers / cap);
+        const noise = (rng.next() - 0.5) * 0.04;
+        const drift = Math.exp(malthusian + noise);
         lang.speakers = Math.max(50, Math.round(lang.speakers * drift));
       }
       // Migration. Each alive community drifts on the map at a slow
@@ -99,6 +109,20 @@ export function createSimulation(
             kind: "grammar_shift",
             description: `cultural tier: ${TIER_LABELS[priorTier]} → ${TIER_LABELS[nextTier]}`,
           });
+          // Foraging → agricultural transition: kinship terms
+          // collapse as households centralise (the
+          // ethnographic shift from band-classifictory to
+          // descriptive kinship). Only fires on the 0 → 1 step.
+          if (priorTier === 0 && nextTier >= 1) {
+            const merges = applyKinshipSimplification(lang, rng, 2);
+            for (const m of merges) {
+              pushEvent(lang, {
+                generation: nextGen,
+                kind: "semantic_drift",
+                description: `kinship merge (urbanisation): "${m.winner}" absorbs "${m.loser}"`,
+              });
+            }
+          }
         }
         // Refresh the capacity target every 20 gens too so it tracks
         // the slowly-advancing tier + growing age + drifting speakers.
