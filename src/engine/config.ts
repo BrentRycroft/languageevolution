@@ -52,6 +52,7 @@ export function defaultConfig(): SimulationConfig {
     },
     semantics: {
       driftProbabilityPerGeneration: 0.02,
+      recarveProbabilityPerGeneration: 0.003,
     },
     obsolescence: {
       probabilityPerPairPerGeneration: 0.04,

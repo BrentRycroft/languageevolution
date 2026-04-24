@@ -11,6 +11,9 @@ import { stepObsolescence } from "./steps/obsolescence";
 import { stepContact } from "./steps/contact";
 import { stepTreeSplit, stepDeath } from "./steps/tree";
 import { stepTaboo } from "./steps/taboo";
+import { computeTierCandidate, lexicalCapacity } from "./lexicon/tier";
+import { pushEvent } from "./steps/helpers";
+import { TIER_LABELS } from "./lexicon/concepts";
 
 export interface Simulation {
   getState: () => SimulationState;
@@ -82,6 +85,24 @@ export function createSimulation(
         const dx = (rng.next() - 0.5) * 2 * step;
         const dy = (rng.next() - 0.5) * 2 * step;
         lang.coords = { x: lang.coords.x + dx, y: lang.coords.y + dy };
+      }
+      // Cultural-tier advancement. Checked every 20 generations to
+      // keep the cost negligible — age pressure accumulates slowly
+      // so there's no benefit to firing this every gen.
+      if (nextGen % 20 === 0) {
+        const priorTier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
+        const nextTier = computeTierCandidate(lang, state.tree, nextGen, rng);
+        if (nextTier > priorTier) {
+          lang.culturalTier = nextTier;
+          pushEvent(lang, {
+            generation: nextGen,
+            kind: "grammar_shift",
+            description: `cultural tier: ${TIER_LABELS[priorTier]} → ${TIER_LABELS[nextTier]}`,
+          });
+        }
+        // Refresh the capacity target every 20 gens too so it tracks
+        // the slowly-advancing tier + growing age + drifting speakers.
+        lang.lexicalCapacity = lexicalCapacity(lang, nextGen);
       }
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
       // Obsolescence runs BEFORE genesis so freshly-coined words are never
