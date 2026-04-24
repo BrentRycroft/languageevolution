@@ -13,6 +13,12 @@ import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
+import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
+
+/** Capacity at language birth. Age=0 so this is tier + speaker driven. */
+function initialLexicalCapacity(lang: Language): number {
+  return computeCapacity(lang, lang.birthGeneration);
+}
 
 /**
  * Assign a register ("high" / "low") to ~15% of seed meanings so the
@@ -70,10 +76,16 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     // typologically commonest pattern worldwide and a neutral
     // starting point for drift in either direction.
     stressPattern: "penult",
+    // Cultural tier starts at 0 (foraging). Advances slowly via
+    // `lexicon/tier.ts::computeTierCandidate`. Lexical capacity is
+    // tier + age + population driven; initialised below once the
+    // Language object exists.
+    culturalTier: 0,
   };
   // Seed derivational suffixes after the rest of the Language is
   // assembled so we can read the phoneme inventory off it.
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
+  rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   const rootNode: LanguageNode = {
     language: rootLang,
     parentId: null,

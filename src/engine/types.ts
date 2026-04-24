@@ -190,6 +190,32 @@ export interface Language {
    * fallback list in `genesis/catalog.ts` is used.
    */
   derivationalSuffixes?: Array<{ affix: WordForm; tag: string }>;
+  /**
+   * Cultural tier in {0, 1, 2, 3}. Gates which concepts the
+   * dictionary-pull genesis path is allowed to coin for this
+   * language — a tier-0 forager language can't name "iron" or
+   * "plow" until it advances. Advances slowly with age and
+   * population via `simulation.ts::advanceCulturalTier`.
+   */
+  culturalTier?: 0 | 1 | 2 | 3;
+  /**
+   * Target lexicon size; grows with age + cultural tier + speakers.
+   * Capacity-driven coinage: when `|lexicon| < lexicalCapacity`, the
+   * dictionary-pull path has a high probability of firing; once the
+   * language has reached capacity, new coinages slow to a trickle.
+   * Missing ⇒ treated as effectively infinite (back-compat for
+   * pre-concept-dictionary saves).
+   */
+  lexicalCapacity?: number;
+  /**
+   * Re-carving record: which concepts got folded into another slot
+   * after a `semantics/recarve.ts::maybeRecarve` merge event. Keyed
+   * by the winner's concept id; the value is the list of concepts
+   * whose meanings the winner's form now carries. English `tongue`
+   * carrying both "tongue" and "language" would list as
+   * `tongue → [language]`. Empty / missing means no merges yet.
+   */
+  colexifiedAs?: Record<Meaning, Meaning[]>;
 }
 
 export interface LanguageNode {
@@ -253,6 +279,14 @@ export interface SimulationConfig {
   };
   semantics: {
     driftProbabilityPerGeneration: number;
+    /**
+     * Per-gen probability of a re-carving event: two cluster-mates
+     * with a known cross-linguistic colexification merge into one
+     * slot, or a single concept splits into two daughter slots.
+     * Rare — this is how Russian `ruka` = arm+hand and English
+     * arm/hand diverge from a common ancestor.
+     */
+    recarveProbabilityPerGeneration?: number;
   };
   obsolescence: {
     probabilityPerPairPerGeneration: number;

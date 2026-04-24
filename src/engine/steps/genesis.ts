@@ -5,6 +5,7 @@ import { neighborsOf } from "../semantics/neighbors";
 import type { Rng } from "../rng";
 import { genesisRulesFor, pushEvent } from "./helpers";
 import { isFormLegal } from "../phonology/wordShape";
+import { lexicalCapacity } from "../lexicon/tier";
 
 export function stepGenesis(
   lang: Language,
@@ -15,12 +16,30 @@ export function stepGenesis(
 ): void {
   const rules = genesisRulesFor(config);
   const lexSize = Object.keys(lang.lexicon).length;
-  // Exponential decay: small languages coin aggressively, mature languages
-  // only rarely. Plus jitter so identical sizes don't all coin in lockstep.
-  const base = 5 * Math.exp(-lexSize / 40);
+  // Capacity-driven coinage: compare current lexicon size against a
+  // per-language target that grows with cultural tier, age, and
+  // speakers (see `lexicon/tier.ts::lexicalCapacity`). When we're
+  // below capacity, coin aggressively; once at capacity, coinage
+  // drops to a trickle (one every handful of generations). Always
+  // keeps a small residual rate so stagnant languages still
+  // occasionally introduce ideophones, reduplications, etc.
+  const capacity = lang.lexicalCapacity ?? lexicalCapacity(lang, generation);
+  const deficit = Math.max(0, capacity - lexSize);
+  // Base target: ~5% of the deficit per step, +0.2 residual. Jitter
+  // keeps identical sizes out of lockstep.
+  const base = 0.2 + 0.05 * deficit;
   const noise = 0.5 + rng.next();
   const target = Math.max(1, Math.round(base * noise * lang.conservatism));
-  if (!rng.chance(Math.min(1, 0.5 + 0.5 * lang.conservatism))) return;
+  // Capacity throttle: at or above the target capacity, gate the
+  // step behind a moderate probability so saturated languages still
+  // coin occasionally (reduplication, ideophones, new compound
+  // combinations) — just at a much slower rate. Below capacity, use
+  // the full gate so the deficit actually gets filled.
+  const atCapacity = lexSize >= capacity;
+  const gateProb = atCapacity
+    ? 0.25 * lang.conservatism
+    : Math.min(1, 0.5 + 0.5 * lang.conservatism);
+  if (!rng.chance(gateProb)) return;
   // Compute need once per step; cheaper than recomputing for each coinage.
   // Gets stale across coinages within a single step but the drift is small.
   const need = lexicalNeed(lang, state.tree);

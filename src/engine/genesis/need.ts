@@ -1,6 +1,7 @@
 import type { Language, LanguageTree, Meaning } from "../types";
 import { SEMANTIC_CLUSTERS, clusterOf } from "../semantics/clusters";
 import { BASIC_240 } from "../lexicon/basic240";
+import { tierOf, type Tier } from "../lexicon/concepts";
 import { leafIds } from "../tree/split";
 
 /**
@@ -53,8 +54,17 @@ export function lexicalNeed(
     }
   }
 
+  const tier = (lang.culturalTier ?? 0) as Tier;
   for (const m of BASIC_240) {
     if (lex[m]) {
+      out[m] = 0;
+      continue;
+    }
+    // Tier gate: a concept above this language's cultural tier isn't
+    // a candidate for coinage yet (a palaeolithic language can't
+    // invent a word for "iron" or "plow"). Tier diffuses in via
+    // contact or age in `lexicon/tier.ts::computeTierCandidate`.
+    if (tierOf(m) > tier) {
       out[m] = 0;
       continue;
     }

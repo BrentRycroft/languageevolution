@@ -4,6 +4,7 @@ import { generateName } from "../naming";
 import { cloneLexicon, cloneGrammar, cloneMorphology } from "../utils/clone";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import type { Rng } from "../rng";
+import { lexicalCapacity } from "../lexicon/tier";
 
 export function leafIds(tree: LanguageTree): string[] {
   return Object.keys(tree)
@@ -237,6 +238,24 @@ export function splitLeaf(
       derivationalSuffixes: (parentLang.derivationalSuffixes ?? [])
         .filter(() => rng.chance(0.8))
         .map((s) => ({ affix: s.affix.slice(), tag: s.tag })),
+      // Cultural tier inherits from the parent (daughters start at
+      // the same material-culture stage) but the capacity resets to
+      // the daughter's own profile — if the daughter got a much
+      // smaller speaker share, its target capacity is lower too.
+      culturalTier: parentLang.culturalTier,
+      // lexicalCapacity is filled in after construction so it can
+      // read speakers + birthGeneration off the daughter itself.
+      // Re-carved concept slots stay with the daughter that inherited
+      // them — the merge already happened, sisters can re-carve on
+      // their own later.
+      colexifiedAs: parentLang.colexifiedAs
+        ? Object.fromEntries(
+            Object.entries(parentLang.colexifiedAs).map(([k, v]) => [
+              k,
+              v.slice(),
+            ]),
+          )
+        : undefined,
     };
   };
 
@@ -247,6 +266,14 @@ export function splitLeaf(
   const children: Language[] = [];
   for (let i = 0; i < childCount; i++) {
     children.push(makeChild(i !== 0));
+  }
+  // Now that each daughter has its own birthGeneration + speakers,
+  // compute a fresh lexicalCapacity target. Daughters with smaller
+  // populations get proportionally smaller capacity, so fragmented
+  // communities don't feel compelled to coin their parent's full
+  // vocabulary overnight.
+  for (const child of children) {
+    child.lexicalCapacity = lexicalCapacity(child, generation);
   }
 
   // Persistent map coordinates: fan the daughters evenly around the
