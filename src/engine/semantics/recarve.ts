@@ -109,6 +109,57 @@ function tryMerge(lang: Language, rng: Rng): RecarveEvent | null {
   return { kind: "merge", winner, loser };
 }
 
+/**
+ * One-shot kinship-cluster simplification, triggered when a
+ * language advances from tier 0 (foraging) to tier 1 (agricultural).
+ * Real urbanisation tends to compress fine-grained foraging-band
+ * kinship distinctions: classifictory mother-vs-aunt merges into
+ * a single "mother", brother-vs-cousin into "brother", etc. We
+ * apply up to two kinship-cluster merges in one go so the
+ * vocabulary visibly shifts at the transition.
+ *
+ * Only fires when both ends of an attested kinship colexification
+ * exist in the lexicon. Returns the list of merges performed.
+ */
+export function applyKinshipSimplification(
+  lang: Language,
+  rng: Rng,
+  maxEvents = 2,
+): RecarveEvent[] {
+  const out: RecarveEvent[] = [];
+  const KINSHIP_PAIRS: ReadonlyArray<readonly [Meaning, Meaning]> = [
+    ["mother", "aunt"],
+    ["father", "uncle"],
+    ["brother", "cousin"],
+    ["sister", "cousin"],
+    ["child", "son"],
+    ["child", "baby"],
+    ["friend", "neighbor"],
+  ];
+  for (let attempts = 0; attempts < maxEvents * 3 && out.length < maxEvents; attempts++) {
+    const [a, b] = KINSHIP_PAIRS[rng.int(KINSHIP_PAIRS.length)]!;
+    if (!lang.lexicon[a] || !lang.lexicon[b]) continue;
+    // Winner = the higher-frequency slot (mirrors the merge logic).
+    const fa = lang.wordFrequencyHints[a] ?? 0.4;
+    const fb = lang.wordFrequencyHints[b] ?? 0.4;
+    const winner = fa >= fb ? a : b;
+    const loser = winner === a ? b : a;
+    delete lang.lexicon[loser];
+    delete lang.wordFrequencyHints[loser];
+    delete lang.wordOrigin[loser];
+    delete lang.localNeighbors[loser];
+    delete lang.lastChangeGeneration[loser];
+    if (lang.registerOf) delete lang.registerOf[loser];
+    if (lang.suppletion) delete lang.suppletion[loser];
+    if (!lang.colexifiedAs) lang.colexifiedAs = {};
+    const bag = lang.colexifiedAs[winner] ?? [];
+    bag.push(loser);
+    lang.colexifiedAs[winner] = bag;
+    out.push({ kind: "merge", winner, loser });
+  }
+  return out;
+}
+
 function trySplit(lang: Language, rng: Rng): RecarveEvent | null {
   const lex = lang.lexicon;
   const meanings = Object.keys(lex).filter(isRegisteredConcept);

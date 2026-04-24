@@ -192,6 +192,83 @@ export function maybeMergeParadigms(
 }
 
 /**
+ * Phonologically-conditioned paradigm split. Promotes an existing
+ * single-affix paradigm into a two-way conjugation/declension class
+ * by perturbing the affix slightly for vowel-final stems vs
+ * consonant-final stems. Models the historical emergence of
+ * Latin's I/II/III/IV conjugations, Russian's first/second class,
+ * Spanish ar/er/ir — all start as morpho-phonological alternation
+ * before solidifying into memorised classes.
+ *
+ * Strategy: pick a paradigm without `variants`; pick whichever
+ * stem-shape is rarer in the lexicon as the variant condition;
+ * synthesise an alternate affix by changing the first vowel of the
+ * existing affix to a slightly different one (a→e, e→i, …) — the
+ * phonological perturbation that historically produced the class
+ * distinction. Returns the paradigm category that got split.
+ */
+export function maybeSplitParadigm(
+  lang: Language,
+  rng: Rng,
+  probability: number,
+): { category: MorphCategory; condition: "vowel-final" | "consonant-final" } | null {
+  if (!rng.chance(probability)) return null;
+  const cats = (Object.keys(lang.morphology.paradigms) as MorphCategory[])
+    .filter((c) => {
+      const p = lang.morphology.paradigms[c];
+      return p && (!p.variants || p.variants.length === 0);
+    });
+  if (cats.length === 0) return null;
+  const cat = cats[rng.int(cats.length)]!;
+  const paradigm = lang.morphology.paradigms[cat]!;
+  if (paradigm.affix.length === 0) return null;
+  // Pick the rarer stem shape as the variant condition. Stem shapes
+  // come from the meanings that get this paradigm — for now we
+  // sample across the whole lexicon as an approximation.
+  let vowelFinal = 0;
+  let consonantFinal = 0;
+  for (const form of Object.values(lang.lexicon)) {
+    const last = form[form.length - 1];
+    if (!last) continue;
+    if (isVowelLike(last)) vowelFinal++;
+    else consonantFinal++;
+  }
+  if (vowelFinal === 0 || consonantFinal === 0) return null;
+  const condition: "vowel-final" | "consonant-final" =
+    vowelFinal < consonantFinal ? "vowel-final" : "consonant-final";
+  // Perturb the affix's first vowel slightly. This mimics the way
+  // Romance ar/er/ir all started as the same Latin inflection with
+  // a stem-class-conditioned vowel reduction.
+  const variantAffix = perturbAffix(paradigm.affix, rng);
+  if (variantAffix.join("") === paradigm.affix.join("")) return null;
+  paradigm.variants = [{ when: condition, affix: variantAffix }];
+  return { category: cat, condition };
+}
+
+const VOWEL_PERTURBATIONS: Record<string, string[]> = {
+  a: ["e", "ɛ"],
+  e: ["i", "ɛ", "a"],
+  i: ["e", "ɛ"],
+  o: ["u", "ɔ"],
+  u: ["o", "ɔ"],
+  ɛ: ["e", "a"],
+  ɔ: ["o", "u"],
+};
+
+function perturbAffix(affix: WordForm, rng: { int: (n: number) => number }): WordForm {
+  for (let i = 0; i < affix.length; i++) {
+    const p = affix[i]!;
+    const options = VOWEL_PERTURBATIONS[p];
+    if (!options) continue;
+    const swap = options[rng.int(options.length)]!;
+    const out = affix.slice();
+    out[i] = swap;
+    return out;
+  }
+  return affix.slice();
+}
+
+/**
  * Inflect a bare form according to a paradigm. Useful for the Grammar/Translator UIs.
  */
 export function inflect(
@@ -209,9 +286,40 @@ export function inflect(
     if (override && override.length > 0) return override.slice();
   }
   if (!paradigm) return base;
+  const affix = pickAffixVariant(paradigm, base);
   return paradigm.position === "prefix"
-    ? [...paradigm.affix, ...base]
-    : [...base, ...paradigm.affix];
+    ? [...affix, ...base]
+    : [...base, ...affix];
+}
+
+/**
+ * Resolve which paradigm-variant applies to `base` given the
+ * paradigm's `variants` table. Falls back to `paradigm.affix` if no
+ * conditioned variant matches. Variants gate on stem-final phoneme
+ * shape (vowel-final vs consonant-final), the cross-linguistically
+ * commonest first stratum of class-ification.
+ */
+function pickAffixVariant(paradigm: Paradigm, base: WordForm): WordForm {
+  const variants = paradigm.variants;
+  if (!variants || variants.length === 0) return paradigm.affix;
+  const last = base[base.length - 1];
+  if (!last) return paradigm.affix;
+  const isVowelFinal = isVowelLike(last);
+  const want: "vowel-final" | "consonant-final" = isVowelFinal
+    ? "vowel-final"
+    : "consonant-final";
+  const match = variants.find((v) => v.when === want);
+  return match ? match.affix : paradigm.affix;
+}
+
+/** Local vowel detector that doesn't depend on the full IPA module. */
+function isVowelLike(p: string): boolean {
+  // Strip length/tone marks then check the first character. Vowels
+  // are a, e, i, o, u, ɛ, ɔ, ə, ɨ, ɯ, ø, y, œ, æ plus their
+  // diacriticised forms.
+  const base = p.replace(/[ːˈˌ˥˧˩]/g, "");
+  if (base.length === 0) return false;
+  return /^[aeiouɛɔəɨɯøyœæáéíóúàèìòùâêîôûāēīōūãẽĩõũ]/i.test(base);
 }
 
 /**

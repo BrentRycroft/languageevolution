@@ -65,3 +65,23 @@ export function isolationFactor(nearestNeighborDistance: number | undefined): nu
   // Linear climb with a soft cap. 1000 gives +1.0 before cap.
   return 1 + Math.min(0.6, d / 1000);
 }
+
+/**
+ * Trudgill effect: large language communities shed morphological
+ * complexity faster than small ones (Trudgill 2011; Lupyan & Dale
+ * 2010). Adult L2 learners — proportionally more numerous in big
+ * lingua francas — don't reliably acquire fine-grained morphology,
+ * and the simplifications spread back into native speech. Small
+ * isolated communities, by contrast, accumulate idiosyncratic
+ * complexity (Pirahã, Archi, Tabassaran).
+ *
+ * Returns a multiplier on simplification-direction events
+ * (paradigm merger, case loss, gender loss). 1.0 at ~10k speakers,
+ * 0.5 at small (~1k), capped at 3.0 at very large (10M+).
+ */
+export function simplificationFactor(speakers: number | undefined): number {
+  const n = speakers ?? 10000;
+  if (!isFinite(n) || n <= 0) return 1;
+  const factor = 1 + 0.5 * Math.log10(Math.max(1, n) / 10000);
+  return Math.max(0.5, Math.min(3.0, factor));
+}

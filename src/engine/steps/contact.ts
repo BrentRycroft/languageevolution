@@ -1,7 +1,14 @@
 import type { Language, SimulationConfig, SimulationState } from "../types";
 import { tryBorrow } from "../contact/borrow";
+import { maybeArealPhonemeShare } from "../contact/areal_phonology";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
+
+/** Per-gen probability of an areal phoneme-sharing event. Real
+ *  Sprachbund phonological convergence happens over millennia, so
+ *  the rate per generation is low — multiplied further by
+ *  distance affinity inside `maybeArealPhonemeShare`. */
+const AREAL_PHONEME_PROBABILITY = 0.005;
 
 export function stepContact(
   state: SimulationState,
@@ -21,6 +28,18 @@ export function stepContact(
         donorId: loan.donorId,
         recipientId: lang.id,
         meaning: loan.meaning,
+      },
+    });
+  }
+  const areal = maybeArealPhonemeShare(lang, state.tree, rng, AREAL_PHONEME_PROBABILITY);
+  if (areal) {
+    pushEvent(lang, {
+      generation,
+      kind: "borrow",
+      description: `areal phoneme: /${areal.phoneme}/ adopted from ${areal.donorName} (replacing /${areal.replacedPhoneme}/ in ${areal.affectedMeanings.length} word${areal.affectedMeanings.length === 1 ? "" : "s"})`,
+      meta: {
+        donorId: areal.donorId,
+        recipientId: lang.id,
       },
     });
   }

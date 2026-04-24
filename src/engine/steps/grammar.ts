@@ -5,8 +5,11 @@ import {
   maybeMergeParadigms,
   maybeCliticize,
   maybeSuppletion,
+  maybeSplitParadigm,
 } from "../morphology/evolve";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
+import { simplificationFactor } from "../phonology/rate";
+import { maybeReanalyse } from "../lexicon/reanalysis";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 
@@ -28,7 +31,8 @@ export function stepGrammar(
 ): void {
   const p = Math.min(1, config.grammar.driftProbabilityPerGeneration * lang.conservatism);
   if (!rng.chance(p)) return;
-  const shifts = driftGrammar(lang.grammar, rng);
+  const simplification = simplificationFactor(lang.speakers);
+  const shifts = driftGrammar(lang.grammar, rng, simplification);
   for (const s of shifts) {
     pushEvent(lang, {
       generation,
@@ -81,10 +85,14 @@ export function stepMorphology(
         : undefined,
     });
   }
+  // Trudgill-effect: large communities shed paradigms faster than small
+  // ones. Multiplies into the configured probability so very small
+  // languages mostly hold onto their inflections.
+  const trudgill = simplificationFactor(lang.speakers);
   const merge = maybeMergeParadigms(
     lang,
     rng,
-    config.morphology.paradigmMergeProbability * lang.conservatism,
+    config.morphology.paradigmMergeProbability * lang.conservatism * trudgill,
   );
   if (merge) {
     pushEvent(lang, {
@@ -115,6 +123,36 @@ export function stepMorphology(
         generation,
         kind: "grammar_shift",
         description: `analogy: "${ana.meaning}" reshaped ${ana.from} → ${ana.to}`,
+      });
+    }
+  }
+  // Conjugation/declension class emergence. Inverse of the Trudgill
+  // factor — small isolated communities elaborate phonologically-
+  // conditioned class splits more readily than big lingua francas.
+  const conjClassRate = 0.005 * lang.conservatism / Math.max(0.7, simplificationFactor(lang.speakers));
+  if (conjClassRate > 0) {
+    const split = maybeSplitParadigm(lang, rng, conjClassRate);
+    if (split) {
+      pushEvent(lang, {
+        generation,
+        kind: "grammar_shift",
+        description: `paradigm class split: "${split.category}" gains ${split.condition} variant`,
+      });
+    }
+  }
+  // Morphological reanalysis: occasional compound → productive
+  // suffix promotion. Low rate because productive suffixes
+  // historically take centuries to stabilise out of fossil
+  // compounds. Bigger effect in the long run since it expands the
+  // language's derivational repertoire.
+  const reanalysisRate = 0.004 * lang.conservatism;
+  if (reanalysisRate > 0) {
+    const ev = maybeReanalyse(lang, rng, reanalysisRate);
+    if (ev) {
+      pushEvent(lang, {
+        generation,
+        kind: "grammar_shift",
+        description: `reanalysis: "${ev.source}" → suffix ${ev.promotedTag} = /${ev.affix.join("")}/`,
       });
     }
   }

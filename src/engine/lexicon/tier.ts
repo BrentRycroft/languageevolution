@@ -22,12 +22,34 @@ import { leafIds } from "../tree/split";
  *      up the tier through areal diffusion of material culture.
  */
 
-const AGE_PER_TIER_STEP = 2000;
+const AGE_PER_TIER_STEP = 1500;
 const POP_TIER_FLOORS: ReadonlyArray<{ speakers: number; tier: Tier }> = [
-  { speakers: 50_000, tier: 1 },
-  { speakers: 250_000, tier: 2 },
-  { speakers: 10_000_000, tier: 3 },
+  { speakers: 5_000, tier: 1 },
+  { speakers: 80_000, tier: 2 },
+  { speakers: 5_000_000, tier: 3 },
 ];
+
+/**
+ * Carrying capacity for a language at a given cultural tier — the
+ * speaker count toward which logistic-growth simulation pulls. Tied
+ * to material-culture realism: foragers max out at hundreds-of-bands
+ * scale, agriculturalists at small kingdoms, iron-age states at low
+ * millions, modern at hundreds of millions. The deliberate
+ * staircase is what makes tier advancement self-reinforcing —
+ * advancing the tier raises the cap, populations grow toward it,
+ * and the larger population then pushes the tier further (Diamond's
+ * Guns-Germs-Steel feedback in miniature).
+ */
+const TIER_POP_CAPS: Record<Tier, number> = {
+  0: 6_000,
+  1: 100_000,
+  2: 8_000_000,
+  3: 100_000_000,
+};
+
+export function populationCap(tier: Tier): number {
+  return TIER_POP_CAPS[tier];
+}
 
 /**
  * Return the tier this language should now be at, given its current
