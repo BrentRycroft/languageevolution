@@ -59,7 +59,16 @@ export function createSimulation(
     for (const leafId of leaves) {
       const lang = state.tree[leafId]!.language;
       if (lang.extinct) continue;
-      if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen);
+      // Population random-walk. ±4 % per generation on a log scale so
+      // the drift is multiplicative and symmetric. Floor at 50 so
+      // near-extinct communities don't underflow; no ceiling — a very
+      // successful language can keep growing. Small populations drive
+      // fast drift via `speakerFactor` in `phonology/rate.ts`.
+      if (lang.speakers !== undefined) {
+        const drift = Math.exp((rng.next() - 0.5) * 0.08);
+        lang.speakers = Math.max(50, Math.round(lang.speakers * drift));
+      }
+      if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
       // Obsolescence runs BEFORE genesis so freshly-coined words are never
       // retired in the same step they were born in.
       stepObsolescence(lang, config, rng, nextGen);

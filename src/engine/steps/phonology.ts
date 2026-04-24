@@ -1,15 +1,27 @@
-import type { Language, SimulationConfig } from "../types";
+import type { Language, SimulationConfig, SimulationState } from "../types";
 import { applyChangesToLexicon } from "../phonology/apply";
 import { driftOrthography } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
-import { rateMultiplier } from "../phonology/rate";
+import { rateMultiplier, speakerFactor } from "../phonology/rate";
 import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../phonology/propose";
-import { matchSites } from "../phonology/generated";
+import { matchSites, hasAnyMatch } from "../phonology/generated";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
+import { leafIds } from "../tree/split";
+import { geoDistance } from "../geo";
+
+/**
+ * Half-distance for areal diffusion of a newly-proposed sound law.
+ * A sister language at this distance has a 50 % chance of receiving
+ * the rule; sisters far outside the areal lose it quickly. Tuned
+ * against the split step size (80 px) so primary-branch neighbours
+ * are candidates, second-cousins are marginal.
+ */
+const AREAL_HALF_LIFE = 150;
+const AREAL_BASE_PROBABILITY = 0.25;
 
 /** Try to invent a rule roughly every this many generations per language. */
 const PROPOSAL_CADENCE = 8;
@@ -19,10 +31,14 @@ export function stepPhonology(
   config: SimulationConfig,
   rng: Rng,
   generation: number,
+  state?: SimulationState,
 ): void {
   const before = lang.lexicon;
   const changes = changesForLang(lang);
-  const mult = rateMultiplier(generation, lang.id) * lang.conservatism;
+  const mult =
+    rateMultiplier(generation, lang.id) *
+    lang.conservatism *
+    speakerFactor(lang.speakers);
   const ages: Record<string, number> = {};
   for (const m of Object.keys(before)) {
     const last = lang.lastChangeGeneration[m];
@@ -177,7 +193,66 @@ export function stepPhonology(
           meta: { pairedRuleId: rule.id },
         });
       }
+      // Areal diffusion. Spatially-close alive sisters have a
+      // distance-decayed probability of picking up the new rule —
+      // models Sprachbund / wave-diffusion effects (the Balkan
+      // linguistic area, the Rhenish fan, the Indian subcontinent's
+      // retroflex spread across unrelated families). Only fires if
+      // the sister's current inventory has a site for the rule;
+      // otherwise there's nothing for the rule to operate on.
+      if (state) {
+        propagateArealRule(state, lang, rule, generation, rng);
+      }
     }
+  }
+}
+
+/**
+ * Distance-decayed propagation of a freshly-minted sound law to
+ * nearby alive sisters. Each candidate gets a separate chance based
+ * on `AREAL_BASE_PROBABILITY × half-life / (half-life + d)`. The
+ * donor language doesn't emit the event a second time — only the
+ * recipient gets the history note.
+ */
+function propagateArealRule(
+  state: SimulationState,
+  donor: Language,
+  rule: ReturnType<typeof proposeOneRule> & object,
+  generation: number,
+  rng: Rng,
+): void {
+  const donorCoords = donor.coords;
+  if (!donorCoords) return;
+  const alive = leafIds(state.tree).filter(
+    (id) => id !== donor.id && !state.tree[id]!.language.extinct,
+  );
+  for (const id of alive) {
+    const sister = state.tree[id]!.language;
+    const sisterCoords = sister.coords;
+    if (!sisterCoords) continue;
+    const d = geoDistance(donorCoords, sisterCoords);
+    const affinity = AREAL_HALF_LIFE / (AREAL_HALF_LIFE + d);
+    const p = AREAL_BASE_PROBABILITY * affinity;
+    if (!rng.chance(p)) continue;
+    // Copy the rule with a sister-scoped id so the stemma doesn't
+    // confuse them later.
+    const adopted: typeof rule = {
+      ...rule,
+      id: `${sister.id}.g${generation}.areal.${rule.templateId}`,
+      birthGeneration: generation,
+      lastFireGeneration: generation,
+    };
+    if (!hasAnyMatch(adopted, sister)) continue;
+    if (!sister.activeRules) sister.activeRules = [];
+    // Avoid duplicate-template adoption — if the sister already has a
+    // rule of the same templateId, skip.
+    if (sister.activeRules.some((r) => r.templateId === rule.templateId)) continue;
+    sister.activeRules.push(adopted);
+    pushEvent(sister, {
+      generation,
+      kind: "sound_change",
+      description: `areal diffusion from ${donor.name}: ${rule.description}`,
+    });
   }
 }
 

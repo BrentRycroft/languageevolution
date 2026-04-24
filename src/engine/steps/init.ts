@@ -54,6 +54,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     morphology: cloneMorphology(config.seedMorphology),
     localNeighbors: {},
     conservatism: 1.0,
+    speakers: 10000,
     wordOrigin: {},
     activeRules: [],
     retiredRules: [],

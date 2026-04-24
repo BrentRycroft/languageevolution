@@ -1,6 +1,7 @@
 import type { Language, SimulationConfig } from "../types";
 import { driftGrammar } from "../grammar/evolve";
 import { maybeGrammaticalize, maybeMergeParadigms } from "../morphology/evolve";
+import { maybeAnalogicalLevel } from "../morphology/analogy";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 
@@ -58,5 +59,17 @@ export function stepMorphology(
       kind: "grammar_shift",
       description: merge.description,
     });
+  }
+  const analogyRate =
+    (config.morphology.analogyProbability ?? 0) * lang.conservatism;
+  if (analogyRate > 0) {
+    const ana = maybeAnalogicalLevel(lang, rng, analogyRate);
+    if (ana) {
+      pushEvent(lang, {
+        generation,
+        kind: "grammar_shift",
+        description: `analogy: "${ana.meaning}" reshaped ${ana.from} → ${ana.to}`,
+      });
+    }
   }
 }

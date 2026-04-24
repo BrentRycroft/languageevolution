@@ -19,3 +19,28 @@ export function rateMultiplier(generation: number, languageId: string): number {
 
   return Math.max(0.2, base + burst);
 }
+
+/**
+ * Speaker-count modulator. Small speech communities innovate faster
+ * than large ones — smaller networks mean a change originated by one
+ * speaker reaches everyone sooner, and there's less adult-speaker
+ * resistance to young-speaker innovations. Large national languages
+ * are phonologically conservative for decades (standard-language
+ * attractor + literacy + broadcast media all slow drift).
+ *
+ * Returns a multiplier centred on 1.0 at ~10 000 speakers and sliding
+ * between ~2× (very small) and ~0.4× (very large). Capped both ways
+ * so the sim can't stall or blow up.
+ *
+ * Reference: Nettle 1999, Lupyan & Dale 2010 for the correlation
+ * between population size and morphosyntactic complexity.
+ */
+export function speakerFactor(speakers: number | undefined): number {
+  const n = speakers ?? 10000;
+  if (!isFinite(n) || n <= 0) return 1;
+  // Log-scale: doubling speakers cuts drift rate by ~20 %.
+  // log₁₀(10k) = 4 is the neutral point.
+  const log10 = Math.log10(Math.max(1, n));
+  const factor = Math.pow(0.8, log10 - 4);
+  return Math.max(0.4, Math.min(2.2, factor));
+}

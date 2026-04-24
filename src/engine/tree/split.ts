@@ -187,6 +187,20 @@ export function splitLeaf(
         0.3,
         Math.min(1.8, parentLang.conservatism * (0.7 + rng.next() * 0.6)),
       ),
+      // Daughters inherit parent's speaker count × a log-normal
+      // fragmentation factor. When a community breaks up, each
+      // daughter gets a random fraction of the original pool —
+      // typically 30 – 120 % of parent / N, with heavy tails so some
+      // daughters end up tiny (drive fast innovation) and others
+      // inherit the bulk (conservative giants). Empirically: Vulgar
+      // Latin → huge Romance daughters on the empire's former core
+      // territory, tiny ones in isolated pockets like Romansh.
+      speakers: Math.max(
+        50,
+        Math.round(
+          ((parentLang.speakers ?? 10000) / 3) * (0.3 + rng.next() * 1.7),
+        ),
+      ),
       wordOrigin: { ...parentLang.wordOrigin },
       // Daughters inherit the parent's procedural rule stack, dropping a
       // random ~30% so sisters begin to diverge immediately.

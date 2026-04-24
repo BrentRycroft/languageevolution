@@ -98,6 +98,15 @@ export interface Language {
    */
   conservatism: number;
   /**
+   * Approximate speaker population. Small communities innovate
+   * faster than large ones (founder effects, reduced network size;
+   * cf. Nettle 1999, Lupyan & Dale 2010). `speakerFactor(speakers)`
+   * in `phonology/rate.ts` turns this into a change-rate multiplier.
+   * Optional for back-compat — missing means "unspecified" and the
+   * engine treats it as a neutral 10 000.
+   */
+  speakers?: number;
+  /**
    * Origin tag per meaning. Present only for words that didn't come from
    * the proto-seed. "compound" / "derivation" / "reduplication" mirror the
    * genesis catalog ids; "borrow:LangName" marks contact loans.
@@ -218,6 +227,11 @@ export interface SimulationConfig {
   morphology: {
     grammaticalizationProbability: number;
     paradigmMergeProbability: number;
+    /**
+     * Per-gen probability of a lexical analogical-leveling event
+     * (an outlier form gets reshaped toward its cluster mean).
+     */
+    analogyProbability?: number;
   };
   contact: {
     borrowProbabilityPerGeneration: number;
