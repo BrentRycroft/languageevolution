@@ -460,7 +460,8 @@ function FilterChip({
   return (
     <button
       type="button"
-      className={`lexicon-filter-chip ${active ? "active" : ""}`}
+      className={`chip lexicon-filter-chip ${active ? "active" : ""}`}
+      aria-pressed={active}
       onClick={onClick}
     >
       {label}

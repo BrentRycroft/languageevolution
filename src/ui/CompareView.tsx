@@ -86,7 +86,7 @@ export function CompareView() {
             key={m}
             role="tab"
             aria-selected={mode === m}
-            className={mode === m ? "active" : ""}
+            className={`chip ${mode === m ? "active" : ""}`}
             onClick={() => setMode(m)}
           >
             {modeLabel(m)}

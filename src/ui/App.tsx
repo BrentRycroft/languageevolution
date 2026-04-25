@@ -42,28 +42,22 @@ const TimelineChart = lazy(() =>
 );
 
 function PanelSkeleton() {
+  // Three stacked shimmer bars instead of a spinner — reads as
+  // "content loading here" rather than a generic indeterminate
+  // spinner. Honours prefers-reduced-motion (the .skeleton animation
+  // disables itself there).
   return (
     <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "var(--muted)",
-        fontSize: "var(--fs-2)",
-      }}
+      className="col-8"
+      style={{ flex: 1, minHeight: 0, padding: 16 }}
+      aria-busy="true"
+      aria-label="Loading panel"
     >
-      <div
-        style={{
-          width: 32,
-          height: 32,
-          border: "3px solid var(--border)",
-          borderTopColor: "var(--accent)",
-          borderRadius: "50%",
-          animation: "spin 0.9s linear infinite",
-        }}
-      />
+      <div className="skeleton" style={{ height: 24, width: "40%" }} />
+      <div className="skeleton" style={{ height: 16, width: "85%" }} />
+      <div className="skeleton" style={{ height: 16, width: "70%" }} />
+      <div className="skeleton" style={{ height: 16, width: "90%" }} />
+      <div className="skeleton" style={{ height: 16, width: "60%" }} />
     </div>
   );
 }
