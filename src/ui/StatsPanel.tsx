@@ -2,6 +2,8 @@ import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import { levenshtein } from "../engine/phonology/ipa";
 import { TIER_LABELS, type Tier } from "../engine/lexicon/concepts";
+import { formatElapsed } from "../engine/time";
+import { YEARS_PER_GENERATION } from "../engine/constants";
 
 function tempoBadge(conservatism: number): { icon: string; label: string; hue: number } {
   // 🐢 slow/conservative • ⏱ balanced • 🐇 fast/innovative
@@ -23,6 +25,9 @@ function tierBadge(tier: Tier): { icon: string; label: string } {
 export function StatsPanel() {
   const state = useSimStore((s) => s.state);
   const seed = useSimStore((s) => s.seedFormsByMeaning);
+  const yearsPerGen = useSimStore(
+    (s) => s.config.yearsPerGeneration ?? YEARS_PER_GENERATION,
+  );
 
   const leaves = leafIds(state.tree);
   const alive = leaves.filter((id) => !state.tree[id]!.language.extinct);
@@ -90,7 +95,12 @@ export function StatsPanel() {
                 >
                   {tier.icon}
                 </td>
-                <td className="text-right">{s.age}</td>
+                <td
+                  className="text-right"
+                  title={`${s.age} generations · ${formatElapsed(s.age, yearsPerGen)}`}
+                >
+                  {formatElapsed(s.age, yearsPerGen)}
+                </td>
                 <td className="text-right">{s.words}</td>
                 <td className="text-right">{s.mean.toFixed(2)}</td>
               </tr>

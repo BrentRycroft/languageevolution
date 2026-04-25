@@ -382,6 +382,16 @@ export interface GrammarFeatures {
 
 export interface SimulationConfig {
   seed: string;
+  /**
+   * How many years one generation represents. Drives the
+   * "gen 80 ≈ 2000y" anchor in the UI and lets users reason about
+   * outputs against attested diachronic linguistics. Default 25 is
+   * the standard demographic figure (one human generation; cf. Pagel
+   * et al. 2007 evolutionary tree-dating in 25y units). All
+   * per-generation rates are calibrated against this anchor — change
+   * it and the surface output speed shifts proportionally.
+   */
+  yearsPerGeneration?: number;
   modes: {
     phonology: boolean;
     tree: boolean;
