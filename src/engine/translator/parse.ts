@@ -32,6 +32,13 @@ import type {
  * class lookup, so we don't lose information.
  */
 export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
+  // Leading discourse coordinator: "And he saw...", "But the king...",
+  // "Or maybe...". Surface so the user sees the connective; the rest
+  // of the parse pretends the conjunction wasn't there.
+  let leadingConj: { lemma: string } | undefined;
+  if (tokens.length > 0 && tokens[0]!.tag === "CONJ") {
+    leadingConj = { lemma: tokens[0]!.lemma };
+  }
   let verbIdx = tokens.findIndex((t) => t.tag === "V");
   // Copula promotion: when no main verb is found, look for an AUX
   // copula (is / are / was / were / be / been) and promote it to a
@@ -145,6 +152,25 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   // ---- Object NP: closest noun-phrase head to the RIGHT of the verb ----
   const object = collectNP(tokens, verbIdx, "right") ?? undefined;
 
+  // ---- Predicate complement (copula): when the verb is "be" and there's
+  // no object NP, look right of the verb for an ADJ chain — these are
+  // predicate adjectives that complete the copula clause ("X is happy",
+  // "today was good"). Without this they get dropped.
+  const complement: { lemma: string; baseForm: never[] }[] = [];
+  if (verbTok.lemma === "be" && !object) {
+    for (let i = verbIdx + 1; i < tokens.length; i++) {
+      const t = tokens[i]!;
+      if (t.tag === "ADJ") {
+        complement.push({ lemma: t.lemma, baseForm: [] });
+        continue;
+      }
+      // Skip past negators / punctuation while scanning for the
+      // complement; stop at a PREP, V, or any other content token.
+      if (t.tag === "PUNCT" || t.tag === "AUX" || t.tag === "DET") continue;
+      break;
+    }
+  }
+
   // ---- PPs: walk all PREPs not already consumed ----
   // Object collection now stops at PREP boundaries, so the PPs we
   // collect here can't double-count the object's tokens.
@@ -173,9 +199,10 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     object,
     pps,
     adverbs: collectAdverbs(tokens, consumed),
+    complement: complement.length > 0 ? complement : undefined,
   };
 
-  return { kind: "S", subject, predicate, negated, interrogative };
+  return { kind: "S", subject, predicate, negated, interrogative, leadingConj };
 }
 
 function collectNP(
