@@ -296,7 +296,7 @@ export function TimelineChart() {
             fontSize: "var(--fs-1)",
           }}
         >
-          <label style={{ color: "var(--muted)" }}>Meaning:</label>
+          <label className="t-muted">Meaning:</label>
           <select
             value={selectedMeaning ?? ""}
             onChange={(e) => selectMeaning(e.target.value || null)}
@@ -328,7 +328,7 @@ export function TimelineChart() {
           maxGen={effectiveGen}
         />
       ) : chartData.length === 0 ? (
-        <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
+        <div className="section-empty">
           No history yet — run the simulation for a few generations.
         </div>
       ) : (

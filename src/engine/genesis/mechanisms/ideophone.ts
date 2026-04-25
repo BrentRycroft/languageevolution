@@ -1,4 +1,4 @@
-import type { CoinageMechanism } from "./index";
+import type { CoinageMechanism } from "./types";
 import type { Phoneme, WordForm } from "../../types";
 import { isVowel, isConsonant } from "../../phonology/ipa";
 

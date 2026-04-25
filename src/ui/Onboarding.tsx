@@ -58,23 +58,23 @@ export function WelcomeBanner() {
           Welcome to the language evolution simulator
         </div>
         <div style={{ color: "var(--muted)", marginBottom: 4 }}>
-          Press <strong style={{ color: "var(--text)" }}>Play</strong> (or <kbd>Space</kbd>) to
+          Press <strong className="t-text">Play</strong> (or <kbd>Space</kbd>) to
           watch a proto-language diverge. Each language{" "}
-          <strong style={{ color: "var(--text)" }}>invents its own sound laws</strong> procedurally
+          <strong className="t-text">invents its own sound laws</strong> procedurally
           — the first law usually lands around gen 8–16. Open the{" "}
-          <strong style={{ color: "var(--text)" }}>Sound laws</strong> tab to see them, or the{" "}
-          <strong style={{ color: "var(--text)" }}>Timeline → rules</strong> view for their
+          <strong className="t-text">Sound laws</strong> tab to see them, or the{" "}
+          <strong className="t-text">Timeline → rules</strong> view for their
           full lifecycle.
         </div>
         <div style={{ color: "var(--muted)", marginBottom: 4 }}>
-          Other tabs worth exploring: <strong style={{ color: "var(--text)" }}>Compare</strong>{" "}
+          Other tabs worth exploring: <strong className="t-text">Compare</strong>{" "}
           (lexicon + rule diff between two languages),{" "}
-          <strong style={{ color: "var(--text)" }}>Stemma</strong> (rule-similarity tree),{" "}
-          <strong style={{ color: "var(--text)" }}>Glossary</strong> (linguistic terms
-          this sim uses), <strong style={{ color: "var(--text)" }}>Quiz</strong> (guess
+          <strong className="t-text">Stemma</strong> (rule-similarity tree),{" "}
+          <strong className="t-text">Glossary</strong> (linguistic terms
+          this sim uses), <strong className="t-text">Quiz</strong> (guess
           which sound law produced a form).
         </div>
-        <div style={{ color: "var(--muted)" }}>
+        <div className="t-muted">
           Shortcuts: <kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>F</kbd> fast-forward ·
           <kbd>?</kbd> help · <kbd>1–9</kbd> tabs.
         </div>

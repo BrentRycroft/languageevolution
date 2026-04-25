@@ -68,7 +68,7 @@ export function Translator() {
             {label(m)}
           </button>
         ))}
-        <span style={{ marginLeft: "auto" }}>
+        <span className="ml-auto">
           <ScriptPicker />
         </span>
       </div>
@@ -336,7 +336,7 @@ function CognatesTable({ meaning, tree }: { meaning: string; tree: import("../en
       }}
     >
       <thead>
-        <tr style={{ color: "var(--muted)" }}>
+        <tr className="t-muted">
           <th style={{ textAlign: "left", padding: "4px 6px" }}>language</th>
           <th style={{ textAlign: "left", padding: "4px 6px" }}>form</th>
         </tr>
@@ -388,9 +388,9 @@ function EtymologyTrace({ leafId, meaning }: { leafId: string; meaning: string }
             <div style={{ fontSize: 10, color: "var(--muted)" }}>
               {s.languageName} @ g{s.generation}
             </div>
-            <div style={{ color: "var(--accent)" }}>{s.form}</div>
+            <div className="t-accent">{s.form}</div>
           </div>
-          {i < steps.length - 1 && <span style={{ color: "var(--muted)" }}>→</span>}
+          {i < steps.length - 1 && <span className="t-muted">→</span>}
         </div>
       ))}
     </div>

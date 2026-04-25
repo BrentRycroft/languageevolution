@@ -55,8 +55,8 @@ export function WorldMapPicker() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div role="tablist" style={{ display: "flex", gap: 4 }}>
+    <div className="col-8">
+      <div role="tablist" className="row-4">
         <button
           role="tab"
           aria-selected={mode === "random"}
@@ -76,7 +76,7 @@ export function WorldMapPicker() {
           Earth-shape
         </button>
       </div>
-      <div style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+      <div className="label-line">
         {mode === "random"
           ? "A unique continent generated from your seed. Same seed → same continent."
           : "Stylised Earth outline. Each preset has a suggested starting region."}
@@ -101,7 +101,7 @@ export function WorldMapPicker() {
           {generation > 0 ? "Apply (resets sim)" : "Apply"}
         </button>
         {originId !== null && (
-          <span style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+          <span className="label-line">
             cell {originId}
           </span>
         )}

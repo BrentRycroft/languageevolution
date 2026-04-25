@@ -2,6 +2,7 @@ import type { Language, LanguageTree, Meaning } from "../types";
 import { SEMANTIC_CLUSTERS, clusterOf } from "../semantics/clusters";
 import { BASIC_240 } from "../lexicon/basic240";
 import { CONCEPT_IDS, CONCEPTS, tierOf, type Tier } from "../lexicon/concepts";
+import { EXPANSION_NEED_BASELINE } from "../constants";
 import { leafIds } from "../tree/split";
 
 /**
@@ -91,7 +92,7 @@ export function lexicalNeed(
       // Expansion-only concept — give it a small baseline so it can
       // surface, but lower than the BASIC_240 coverage-driven score
       // so the basic vocabulary still fills first.
-      score += 0.15;
+      score += EXPANSION_NEED_BASELINE;
     }
     // Sister pressure
     let sistersWithIt = 0;

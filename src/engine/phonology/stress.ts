@@ -1,8 +1,6 @@
-import type { Meaning, Phoneme, WordForm } from "../types";
+import type { WordForm } from "../types";
 import { isVowel } from "./ipa";
 import { stripTone } from "./tone";
-
-export const STRESS_MARK = "ˈ";
 
 /**
  * Locate indices of vowel phonemes in a form.
@@ -125,6 +123,3 @@ export const UNSTRESSED_REDUCTION: SoundChange = {
   baseWeight: 1,
 };
 
-// silence unused-imports when Meaning / Phoneme aren't referenced directly.
-export type _MeaningRef = Meaning;
-export type _PhonemeRef = Phoneme;

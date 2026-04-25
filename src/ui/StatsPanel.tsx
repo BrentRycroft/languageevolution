@@ -64,11 +64,11 @@ export function StatsPanel() {
         <thead>
           <tr>
             <th>lang</th>
-            <th style={{ textAlign: "center" }}>tempo</th>
-            <th style={{ textAlign: "center" }}>tier</th>
-            <th style={{ textAlign: "right" }}>age</th>
-            <th style={{ textAlign: "right" }}>words</th>
-            <th style={{ textAlign: "right" }}>δ</th>
+            <th className="text-center">tempo</th>
+            <th className="text-center">tier</th>
+            <th className="text-right">age</th>
+            <th className="text-right">words</th>
+            <th className="text-right">δ</th>
           </tr>
         </thead>
         <tbody>
@@ -77,22 +77,22 @@ export function StatsPanel() {
             const tier = tierBadge(s.tier);
             return (
               <tr key={s.id}>
-                <td style={{ color: "var(--text)" }}>{s.name}</td>
+                <td className="t-text">{s.name}</td>
                 <td
-                  style={{ textAlign: "center" }}
+                  className="text-center"
                   title={`${tempo.label} (conservatism ${s.conservatism.toFixed(2)})`}
                 >
                   {tempo.icon}
                 </td>
                 <td
-                  style={{ textAlign: "center" }}
+                  className="text-center"
                   title={`${tier.label} — ${s.speakers.toLocaleString()} speakers`}
                 >
                   {tier.icon}
                 </td>
-                <td style={{ textAlign: "right" }}>{s.age}</td>
-                <td style={{ textAlign: "right" }}>{s.words}</td>
-                <td style={{ textAlign: "right" }}>{s.mean.toFixed(2)}</td>
+                <td className="text-right">{s.age}</td>
+                <td className="text-right">{s.words}</td>
+                <td className="text-right">{s.mean.toFixed(2)}</td>
               </tr>
             );
           })}

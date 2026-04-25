@@ -1,4 +1,4 @@
-import type { Phoneme } from "../types";
+import type { Phoneme } from "../primitives";
 
 export type MorphCategory =
   | "noun.case.nom"

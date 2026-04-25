@@ -1,9 +1,7 @@
 import type { Rng } from "./rng";
 
-export type Phoneme = string;
-export type Meaning = string;
-export type WordForm = Phoneme[];
-export type Lexicon = Record<Meaning, WordForm>;
+export type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
+import type { Meaning, WordForm, Lexicon } from "./primitives";
 
 export type SoundChangeCategory =
   | "lenition"
@@ -131,11 +129,11 @@ export interface Language {
    * subject to. Each rule has a strength that grows with use and decays with
    * disuse; when strength falls below a threshold the rule retires.
    */
-  activeRules: import("./phonology/generated").GeneratedRule[];
+  activeRules: import("./phonology/generated-types").GeneratedRule[];
   /**
    * Retired rules kept for UI history.
    */
-  retiredRules?: import("./phonology/generated").GeneratedRule[];
+  retiredRules?: import("./phonology/generated-types").GeneratedRule[];
   /**
    * Per-family bias vector used by the procedural proposer. Higher numbers
    * mean the language is more inclined to invent rules of that family.

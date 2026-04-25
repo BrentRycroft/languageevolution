@@ -371,7 +371,7 @@ function renderCellTooltip(
   if (!ownerId || !tree[ownerId]) {
     return (
       <div>
-        <div style={{ color: "var(--muted)" }}>{cell.biome} · cell {cell.id}</div>
+        <div className="t-muted">{cell.biome} · cell {cell.id}</div>
       </div>
     );
   }
@@ -390,12 +390,12 @@ function renderCellTooltip(
     <div>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>
         {lang.name}
-        {lang.extinct && <span style={{ color: "var(--danger)" }}> †</span>}
+        {lang.extinct && <span className="t-danger"> †</span>}
       </div>
-      <div style={{ color: "var(--muted)" }}>
+      <div className="t-muted">
         {(lang.speakers ?? 0).toLocaleString()} speakers · tier {tier} ({TIER_LABELS[tier as 0 | 1 | 2 | 3]})
       </div>
-      <div style={{ color: "var(--muted)" }}>
+      <div className="t-muted">
         {(lang.territory?.cells.length ?? 0)} cells · {Object.keys(lang.lexicon).length} words
       </div>
       {samples.length > 0 && (

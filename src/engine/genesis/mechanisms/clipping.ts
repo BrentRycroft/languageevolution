@@ -1,4 +1,4 @@
-import type { CoinageMechanism } from "./index";
+import type { CoinageMechanism } from "./types";
 
 /**
  * Clipping: take a long existing word and shorten it (typically to its

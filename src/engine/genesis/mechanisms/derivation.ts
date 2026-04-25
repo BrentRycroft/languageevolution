@@ -1,4 +1,4 @@
-import type { CoinageMechanism } from "./index";
+import type { CoinageMechanism } from "./types";
 import type { WordForm } from "../../types";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";

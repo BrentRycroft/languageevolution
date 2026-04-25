@@ -90,13 +90,13 @@ export function CompareView() {
             {modeLabel(m)}
           </button>
         ))}
-        <span style={{ marginLeft: "auto" }}>
+        <span className="ml-auto">
           <ScriptPicker />
         </span>
       </div>
 
       {pair.length < 2 && mode !== "cognate" ? (
-        <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
+        <div className="section-empty">
           Check two or more languages in the Lexicon → Compare chip to populate
           this view, or select one in the Tree and we'll auto-pair it with a
           sibling.
@@ -353,7 +353,7 @@ function EventList({ events }: { events: LanguageEvent[] }) {
     );
   }
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <div className="col-2">
       {recent.map((e, i) => (
         <div
           key={i}
@@ -366,7 +366,7 @@ function EventList({ events }: { events: LanguageEvent[] }) {
             padding: "2px 4px",
           }}
         >
-          <span style={{ color: "var(--muted)" }}>g{e.generation}</span>
+          <span className="t-muted">g{e.generation}</span>
           <span>{e.description}</span>
         </div>
       ))}
@@ -408,7 +408,7 @@ function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="col-8">
       <div
         style={{
           display: "flex",
@@ -527,9 +527,9 @@ function CognateTrace({
   const [meaningInput, setMeaningInput] = useState(meaning);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="col-8">
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <label style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+        <label className="label-line">
           Meaning:
         </label>
         <input
@@ -539,13 +539,13 @@ function CognateTrace({
           placeholder="e.g. water"
           aria-label="Meaning to trace"
         />
-        <span style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+        <span className="label-line">
           Showing how this meaning's form changed from proto to each selected leaf.
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="col-8">
         {leafIds.length === 0 ? (
-          <div style={{ color: "var(--muted)" }}>
+          <div className="t-muted">
             Select languages in the Lexicon → Compare chip to populate.
           </div>
         ) : (
@@ -567,7 +567,7 @@ function CognateTrace({
                   {lang.name}
                 </div>
                 {steps.length === 0 ? (
-                  <div style={{ color: "var(--muted)", fontSize: "var(--fs-1)" }}>
+                  <div className="label-line">
                     {lang.name} has no entry for "{meaningInput}".
                   </div>
                 ) : (
@@ -587,9 +587,9 @@ function CognateTrace({
                           <div style={{ fontSize: 10, color: "var(--muted)" }}>
                             {s.languageName} @ g{s.generation}
                           </div>
-                          <div style={{ color: "var(--accent)" }}>{s.form}</div>
+                          <div className="t-accent">{s.form}</div>
                         </div>
-                        {i < steps.length - 1 && <span style={{ color: "var(--muted)" }}>→</span>}
+                        {i < steps.length - 1 && <span className="t-muted">→</span>}
                       </div>
                     ))}
                   </div>

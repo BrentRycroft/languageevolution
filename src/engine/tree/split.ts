@@ -7,12 +7,14 @@ import type { Rng } from "../rng";
 import { lexicalCapacity } from "../lexicon/tier";
 import { partitionTerritory } from "../geo/territory";
 import type { WorldMap } from "../geo/map";
+import { leafIds } from "./leafIds";
+import { CONSERVATISM_MIN, CONSERVATISM_MAX } from "../constants";
 
-export function leafIds(tree: LanguageTree): string[] {
-  return Object.keys(tree)
-    .filter((id) => tree[id]!.childrenIds.length === 0)
-    .sort();
-}
+// Re-export for backwards compatibility — many call-sites import leafIds
+// from `tree/split`. The implementation now lives in `tree/leafIds.ts`
+// so `geo/territory.ts` and `lexicon/tier.ts` can use it without
+// creating an import cycle through this file.
+export { leafIds };
 
 /**
  * Pairs of catalog rule ids that compose into runaway loops if both are
@@ -197,11 +199,12 @@ export function splitLeaf(
         Object.entries(parentLang.localNeighbors).map(([k, v]) => [k, v.slice()]),
       ),
       // Daughters inherit parent's tempo with ±30% jitter, clamped to
-      // [0.3, 1.8]. So sister languages frequently diverge in tempo, not just
-      // form — one becomes the "turtle", the other the "hare".
+      // [CONSERVATISM_MIN, CONSERVATISM_MAX]. Sister languages frequently
+      // diverge in tempo as well as form — one becomes the "turtle",
+      // the other the "hare".
       conservatism: Math.max(
-        0.3,
-        Math.min(1.8, parentLang.conservatism * (0.7 + rng.next() * 0.6)),
+        CONSERVATISM_MIN,
+        Math.min(CONSERVATISM_MAX, parentLang.conservatism * (0.7 + rng.next() * 0.6)),
       ),
       // Daughters inherit parent's speaker count × a log-normal
       // fragmentation factor. When a community breaks up, each

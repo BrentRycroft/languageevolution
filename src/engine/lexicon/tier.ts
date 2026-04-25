@@ -1,7 +1,7 @@
 import type { Language, LanguageTree } from "../types";
 import type { Rng } from "../rng";
 import type { Tier } from "./concepts";
-import { leafIds } from "../tree/split";
+import { leafIds } from "../tree/leafIds";
 
 /**
  * Cultural-tier advancement machinery. A language's `culturalTier`

@@ -62,7 +62,7 @@ export function SavedRunsList() {
           <div key={r.id} className="run-row">
             <span className="label" title={`gen ${r.generationsRun}`}>
               {r.label}{" "}
-              <span style={{ color: "var(--muted)" }}>
+              <span className="t-muted">
                 (g{r.generationsRun}{r.stateSnapshot ? "✓" : ""})
               </span>
             </span>

@@ -201,7 +201,7 @@ export function LexiconView() {
         {hiddenCount > 0 && (
           <span className="lexicon-filter-hint">{hiddenCount} hidden</span>
         )}
-        <div style={{ marginLeft: "auto" }}>
+        <div className="ml-auto">
           <ScriptPicker />
         </div>
       </div>
@@ -222,7 +222,7 @@ export function LexiconView() {
           aria-label="Search meanings"
           style={{ flex: "1 1 200px", fontSize: "var(--fs-2)" }}
         />
-        <label style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+        <label className="label-line">
           sort:&nbsp;
           <select
             value={sort}
@@ -273,7 +273,7 @@ export function LexiconView() {
             toggleCompare={toggleCompare}
           />
         ) : visibleLeaves.length === 0 ? (
-          <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
+          <div className="section-empty">
             {filter === "starred"
               ? "No languages starred yet. Click ☆ on a column header to star one."
               : "No languages match this filter."}

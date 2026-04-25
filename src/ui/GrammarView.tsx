@@ -30,8 +30,8 @@ export function GrammarView() {
             }}
           >
             <strong>{selected.name}</strong>{" "}
-            {selected.extinct && <span style={{ color: "var(--danger)" }}>(extinct)</span>}
-            <span style={{ marginLeft: "auto" }}>
+            {selected.extinct && <span className="t-danger">(extinct)</span>}
+            <span className="ml-auto">
               <ScriptPicker />
             </span>
           </div>
@@ -40,7 +40,7 @@ export function GrammarView() {
           <ParadigmTable lang={selected} />
         </>
       ) : (
-        <div style={{ color: "var(--muted)" }}>Select a language to view grammar.</div>
+        <div className="t-muted">Select a language to view grammar.</div>
       )}
 
       <div style={{ marginTop: 12, display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -112,7 +112,7 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
         {demo && (
           <>
             {" — "}
-            showing "<span style={{ color: "var(--text)" }}>{demo}</span>" inflected
+            showing "<span className="t-text">{demo}</span>" inflected
           </>
         )}
       </div>

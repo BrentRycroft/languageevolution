@@ -1,7 +1,7 @@
 import type { Language, LanguageTree } from "../types";
 import type { Rng } from "../rng";
 import { sharedEdgeCount, territoryCentroid, type WorldMap } from "./map";
-import { leafIds } from "../tree/split";
+import { leafIds } from "../tree/leafIds";
 
 /**
  * Territory dynamics. Each language holds a contiguous (or nearly so)

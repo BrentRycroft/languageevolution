@@ -52,8 +52,7 @@ export function AboutModal({ onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Close"
-            className="ghost icon-only"
-            style={{ marginLeft: "auto" }}
+            className="ghost icon-only ml-auto"
           >
             <CloseIcon size={16} />
           </button>
@@ -67,12 +66,12 @@ export function AboutModal({ onClose }: Props) {
             all deterministically from a seed.
           </p>
           <p>
-            <strong style={{ color: "var(--text)" }}>Tech:</strong> React + Zustand + TypeScript,
+            <strong className="t-text">Tech:</strong> React + Zustand + TypeScript,
             Recharts, d3-hierarchy, WebLLM (Ministral 3B). All state lives in
             your browser. No server-side anything.
           </p>
           <p>
-            <strong style={{ color: "var(--text)" }}>Tips:</strong> press <kbd>?</kbd> for
+            <strong className="t-text">Tips:</strong> press <kbd>?</kbd> for
             keyboard shortcuts, open the <em>Glossary</em> tab to learn what
             the rule families and shift taxa mean, and the <em>Sound laws</em>{" "}
             tab to read the procedurally-invented rules live.
