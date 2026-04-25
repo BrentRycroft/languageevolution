@@ -352,6 +352,20 @@ function realiseNP(
     if (ctx.possPos === "pre") out.push(...possTokens);
   }
   out.push(...ppTokens);
+  // Coordination — emit `... CONJ <coord-NP>` so "the king and the
+  // wolf" surfaces both members joined by the language's "and".
+  if (np.coord) {
+    const cf = closedClassForm(lang, np.coord.lemma) ?? [];
+    if (cf.length > 0) {
+      out.push({
+        surface: cf.join(""),
+        english: np.coord.lemma,
+        role: "DET" as const,
+        resolution: "concept",
+      });
+    }
+    out.push(...realiseNP(np.coord.np, lang, ctx, role));
+  }
   return out;
 }
 
@@ -526,6 +540,7 @@ function populateForms(s: Sentence, deps: RealiseDeps): void {
     }
     if (np.possessor) visitNP(np.possessor);
     for (const pp of np.pps) visitNP(pp.np);
+    if (np.coord) visitNP(np.coord.np);
   };
   visitNP(s.subject);
   if (s.predicate.object) visitNP(s.predicate.object);

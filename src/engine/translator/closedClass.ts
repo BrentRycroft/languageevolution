@@ -29,6 +29,13 @@ export type ClosedClassLemma =
   | "because" | "when" | "while" | "if"
   | "not"
   | "very" | "now" | "then"
+  // Demonstratives — every language synthesises a distinct token
+  // even when the language's lexicon also has "this"/"that".
+  | "this" | "that"
+  // Possessive determiners — each language synthesises distinct
+  // tokens. Languages that conflate (e.g. genitive of pronoun)
+  // ignore the synthesised form via the open-class lookup chain.
+  | "my" | "your" | "his" | "her" | "its" | "our" | "their"
   // Numeral classifier: synthesised once per language; emitted
   // between numeral + noun when `lang.grammar.classifierSystem` is
   // true (Mandarin 个, Japanese 本, etc.).
@@ -46,6 +53,8 @@ const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "because", "when", "while", "if",
   "not",
   "very", "now", "then",
+  "this", "that",
+  "my", "your", "his", "her", "its", "our", "their",
   "CLF", "Q",
 ];
 

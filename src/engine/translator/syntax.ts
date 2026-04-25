@@ -85,6 +85,13 @@ export interface NP {
   numeral?: { lemma: string };
   /** Prepositional / postpositional phrase modifying the head. */
   pps: PP[];
+  /**
+   * Coordinated NP joined by `coord.lemma` ("and"/"or"/"but"). The
+   * coordinated NP shares this NP's syntactic role, so a coordinated
+   * subject still gets verb agreement from the leftmost head's
+   * features. Recursive — supports "X and Y and Z" via nesting.
+   */
+  coord?: { lemma: string; np: NP };
 }
 
 export interface PP {
