@@ -188,7 +188,12 @@ export const CATALOG: SoundChange[] = [
     category: "deletion",
     description: "Drop word-final vowel (if a nucleus still remains).",
     probabilityFor: (w) => {
-      if (w.length < 3) return 0;
+      // Minimum word-length floor for content words. Without this
+      // every apocope cycle eats the word until it hits the
+      // hard-floor in `wordShape.isFormLegal` (length 2). Bumping
+      // the per-word floor to 4 keeps the surface lengths in the
+      // 3-6 range that's typical for attested content words.
+      if (w.length < 4) return 0;
       if (!isVowel(w[w.length - 1]!)) return 0;
       // Block deletion if the final vowel is the last remaining nucleus
       // — otherwise the word collapses to an all-consonant form like
@@ -225,9 +230,13 @@ export const CATALOG: SoundChange[] = [
     label: "CC → C / #_",
     category: "deletion",
     description: "Simplify word-initial consonant cluster.",
-    probabilityFor: (w) => (w.length >= 2 && isConsonant(w[0]!) && isConsonant(w[1]!) ? 0.08 : 0),
+    probabilityFor: (w) =>
+      // Length floor: keep content words at ≥3 phonemes after the
+      // reduction. Two-phoneme words are already at the legal
+      // minimum and shouldn't get shorter.
+      w.length >= 4 && isConsonant(w[0]!) && isConsonant(w[1]!) ? 0.08 : 0,
     apply: (word) => {
-      if (word.length < 2) return word;
+      if (word.length < 4) return word;
       if (!(isConsonant(word[0]!) && isConsonant(word[1]!))) return word;
       return word.slice(1);
     },
