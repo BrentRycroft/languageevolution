@@ -630,9 +630,33 @@ export function translateSentence(lang: Language, english: string): SentenceTran
   // we can later attach an enclitic article to the corresponding noun.
   const openClassByIndex = new Map<number, TranslatedToken>();
 
+  // Negation surfaces in the legacy fallback even when no clause
+  // structure was recoverable. Without this, "the man not" → just
+  // "wihro" — silently dropping the user's intended negation.
+  // Reserved for future "force-emit a copula" heuristic — currently
+  // unused, but keeps the negator-surfacing logic below readable.
+  void englishTokens;
+
   for (let i = 0; i < englishTokens.length; i++) {
     const tok = englishTokens[i]!;
-    if (tok.tag === "PUNCT") continue;
+    if (tok.tag === "PUNCT") {
+      // PUNCT in our tokeniser is overloaded: real punctuation AND
+      // negators (not/never/n't, tagged PUNCT to keep the parser
+      // from pulling them into NPs). Surface the negator inline so
+      // the legacy path still shows "not".
+      if (tok.lemma === "not" || tok.lemma === "n't" || tok.lemma === "never") {
+        const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
+        targetTokens.push({
+          englishLemma: "not",
+          englishTag: "PUNCT",
+          targetForm: negForm,
+          targetSurface: negForm.join(""),
+          glossNote: "neg",
+          resolution: "concept",
+        });
+      }
+      continue;
+    }
 
     // ------ closed-class branches ------
     if (tok.tag === "AUX") {

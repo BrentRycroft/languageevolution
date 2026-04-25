@@ -336,6 +336,13 @@ function realiseVerb(
 ): RealisedToken[] {
   let form = vp.verb.baseForm;
   const meaning = vp.verb.lemma;
+  // Zero-copula detection: when the verb is the copula "be" and the
+  // language doesn't carry a `be` lexeme (Russian, Mandarin, Toki
+  // Pona, Hebrew-present, …), drop the verb token entirely and rely
+  // on subject + complement to carry the meaning. We capture the
+  // signal here, BEFORE any inflection paradigm gets a chance to
+  // turn the empty stem into a phantom affix-only token like "ti".
+  const isZeroCopula = vp.verb.lemma === "be" && form.length === 0;
 
   // Noun incorporation: prepend the incorporated object root to the
   // verb stem, then run all other affix derivations on the fused
@@ -420,6 +427,11 @@ function realiseVerb(
   // Negation (applied AFTER the inflection stack so morphological
   // negation sits on the inflected form).
   if (negated) {
+    if (isZeroCopula) {
+      // Zero-copula + negated → just emit the standalone NEG token.
+      const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
+      return [{ surface: negForm.join(""), english: "not", role: "NEG", resolution: "concept" }];
+    }
     if (negPos === "prefix" || negPos === "suffix") {
       const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
       form = negPos === "prefix" ? [...negForm, ...form] : [...form, ...negForm];
@@ -430,6 +442,7 @@ function realiseVerb(
     const negTok: RealisedToken = { surface: negForm.join(""), english: "not", role: "NEG", resolution: "concept" };
     return negPos === "pre-verb" ? [negTok, verbTok] : [verbTok, negTok];
   }
+  if (isZeroCopula) return [];
   return [{ surface: form.join(""), english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
 }
 
