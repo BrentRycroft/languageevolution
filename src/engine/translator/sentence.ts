@@ -234,6 +234,13 @@ function stripNounSuffix(s: string): string {
   if (IRREGULAR_PLURALS[s]) return IRREGULAR_PLURALS[s]!;
   if (s.length >= 4 && s.endsWith("ies")) return s.slice(0, -3) + "y";
   if (s.length >= 4 && s.endsWith("ses")) return s.slice(0, -2);
+  // -ves → -f / -fe (wolves → wolf, knives → knife). Pure heuristic;
+  // words like "saves" (verb) shouldn't reach here because the verb
+  // detector fires first on -es endings via IRREGULAR_VERBS.
+  if (s.length >= 5 && s.endsWith("ves")) {
+    const stem = s.slice(0, -3);
+    return stem + "f";
+  }
   if (s.length >= 3 && s.endsWith("s") && !s.endsWith("ss")) return s.slice(0, -1);
   return s;
 }
@@ -262,9 +269,17 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     }
     // Closed-class checks (most specific first).
     if (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w)) {
+      // Object-form pronouns alias to the subject lemma so the
+      // dictionary resolution chain finds them under "i" / "he" /
+      // "she" / "we" / "they". The role/case from PRONOUN_FEATURES
+      // still carries through so case-marking morphology still
+      // fires on the right form.
+      const PRONOUN_LEMMA: Record<string, string> = {
+        me: "i", him: "he", her: "she", us: "we", them: "they",
+      };
       tokens.push({
         surface: w,
-        lemma: w,
+        lemma: PRONOUN_LEMMA[w] ?? w,
         tag: "PRON",
         features: { ...(PRONOUN_FEATURES[w] ?? {}) },
       });
@@ -755,7 +770,12 @@ export function translateSentence(lang: Language, english: string): SentenceTran
         englishLemma: tok.lemma,
         englishTag: tok.tag,
         targetForm: [],
-        targetSurface: `[${tok.lemma}]`,
+        // Unresolved English lemma — surface in typographic
+        // quotation marks so the reader knows it's a passthrough,
+        // and keep the token in surface order so the rest of the
+        // sentence still scans grammatically. Was previously
+        // `[lemma]` — switched to "lemma" per user request.
+        targetSurface: `“${tok.lemma}”`,
         glossNote: "?",
         resolution,
       });

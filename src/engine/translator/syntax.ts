@@ -101,6 +101,14 @@ export interface VP {
   /** Adverbial PPs and bare adverbs (rendered after the verb). */
   pps: PP[];
   adverbs: AdjRef[];
+  /**
+   * Predicate complement of a copula clause: the adjective in
+   * "X is happy" or the locative adverb in "X is here". Surfaces
+   * after the verb in SVO realisation and lets the realiser drop
+   * the verb in zero-copula languages while keeping subject +
+   * complement intact ("X happy", "X here").
+   */
+  complement?: AdjRef[];
 }
 
 export interface Sentence {
@@ -112,4 +120,8 @@ export interface Sentence {
   /** True for yes/no questions. Surfaces per `interrogativeStrategy`:
    *  particle / inversion / intonation. */
   interrogative?: boolean;
+  /** Leading discourse coordinator ("And he ...", "But he ...").
+   *  Surfaces before the subject so the connective isn't silently
+   *  lost. */
+  leadingConj?: { lemma: string };
 }

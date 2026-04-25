@@ -90,13 +90,28 @@ export function realiseSentence(
     realisePP(pp, lang, { articlePresence, caseStrategy, adjPos, possPos, numPos }),
   );
   const advTokens: RealisedToken[] = s.predicate.adverbs.flatMap((a) => {
-    if (a.baseForm.length === 0) return [];
     return [{
-      surface: a.baseForm.join(""),
+      surface: a.baseForm.length > 0 ? a.baseForm.join("") : `“${a.lemma}”`,
       english: a.lemma,
       role: "ADV" as const,
       resolution: a.resolution,
     }];
+  });
+  // Predicate complement: adjective(s) following a copula. Render
+  // with adj.num.pl agreement when the subject is plural (ADJ-noun
+  // agreement bleeds onto predicate adjectives in many languages).
+  const complementTokens: RealisedToken[] = (s.predicate.complement ?? []).map((a) => {
+    let af = a.baseForm;
+    if (af.length > 0 && s.subject.head.number === "pl") {
+      const p = lang.morphology.paradigms["adj.num.pl"];
+      if (p) af = inflect(af, p, lang, a.lemma);
+    }
+    return {
+      surface: af.length > 0 ? af.join("") : `“${a.lemma}”`,
+      english: a.lemma,
+      role: "ADJ" as const,
+      resolution: a.resolution,
+    };
   });
 
   // Prodrop: if the language drops pronouns and the subject is a
@@ -119,6 +134,19 @@ export function realiseSentence(
     O: objectTokens,
   };
   const out: RealisedToken[] = [];
+  // Leading discourse coordinator ("and", "but", "or") surfaces
+  // first so the connective isn't silently lost.
+  if (s.leadingConj) {
+    const cf = closedClassForm(lang, s.leadingConj.lemma) ?? [];
+    if (cf.length > 0) {
+      out.push({
+        surface: cf.join(""),
+        english: s.leadingConj.lemma,
+        role: "DET",
+        resolution: "concept",
+      });
+    }
+  }
   // Yes/no question: emit per the language's interrogative strategy.
   // - "particle"   prepend or append the synthesised Q particle
   // - "inversion"  put V before S regardless of word order
@@ -133,6 +161,11 @@ export function realiseSentence(
   } else {
     for (const k of order) out.push(...slot[k]);
   }
+  // Predicate complement (copula): emit after the verb so output
+  // reads "X is happy" / "X is here" naturally. In zero-copula
+  // languages where verbTokens is empty, this still surfaces and
+  // gives the equational reading "X happy".
+  out.push(...complementTokens);
   out.push(...predPpTokens);
   out.push(...advTokens);
 
@@ -197,7 +230,12 @@ function realiseNP(
     else if (ctx.articlePresence === "proclitic") headForm = [...af, ...headForm];
   }
   const head: RealisedToken = {
-    surface: headForm.join(""),
+    // Unresolved heads (lexicon miss) surface in typographic
+    // quotation marks so they stay visible in surface order rather
+    // than collapsing to "" and disappearing from the sentence.
+    surface: np.head.baseForm.length === 0
+      ? `“${np.head.lemma}”`
+      : headForm.join(""),
     english: np.head.lemma,
     role,
     resolution: np.head.resolution,
@@ -243,7 +281,10 @@ function realiseNP(
       if (p) af = inflect(af, p, lang, a.lemma);
     }
     return {
-      surface: af.join(""),
+      // Unresolved adjective in an NP — surface in quotation marks so
+      // "the [missing] dog" reads as "the “shiny” dog" rather than
+      // "the dog" (silent loss).
+      surface: a.baseForm.length === 0 ? `“${a.lemma}”` : af.join(""),
       english: a.lemma,
       role: "ADJ" as const,
       resolution: a.resolution,
@@ -443,7 +484,15 @@ function realiseVerb(
     return negPos === "pre-verb" ? [negTok, verbTok] : [verbTok, negTok];
   }
   if (isZeroCopula) return [];
-  return [{ surface: form.join(""), english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
+  // Unresolved verb (lexicon miss, but not the copula) — surface in
+  // quotation marks so the slot stays visible. Skip when an
+  // inflection paradigm has padded the empty stem with affixes
+  // alone (form non-empty but baseForm empty) — for those, render
+  // the affix-only stem so the structural marker is at least visible.
+  const verbSurface = vp.verb.baseForm.length === 0 && form.length === 0
+    ? `“${vp.verb.lemma}”`
+    : form.join("");
+  return [{ surface: verbSurface, english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
 }
 
 function sliceOrder(wo: Language["grammar"]["wordOrder"]): Array<"S" | "V" | "O"> {
@@ -485,6 +534,11 @@ function populateForms(s: Sentence, deps: RealiseDeps): void {
     const ar = deps.resolveOpen(a.lemma);
     if (ar.form) a.baseForm = ar.form;
     a.resolution = ar.resolution;
+  }
+  for (const c of s.predicate.complement ?? []) {
+    const cr = deps.resolveOpen(c.lemma);
+    if (cr.form) c.baseForm = cr.form;
+    c.resolution = cr.resolution;
   }
   const vr = deps.resolveOpen(s.predicate.verb.lemma);
   if (vr.form) s.predicate.verb.baseForm = vr.form;
