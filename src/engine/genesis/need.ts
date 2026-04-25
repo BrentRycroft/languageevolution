@@ -1,7 +1,7 @@
 import type { Language, LanguageTree, Meaning } from "../types";
 import { SEMANTIC_CLUSTERS, clusterOf } from "../semantics/clusters";
 import { BASIC_240 } from "../lexicon/basic240";
-import { tierOf, type Tier } from "../lexicon/concepts";
+import { CONCEPT_IDS, CONCEPTS, tierOf, type Tier } from "../lexicon/concepts";
 import { leafIds } from "../tree/split";
 
 /**
@@ -55,7 +55,13 @@ export function lexicalNeed(
   }
 
   const tier = (lang.culturalTier ?? 0) as Tier;
-  for (const m of BASIC_240) {
+  // Need vector now spans the whole concept registry, not just
+  // BASIC_240 — so tier-2/3 vocabulary becomes coinable for
+  // languages that have advanced. The tier gate below filters
+  // out concepts above the language's current tier.
+  const basicSet = BASIC_240 as readonly Meaning[];
+  const basicSetLookup = new Set(basicSet);
+  for (const m of CONCEPT_IDS) {
     if (lex[m]) {
       out[m] = 0;
       continue;
@@ -69,14 +75,23 @@ export function lexicalNeed(
       continue;
     }
     let score = 0;
-    // Cluster underpopulation
-    const cl = clusterOf(m);
-    if (cl) {
+    // Cluster underpopulation. Only consults the cluster-coverage
+    // map for BASIC_240 members; expansion-only concepts get a flat
+    // baseline (the cluster math is calibrated against BASIC_240
+    // sizes so we'd over-coin if every expansion concept counted
+    // toward the same denominator).
+    const cl = clusterOf(m) ?? CONCEPTS[m]?.cluster;
+    if (cl && basicSetLookup.has(m)) {
       const info = clusterCounts[cl];
       if (info && info.total > 0) {
         const coverage = info.have / info.total;
         score += Math.max(0, 1 - coverage) * 0.6;
       }
+    } else if (!basicSetLookup.has(m)) {
+      // Expansion-only concept — give it a small baseline so it can
+      // surface, but lower than the BASIC_240 coverage-driven score
+      // so the basic vocabulary still fills first.
+      score += 0.15;
     }
     // Sister pressure
     let sistersWithIt = 0;

@@ -3,6 +3,7 @@ import { BASIC_240 } from "./basic240";
 import { posOf, type POS } from "./pos";
 import { clusterOf } from "../semantics/clusters";
 import { frequencyFor } from "./frequency";
+import { EXPANDED_CONCEPTS } from "./expanded_concepts";
 
 /**
  * The concept registry: a language-agnostic inventory of meanings that
@@ -256,6 +257,22 @@ function buildRegistry(): Record<Meaning, Concept> {
       cluster,
       tier,
       frequencyClass,
+      colexWith: nbr ? Array.from(nbr).sort() : undefined,
+    };
+  }
+  // Layer the expanded concepts on top. Anything already in the
+  // BASIC_240 set wins (we don't want a tier-3 expansion to override
+  // a tier-0 basic word). Expanded concepts ship with explicit tier
+  // + cluster + POS so we don't consult `clusterOf` / `posOf` for them.
+  for (const exp of EXPANDED_CONCEPTS) {
+    if (out[exp.id]) continue;
+    const nbr = colexOf[exp.id];
+    out[exp.id] = {
+      id: exp.id,
+      pos: exp.pos,
+      cluster: exp.cluster,
+      tier: exp.tier,
+      frequencyClass: inferFrequencyClass(exp.id),
       colexWith: nbr ? Array.from(nbr).sort() : undefined,
     };
   }
