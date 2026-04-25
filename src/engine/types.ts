@@ -344,6 +344,40 @@ export interface GrammarFeatures {
   possessorPosition?: "pre" | "post";
   numeralPosition?: "pre" | "post";
   negationPosition?: "pre-verb" | "post-verb" | "prefix" | "suffix";
+  /**
+   * Aspect / mood / voice / interrogative typology added in PR B
+   * follow-up. All optional; defaults applied at read-site.
+   *
+   * `aspectMarking`        — "none" | "perfective" | "imperfective" |
+   *                          "progressive". Drives which verb.aspect.*
+   *                          paradigm fires by default; tokeniser
+   *                          cues (e.g. "is going") override per-line.
+   * `voice`                — "active" | "mixed". When `mixed` the
+   *                          translator emits passive when the input
+   *                          contains "is/was/were Xed" pattern, via
+   *                          verb.voice.pass.
+   * `moodMarking`          — declarative | subjunctive | imperative.
+   *                          Cues: "should/might/may" → subjunctive;
+   *                          imperative input "do X!" → imperative.
+   * `interrogativeStrategy` — how yes/no questions surface:
+   *                          "particle"  = a sentence-final / initial
+   *                                        particle (Mandarin 吗,
+   *                                          Japanese か).
+   *                          "inversion" = subject-verb inversion
+   *                                        (English "Is the king …").
+   *                          "intonation" = no morphological cue;
+   *                                        the realiser appends "?"
+   *                                        as a marker.
+   * `interrogativeParticle` — when `interrogativeStrategy` is
+   *                          "particle", the lemma the closed-class
+   *                          table renders for it (treated like a
+   *                          discourse.q particle).
+   */
+  aspectMarking?: "none" | "perfective" | "imperfective" | "progressive";
+  voice?: "active" | "mixed";
+  moodMarking?: "declarative" | "subjunctive" | "imperative";
+  interrogativeStrategy?: "particle" | "inversion" | "intonation";
+  interrogativeParticle?: "initial" | "final";
 }
 
 export interface SimulationConfig {

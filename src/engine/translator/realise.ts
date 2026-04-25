@@ -62,12 +62,30 @@ export function realiseSentence(
   const subject = realiseNP(s.subject, lang, {
     articlePresence, caseStrategy, adjPos, possPos, numPos,
   }, "S");
-  const objectTokens = s.predicate.object
-    ? realiseNP(s.predicate.object, lang, {
+  // Noun incorporation (polysynthetic): when `incorporates` is on AND
+  // the object NP is a bare noun (no determiner, adjectives, possessor,
+  // PPs), the object's head root fuses into the verb stem and the
+  // object NP emits no surface tokens. This mirrors Mohawk-style
+  // object-noun incorporation. Modified objects (with adjectives,
+  // possessors, etc.) stay separate — realistic, since real
+  // polysynthetic languages don't usually incorporate modified NPs.
+  const obj = s.predicate.object;
+  const canIncorporate =
+    !!lang.grammar.incorporates &&
+    !!obj &&
+    obj.adjectives.length === 0 &&
+    !obj.determiner &&
+    !obj.possessor &&
+    !obj.numeral &&
+    obj.pps.length === 0 &&
+    !obj.head.isPronoun;
+  const incorporatedRoot = canIncorporate && obj ? obj.head.baseForm : null;
+  const objectTokens = canIncorporate || !obj
+    ? []
+    : realiseNP(obj, lang, {
         articlePresence, caseStrategy, adjPos, possPos, numPos,
-      }, "O")
-    : [];
-  const verbTokens = realiseVerb(s.predicate, lang, s.negated, negPos);
+      }, "O");
+  const verbTokens = realiseVerb(s.predicate, lang, s.negated, negPos, incorporatedRoot);
   const predPpTokens = s.predicate.pps.flatMap((pp) =>
     realisePP(pp, lang, { articlePresence, caseStrategy, adjPos, possPos, numPos }),
   );
@@ -101,9 +119,40 @@ export function realiseSentence(
     O: objectTokens,
   };
   const out: RealisedToken[] = [];
-  for (const k of order) out.push(...slot[k]);
+  // Yes/no question: emit per the language's interrogative strategy.
+  // - "particle"   prepend or append the synthesised Q particle
+  // - "inversion"  put V before S regardless of word order
+  // - "intonation" append a "?" marker token
+  const isQuestion = !!s.interrogative;
+  const interStrategy = lang.grammar.interrogativeStrategy ?? "intonation";
+  if (isQuestion && interStrategy === "inversion") {
+    // Force V→first, S follows, O last (mirrors English yes/no).
+    out.push(...verbTokens);
+    out.push(...subjectFinal);
+    out.push(...objectTokens);
+  } else {
+    for (const k of order) out.push(...slot[k]);
+  }
   out.push(...predPpTokens);
   out.push(...advTokens);
+
+  if (isQuestion && interStrategy === "particle") {
+    const qf = closedClassForm(lang, "Q") ?? [];
+    if (qf.length > 0) {
+      const qTok: RealisedToken = {
+        surface: qf.join(""),
+        english: "Q",
+        role: "DET",
+        resolution: "concept",
+      };
+      const placement = lang.grammar.interrogativeParticle ?? "final";
+      if (placement === "initial") out.unshift(qTok);
+      else out.push(qTok);
+    }
+  }
+  if (isQuestion && interStrategy === "intonation") {
+    out.push({ surface: "?", english: "?", role: "DET", resolution: "concept" });
+  }
   return out;
 }
 
@@ -119,7 +168,7 @@ function realiseNP(
   np: NP,
   lang: Language,
   ctx: NPCtx,
-  role: "S" | "O" | "PP-NP",
+  role: "S" | "O" | "PP-NP" | "POSS",
 ): RealisedToken[] {
   // Inflect the head form for case + number.
   let headForm = np.head.baseForm;
@@ -128,8 +177,16 @@ function realiseNP(
     const p = lang.morphology.paradigms["noun.num.pl"];
     if (p) headForm = inflect(headForm, p, lang, meaning);
   }
-  if (np.head.case === "acc" && lang.grammar.hasCase) {
-    const p = lang.morphology.paradigms["noun.case.acc"];
+  // Case morphology — the parser tags possessor NPs with role POSS so
+  // the realiser can route through verb.case.gen instead of nom/acc.
+  // hasCase still gates emission; if a language has no case, the
+  // possessorPosition + caseStrategy alone signal genitive relations.
+  const caseSlot: import("../morphology/types").MorphCategory | null =
+    role === "POSS" ? "noun.case.gen"
+    : np.head.case === "acc" ? "noun.case.acc"
+    : null;
+  if (caseSlot && lang.grammar.hasCase) {
+    const p = lang.morphology.paradigms[caseSlot];
     if (p) headForm = inflect(headForm, p, lang, meaning);
   }
   // Article attachment (enclitic / proclitic) on the head form.
@@ -166,22 +223,68 @@ function realiseNP(
     }
   }
 
-  const adjTokens: RealisedToken[] = np.adjectives.map((a) => ({
-    surface: a.baseForm.join(""),
-    english: a.lemma,
-    role: "ADJ" as const,
-    resolution: a.resolution,
-  }));
+  const adjTokens: RealisedToken[] = np.adjectives.map((a) => {
+    let af = a.baseForm;
+    // Adj-noun number agreement: when the head is plural and the
+    // language has an `adj.num.pl` paradigm, the adjective takes it
+    // (Spanish-style "los perros grandes"). Without an explicit
+    // adjective-plural paradigm we leave the adjective bare.
+    if (np.head.number === "pl") {
+      const p = lang.morphology.paradigms["adj.num.pl"];
+      if (p) af = inflect(af, p, lang, a.lemma);
+    }
+    // Comparative / superlative degree morphology — applied AFTER
+    // number agreement so a plural-comparative reads natural.
+    if (a.degree === "comparative") {
+      const p = lang.morphology.paradigms["adj.degree.cmp"];
+      if (p) af = inflect(af, p, lang, a.lemma);
+    } else if (a.degree === "superlative") {
+      const p = lang.morphology.paradigms["adj.degree.sup"];
+      if (p) af = inflect(af, p, lang, a.lemma);
+    }
+    return {
+      surface: af.join(""),
+      english: a.lemma,
+      role: "ADJ" as const,
+      resolution: a.resolution,
+    };
+  });
   const numTokens: RealisedToken[] = np.numeral
     ? (() => {
-        const nf = closedClassForm(lang, np.numeral!.lemma) ?? [];
-        return nf.length > 0
-          ? [{ surface: nf.join(""), english: np.numeral!.lemma, role: "NUM" as const }]
-          : [];
+        // Numerals come from the open-class lexicon (each language
+        // names its own one/two/three/...), not the closed-class
+        // table. Fall through to the closed-class table only when the
+        // lexicon doesn't have the numeral.
+        const lex = lang.lexicon[np.numeral!.lemma];
+        const nf = lex ?? closedClassForm(lang, np.numeral!.lemma) ?? [];
+        const out: RealisedToken[] = [];
+        if (nf.length > 0) {
+          out.push({
+            surface: nf.join(""),
+            english: np.numeral!.lemma,
+            role: "NUM" as const,
+            resolution: lex ? "direct" : "concept",
+          });
+          // Mandarin-style numeral classifier: when classifierSystem
+          // is on, every counted noun requires a classifier between
+          // the numeral and the noun head.
+          if (lang.grammar.classifierSystem) {
+            const cf = closedClassForm(lang, "CLF") ?? [];
+            if (cf.length > 0) {
+              out.push({
+                surface: cf.join(""),
+                english: "CLF",
+                role: "NUM" as const,
+                resolution: "concept",
+              });
+            }
+          }
+        }
+        return out;
       })()
     : [];
   const possTokens: RealisedToken[] = np.possessor
-    ? realiseNP(np.possessor, lang, ctx, "PP-NP").map((t) => ({ ...t, role: "POSS" as const }))
+    ? realiseNP(np.possessor, lang, ctx, "POSS")
     : [];
   const ppTokens: RealisedToken[] = np.pps.flatMap((pp) => realisePP(pp, lang, ctx));
 
@@ -229,31 +332,93 @@ function realiseVerb(
   lang: Language,
   negated: boolean,
   negPos: NonNullable<Language["grammar"]["negationPosition"]>,
+  incorporatedRoot: WordForm | null,
 ): RealisedToken[] {
   let form = vp.verb.baseForm;
   const meaning = vp.verb.lemma;
-  // Tense
+
+  // Noun incorporation: prepend the incorporated object root to the
+  // verb stem, then run all other affix derivations on the fused
+  // stem. Polysynthetic languages do this: the incorporated noun
+  // doesn't surface separately.
+  if (incorporatedRoot && incorporatedRoot.length > 0) {
+    form = [...incorporatedRoot, ...form];
+  }
+
+  // Pre-collect every paradigm we'll apply, in canonical order:
+  // tense → aspect → mood → voice → person/number. The order matters
+  // for fusional languages where the affixes pile up; agglutinative
+  // languages keep them distinct.
+  const stack: import("../morphology/types").MorphCategory[] = [];
   const tenseCat: MorphCategory | null =
     vp.verb.tense === "past" ? "verb.tense.past" :
     vp.verb.tense === "future" ? "verb.tense.fut" : null;
-  if (tenseCat) {
-    const p = lang.morphology.paradigms[tenseCat];
-    if (p) form = inflect(form, p, lang, meaning);
-  }
+  if (tenseCat) stack.push(tenseCat);
+  const aspectCat: MorphCategory | null =
+    vp.verb.aspect === "perfective" ? "verb.aspect.pfv" :
+    vp.verb.aspect === "imperfective" ? "verb.aspect.ipfv" :
+    vp.verb.aspect === "progressive" ? "verb.aspect.prog" : null;
+  if (aspectCat) stack.push(aspectCat);
+  const moodCat: MorphCategory | null =
+    vp.verb.mood === "subjunctive" ? "verb.mood.subj" :
+    vp.verb.mood === "imperative" ? "verb.mood.imp" : null;
+  if (moodCat) stack.push(moodCat);
+  if (vp.verb.voice === "passive") stack.push("verb.voice.pass");
+
   // Subject-verb agreement: pick the most-specific person+number paradigm.
   const ps = vp.verb.subjectPerson;
   const ns = vp.verb.subjectNumber;
   if (ps && ns) {
     const cat = `verb.person.${ps}${ns}` as MorphCategory;
-    const p = lang.morphology.paradigms[cat];
-    if (p) form = inflect(form, p, lang, meaning);
-    else if (ps === "3" && ns === "sg") {
-      // Fallback: legacy 3sg paradigm.
-      const p3 = lang.morphology.paradigms["verb.person.3sg"];
-      if (p3) form = inflect(form, p3, lang, meaning);
+    if (lang.morphology.paradigms[cat]) {
+      stack.push(cat);
+    } else if (ps === "3" && ns === "sg" && lang.morphology.paradigms["verb.person.3sg"]) {
+      stack.push("verb.person.3sg");
     }
   }
-  // Negation.
+
+  // SynthesisIndex gate: low-synthesis languages drop everything
+  // beyond the first inflection (analytical-style — they'd express
+  // the rest periphrastically with auxiliaries we don't emit yet).
+  // High-synthesis languages keep the whole stack.
+  const synth = lang.grammar.synthesisIndex ?? 2.0;
+  const cap = Math.max(1, Math.round(synth));
+  const applied = stack.slice(0, cap);
+
+  // Apply each paradigm in order. Agglutinative (low fusionIndex)
+  // keeps each affix distinct — the natural concatenation of `inflect`
+  // already does this. Fusional (high fusionIndex) merges adjacent
+  // affixes by collapsing duplicated phonemes at the seam — a coarse
+  // approximation but enough to make fusional output visibly tighter.
+  const fusion = lang.grammar.fusionIndex ?? 0.5;
+  for (const cat of applied) {
+    const p = lang.morphology.paradigms[cat];
+    if (!p) continue;
+    const before = form;
+    form = inflect(before, p, lang, meaning);
+    if (fusion >= 0.7 && p.position === "suffix") {
+      // Cheap fusion: if the new affix begins with the same phoneme
+      // the previous form ended with, drop the duplicate. This is a
+      // very rough proxy for fusion (a real model would use OT
+      // constraints), but it produces a visible difference between
+      // agglutinative and fusional output.
+      while (
+        form.length >= 2 &&
+        form[form.length - p.affix.length - 1] === p.affix[0]
+      ) {
+        form.splice(form.length - p.affix.length, 0); // no-op safe
+        break;
+      }
+      // Compress doubled adjacent phonemes at the new seam.
+      const seam = before.length;
+      if (seam > 0 && seam < form.length && form[seam - 1] === form[seam]) {
+        form.splice(seam, 1);
+      }
+    }
+  }
+
+  // Negation (applied AFTER the inflection stack so morphological
+  // negation sits on the inflected form).
   if (negated) {
     if (negPos === "prefix" || negPos === "suffix") {
       const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];

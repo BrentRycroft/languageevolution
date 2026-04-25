@@ -45,9 +45,82 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     }
   }
 
+  // ---- Interrogative detection ----
+  // Yes/no question if the input ends with "?" OR begins with an
+  // auxiliary (English "is the king ...", "do you ...", "will it ...").
+  let interrogative = false;
+  if (tokens.length > 0 && tokens[tokens.length - 1]!.lemma === "?") {
+    interrogative = true;
+  }
+  if (tokens.length > 0 && tokens[0]!.tag === "AUX") {
+    interrogative = true;
+  }
+
+  // ---- Aspect / mood / voice from auxiliary cues ----
+  // Walk the tokens left of the verb collecting auxiliary signatures.
+  let aspect: import("./syntax").Aspect | undefined;
+  let mood: import("./syntax").Mood | undefined;
+  let voice: import("./syntax").Voice | undefined;
+  for (let i = 0; i < verbIdx; i++) {
+    const t = tokens[i]!;
+    if (t.tag !== "AUX") continue;
+    const lem = t.lemma;
+    // Progressive: "is/are/was/were" + V-ing.
+    if (verbTok.surface.endsWith("ing") && (lem === "is" || lem === "are" || lem === "was" || lem === "were" || lem === "be")) {
+      aspect = "progressive";
+    }
+    // Perfective: "have/has/had" + V-ed (or irregular past participle).
+    if (lem === "have" || lem === "has" || lem === "had") {
+      aspect = "perfective";
+    }
+    // Subjunctive / dubitative cues.
+    if (lem === "should" || lem === "would" || lem === "might" || lem === "may") {
+      mood = "subjunctive";
+    }
+    // Passive: "is/are/was/were/be" + past-participle (V ends -ed or
+    // is in the past-participle form). This overlaps with progressive
+    // — we let `voice` win when the verb is past-tense in form.
+    if (
+      (lem === "is" || lem === "are" || lem === "was" || lem === "were" || lem === "be" || lem === "been") &&
+      (verbTok.surface.endsWith("ed") || verbTok.features.tense === "past")
+    ) {
+      voice = "passive";
+    }
+  }
+  // Imperative cues: input that has no overt subject AND starts with
+  // a bare verb signal an imperative ("go!", "see the king!"). We
+  // detect this lightly by checking the position of the verb at
+  // index 0.
+  if (verbIdx === 0) {
+    mood = "imperative";
+  }
+
   // ---- Subject NP: closest noun-phrase head to the LEFT of the verb ----
-  const subject = collectNP(tokens, verbIdx, "left");
-  if (!subject) return null;
+  // For imperatives (verb at idx 0) and yes/no questions starting with
+  // an auxiliary, the explicit subject may be missing on the left.
+  // Synthesize a 2sg "you" subject for imperatives so the realiser
+  // still has a Sentence to walk; for AUX-initial questions the real
+  // subject sits between AUX and V.
+  let subject = collectNP(tokens, verbIdx, "left");
+  if (!subject) {
+    if (verbIdx === 0 || (verbIdx > 0 && tokens[0]!.tag === "AUX")) {
+      subject = {
+        kind: "NP",
+        head: {
+          lemma: "you",
+          baseForm: [],
+          number: "sg",
+          case: "nom",
+          person: "2",
+          isPronoun: true,
+        },
+        adjectives: [],
+        pps: [],
+      };
+    } else {
+      return null;
+    }
+  }
 
   // ---- Object NP: closest noun-phrase head to the RIGHT of the verb ----
   const object = collectNP(tokens, verbIdx, "right") ?? undefined;
@@ -73,13 +146,16 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
       tense,
       subjectPerson,
       subjectNumber,
+      aspect,
+      mood,
+      voice,
     },
     object,
     pps,
     adverbs: collectAdverbs(tokens, consumed),
   };
 
-  return { kind: "S", subject, predicate, negated };
+  return { kind: "S", subject, predicate, negated, interrogative };
 }
 
 function collectNP(
@@ -114,18 +190,68 @@ function collectNP(
   }
   if (headIdx < 0) return null;
 
-  const headTok = tokens[headIdx]!;
-  const number_: Number_ = headTok.features.number === "pl" ? "pl" : "sg";
-  const person = (headTok.features.person ?? "3") as Person;
+  let headTokRef = tokens[headIdx]!;
+  let number_: Number_ = headTokRef.features.number === "pl" ? "pl" : "sg";
+  let person = (headTokRef.features.person ?? "3") as Person;
 
   // Walk back from the head collecting determiners, adjectives, numerals.
-  const adjectives: { lemma: string; baseForm: never[] }[] = [];
+  // Rewind for possessive "X of Y" — when the head we just located
+  // sits directly inside an "of"-PP (i.e. an "of" lies just before
+  // the head, optionally separated by a DET), then the *real* head
+  // is the noun before that "of", and our current head becomes the
+  // possessor. Without this, "the dog of the king sees" gets king as
+  // subject and dog drops out — unwanted.
+  let possessor: NP | undefined;
+  if (direction === "left") {
+    let scan = headIdx - 1;
+    while (scan >= 0 && tokens[scan]!.tag === "DET") scan--;
+    if (scan >= 0 && tokens[scan]!.tag === "PREP" && tokens[scan]!.lemma === "of") {
+      // Treat current head as the possessor; locate a new head before
+      // the "of".
+      let realHeadIdx = -1;
+      for (let i = scan - 1; i >= 0; i--) {
+        const t = tokens[i]!;
+        if (t.tag === "N" || t.tag === "PRON") {
+          realHeadIdx = i;
+          break;
+        }
+        if (t.tag === "V") break;
+      }
+      if (realHeadIdx >= 0) {
+        // Save the old head as the possessor.
+        possessor = {
+          kind: "NP",
+          head: {
+            lemma: headTokRef.lemma,
+            baseForm: [],
+            number: number_,
+            case: "gen",
+            person,
+            isPronoun: headTokRef.tag === "PRON",
+          },
+          adjectives: [],
+          pps: [],
+        };
+        // Swap to the real head.
+        headIdx = realHeadIdx;
+        headTokRef = tokens[headIdx]!;
+        number_ = headTokRef.features.number === "pl" ? "pl" : "sg";
+        person = (headTokRef.features.person ?? "3") as Person;
+      }
+    }
+  }
+  const adjectives: { lemma: string; baseForm: never[]; degree?: import("./syntax").Degree }[] = [];
   let determiner: { lemma: string } | undefined;
   let numeral: { lemma: string } | undefined;
   for (let i = headIdx - 1; i >= 0; i--) {
     const t = tokens[i]!;
     if (t.tag === "ADJ") {
-      adjectives.unshift({ lemma: t.lemma, baseForm: [] });
+      const deg = t.features.degree;
+      adjectives.unshift({
+        lemma: t.lemma,
+        baseForm: [],
+        ...(deg && deg !== "positive" ? { degree: deg } : {}),
+      });
       continue;
     }
     if (t.tag === "DET") {
@@ -139,14 +265,21 @@ function collectNP(
     break;
   }
 
-  // Walk forward collecting trailing PPs that modify this noun.
+  // Walk forward collecting trailing PPs that modify this noun. The
+  // first "of X" PP becomes the possessor (so "the dog of the king"
+  // surfaces with the king as a genitive-marked possessor); the rest
+  // become ordinary PPs.
   const pps: PP[] = [];
   for (let i = headIdx + 1; i < tokens.length; i++) {
     const t = tokens[i]!;
     if (t.tag !== "PREP") break;
     const sub = collectNP(tokens, i, "right");
     if (!sub) break;
-    pps.push({ kind: "PP", prep: { lemma: t.lemma }, np: sub });
+    if (t.lemma === "of" && !possessor) {
+      possessor = { ...sub, head: { ...sub.head, case: "gen" } };
+    } else {
+      pps.push({ kind: "PP", prep: { lemma: t.lemma }, np: sub });
+    }
     // Skip past the PP's NP.
     while (i + 1 < tokens.length && tokens[i + 1]!.tag !== "PREP") i++;
   }
@@ -154,16 +287,17 @@ function collectNP(
   return {
     kind: "NP",
     head: {
-      lemma: headTok.lemma,
+      lemma: headTokRef.lemma,
       baseForm: [],
       number: number_,
       case: direction === "left" ? "nom" : "acc",
       person,
-      isPronoun: headTok.tag === "PRON",
+      isPronoun: headTokRef.tag === "PRON",
     },
     determiner,
     adjectives,
     numeral,
+    possessor,
     pps,
   };
 }

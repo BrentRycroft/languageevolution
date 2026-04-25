@@ -27,4 +27,9 @@ export const DEFAULT_GRAMMAR: GrammarFeatures = {
   possessorPosition: "pre",
   numeralPosition: "pre",
   negationPosition: "pre-verb",
+  aspectMarking: "none",
+  voice: "active",
+  moodMarking: "declarative",
+  interrogativeStrategy: "intonation",
+  interrogativeParticle: "final",
 };

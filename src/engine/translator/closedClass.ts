@@ -28,7 +28,15 @@ export type ClosedClassLemma =
   | "and" | "or" | "but"
   | "because" | "when" | "while" | "if"
   | "not"
-  | "very" | "now" | "then";
+  | "very" | "now" | "then"
+  // Numeral classifier: synthesised once per language; emitted
+  // between numeral + noun when `lang.grammar.classifierSystem` is
+  // true (Mandarin 个, Japanese 本, etc.).
+  | "CLF"
+  // Yes/no question particle: synthesised once; emitted at the
+  // start or end of an interrogative when
+  // `lang.grammar.interrogativeStrategy === "particle"`.
+  | "Q";
 
 const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "the", "a",
@@ -38,6 +46,7 @@ const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "because", "when", "while", "if",
   "not",
   "very", "now", "then",
+  "CLF", "Q",
 ];
 
 /**

@@ -38,6 +38,9 @@ export interface EnglishToken {
     number?: "sg" | "pl";
     person?: "1" | "2" | "3";
     role?: "subject" | "object";
+    /** Adjective degree: comparative ("bigger") or superlative
+     *  ("biggest"). Default positive when absent. */
+    degree?: "positive" | "comparative" | "superlative";
   };
 }
 
@@ -84,9 +87,23 @@ const PREPOSITIONS = new Set([
   "into", "onto", "beside", "between", "without",
 ]);
 const CONJUNCTIONS = new Set(["and", "or", "but", "because", "so", "if", "when", "while", "though", "although"]);
-const AUX_VERBS = new Set(["am", "is", "are", "was", "were", "be", "been", "do", "does", "did", "will", "would", "have", "has", "had"]);
+const AUX_VERBS = new Set([
+  "am", "is", "are", "was", "were", "be", "been",
+  "do", "does", "did",
+  "will", "would", "shall", "should",
+  "can", "could", "may", "might", "must",
+  "have", "has", "had",
+]);
 const COPULAS = new Set(["am", "is", "are", "was", "were", "be"]);
 const NEGATORS = new Set(["not", "n't", "never"]);
+// Bare cardinal numerals.
+const BARE_NUMERALS = new Set([
+  "zero", "one", "two", "three", "four", "five", "six", "seven",
+  "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen",
+  "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
+  "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
+  "hundred", "thousand", "million",
+]);
 // Bare nouns whose surface form would otherwise trigger the -ing /
 // -ed verb heuristic (king, morning, evening, …) or the noun-fallback
 // stripping logic (loss → "los"). Checked BEFORE the verb heuristics
@@ -313,6 +330,12 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       tokens.push({ surface: w, lemma: w, tag: "NUM", features: {} });
       continue;
     }
+    // Bare cardinal numerals — needed so the tokenizer doesn't misread
+    // "three dogs" as N + N.
+    if (BARE_NUMERALS.has(w)) {
+      tokens.push({ surface: w, lemma: w, tag: "NUM", features: {} });
+      continue;
+    }
     // Suffix-based heuristics.
     if (w.length >= 3 && w.endsWith("ly")) {
       tokens.push({
@@ -337,8 +360,21 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     if (w.length >= 5 && (w.endsWith("er") || w.endsWith("est"))) {
       const stem = w.endsWith("est") ? w.slice(0, -3) : w.slice(0, -2);
       const stemY = stem.endsWith("i") ? stem.slice(0, -1) + "y" : stem;
-      if (COMPARATIVE_BASES.has(stem) || COMPARATIVE_BASES.has(stemY)) {
-        tokens.push({ surface: w, lemma: stemY, tag: "ADJ", features: {} });
+      // Doubled-final-consonant variant (`bigg(er)` → `big`,
+      // `runn(er)` → `run`). When the last two chars match, drop one.
+      const stemD =
+        stem.length >= 2 && stem[stem.length - 1] === stem[stem.length - 2]
+          ? stem.slice(0, -1)
+          : stem;
+      const candidates = [stem, stemY, stemD];
+      const found = candidates.find((c) => COMPARATIVE_BASES.has(c));
+      if (found) {
+        tokens.push({
+          surface: w,
+          lemma: found,
+          tag: "ADJ",
+          features: { degree: w.endsWith("est") ? "superlative" : "comparative" },
+        });
         continue;
       }
       // Otherwise fall through to noun/verb detection below.
@@ -740,7 +776,11 @@ export function translateSentence(lang: Language, english: string): SentenceTran
     ),
     lang.grammar.wordOrder,
   );
-  const arranged = arrangedTokens.map((t) => t.targetSurface);
+  // Filter out undefined entries — the legacy `rearrangeClause` can
+  // produce sparse arrays when targetTokens and the filtered
+  // englishTokens get out of sync due to closed-class extras.
+  const arrangedNonNull = arrangedTokens.filter((t): t is TranslatedToken => !!t);
+  const arranged = arrangedNonNull.map((t) => t.targetSurface);
 
   const notes = missing.length === 0
     ? `Resolved every word via the dictionary.`
@@ -749,7 +789,7 @@ export function translateSentence(lang: Language, english: string): SentenceTran
   return {
     english,
     englishTokens,
-    targetTokens: arrangedTokens,
+    targetTokens: arrangedNonNull,
     arranged,
     missing,
     notes,

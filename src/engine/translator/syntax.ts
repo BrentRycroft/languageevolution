@@ -39,6 +39,11 @@ export interface NounRef {
   resolution?: LemmaResolution;
 }
 
+export type Aspect = "perfective" | "imperfective" | "progressive";
+export type Mood = "declarative" | "subjunctive" | "imperative";
+export type Voice = "active" | "passive";
+export type Degree = "positive" | "comparative" | "superlative";
+
 export interface VerbRef {
   lemma: string;
   baseForm: WordForm;
@@ -47,12 +52,20 @@ export interface VerbRef {
   subjectPerson?: Person;
   subjectNumber?: Number_;
   resolution?: LemmaResolution;
+  /** Filled by the parser when the input carries a clear aspect cue
+   *  ("is X-ing" → progressive; "has X-ed" → perfective). */
+  aspect?: Aspect;
+  mood?: Mood;
+  voice?: Voice;
 }
 
 export interface AdjRef {
   lemma: string;
   baseForm: WordForm;
   resolution?: LemmaResolution;
+  /** Default `positive`; the tokeniser flags comparative ("bigger") /
+   *  superlative ("biggest") forms. */
+  degree?: Degree;
 }
 
 export interface PrepRef {
@@ -96,4 +109,7 @@ export interface Sentence {
   predicate: VP;
   /** Negated S — surfaces as morphological or syntactic negation. */
   negated: boolean;
+  /** True for yes/no questions. Surfaces per `interrogativeStrategy`:
+   *  particle / inversion / intonation. */
+  interrogative?: boolean;
 }
