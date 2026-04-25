@@ -1,4 +1,4 @@
-import type { EnglishToken } from "./sentence";
+import type { EnglishToken } from "./tokens";
 import type {
   NP,
   PP,

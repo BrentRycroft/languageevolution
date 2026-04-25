@@ -79,14 +79,13 @@ export function stepCreolization(
 
   // 1. Drastic morphology simplification — drop case + most paradigms,
   //    keep only plural and a single tense.
-  const survivors = ["noun.num.pl", "verb.tense.past"] as const;
-  const before = Object.keys(substrate.morphology.paradigms).length;
-  for (const cat of Object.keys(substrate.morphology.paradigms)) {
-    if (!survivors.includes(cat as never)) {
-      delete substrate.morphology.paradigms[cat as never];
-    }
+  const survivors: ReadonlySet<string> = new Set(["noun.num.pl", "verb.tense.past"]);
+  const paradigms = substrate.morphology.paradigms as Record<string, unknown>;
+  const before = Object.keys(paradigms).length;
+  for (const cat of Object.keys(paradigms)) {
+    if (!survivors.has(cat)) delete paradigms[cat];
   }
-  const after = Object.keys(substrate.morphology.paradigms).length;
+  const after = Object.keys(paradigms).length;
 
   // 2. Grammar profile shift toward analytical.
   substrate.grammar = {
