@@ -4,6 +4,8 @@ import { leafIds } from "../tree/split";
 import { isVowel } from "../phonology/ipa";
 import { isFormLegal } from "../phonology/wordShape";
 import { geoDistance } from "../geo";
+import type { WorldMap } from "../geo/map";
+import { arealShareAffinity } from "../geo/territory";
 
 export interface LoanEvent {
   donor: string;
@@ -38,6 +40,7 @@ export function tryBorrow(
   tree: LanguageTree,
   rng: Rng,
   probability: number,
+  worldMap?: WorldMap,
 ): LoanEvent | null {
   const donors = leafIds(tree).filter(
     (id) =>
@@ -47,13 +50,22 @@ export function tryBorrow(
   );
   if (donors.length === 0) return null;
 
-  // Weight each candidate donor by its map-space proximity to the
-  // recipient: affinity = half-life / (half-life + d). At d=0 this is 1;
-  // at d=half-life it's 0.5; at d→∞ it decays to 0. If none of the
-  // donors have coords yet (pre-Update-1 saves), fall back to uniform.
+  // Weight each candidate donor by contact affinity. When both
+  // languages have territory on the world map, use the cell-edge
+  // share metric (1 − exp(−sharedEdges / 3)) — strongest signal
+  // because two languages with a long border genuinely contact
+  // every generation. Otherwise fall back to centroid distance with
+  // the existing half-life decay (preserves behaviour for back-
+  // compat saves and tests).
   const recipCoords = recipient.coords;
   const weighted: Array<{ id: string; weight: number }> = donors.map((id) => {
-    const donorCoords = tree[id]!.language.coords;
+    const donor = tree[id]!.language;
+    if (worldMap && recipient.territory && donor.territory) {
+      const shareAffinity = arealShareAffinity(worldMap, recipient, donor);
+      // Boost slightly so non-touching neighbours can still borrow.
+      return { id, weight: 0.1 + shareAffinity };
+    }
+    const donorCoords = donor.coords;
     if (!recipCoords || !donorCoords) {
       return { id, weight: 1 };
     }

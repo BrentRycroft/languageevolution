@@ -3,6 +3,8 @@ import type { Rng } from "../rng";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
 import { isVowel } from "../phonology/ipa";
+import type { WorldMap } from "../geo/map";
+import { arealShareAffinity } from "../geo/territory";
 
 /**
  * Areal phoneme convergence: alive sisters in close geographic
@@ -37,6 +39,7 @@ export function maybeArealPhonemeShare(
   tree: LanguageTree,
   rng: Rng,
   baseProbability: number,
+  worldMap?: WorldMap,
 ): ArealPhonemeEvent | null {
   if (!recipient.coords) return null;
   const sisters = leafIds(tree)
@@ -49,21 +52,30 @@ export function maybeArealPhonemeShare(
     .map((id) => tree[id]!.language);
   if (sisters.length === 0) return null;
 
-  // Pick the closest sister; that's the most likely areal donor.
+  // Pick a donor weighted by contact affinity. When territories are
+  // available, use the cell-edge share metric; otherwise fall back
+  // to nearest-by-distance for back-compat. The strongest contact
+  // signal wins — sisters with a long shared border drive most of
+  // the areal phoneme spread, mirroring real Sprachbund effects.
   let donor: Language | null = null;
-  let minDist = Infinity;
+  let bestAffinity = 0;
   for (const s of sisters) {
-    const d = geoDistance(recipient.coords!, s.coords!);
-    if (d < minDist) {
-      minDist = d;
+    let affinity: number;
+    if (worldMap && recipient.territory && s.territory) {
+      affinity = arealShareAffinity(worldMap, recipient, s);
+    } else {
+      const d = geoDistance(recipient.coords!, s.coords!);
+      affinity = AREAL_HALF_LIFE / (AREAL_HALF_LIFE + d);
+    }
+    if (affinity > bestAffinity) {
+      bestAffinity = affinity;
       donor = s;
     }
   }
   if (!donor) return null;
 
-  // Distance-decayed gate.
-  const affinity = AREAL_HALF_LIFE / (AREAL_HALF_LIFE + minDist);
-  if (!rng.chance(baseProbability * affinity)) return null;
+  // Affinity-gated firing rate.
+  if (!rng.chance(baseProbability * bestAffinity)) return null;
 
   // Phonemes the donor has that we don't.
   const ours = new Set(recipient.phonemeInventory.segmental);

@@ -5,6 +5,8 @@ import { cloneLexicon, cloneGrammar, cloneMorphology } from "../utils/clone";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import type { Rng } from "../rng";
 import { lexicalCapacity } from "../lexicon/tier";
+import { partitionTerritory } from "../geo/territory";
+import type { WorldMap } from "../geo/map";
 
 export function leafIds(tree: LanguageTree): string[] {
   return Object.keys(tree)
@@ -141,6 +143,14 @@ export interface SplitOptions {
    * binary-dominant one. Any positive integer works.
    */
   childCount?: number;
+  /**
+   * World map context. When passed, the parent's territory is
+   * partitioned among the daughters; the legacy coord-fanout layout
+   * still runs for back-compat callers (tests, pre-territory saves)
+   * but the territory partition takes precedence and overwrites the
+   * fanout coords.
+   */
+  worldMap?: WorldMap;
 }
 
 export function splitLeaf(
@@ -292,6 +302,12 @@ export function splitLeaf(
       x: parentCoords.x + Math.cos(angle) * step,
       y: parentCoords.y + Math.sin(angle) * step,
     };
+  }
+  // Territory partition overrides the legacy fanout when the caller
+  // supplied a world map. Each daughter ends up with a contiguous-or-
+  // close-to-it cell list; coords are recomputed as the centroid.
+  if (opts.worldMap) {
+    partitionTerritory(parentLang, children, opts.worldMap, rng);
   }
 
   const childIds: string[] = [];

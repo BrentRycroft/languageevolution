@@ -1,17 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
-import { computeGeoLayout, boundingBox } from "../engine/geo";
+import { getWorldMap, type MapCell, type WorldMap } from "../engine/geo/map";
+import { fnv1a } from "../engine/rng";
 import { formatForm } from "../engine/phonology/display";
+import { TIER_LABELS } from "../engine/lexicon/concepts";
+import type { Language, LanguageNode, LanguageTree } from "../engine/types";
 
 /**
- * 2-D "world map" of the language family. Each node gets a deterministic
- * position derived from its id hash and depth; splits push children apart,
- * so the final layout visually evokes migration.
- *
- * Interaction: pan and zoom via drag / scroll. Clicking a leaf selects it.
+ * Voronoi-cell-based world map. Replaces the old centroid-only
+ * MapView. Each language holds a contiguous set of map cells
+ * (`lang.territory.cells`); we colour each cell by its owner's
+ * id-hash hue, dim it for extinct languages, render ocean cells
+ * blue, and draw an isogloss stroke between cells whose owners
+ * differ. Pan + zoom via SVG viewBox manipulation.
  */
 export function MapView() {
   const state = useSimStore((s) => s.state);
+  const config = useSimStore((s) => s.config);
   const selectedLangId = useSimStore((s) => s.selectedLangId);
   const selectLanguage = useSimStore((s) => s.selectLanguage);
   const selectedMeaning = useSimStore((s) => s.selectedMeaning);
@@ -32,51 +37,29 @@ export function MapView() {
     return () => ro.disconnect();
   }, []);
 
-  // Prefer per-language persistent coords (seeded at split time), falling
-  // back to the deterministic id-hash layout for older saves where the
-  // `language.coords` field is missing.
-  const layout = useMemo(() => {
-    const ids = Object.keys(state.tree);
-    const missing = ids.some((id) => !state.tree[id]!.language.coords);
-    const fallback = missing ? computeGeoLayout(state) : null;
-    const out: Record<string, { x: number; y: number }> = {};
-    for (const id of ids) {
-      out[id] = state.tree[id]!.language.coords ?? fallback![id]!;
-    }
-    return out;
-  }, [state]);
-  const bb = useMemo(() => boundingBox(layout), [layout]);
-  const dataW = Math.max(1, bb.maxX - bb.minX);
-  const dataH = Math.max(1, bb.maxY - bb.minY);
-
-  // Fit-to-view scale (with some padding).
-  const pad = 60;
-  const fitScale = Math.min(
-    (size.w - pad * 2) / dataW,
-    (size.h - pad * 2) / dataH,
+  // World map for the active sim. Memoised by mode + seed (the
+  // generator is itself memoised internally too).
+  const worldMap = useMemo(
+    () => getWorldMap(config.mapMode ?? "random", config.seed),
+    [config.mapMode, config.seed],
   );
-  const scale = Math.max(0.05, fitScale * view.zoom);
-  const cx = (bb.minX + bb.maxX) / 2;
-  const cy = (bb.minY + bb.maxY) / 2;
 
-  // When selection changes from elsewhere (Tree / Lexicon / Timeline), pan
-  // the map so the selected node is centered. Only do this if we've laid
-  // out the selected node and the user hasn't actively been dragging.
-  const lastFocusedId = useRef<string | null>(null);
-  useEffect(() => {
-    if (!selectedLangId || selectedLangId === lastFocusedId.current) return;
-    const pos = layout[selectedLangId];
-    if (!pos) return;
-    lastFocusedId.current = selectedLangId;
-    // Convert the node's data-space position into the pan offset that would
-    // place it at the svg center at the current zoom.
-    const targetX = -((pos.x - cx) * scale);
-    const targetY = -((pos.y - cy) * scale);
-    setView((v) => ({ ...v, x: targetX, y: targetY }));
-    // We intentionally don't depend on `cx`, `cy`, `scale` — pan only when
-    // the selection changes, not on every layout tweak.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLangId]);
+  // Ownership map: cellId → languageId. Built once per render.
+  const ownership = useMemo(() => buildOwnership(state.tree), [state.tree]);
+
+  // Fit viewBox to map bounds.
+  const pad = 40;
+  const fitScale = Math.min(
+    (size.w - pad * 2) / (worldMap.bounds.maxX - worldMap.bounds.minX),
+    (size.h - pad * 2) / (worldMap.bounds.maxY - worldMap.bounds.minY),
+  );
+  const scale = Math.max(0.05, Math.min(20, fitScale * view.zoom));
+  const cx = (worldMap.bounds.minX + worldMap.bounds.maxX) / 2;
+  const cy = (worldMap.bounds.minY + worldMap.bounds.maxY) / 2;
+  const project = (x: number, y: number) => ({
+    px: (x - cx) * scale + size.w / 2 + view.x,
+    py: (y - cy) * scale + size.h / 2 + view.y,
+  });
 
   // Drag-to-pan
   const drag = useRef<{ startX: number; startY: number; vx: number; vy: number } | null>(null);
@@ -102,105 +85,39 @@ export function MapView() {
   const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault();
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    setView((v) => ({ ...v, zoom: Math.max(0.25, Math.min(6, v.zoom * factor)) }));
+    setView((v) => ({ ...v, zoom: Math.max(0.4, Math.min(8, v.zoom * factor)) }));
   };
 
-  const ids = useMemo(() => Object.keys(layout), [layout]);
-
-  // Walk up the tree to produce a "ProtoX > Y > Z" family path for the
-  // tooltip. Caps at 4 ancestors so the text doesn't overflow.
-  const familyPath = (id: string): string => {
-    const chain: string[] = [];
-    let cur: string | null = id;
-    while (cur !== null) {
-      const ancestor: import("../engine/types").LanguageNode | undefined =
-        state.tree[cur];
-      if (!ancestor) break;
-      chain.unshift(ancestor.language.name);
-      cur = ancestor.parentId;
-    }
-    if (chain.length > 5) {
-      return [chain[0], "…", ...chain.slice(-3)].join(" › ");
-    }
-    return chain.join(" › ");
-  };
-
-  // Three sample words for a language's tooltip — prefer the selected
-  // meaning first, then fall back to a short, stable slice.
-  const tooltipSamples = (id: string): string => {
-    const lang = state.tree[id]!.language;
-    const out: string[] = [];
-    const seen = new Set<string>();
-    if (selectedMeaning && lang.lexicon[selectedMeaning]) {
-      out.push(
-        `${selectedMeaning}: ${formatForm(lang.lexicon[selectedMeaning]!, lang, script)}`,
-      );
-      seen.add(selectedMeaning);
-    }
-    for (const m of Object.keys(lang.lexicon).sort()) {
-      if (out.length >= 3) break;
-      if (seen.has(m)) continue;
-      out.push(`${m}: ${formatForm(lang.lexicon[m]!, lang, script)}`);
-    }
-    return out.join("\n");
-  };
-
-  const extinctLeaves = useMemo(() => {
-    return Object.keys(state.tree)
-      .filter((id) => {
-        const n = state.tree[id]!;
-        return n.language.extinct && n.childrenIds.length === 0;
-      })
-      .map((id) => state.tree[id]!.language)
-      .sort(
-        (a, b) => (b.deathGeneration ?? 0) - (a.deathGeneration ?? 0),
-      );
-  }, [state]);
-
-  /**
-   * Recent borrow arrows: scan every language's events ring-buffer for
-   * "borrow" events in the last RECENT_BORROW_WINDOW generations, so we
-   * can draw a fading donor→recipient arrow. Opacity is proportional to
-   * recency (a fresh borrow is bright; a ~10-gen-old one is dim).
-   */
-  const RECENT_BORROW_WINDOW = 12;
-  const recentBorrows = useMemo(() => {
-    const out: Array<{
-      donorId: string;
-      recipientId: string;
-      meaning: string;
-      age: number;
-    }> = [];
-    const now = state.generation;
-    for (const id of Object.keys(state.tree)) {
-      const lang = state.tree[id]!.language;
-      for (const e of lang.events) {
-        if (e.kind !== "borrow") continue;
-        const age = now - e.generation;
-        if (age < 0 || age > RECENT_BORROW_WINDOW) continue;
-        const donorId = e.meta?.donorId;
-        const recipientId = e.meta?.recipientId ?? id;
-        if (!donorId) continue;
-        out.push({
-          donorId,
-          recipientId,
-          meaning: e.meta?.meaning ?? "",
-          age,
-        });
+  // Pre-compute fill colours per cell so repaints don't recompute.
+  const cellFills = useMemo(() => {
+    const out: string[] = new Array(worldMap.cells.length);
+    for (let i = 0; i < worldMap.cells.length; i++) {
+      const cell = worldMap.cells[i]!;
+      if (cell.biome === "ocean") {
+        out[i] = "#1d3a55"; // deep blue
+        continue;
       }
+      const ownerId = ownership[cell.id];
+      if (ownerId) {
+        const lang = state.tree[ownerId]?.language;
+        if (lang) {
+          out[i] = languageColor(ownerId, lang.extinct ?? false, (lang.culturalTier ?? 0));
+          continue;
+        }
+      }
+      // Unowned land → biome-tinted neutral.
+      out[i] = biomeColor(cell.biome);
     }
     return out;
-  }, [state]);
-  // Project a data-space (x, y) into pixel coordinates inside the svg.
-  const project = (x: number, y: number) => ({
-    px: (x - cx) * scale + size.w / 2 + view.x,
-    py: (y - cy) * scale + size.h / 2 + view.y,
-  });
+  }, [worldMap, ownership, state.tree]);
+
+  // Tooltip state.
+  const [hoverCell, setHoverCell] = useState<number | null>(null);
 
   return (
     <div
       ref={containerRef}
-      style={{ width: "100%", height: "100%", minHeight: 300, position: "relative" }}
+      style={{ width: "100%", height: "100%", minHeight: 320, position: "relative" }}
     >
       <svg
         width={size.w}
@@ -210,156 +127,99 @@ export function MapView() {
         onPointerUp={onPointerUp}
         onWheel={onWheel}
         style={{
-          background: "var(--panel-2)",
+          background: "#0f1f2e",
           border: "1px solid var(--border)",
           borderRadius: "var(--r-2)",
           cursor: drag.current ? "grabbing" : "grab",
           touchAction: "none",
+          userSelect: "none",
         }}
       >
-        {/* Links from parent to child. */}
-        {ids.map((id) => {
-          const node = state.tree[id]!;
-          if (!node.parentId) return null;
-          const parentPos = layout[node.parentId];
-          const childPos = layout[id];
-          if (!parentPos || !childPos) return null;
-          const a = project(parentPos.x, parentPos.y);
-          const b = project(childPos.x, childPos.y);
-          const extinct = !!node.language.extinct;
-          return (
-            <line
-              key={id}
-              x1={a.px}
-              y1={a.py}
-              x2={b.px}
-              y2={b.py}
-              stroke="var(--border-strong)"
-              strokeWidth={1}
-              strokeDasharray={extinct ? "3 3" : undefined}
-              opacity={extinct ? 0.5 : 1}
-            />
-          );
-        })}
-
-        {/* Recent borrow arrows: donor → recipient, fading with age. */}
-        <defs>
-          <marker
-            id="borrow-arrowhead"
-            viewBox="0 0 6 6"
-            refX="5"
-            refY="3"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto"
-          >
-            <path d="M 0 0 L 6 3 L 0 6 Z" fill="#ffb473" />
-          </marker>
-        </defs>
-        {recentBorrows.map((b, i) => {
-          const donorPos = layout[b.donorId];
-          const recipPos = layout[b.recipientId];
-          if (!donorPos || !recipPos) return null;
-          const a = project(donorPos.x, donorPos.y);
-          const q = project(recipPos.x, recipPos.y);
-          const fade = 1 - b.age / RECENT_BORROW_WINDOW;
-          return (
-            <line
-              key={`b${i}`}
-              x1={a.px}
-              y1={a.py}
-              x2={q.px}
-              y2={q.py}
-              stroke="#ffb473"
-              strokeWidth={1.2}
-              opacity={Math.max(0.1, fade * 0.8)}
-              markerEnd="url(#borrow-arrowhead)"
-            >
-              <title>
-                borrow: "{b.meaning}" ({b.age} gens ago)
-              </title>
-            </line>
-          );
-        })}
-
-        {/* Nodes. */}
-        {ids.map((id) => {
-          const node = state.tree[id]!;
-          const pos = layout[id];
-          if (!pos) return null;
-          const { px, py } = project(pos.x, pos.y);
-          const lang = node.language;
-          const isLeaf = node.childrenIds.length === 0;
-          const isSelected = selectedLangId === id;
-          const isExtinct = !!lang.extinct;
-          const r = isLeaf ? 6 : 3;
+        {/* Cells. */}
+        {worldMap.cells.map((cell, i) => (
+          <MapCellShape
+            key={cell.id}
+            cell={cell}
+            fill={cellFills[i]!}
+            ownerId={ownership[cell.id]}
+            ownership={ownership}
+            project={project}
+            onHover={setHoverCell}
+            onClick={(langId) => {
+              if (langId) selectLanguage(langId);
+            }}
+            isOwnerSelected={
+              ownership[cell.id] !== undefined &&
+              ownership[cell.id] === selectedLangId
+            }
+          />
+        ))}
+        {/* Language name labels — one per alive leaf at its centroid. */}
+        {labelsForAliveLeaves(state.tree, worldMap).map(({ langId, lang, point }) => {
+          const { px, py } = project(point.x, point.y);
           const sample =
             selectedMeaning && lang.lexicon[selectedMeaning]
               ? formatForm(lang.lexicon[selectedMeaning]!, lang, script)
               : "";
           return (
             <g
-              key={id}
+              key={langId}
               transform={`translate(${px},${py})`}
-              onClick={() => selectLanguage(id)}
-              style={{ cursor: "pointer" }}
+              pointerEvents="none"
+              opacity={lang.extinct ? 0.4 : 1}
             >
-              <title>
-                {familyPath(id)}
-                {"\n"}
-                {isExtinct
-                  ? `extinct (gen ${lang.deathGeneration ?? "?"})`
-                  : `alive — born gen ${lang.birthGeneration}`}
-                {"\n"}
-                {Object.keys(lang.lexicon).length} words · pace {lang.conservatism < 0.75 ? "🐇" : lang.conservatism > 1.25 ? "🐢" : "—"} {lang.conservatism.toFixed(2)}
-                {"\n"}
-                {tooltipSamples(id)}
-              </title>
-              <circle
-                r={r}
-                fill={
-                  isExtinct
-                    ? "var(--muted-2)"
-                    : isLeaf
-                      ? "var(--accent)"
-                      : "var(--muted)"
-                }
-                stroke={isSelected ? "var(--accent-2)" : "transparent"}
-                strokeWidth={isSelected ? 3 : 0}
-                opacity={isExtinct ? 0.5 : 1}
-              />
-              {isLeaf && (
-                <>
-                  <text
-                    x={0}
-                    y={r + 11}
-                    textAnchor="middle"
-                    fill="var(--text)"
-                    fontSize={10}
-                    fontFamily="var(--font-mono)"
-                    opacity={isExtinct ? 0.5 : 1}
-                  >
-                    {lang.name}
-                  </text>
-                  {sample && (
-                    <text
-                      x={0}
-                      y={r + 22}
-                      textAnchor="middle"
-                      fill="var(--muted)"
-                      fontSize={9}
-                      fontFamily="var(--font-mono)"
-                      opacity={isExtinct ? 0.4 : 1}
-                    >
-                      {sample}
-                    </text>
-                  )}
-                </>
+              <text
+                textAnchor="middle"
+                fontSize={11}
+                fontFamily="var(--font-mono)"
+                fill="white"
+                stroke="rgba(0,0,0,0.7)"
+                strokeWidth={3}
+                paintOrder="stroke"
+              >
+                {lang.name}
+              </text>
+              {sample && (
+                <text
+                  y={12}
+                  textAnchor="middle"
+                  fontSize={9}
+                  fontFamily="var(--font-mono)"
+                  fill="rgba(255,255,255,0.85)"
+                  stroke="rgba(0,0,0,0.7)"
+                  strokeWidth={3}
+                  paintOrder="stroke"
+                >
+                  {sample}
+                </text>
               )}
             </g>
           );
         })}
       </svg>
+
+      {/* Hover tooltip pinned to the corner — simpler than a tracking
+          tooltip and works on touch. */}
+      {hoverCell !== null && (
+        <div
+          style={{
+            position: "absolute",
+            left: 8,
+            top: 8,
+            background: "var(--panel)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--r-2)",
+            padding: 8,
+            fontSize: "var(--fs-1)",
+            maxWidth: 240,
+            color: "var(--text)",
+            pointerEvents: "none",
+          }}
+        >
+          {renderCellTooltip(hoverCell, worldMap, ownership, state.tree, selectedMeaning, script)}
+        </div>
+      )}
+
       <div
         style={{
           position: "absolute",
@@ -376,59 +236,171 @@ export function MapView() {
           pointerEvents: "none",
         }}
       >
-        drag to pan · scroll to zoom · zoom {view.zoom.toFixed(2)}×
+        {worldMap.kind} · drag to pan · scroll to zoom · {view.zoom.toFixed(2)}×
       </div>
-      {extinctLeaves.length > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            top: 8,
-            right: 10,
-            maxHeight: "60%",
-            width: 180,
-            overflow: "auto",
-            background: "var(--panel)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--r-2)",
-            padding: 8,
-            fontSize: "var(--fs-1)",
-          }}
-        >
-          <div style={{ color: "var(--muted)", marginBottom: 4 }}>
-            extinct ({extinctLeaves.length})
-          </div>
-          {extinctLeaves.slice(0, 12).map((l) => (
-            <button
-              key={l.id}
-              onClick={() => selectLanguage(l.id)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "2px 4px",
-                marginBottom: 1,
-                background:
-                  selectedLangId === l.id ? "var(--panel-2)" : "transparent",
-                color: "var(--text)",
-                border: "none",
-                borderRadius: "var(--r-1)",
-                fontFamily: "var(--font-mono)",
-                cursor: "pointer",
-                fontSize: "var(--fs-1)",
-              }}
-              title={`died gen ${l.deathGeneration ?? "?"}, born gen ${l.birthGeneration}`}
-            >
-              {l.name}{" "}
-              <span style={{ color: "var(--muted)" }}>
-                †{l.deathGeneration ?? "?"}
-              </span>
-            </button>
-          ))}
-          {extinctLeaves.length > 12 && (
-            <div style={{ color: "var(--muted)", marginTop: 4 }}>
-              +{extinctLeaves.length - 12} more
-            </div>
-          )}
+    </div>
+  );
+}
+
+interface CellShapeProps {
+  cell: MapCell;
+  fill: string;
+  ownerId: string | undefined;
+  ownership: Record<number, string>;
+  project: (x: number, y: number) => { px: number; py: number };
+  onHover: (id: number | null) => void;
+  onClick: (langId: string | undefined) => void;
+  isOwnerSelected: boolean;
+}
+
+function MapCellShape({
+  cell,
+  fill,
+  ownerId,
+  ownership,
+  project,
+  onHover,
+  onClick,
+  isOwnerSelected,
+}: CellShapeProps) {
+  if (cell.vertices.length < 3) return null;
+  const points = cell.vertices
+    .map((v) => {
+      const p = project(v.x, v.y);
+      return `${p.px},${p.py}`;
+    })
+    .join(" ");
+  // Isogloss thickness: thicker when the cell's neighbours have
+  // different owners (or the cell is on the ocean / land boundary).
+  let isoglossEdges = 0;
+  for (const n of cell.neighbours) {
+    if (ownership[n] !== ownerId) isoglossEdges++;
+  }
+  const stroke = isOwnerSelected ? "var(--accent-2)" : "rgba(0,0,0,0.4)";
+  const strokeWidth = isOwnerSelected ? 2.5 : isoglossEdges > 0 ? 0.6 : 0.2;
+  return (
+    <polygon
+      points={points}
+      fill={fill}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+      onPointerEnter={() => onHover(cell.id)}
+      onPointerLeave={() => onHover(null)}
+      onClick={() => onClick(ownerId)}
+      style={{ cursor: ownerId ? "pointer" : "default" }}
+    />
+  );
+}
+
+function buildOwnership(tree: LanguageTree): Record<number, string> {
+  const out: Record<number, string> = {};
+  for (const id of Object.keys(tree)) {
+    const lang = tree[id]!.language;
+    const cells = lang.territory?.cells;
+    if (!cells || cells.length === 0) continue;
+    // Alive leaves and extinct leaves can both own cells; but if
+    // multiple claim the same cell (during a transition), the alive
+    // one wins.
+    for (const c of cells) {
+      const existing = out[c];
+      if (!existing) {
+        out[c] = id;
+        continue;
+      }
+      const existingLang = tree[existing]!.language;
+      if (existingLang.extinct && !lang.extinct) out[c] = id;
+    }
+  }
+  return out;
+}
+
+function languageColor(langId: string, extinct: boolean, tier: number): string {
+  // Golden-angle hue spread so adjacent leaves visibly differ.
+  const hue = (fnv1a(langId) % 360);
+  const sat = extinct ? 6 : 30 + tier * 10;
+  const light = extinct ? 30 : 50 - tier * 4;
+  return `hsl(${hue} ${sat}% ${light}%)`;
+}
+
+function biomeColor(biome: MapCell["biome"]): string {
+  switch (biome) {
+    case "lowland":  return "#3d4a2e";
+    case "highland": return "#4a4536";
+    case "mountain": return "#5a5550";
+    case "ocean":    return "#1d3a55";
+  }
+}
+
+function labelsForAliveLeaves(
+  tree: LanguageTree,
+  worldMap: WorldMap,
+): Array<{ langId: string; lang: Language; point: { x: number; y: number } }> {
+  const out: Array<{ langId: string; lang: Language; point: { x: number; y: number } }> = [];
+  for (const id of Object.keys(tree)) {
+    const node: LanguageNode = tree[id]!;
+    if (node.childrenIds.length > 0) continue;
+    const lang = node.language;
+    const cells = lang.territory?.cells;
+    if (!cells || cells.length === 0) continue;
+    // Use the centroid of the territory for label placement.
+    let cx = 0, cy = 0, n = 0;
+    for (const cellId of cells) {
+      const cell = worldMap.cells[cellId];
+      if (!cell) continue;
+      cx += cell.centroid.x;
+      cy += cell.centroid.y;
+      n++;
+    }
+    if (n === 0) continue;
+    out.push({ langId: id, lang, point: { x: cx / n, y: cy / n } });
+  }
+  return out;
+}
+
+function renderCellTooltip(
+  cellId: number,
+  worldMap: WorldMap,
+  ownership: Record<number, string>,
+  tree: LanguageTree,
+  selectedMeaning: string | null,
+  script: import("../engine/phonology/display").DisplayScript,
+): JSX.Element {
+  const cell = worldMap.cells[cellId];
+  if (!cell) return <div>—</div>;
+  const ownerId = ownership[cell.id];
+  if (!ownerId || !tree[ownerId]) {
+    return (
+      <div>
+        <div style={{ color: "var(--muted)" }}>{cell.biome} · cell {cell.id}</div>
+      </div>
+    );
+  }
+  const lang = tree[ownerId]!.language;
+  const tier = lang.culturalTier ?? 0;
+  const samples: string[] = [];
+  if (selectedMeaning && lang.lexicon[selectedMeaning]) {
+    samples.push(`${selectedMeaning}: ${formatForm(lang.lexicon[selectedMeaning]!, lang, script)}`);
+  }
+  for (const m of ["water", "fire", "mother"]) {
+    if (samples.length >= 3) break;
+    if (m === selectedMeaning) continue;
+    if (lang.lexicon[m]) samples.push(`${m}: ${formatForm(lang.lexicon[m]!, lang, script)}`);
+  }
+  return (
+    <div>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>
+        {lang.name}
+        {lang.extinct && <span style={{ color: "var(--danger)" }}> †</span>}
+      </div>
+      <div style={{ color: "var(--muted)" }}>
+        {(lang.speakers ?? 0).toLocaleString()} speakers · tier {tier} ({TIER_LABELS[tier as 0 | 1 | 2 | 3]})
+      </div>
+      <div style={{ color: "var(--muted)" }}>
+        {(lang.territory?.cells.length ?? 0)} cells · {Object.keys(lang.lexicon).length} words
+      </div>
+      {samples.length > 0 && (
+        <div style={{ marginTop: 4, fontFamily: "var(--font-mono)", fontSize: 10 }}>
+          {samples.map((s) => <div key={s}>{s}</div>)}
         </div>
       )}
     </div>

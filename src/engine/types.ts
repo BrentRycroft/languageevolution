@@ -133,12 +133,26 @@ export interface Language {
    */
   registerOf?: Record<string, "high" | "low">;
   /**
-   * Persistent 2D map coordinates. Set once at language birth and frozen
-   * thereafter (users may also drag a node in MapView, which writes here).
-   * Optional for back-compat — if undefined, MapView falls back to a
-   * deterministic id-hash layout.
+   * Persistent 2D map coordinates. Derived from the language's
+   * `territory.centroid` when territories are in play; falls back to
+   * an id-hash layout for pre-territory saves. Mutable across
+   * generations so areal mechanics + the MapView render see the same
+   * positions.
    */
   coords?: { x: number; y: number };
+  /**
+   * Voronoi-cell territory on the world map. Cell ids reference the
+   * `WorldMap` returned by `engine/geo/map.ts::getWorldMap`. Each
+   * generation, growth claims one more neighbour cell with low
+   * probability; splits partition the parent's territory among
+   * daughters; death frees the cells back to the unowned pool.
+   *
+   * Optional for back-compat — pre-§C saves don't have it. The map
+   * renderer falls back to centroid-only rendering when missing.
+   */
+  territory?: {
+    cells: number[];
+  };
   /**
    * Romanization / orthography map: IPA phoneme → Latin-ish spelling.
    * Drifts slower than phonology, producing the classic "spelling vs
@@ -340,6 +354,19 @@ export interface SimulationConfig {
   preset?: string;
   /** Evolution-speed profile id (conservative / standard / rapid / extreme). */
   evolutionSpeed?: string;
+  /**
+   * World-map shape. "random" generates a unique continent from the
+   * sim seed; "earth" uses a fixed low-poly approximation of the
+   * inhabited continents. Missing = "random" (default).
+   */
+  mapMode?: "random" | "earth";
+  /**
+   * Voronoi-cell id at which the proto-language starts. The user
+   * picks this on the map preview before starting; if missing, the
+   * preset's suggested origin (Earth mode) or a random viable land
+   * cell (Random mode) is used.
+   */
+  originCellId?: number;
 }
 
 export interface SimulationState {

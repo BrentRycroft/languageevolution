@@ -110,6 +110,11 @@ export function cloneLanguage(lang: Language): Language {
           ]),
         )
       : undefined,
+    // Territory: deep-clone the cells array so a snapshot can mutate
+    // it without leaking back to the live tree.
+    territory: lang.territory
+      ? { cells: lang.territory.cells.slice() }
+      : undefined,
   };
 }
 
