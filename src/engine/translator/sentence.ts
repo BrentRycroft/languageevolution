@@ -777,9 +777,9 @@ function translateViaTree(
       const r = resolveLemma(lang, lemma, "N");
       if (!r.form) {
         missing.push(lemma);
-        return null;
+        return { form: null, resolution: r.resolution };
       }
-      return r.form;
+      return { form: r.form, resolution: r.resolution };
     },
   });
 
@@ -810,7 +810,7 @@ function translateViaTree(
       r.role === "POSS" ? "poss" :
       r.role === "PP-NP" ? "obl" :
       "",
-    resolution: "concept" as const,
+    resolution: r.resolution ?? "concept",
   }));
 
   const notes = missing.length === 0

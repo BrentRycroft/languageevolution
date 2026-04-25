@@ -40,40 +40,79 @@ export interface GenreTemplate {
   /** True when the subject should be the current topic (for pronoun
    *  substitution). */
   topicSubject?: boolean;
+  /** Tense the {V} slot should be realised in. Default: "present".
+   *  Myth + legend default to past so the narratives read like real
+   *  folk tales ("long ago the king fought the wolf"); dialogue mixes
+   *  tenses for naturalism. */
+  tense?: "past" | "present" | "future";
 }
 
+/**
+ * Verb-pool mapped to past-tense surface forms. The translator's
+ * tokeniser already recognises these via IRREGULAR_VERBS or -ed
+ * stripping, so emitting "saw" instead of "see" gives the realiser
+ * a tense=past hint without us having to bypass tokenisation.
+ */
+export const PAST_TENSE_VERB: Record<string, string> = {
+  go: "went", come: "came", see: "saw", know: "knew",
+  eat: "ate", drink: "drank", give: "gave", take: "took",
+  speak: "spoke", hold: "held", fight: "fought",
+  make: "made", break: "broke", fall: "fell",
+  sleep: "slept", die: "died",
+  run: "ran", walk: "walked", fly: "flew",
+};
+
+/**
+ * Future-tense rendering: prepend the auxiliary "will" so the tokeniser
+ * tags the verb as future. This works for every bare verb in the pool.
+ */
+export function futureForm(verb: string): string {
+  return `will ${verb}`;
+}
+
+export function pastForm(verb: string): string {
+  return PAST_TENSE_VERB[verb] ?? `${verb}ed`;
+}
+
+// Myth & legend default to past tense — folk-tale register. Daily &
+// dialogue default to present. {V}.past / {V}.fut placeholders force a
+// non-default tense on a particular line so the texture varies.
 const MYTH_TEMPLATES: GenreTemplate[] = [
-  { english: "long ago the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true },
-  { english: "in the {TIME} the {S} {V}.", needs: { subject: true, object: false, adjective: false, time: true, place: false }, introducesEntity: true },
-  { english: "the {ADJ} {S} {V} the {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true },
-  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true },
-  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true },
-  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true },
-  { english: "long ago the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true },
+  { english: "long ago the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "past" },
+  { english: "in the {TIME} the {S} {V}.", needs: { subject: true, object: false, adjective: false, time: true, place: false }, introducesEntity: true, tense: "past" },
+  { english: "the {ADJ} {S} {V} the {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
+  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true, tense: "past" },
+  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true, tense: "past" },
+  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true, tense: "past" },
+  { english: "long ago the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
+  // One forward-looking line so the genre isn't entirely past.
+  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "future" },
 ];
 
 const LEGEND_TEMPLATES: GenreTemplate[] = [
-  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true },
-  { english: "the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true },
-  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true },
-  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true },
-  { english: "the {ADJ} {S} {V}.", needs: { subject: true, object: false, adjective: true, time: false, place: false }, introducesEntity: true },
-  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true },
+  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "past" },
+  { english: "the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
+  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true, tense: "past" },
+  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true, tense: "past" },
+  { english: "the {ADJ} {S} {V}.", needs: { subject: true, object: false, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
+  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true, tense: "past" },
 ];
 
 const DAILY_TEMPLATES: GenreTemplate[] = [
-  { english: "the {S} {V}.", needs: { subject: true, object: false, adjective: false, time: false, place: false }, introducesEntity: true },
-  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true },
-  { english: "in the {TIME} {TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: true, place: false }, topicSubject: true },
-  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true },
-  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true },
+  { english: "the {S} {V}.", needs: { subject: true, object: false, adjective: false, time: false, place: false }, introducesEntity: true, tense: "present" },
+  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "present" },
+  { english: "in the {TIME} {TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: true, place: false }, topicSubject: true, tense: "present" },
+  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true, tense: "present" },
+  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true, tense: "present" },
+  // A future-tense line for variety: planning, anticipation.
+  { english: "the {S} {V}.", needs: { subject: true, object: false, adjective: false, time: false, place: false }, introducesEntity: true, tense: "future" },
 ];
 
 const DIALOGUE_TEMPLATES: GenreTemplate[] = [
-  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true },
-  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true },
-  { english: "the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true },
-  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true },
+  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "present" },
+  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true, tense: "present" },
+  { english: "the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
+  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true, tense: "future" },
 ];
 
 export function templatesFor(genre: DiscourseGenre): readonly GenreTemplate[] {

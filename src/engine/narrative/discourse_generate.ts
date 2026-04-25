@@ -10,6 +10,8 @@ import {
   TIME_POOL,
   PLACE_POOL,
   templatesFor,
+  pastForm,
+  futureForm,
   type GenreTemplate,
 } from "./genres";
 import {
@@ -88,7 +90,17 @@ function fillTemplate(
     slots.push(p);
   }
 
-  english = english.replace("{V}", pick(VERB_POOL, rng));
+  // Tense-aware verb realisation. The translator's tokeniser reads
+  // tense from the surface form (-ed / irregular = past; "will" = fut)
+  // so we just emit the right surface here and let translateSentence
+  // pick up the tense and route it to verb.tense.* paradigms.
+  const verb = pick(VERB_POOL, rng);
+  const tense = template.tense ?? "present";
+  const surfaceVerb =
+    tense === "past" ? pastForm(verb) :
+    tense === "future" ? futureForm(verb) :
+    verb;
+  english = english.replace("{V}", surfaceVerb);
   return { english, openClassSlots: slots };
 }
 

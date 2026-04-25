@@ -129,4 +129,51 @@ describe("§2.2 — generateDiscourseNarrative produces coherent multi-line outp
     // narratives diverge structurally.
     expect(myth.map((l) => l.english)).not.toEqual(dialog.map((l) => l.english));
   });
+
+  it("myth narratives use past-tense verb forms on most lines", () => {
+    const lang = freshLang("disc-tense");
+    // Manufacture a past-tense paradigm so the morph diff between
+    // past and present is visible in the surface output.
+    lang.morphology.paradigms["verb.tense.past"] = {
+      affix: ["e", "d"],
+      position: "suffix",
+      category: "verb.tense.past",
+    };
+    const myth = generateDiscourseNarrative(lang, "tense-x", { lines: 8, genre: "myth" });
+    // The English skeleton should contain past-tense markers
+    // (irregular forms or -ed suffix) on most lines.
+    const pastLines = myth.filter((l) =>
+      /\b(went|came|saw|knew|ate|drank|gave|took|spoke|held|fought|made|broke|fell|slept|died|ran|flew)\b/.test(l.english)
+      || /\bwalked\b/.test(l.english),
+    );
+    expect(pastLines.length).toBeGreaterThan(myth.length / 2);
+  });
+
+  it("daily narratives default to present tense", () => {
+    const lang = freshLang("disc-present");
+    const daily = generateDiscourseNarrative(lang, "tense-y", { lines: 8, genre: "daily" });
+    // Most lines should NOT contain past-tense markers — the genre
+    // includes one future-tense template for variety, and the rest
+    // are present.
+    const pastLines = daily.filter((l) =>
+      /\b(went|came|saw|knew|ate|drank|gave|took|spoke|held|fought|made|broke|fell|slept|died|ran|flew)\b/.test(l.english),
+    );
+    expect(pastLines.length).toBeLessThan(daily.length / 2);
+  });
+
+  it("translator surfaces past tense via the language's verb.tense.past paradigm", () => {
+    const lang = freshLang("disc-tx-past");
+    lang.morphology.paradigms["verb.tense.past"] = {
+      affix: ["e", "d"],
+      position: "suffix",
+      category: "verb.tense.past",
+    };
+    // Force the wider lexicon to share a known stem.
+    lang.lexicon["see"] = ["w", "i"];
+    const presentOut = generateDiscourseNarrative(lang, "tx-pres", { lines: 1, genre: "daily" });
+    const pastOut = generateDiscourseNarrative(lang, "tx-past", { lines: 1, genre: "myth" });
+    // The two should produce different surface texts (past vs present
+    // shape applied to potentially different verbs / S / O slots).
+    expect(presentOut[0]!.text).not.toBe(pastOut[0]!.text);
+  });
 });

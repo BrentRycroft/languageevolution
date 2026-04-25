@@ -24,6 +24,9 @@ export type Person = "1" | "2" | "3";
 export type Number_ = "sg" | "pl";
 export type Case = "nom" | "acc" | "dat" | "gen" | "obl";
 
+/** How an open-class lemma was resolved against a target language. */
+export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback";
+
 export interface NounRef {
   lemma: string;
   baseForm: WordForm;
@@ -32,6 +35,8 @@ export interface NounRef {
   person?: Person;
   /** True when the noun is actually a pronoun ("he", "they"). */
   isPronoun?: boolean;
+  /** Stamped by the realiser's populate step. */
+  resolution?: LemmaResolution;
 }
 
 export interface VerbRef {
@@ -41,11 +46,13 @@ export interface VerbRef {
   /** Subject features inherited via agreement; filled by the parser. */
   subjectPerson?: Person;
   subjectNumber?: Number_;
+  resolution?: LemmaResolution;
 }
 
 export interface AdjRef {
   lemma: string;
   baseForm: WordForm;
+  resolution?: LemmaResolution;
 }
 
 export interface PrepRef {

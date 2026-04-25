@@ -29,11 +29,17 @@ export interface RealisedToken {
   english: string;
   /** Tag used by the gloss / debug view. */
   role: "S" | "V" | "O" | "ADJ" | "DET" | "PREP" | "POSTP" | "POSS" | "NUM" | "NEG" | "ADV" | "PP-NP";
+  /** How the open-class lemma resolved (direct / colex / fallback /
+   *  concept). Closed-class tokens are tagged "concept" because they
+   *  come from the per-language closed-class table, not the lexicon. */
+  resolution?: "direct" | "concept" | "colex" | "reverse-colex" | "fallback";
 }
+
+export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback";
 
 export interface RealiseDeps {
   /** Resolve a lemma to a target form via the open-class chain. */
-  resolveOpen: (lemma: string) => WordForm | null;
+  resolveOpen: (lemma: string) => { form: WordForm | null; resolution: LemmaResolution };
 }
 
 export function realiseSentence(
@@ -66,9 +72,13 @@ export function realiseSentence(
     realisePP(pp, lang, { articlePresence, caseStrategy, adjPos, possPos, numPos }),
   );
   const advTokens: RealisedToken[] = s.predicate.adverbs.flatMap((a) => {
-    const f = deps.resolveOpen(a.lemma);
-    if (!f) return [];
-    return [{ surface: f.join(""), english: a.lemma, role: "ADV" as const }];
+    if (a.baseForm.length === 0) return [];
+    return [{
+      surface: a.baseForm.join(""),
+      english: a.lemma,
+      role: "ADV" as const,
+      resolution: a.resolution,
+    }];
   });
 
   // Prodrop: if the language drops pronouns and the subject is a
@@ -133,6 +143,7 @@ function realiseNP(
     surface: headForm.join(""),
     english: np.head.lemma,
     role,
+    resolution: np.head.resolution,
   };
 
   // Free-article emission (handled separately from enclitic/proclitic).
@@ -159,6 +170,7 @@ function realiseNP(
     surface: a.baseForm.join(""),
     english: a.lemma,
     role: "ADJ" as const,
+    resolution: a.resolution,
   }));
   const numTokens: RealisedToken[] = np.numeral
     ? (() => {
@@ -246,14 +258,14 @@ function realiseVerb(
     if (negPos === "prefix" || negPos === "suffix") {
       const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
       form = negPos === "prefix" ? [...negForm, ...form] : [...form, ...negForm];
-      return [{ surface: form.join(""), english: vp.verb.lemma, role: "V" }];
+      return [{ surface: form.join(""), english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
     }
     const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
-    const verbTok: RealisedToken = { surface: form.join(""), english: vp.verb.lemma, role: "V" };
-    const negTok: RealisedToken = { surface: negForm.join(""), english: "not", role: "NEG" };
+    const verbTok: RealisedToken = { surface: form.join(""), english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution };
+    const negTok: RealisedToken = { surface: negForm.join(""), english: "not", role: "NEG", resolution: "concept" };
     return negPos === "pre-verb" ? [negTok, verbTok] : [verbTok, negTok];
   }
-  return [{ surface: form.join(""), english: vp.verb.lemma, role: "V" }];
+  return [{ surface: form.join(""), english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
 }
 
 function sliceOrder(wo: Language["grammar"]["wordOrder"]): Array<"S" | "V" | "O"> {
@@ -269,17 +281,21 @@ function sliceOrder(wo: Language["grammar"]["wordOrder"]): Array<"S" | "V" | "O"
 
 /**
  * Resolve every leaf form in the sentence via the deps.resolveOpen
- * callback. Mutates the tree in place. Lemmas with no dictionary
- * resolution get an empty form — the caller is responsible for
- * surfacing those via the `missing` list (see translateSentence).
+ * callback. Mutates the tree in place AND records the resolution kind
+ * on each leaf node so realisation can stamp it onto the emitted
+ * RealisedToken (preserves "direct" vs "fallback" gloss state). Lemmas
+ * with no dictionary resolution get an empty form — the caller surfaces
+ * those via the `missing` list (see translateSentence).
  */
 function populateForms(s: Sentence, deps: RealiseDeps): void {
   const visitNP = (np: NP) => {
-    const f = deps.resolveOpen(np.head.lemma);
-    if (f) np.head.baseForm = f;
+    const r = deps.resolveOpen(np.head.lemma);
+    if (r.form) np.head.baseForm = r.form;
+    np.head.resolution = r.resolution;
     for (const a of np.adjectives) {
-      const af = deps.resolveOpen(a.lemma);
-      if (af) a.baseForm = af;
+      const ar = deps.resolveOpen(a.lemma);
+      if (ar.form) a.baseForm = ar.form;
+      a.resolution = ar.resolution;
     }
     if (np.possessor) visitNP(np.possessor);
     for (const pp of np.pps) visitNP(pp.np);
@@ -288,9 +304,11 @@ function populateForms(s: Sentence, deps: RealiseDeps): void {
   if (s.predicate.object) visitNP(s.predicate.object);
   for (const pp of s.predicate.pps) visitNP(pp.np);
   for (const a of s.predicate.adverbs) {
-    const af = deps.resolveOpen(a.lemma);
-    if (af) a.baseForm = af;
+    const ar = deps.resolveOpen(a.lemma);
+    if (ar.form) a.baseForm = ar.form;
+    a.resolution = ar.resolution;
   }
-  const vf = deps.resolveOpen(s.predicate.verb.lemma);
-  if (vf) s.predicate.verb.baseForm = vf;
+  const vr = deps.resolveOpen(s.predicate.verb.lemma);
+  if (vr.form) s.predicate.verb.baseForm = vr.form;
+  s.predicate.verb.resolution = vr.resolution;
 }
