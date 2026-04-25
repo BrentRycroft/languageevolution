@@ -4,6 +4,8 @@ import { posOf } from "../lexicon/pos";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassForm } from "./closedClass";
+import { parseSyntax } from "./parse";
+import { realiseSentence } from "./realise";
 
 /**
  * Rule-based English-to-target-language sentence translator.
@@ -84,6 +86,50 @@ const PREPOSITIONS = new Set([
 const CONJUNCTIONS = new Set(["and", "or", "but", "because", "so", "if", "when", "while", "though", "although"]);
 const AUX_VERBS = new Set(["am", "is", "are", "was", "were", "be", "been", "do", "does", "did", "will", "would", "have", "has", "had"]);
 const COPULAS = new Set(["am", "is", "are", "was", "were", "be"]);
+const NEGATORS = new Set(["not", "n't", "never"]);
+// Bare nouns whose surface form would otherwise trigger the -ing /
+// -ed verb heuristic (king, morning, evening, …) or the noun-fallback
+// stripping logic (loss → "los"). Checked BEFORE the verb heuristics
+// so the parser sees them as N.
+const BARE_NOUNS = new Set([
+  "king", "ring", "string", "wing", "thing", "spring",
+  "morning", "evening", "ceiling", "ending", "beginning",
+  "meaning", "feeling", "building", "warning", "writing",
+  "mountain", "fountain", "bread", "head", "stone",
+  "child", "wolf", "horse", "river", "mother", "father",
+  "brother", "sister", "warrior", "stranger", "friend",
+  "house", "village", "forest", "winter", "summer",
+  "water", "fire", "moon", "sun", "tree",
+]);
+// Bare verbs the tokeniser can recognise without -ed / -ing / `to` cue.
+const BARE_VERBS = new Set([
+  // motion / state
+  "go", "come", "walk", "run", "stand", "sit", "lie", "fall", "fly", "swim",
+  // perception / cognition
+  "see", "hear", "know", "think", "speak", "say", "call", "ask",
+  // action
+  "do", "make", "take", "give", "hold", "carry", "throw", "pull",
+  "push", "cut", "break", "bend", "build", "burn", "wash", "weave",
+  "plant", "sow", "freeze", "melt", "hunt", "fight", "scratch",
+  "dig", "split", "sew", "rub", "wipe", "pour", "flow", "suck",
+  "blow", "spit", "bite", "kill", "breathe",
+  // life
+  "eat", "drink", "sleep", "live", "die", "grow",
+  "love", "fear", "laugh", "cry", "play",
+  // common short
+  "want", "need", "like", "find", "lose", "win", "open", "close",
+  "start", "stop", "wait", "help",
+]);
+// Bare adjectives the tokeniser can recognise without -er/-est suffix.
+const BARE_ADJECTIVES = new Set([
+  "big", "small", "tall", "short", "fast", "slow", "new", "old",
+  "good", "bad", "long", "wide", "narrow", "deep", "shallow",
+  "hot", "cold", "high", "low", "near", "far", "young", "rich",
+  "poor", "strong", "weak", "happy", "sad", "easy", "hard",
+  "red", "blue", "green", "yellow", "black", "white",
+  "wet", "dry", "full", "empty", "round", "straight", "sharp",
+  "wise", "foolish", "brave", "kind", "cruel", "true", "false",
+]);
 
 const PRONOUN_FEATURES: Record<string, EnglishToken["features"]> = {
   i:    { person: "1", number: "sg" },
@@ -217,6 +263,36 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     }
     if (CONJUNCTIONS.has(w)) {
       tokens.push({ surface: w, lemma: w, tag: "CONJ", features: {} });
+      continue;
+    }
+    if (NEGATORS.has(w)) {
+      // Tag negators as PUNCT-like — they don't carry inflection but
+      // we want a stable lemma for the parser's negation detection.
+      // The realiser handles them via the sentence-level `negated`
+      // flag; this token is dropped during reordering.
+      tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
+      continue;
+    }
+    if (BARE_NOUNS.has(w)) {
+      tokens.push({
+        surface: w,
+        lemma: w,
+        tag: "N",
+        features: { number: "sg" },
+      });
+      lastWasVerb = false;
+      continue;
+    }
+    if (BARE_ADJECTIVES.has(w)) {
+      tokens.push({ surface: w, lemma: w, tag: "ADJ", features: {} });
+      continue;
+    }
+    if (BARE_VERBS.has(w)) {
+      const tense: "past" | "present" | "future" | undefined =
+        pendingTense ?? "present";
+      tokens.push({ surface: w, lemma: w, tag: "V", features: { tense } });
+      pendingTense = undefined;
+      lastWasVerb = true;
       continue;
     }
     if (AUX_VERBS.has(w)) {
@@ -496,6 +572,17 @@ function sliceOrder(wo: Language["grammar"]["wordOrder"]): Array<"S" | "V" | "O"
 
 export function translateSentence(lang: Language, english: string): SentenceTranslation {
   const englishTokens = tokeniseEnglish(english);
+
+  // §2.1 path: try to parse a single clause into a syntax tree and run
+  // the tree-driven realiser. Handles agreement, adjective placement,
+  // possessor placement, negation, prodrop, and PP order. Falls
+  // through to the legacy linear path when parsing fails (no verb
+  // found, multi-clause input, etc.).
+  const parsed = parseSyntax(englishTokens);
+  if (parsed) {
+    return translateViaTree(lang, english, englishTokens, parsed);
+  }
+
   const targetTokens: TranslatedToken[] = [];
   const missing: string[] = [];
 
@@ -664,6 +751,77 @@ export function translateSentence(lang: Language, english: string): SentenceTran
     englishTokens,
     targetTokens: arrangedTokens,
     arranged,
+    missing,
+    notes,
+  };
+}
+
+/**
+ * Tree-driven translation path (§2.1).
+ *
+ * Parses the tagged English tokens into a Sentence, runs the realiser
+ * with language-specific typology, then maps the resulting
+ * RealisedTokens back into the legacy `TranslatedToken` / `arranged`
+ * surface so the UI doesn't need to change. The `englishTokens` field
+ * is preserved verbatim so the gloss view still aligns rows.
+ */
+function translateViaTree(
+  lang: Language,
+  english: string,
+  englishTokens: EnglishToken[],
+  parsed: import("./syntax").Sentence,
+): SentenceTranslation {
+  const missing: string[] = [];
+  const realised = realiseSentence(parsed, lang, {
+    resolveOpen: (lemma) => {
+      const r = resolveLemma(lang, lemma, "N");
+      if (!r.form) {
+        missing.push(lemma);
+        return null;
+      }
+      return r.form;
+    },
+  });
+
+  // Map RealisedToken[] → TranslatedToken[]. Only open-class slots
+  // (S, V, O, ADJ, ADV, possessive heads) carry a real englishLemma;
+  // function-word slots (DET, PREP, NEG, NUM) carry the closed-class
+  // lemma so the gloss row still labels them.
+  const translated: TranslatedToken[] = realised.map((r) => ({
+    englishLemma: r.english,
+    englishTag:
+      r.role === "V" ? "V" :
+      r.role === "S" || r.role === "O" || r.role === "PP-NP" || r.role === "POSS" ? "N" :
+      r.role === "ADJ" ? "ADJ" :
+      r.role === "ADV" ? "ADV" :
+      r.role === "DET" ? "DET" :
+      r.role === "NUM" ? "NUM" :
+      r.role === "PREP" || r.role === "POSTP" ? "PREP" :
+      r.role === "NEG" ? "AUX" : // legacy fallback tag
+      "PUNCT",
+    targetForm: [r.surface],
+    targetSurface: r.surface,
+    glossNote:
+      r.role === "DET" ? "art/det" :
+      r.role === "PREP" ? "prep" :
+      r.role === "POSTP" ? "postp" :
+      r.role === "NEG" ? "neg" :
+      r.role === "NUM" ? "num" :
+      r.role === "POSS" ? "poss" :
+      r.role === "PP-NP" ? "obl" :
+      "",
+    resolution: "concept" as const,
+  }));
+
+  const notes = missing.length === 0
+    ? `Resolved every word via the dictionary.`
+    : `${missing.length} word${missing.length === 1 ? "" : "s"} unresolved — flagged with [].`;
+
+  return {
+    english,
+    englishTokens,
+    targetTokens: translated,
+    arranged: translated.map((t) => t.targetSurface).filter((s) => s.length > 0),
     missing,
     notes,
   };

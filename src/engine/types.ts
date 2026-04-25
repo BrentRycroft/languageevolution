@@ -320,6 +320,30 @@ export interface GrammarFeatures {
   incorporates?: boolean;
   classifierSystem?: boolean;
   prodrop?: boolean;
+  /**
+   * Constituent ordering inside an NP / clause beyond the top-level
+   * S/V/O. All optional; defaults are pre-modifier (English-style).
+   *
+   * `adjectivePosition`  — where attributive adjectives sit relative
+   *                        to their head noun. `pre` = English, German,
+   *                        Mandarin; `post` = French, Spanish, Welsh.
+   * `possessorPosition`  — where the possessor sits relative to the
+   *                        possessed noun. `pre` = English ("John's
+   *                        book"), `post` = Italian ("il libro di
+   *                        Giovanni").
+   * `numeralPosition`    — where a cardinal numeral sits relative to
+   *                        its noun. `pre` = English, Spanish; `post`
+   *                        = some Bantu, some Mayan.
+   * `negationPosition`   — `pre-verb` = English (`do not see`),
+   *                        Spanish (`no veo`); `post-verb` = some
+   *                        Romance archaisms; `prefix` = morphological
+   *                        ne- on the verb; `suffix` = morphological
+   *                        -nai on the verb (Japanese).
+   */
+  adjectivePosition?: "pre" | "post";
+  possessorPosition?: "pre" | "post";
+  numeralPosition?: "pre" | "post";
+  negationPosition?: "pre-verb" | "post-verb" | "prefix" | "suffix";
 }
 
 export interface SimulationConfig {

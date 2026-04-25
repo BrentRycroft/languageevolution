@@ -23,4 +23,8 @@ export const DEFAULT_GRAMMAR: GrammarFeatures = {
   incorporates: false,
   classifierSystem: false,
   prodrop: false,
+  adjectivePosition: "pre",
+  possessorPosition: "pre",
+  numeralPosition: "pre",
+  negationPosition: "pre-verb",
 };
