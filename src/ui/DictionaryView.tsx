@@ -35,13 +35,19 @@ export function DictionaryView() {
     const filtered = search
       ? meanings.filter((m) => m.toLowerCase().includes(search.toLowerCase()))
       : meanings;
-    const data = filtered.map((m) => ({
-      meaning: m,
-      form: formatForm(lang.lexicon[m]!, lang, script),
-      pos: posOf(m),
-      cluster: CONCEPTS[m]?.cluster ?? "—",
-      tier: tierOf(m),
-    }));
+    const data = filtered.map((m) => {
+      const origin = lang.wordOrigin?.[m];
+      const isLoan = origin?.startsWith("borrow:");
+      return {
+        meaning: m,
+        form: formatForm(lang.lexicon[m]!, lang, script),
+        pos: posOf(m),
+        cluster: CONCEPTS[m]?.cluster ?? "—",
+        tier: tierOf(m),
+        origin,
+        isLoan,
+      };
+    });
     if (sortBy === "meaning") data.sort((a, b) => a.meaning.localeCompare(b.meaning));
     else if (sortBy === "pos") data.sort((a, b) => a.pos.localeCompare(b.pos) || a.meaning.localeCompare(b.meaning));
     else if (sortBy === "tier") data.sort((a, b) => a.tier - b.tier || a.meaning.localeCompare(b.meaning));
@@ -100,7 +106,18 @@ export function DictionaryView() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.meaning}>
-                <td>{r.meaning}</td>
+                <td>
+                  {r.meaning}
+                  {r.isLoan && (
+                    <span
+                      className="t-accent"
+                      style={{ marginLeft: 4, fontSize: "0.85em" }}
+                      title={`Borrowed from ${r.origin?.slice(7)}`}
+                    >
+                      ⟶
+                    </span>
+                  )}
+                </td>
                 <td className="mono">{r.form}</td>
                 <td className="t-muted">{r.pos}</td>
                 <td className="t-muted">{r.cluster}</td>

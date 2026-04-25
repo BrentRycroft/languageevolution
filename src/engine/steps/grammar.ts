@@ -8,7 +8,7 @@ import {
   maybeSplitParadigm,
 } from "../morphology/evolve";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
-import { simplificationFactor } from "../phonology/rate";
+import { simplificationFactor, realismMultiplier } from "../phonology/rate";
 import { maybeReanalyse } from "../lexicon/reanalysis";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
@@ -29,7 +29,7 @@ export function stepGrammar(
   rng: Rng,
   generation: number,
 ): void {
-  const p = Math.min(1, config.grammar.driftProbabilityPerGeneration * lang.conservatism);
+  const p = Math.min(1, config.grammar.driftProbabilityPerGeneration * lang.conservatism * realismMultiplier(config));
   if (!rng.chance(p)) return;
   const simplification = simplificationFactor(lang.speakers);
   const shifts = driftGrammar(lang.grammar, rng, simplification);

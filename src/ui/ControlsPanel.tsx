@@ -231,11 +231,36 @@ export function ControlsPanel() {
           }}
           format={(v) => `${Math.round(v)} yr`}
         />
-        <div className="label-line" style={{ marginTop: -2, marginBottom: 4 }}>
+        <div className="label-line" style={{ marginTop: -2, marginBottom: 8 }}>
           Anchor for the "gen → years" conversion in tooltips. Default
           25 (one human generation; cf. Pagel 2007). Lower values
           stretch the timeline; higher values compress it. Doesn't
           change simulation behaviour — only the displayed time.
+        </div>
+        <Slider
+          label="Realism / pacing"
+          value={config.realismMultiplier ?? 1}
+          min={0.1}
+          max={5}
+          step={0.1}
+          onChange={(v) => {
+            const cfg = useSimStore.getState().config;
+            useSimStore.getState().updateConfig({
+              ...cfg,
+              realismMultiplier: Math.round(v * 10) / 10,
+            });
+          }}
+          format={(v) =>
+            v <= 0.3 ? `${v.toFixed(1)}× (research)` :
+            v >= 3   ? `${v.toFixed(1)}× (fast)`     :
+            `${v.toFixed(1)}×`
+          }
+        />
+        <div className="label-line" style={{ marginTop: -2, marginBottom: 4 }}>
+          Master multiplier on every stochastic rate (sound change,
+          genesis, splits, drift). 1.0 = stock pacing. 5× pulls the
+          tree faster for demos; 0.2× slows it for careful study.
+          Affects the engine — not just the display.
         </div>
       </Section>
 

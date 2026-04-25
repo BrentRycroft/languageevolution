@@ -392,6 +392,14 @@ export interface SimulationConfig {
    * it and the surface output speed shifts proportionally.
    */
   yearsPerGeneration?: number;
+  /**
+   * Master realism / pacing slider in [0.1, 5.0]. Scales every
+   * stochastic rate the engine has in a single multiplier so the
+   * user can pull one knob to dial between "fast / educational" (5×)
+   * and "slow / research-grade" (0.2×). Default 1 = stock pacing.
+   * Plumbed through `rateMultiplier` in `phonology/rate.ts`.
+   */
+  realismMultiplier?: number;
   modes: {
     phonology: boolean;
     tree: boolean;

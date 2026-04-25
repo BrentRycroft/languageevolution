@@ -4,6 +4,7 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { releaseTerritory } from "../geo/territory";
 import { getWorldMap } from "../geo/map";
+import { realismMultiplier } from "../phonology/rate";
 
 export function stepTreeSplit(
   state: SimulationState,
@@ -27,7 +28,7 @@ export function stepTreeSplit(
   const capPressure = config.tree.unlimitedLeaves
     ? 1
     : capSoftness(aliveLeaves.length, config.tree.maxLeaves);
-  const p = config.tree.splitProbabilityPerGeneration * capPressure;
+  const p = config.tree.splitProbabilityPerGeneration * capPressure * realismMultiplier(config);
   if (rng.chance(p)) {
     splitLeaf(state.tree, leafId, state.generation + 1, rng, {
       worldMap: getWorldMap(config.mapMode ?? "random", config.seed),

@@ -2,7 +2,7 @@ import type { Language, SimulationConfig, SimulationState, WordForm } from "../t
 import { applyChangesToLexicon } from "../phonology/apply";
 import { driftOrthography } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
-import { rateMultiplier, speakerFactor, isolationFactor } from "../phonology/rate";
+import { rateMultiplier, speakerFactor, isolationFactor, realismMultiplier } from "../phonology/rate";
 import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
@@ -46,7 +46,7 @@ export function stepPhonology(
     ages[m] = last === undefined ? 99 : generation - last;
   }
   const opts = {
-    globalRate: config.phonology.globalRate,
+    globalRate: config.phonology.globalRate * realismMultiplier(config),
     weights: lang.changeWeights,
     rateMultiplier: mult,
     frequencyHints: lang.wordFrequencyHints,

@@ -8,6 +8,7 @@ import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
 import { stepCopulaErosion, stepCopulaGenesis } from "./steps/copula";
+import { stepCreolization } from "./steps/creolization";
 import { stepContact } from "./steps/contact";
 import { stepTreeSplit, stepDeath } from "./steps/tree";
 import { stepTaboo } from "./steps/taboo";
@@ -147,6 +148,11 @@ export function createSimulation(
       stepContact(state, lang, config, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
       if (config.modes.death) stepDeath(state, lang, config, rng);
+    }
+    // Cross-language event: creolization. Runs once per gen across
+    // the whole tree, not per-language. Very rare — usually a no-op.
+    if (config.modes.tree) {
+      stepCreolization(state, config, rng, nextGen);
     }
     state = {
       ...state,
