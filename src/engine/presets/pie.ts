@@ -236,7 +236,7 @@ const LEXICON: Lexicon = {
   two: ["d", "w", "o", "h₁"],
   three: ["t", "r", "e", "j", "e", "s"],
   four: ["kʷ", "e", "t", "w", "o", "r", "e", "s"],
-  five: ["p", "e", "n", "k", "ʷ", "e"],
+  five: ["p", "e", "n", "kʷ", "e"],
   six: ["s", "w", "e", "kʲ", "s"],
   seven: ["s", "e", "p", "t", "m̩"],
   eight: ["h₃", "o", "kʲ", "t", "oː"],
@@ -333,7 +333,7 @@ const LEXICON: Lexicon = {
   cheese: ["t", "u", "r"],
   flour: ["m", "o", "l", "h₂"],
   dough: ["t", "a", "j", "s"],
-  wine: ["w", "oj", "n", "o"],
+  wine: ["w", "o", "j", "n", "o"],
   // — tools / technology —
   plow: ["h₂", "e", "r", "h₃"],
   mill: ["m", "e", "l", "h₂"],
