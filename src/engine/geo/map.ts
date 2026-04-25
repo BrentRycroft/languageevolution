@@ -20,6 +20,10 @@ export interface MapCell {
   /** 0–1, used to derive biome. */
   elevation: number;
   biome: "ocean" | "lowland" | "highland" | "mountain";
+  /** True for land cells with at least one ocean neighbour — used by
+   *  the renderer to draw a coastline stroke. Optional for back-compat
+   *  with pre-PR-D saves. */
+  isCoast?: boolean;
 }
 
 export interface WorldMap {
@@ -182,6 +186,18 @@ export function generateRandomContinent(seed: string): WorldMap {
       biome: classifyBiome(elevation),
     });
   }
+  // Coastline pass — same as the Earth map's: flag every land cell
+  // with an ocean neighbour for the renderer's coast stroke.
+  for (const cell of cells) {
+    if (cell.biome === "ocean") continue;
+    for (const n of cell.neighbours) {
+      const nb = cells[n];
+      if (nb && nb.biome === "ocean") {
+        cell.isCoast = true;
+        break;
+      }
+    }
+  }
   return {
     cells,
     bounds: { minX: 0, minY: 0, maxX: MAP_WIDTH, maxY: MAP_HEIGHT },
@@ -200,17 +216,78 @@ export function generateRandomContinent(seed: string): WorldMap {
  * Coordinates are in the same MAP_WIDTH × MAP_HEIGHT space as
  * `generateRandomContinent`, so the SVG renderer is reused directly.
  */
-const EARTH_BLOBS: Array<{ cx: number; cy: number; rx: number; ry: number; name: string }> = [
-  // Eurasia (centre of map, large)
-  { cx: 600, cy: 220, rx: 280, ry: 110, name: "eurasia" },
-  // Africa (south of Eurasia)
-  { cx: 540, cy: 380, rx: 110, ry: 150, name: "africa" },
-  // Americas (left side)
-  { cx: 180, cy: 250, rx: 70,  ry: 150, name: "north_america" },
-  { cx: 220, cy: 430, rx: 60,  ry: 100, name: "south_america" },
-  // Oceania / Australia (bottom right)
-  { cx: 830, cy: 460, rx: 70,  ry: 50,  name: "australia" },
+/**
+ * Hand-crafted 60×30 land/sea bitmap. Each `#` is land, each `.` is
+ * ocean. Sampled per Voronoi cell to derive elevation. Replaces the
+ * five-ellipse blob model — produces a recognisably-Earth silhouette
+ * with separate continents (Africa visibly distinct from Eurasia,
+ * pointed South-American tip, Australia as its own island, etc.).
+ *
+ * Coordinate mapping:
+ *   col 0  ≈ longitude -180   (Pacific west of Americas)
+ *   col 30 ≈ longitude    0   (prime meridian / Greenwich)
+ *   col 59 ≈ longitude +180   (Pacific east of New Zealand)
+ *   row 0  ≈ latitude  +85    (Arctic)
+ *   row 29 ≈ latitude  -85    (Antarctic)
+ *
+ * The bitmap is intentionally coarse — a higher-resolution embedded
+ * world map would balloon the bundle and overshoot the simulator's
+ * scope (the map is for *language territories*, not geography).
+ */
+const EARTH_BITMAP: readonly string[] = [
+  "....................########.....................##........",  //  0
+  "...................##############...........###########....",  //  1
+  "..............################################################",  //  2
+  ".............################...............#################",  //  3
+  ".............##############.................#################",  //  4
+  "...........###############..................#################",  //  5
+  "..........###############......##............################",  //  6
+  ".........###############.......######........###############.",  //  7
+  ".........##############........#######........##############.",  //  8
+  "..........############.........########........#############.",  //  9
+  "..........###########..........########........############..",  // 10
+  "...........#########..........#########........############..",  // 11
+  "............########.........###########.......##########....",  // 12
+  ".............######.........############........########.....",  // 13
+  "..............####.........#############.........########....",  // 14
+  "...............###........##############..........########...",  // 15
+  "...............####.......##############..........#########..",  // 16
+  "...............#####......#############...........#########..",  // 17
+  "................######....############.............########.",  // 18
+  ".................#####....###########..............########.",  // 19
+  ".................#####....##########.................######.",  // 20
+  ".................#####....##########..........############..",  // 21
+  "..................####....#########..........#############..",  // 22
+  "..................####....########.............########.....",  // 23
+  "...................###....######...............######.......",  // 24
+  "....................##....####.................####.........",  // 25
+  ".....................#....##....................##..........",  // 26
+  "............................................................",  // 27
+  "############################################################",  // 28
+  "############################################################",  // 29
 ];
+
+/**
+ * Sample the Earth bitmap at a real-coordinate point and return a
+ * land score in [0, 1]. Bilinear-blends the 4 surrounding bitmap
+ * cells so coastlines come out smooth rather than pixelated.
+ */
+function earthBitmapScore(x: number, y: number): number {
+  const cols = EARTH_BITMAP[0]!.length;
+  const rows = EARTH_BITMAP.length;
+  const fx = (x / MAP_WIDTH) * (cols - 1);
+  const fy = (y / MAP_HEIGHT) * (rows - 1);
+  const x0 = Math.floor(fx), y0 = Math.floor(fy);
+  const x1 = Math.min(cols - 1, x0 + 1), y1 = Math.min(rows - 1, y0 + 1);
+  const wx = fx - x0, wy = fy - y0;
+  const at = (cx: number, cy: number) =>
+    EARTH_BITMAP[cy]![cx] === "#" ? 1 : 0;
+  const a = at(x0, y0), b = at(x1, y0);
+  const c = at(x0, y1), d = at(x1, y1);
+  const top = a * (1 - wx) + b * wx;
+  const bot = c * (1 - wx) + d * wx;
+  return top * (1 - wy) + bot * wy;
+}
 
 /**
  * Earth-shape WorldMap. Generated once and cached — same shape every
@@ -220,10 +297,13 @@ export function generateEarthMap(): WorldMap {
   // Use a fixed seed so the cell graph is identical across all
   // sims that pick "earth" mode. Population of cells is ALSO seeded
   // off this so the map is shareable / reproducible.
-  const baseSeed = "earth-fixed-v1";
+  // PR D: bitmap version uses ~30 cols × 18 rows (was 18 × 12) so the
+  // bitmap detail (Mediterranean separation, Madagascar gap, Indian
+  // peninsula bump, etc.) actually comes through at cell granularity.
+  const baseSeed = "earth-bitmap-v2";
   const rng = makeRng(baseSeed);
-  const cols = 18;
-  const rows = 12;
+  const cols = 30;
+  const rows = 18;
   const cellW = MAP_WIDTH / cols;
   const cellH = MAP_HEIGHT / rows;
   const points: Array<[number, number]> = [];
@@ -249,21 +329,12 @@ export function generateEarthMap(): WorldMap {
     const verts = cellVertices(voronoi, i);
     if (verts.length === 0) continue;
     const centroid = centroidOf(verts);
-    // Elevation: distance to the nearest blob, normalised. Inside a
-    // blob's ellipse → land; outside → ocean. Continental shelves
-    // (close-but-outside) get a gentle slope so coasts aren't a
-    // sheer wall.
-    let landScore = 0;
-    for (const blob of EARTH_BLOBS) {
-      const dx = (centroid.x - blob.cx) / blob.rx;
-      const dy = (centroid.y - blob.cy) / blob.ry;
-      const inside = 1 - Math.sqrt(dx * dx + dy * dy);
-      if (inside > landScore) landScore = inside;
-    }
-    // Translate landScore (negative = far from any blob) into 0–1
-    // elevation: clamp + bias so the threshold for ocean/lowland
-    // sits at 0.3.
-    const elevation = Math.max(0, Math.min(1, 0.3 + landScore * 0.7));
+    // Elevation from the hand-crafted bitmap. Bilinear-blended so
+    // coastlines slope rather than stair-step. The +0.15 floor keeps
+    // ocean cells near coasts at "shallow shelf" rather than abyssal,
+    // which the renderer can pick up later for a coastal palette.
+    const score = earthBitmapScore(centroid.x, centroid.y);
+    const elevation = Math.max(0, Math.min(1, 0.15 + score * 0.85));
     cells.push({
       id: i,
       centroid,
@@ -272,6 +343,19 @@ export function generateEarthMap(): WorldMap {
       elevation,
       biome: classifyBiome(elevation),
     });
+  }
+  // Coastline pass: every land cell with at least one ocean neighbour
+  // is flagged so the renderer can draw a thicker, darker stroke
+  // there (gives continents a visible silhouette).
+  for (const cell of cells) {
+    if (cell.biome === "ocean") continue;
+    for (const n of cell.neighbours) {
+      const nb = cells[n];
+      if (nb && nb.biome === "ocean") {
+        cell.isCoast = true;
+        break;
+      }
+    }
   }
   return {
     cells,
