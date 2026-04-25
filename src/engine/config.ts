@@ -35,9 +35,12 @@ export function defaultConfig(): SimulationConfig {
       // which matches the pacing of attested proto-language
       // subgroupings.
       splitProbabilityPerGeneration: 0.015,
-      maxLeaves: 8,
-      // unlimitedLeaves left undefined (false) by default — the cap stays
-      // until the user opts out of it from the controls panel.
+      // Soft-cap target only — death pressure rises near `maxLeaves`,
+      // never blocks. Default `unlimitedLeaves: true` removes the
+      // hard cap entirely so the tree can grow as long as the
+      // simulation runs.
+      maxLeaves: 12,
+      unlimitedLeaves: true,
       minGenerationsBetweenSplits: 12,
       deathProbabilityPerGeneration: 0.01,
       minGenerationsBeforeDeath: 20,

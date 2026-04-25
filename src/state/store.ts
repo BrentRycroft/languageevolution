@@ -313,8 +313,13 @@ export const useSimStore = create<SimStore>((set, get) => ({
   setSpeed: (s) => set({ speed: s }),
   reset: () => {
     const { config } = get();
-    const init = initFromConfig(config);
+    // PR C: every reset rolls a fresh seed by default — most users
+    // expect "reset" to mean "give me a new run", not "redo the same
+    // run". Hold the same seed by editing it manually before reset.
+    const nextConfig = { ...config, seed: makeRandomSeed() };
+    const init = initFromConfig(nextConfig);
     set({
+      config: nextConfig,
       sim: init.sim,
       state: init.state,
       history: init.history,
@@ -327,7 +332,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
     // Overwrite autosave with the fresh state so a page reload after a
     // reset doesn't resurrect the old simulation.
     saveAutosave(
-      { config, state: init.state, generationsRun: init.state.generation },
+      { config: nextConfig, state: init.state, generationsRun: init.state.generation },
       { force: true },
     );
   },

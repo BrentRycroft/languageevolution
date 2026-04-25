@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import { useSimStore } from "../state/store";
 import { GENESIS_CATALOG } from "../engine/genesis/catalog";
 import { SavedRunsList } from "./SavedRunsList";
-import { StatsPanel } from "./StatsPanel";
 import { AchievementsStrip } from "./Achievements";
 import { shareUrl } from "../share/url";
 import { SeedLexiconEditor } from "./SeedLexiconEditor";
@@ -123,10 +122,6 @@ export function ControlsPanel() {
         <EvolutionSpeedPicker />
       </Section>
 
-      <Section title="World map" defaultOpen={false}>
-        <WorldMapPicker />
-      </Section>
-
       <Section title="Playback" defaultOpen>
         <Slider
           label="Speed (steps/sec)"
@@ -137,6 +132,34 @@ export function ControlsPanel() {
           onChange={setSpeed}
           format={(v) => `${v}/s`}
         />
+      </Section>
+
+      <Section title="Seed" defaultOpen>
+        <div className="row-4">
+          <input
+            type="text"
+            value={config.seed}
+            onChange={(e) => setSeed(e.target.value)}
+            placeholder="seed"
+            aria-label="Random seed"
+            style={{ flex: 1 }}
+          />
+          <button
+            type="button"
+            className="icon-only"
+            onClick={randomiseSeed}
+            aria-label="Randomise seed"
+            title="Randomise seed — rolls a fresh run"
+          >
+            <DiceIcon size={16} />
+          </button>
+        </div>
+        <button
+          style={{ marginTop: 6, width: "100%" }}
+          onClick={() => setSeedEditorOpen(true)}
+        >
+          Edit seed lexicon ({Object.keys(config.seedLexicon).length})
+        </button>
       </Section>
 
       <Section title="Modes">
@@ -172,6 +195,26 @@ export function ControlsPanel() {
         />
       </Section>
 
+      <details style={{ marginTop: 8 }}>
+        <summary
+          className="label-line"
+          style={{
+            cursor: "pointer",
+            padding: "8px 12px",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--r-2)",
+            background: "var(--panel-2)",
+            userSelect: "none",
+          }}
+          title="Tuning knobs for advanced users — leave alone for stock behavior"
+        >
+          ⚙︎ Advanced settings
+        </summary>
+
+      <Section title="World map" defaultOpen={false}>
+        <WorldMapPicker />
+      </Section>
+
       <Section title="Rates" defaultOpen={false}>
         <Slider
           label="Global rate"
@@ -189,22 +232,18 @@ export function ControlsPanel() {
           step={0.01}
           onChange={(v) => updateTree({ splitProbabilityPerGeneration: v })}
         />
-        <Toggle
-          label="Unlimited languages (no cap)"
-          value={!!config.tree.unlimitedLeaves}
-          onChange={(v) => updateTree({ unlimitedLeaves: v })}
+        <Slider
+          label="Soft cap on living languages"
+          value={config.tree.maxLeaves}
+          min={1}
+          max={120}
+          step={1}
+          onChange={(v) => updateTree({ maxLeaves: Math.round(v) })}
+          format={(v) => String(Math.round(v))}
         />
-        {!config.tree.unlimitedLeaves && (
-          <Slider
-            label="Max living languages"
-            value={config.tree.maxLeaves}
-            min={1}
-            max={60}
-            step={1}
-            onChange={(v) => updateTree({ maxLeaves: Math.round(v) })}
-            format={(v) => String(Math.round(v))}
-          />
-        )}
+        <div className="label-line" style={{ marginTop: -4, marginBottom: 6 }}>
+          Soft cap only — death pressure rises near the cap, never blocks.
+        </div>
         <Slider
           label="Death prob. / gen"
           value={config.tree.deathProbabilityPerGeneration}
@@ -265,34 +304,6 @@ export function ControlsPanel() {
         />
       </Section>
 
-      <Section title="Seed" defaultOpen={false}>
-        <div className="row-4">
-          <input
-            type="text"
-            value={config.seed}
-            onChange={(e) => setSeed(e.target.value)}
-            placeholder="seed"
-            aria-label="Random seed"
-            style={{ flex: 1 }}
-          />
-          <button
-            type="button"
-            className="icon-only"
-            onClick={randomiseSeed}
-            aria-label="Randomise seed"
-            title="Randomise seed — rolls a fresh run"
-          >
-            <DiceIcon size={16} />
-          </button>
-        </div>
-        <button
-          style={{ marginTop: 6, width: "100%" }}
-          onClick={() => setSeedEditorOpen(true)}
-        >
-          Edit seed lexicon ({Object.keys(config.seedLexicon).length})
-        </button>
-      </Section>
-
       <Section title="Word genesis rules" defaultOpen={false}>
         <div className="change-catalog">
           {GENESIS_CATALOG.map((g) => {
@@ -317,9 +328,7 @@ export function ControlsPanel() {
         </div>
       </Section>
 
-      <Section title="Stats" defaultOpen={false}>
-        <StatsPanel />
-      </Section>
+      </details>
 
       <Section title="Achievements" defaultOpen={false}>
         <AchievementsStrip />
