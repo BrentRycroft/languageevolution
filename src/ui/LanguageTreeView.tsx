@@ -5,6 +5,8 @@ import { formatForm, type DisplayScript } from "../engine/phonology/display";
 import type { LanguageTree } from "../engine/types";
 import { ScriptPicker } from "./ScriptPicker";
 import { StemmaView } from "./StemmaView";
+import { formatElapsed } from "../engine/time";
+import { YEARS_PER_GENERATION } from "../engine/constants";
 
 type TreeMode = "phylogeny" | "stemma";
 
@@ -24,6 +26,7 @@ function buildTooltip(
   id: string,
   generation: number,
   script: DisplayScript,
+  yearsPerGen: number = YEARS_PER_GENERATION,
 ): string {
   const node = tree[id]!;
   const lang = node.language;
@@ -33,7 +36,7 @@ function buildTooltip(
   const borrowCount = Object.values(lang.wordOrigin ?? {}).filter((o) =>
     o.startsWith("borrow:"),
   ).length;
-  const samples = ["water", "fire", "mother", "go"]
+  const samples = ["water", "fire", "mother", "go", "see", "king"]
     .map((m) => {
       const f = lang.lexicon[m];
       return f ? `${m}=${formatForm(f, lang, script)}` : null;
@@ -43,7 +46,7 @@ function buildTooltip(
     .join("\n  ");
   return [
     lang.name + (lang.extinct ? " (extinct)" : ""),
-    `age ${age} · ${lexCount} words · ${tempo} ${lang.conservatism.toFixed(2)}`,
+    `age ${formatElapsed(age, yearsPerGen)} · ${lexCount} words · ${tempo} ${lang.conservatism.toFixed(2)}`,
     borrowCount > 0 ? `${borrowCount} loanwords` : "",
     samples ? "  " + samples : "",
   ]
@@ -57,6 +60,7 @@ function buildHierarchy(
   sampleMeaning: string,
   generation: number,
   script: DisplayScript,
+  yearsPerGen: number = YEARS_PER_GENERATION,
 ): NodeDatum {
   const build = (id: string): NodeDatum => {
     const node = tree[id]!;
@@ -68,7 +72,7 @@ function buildHierarchy(
       sample: form ? formatForm(form, lang, script) : "—",
       isLeaf: node.childrenIds.length === 0,
       extinct: !!lang.extinct,
-      tooltip: buildTooltip(tree, id, generation, script),
+      tooltip: buildTooltip(tree, id, generation, script, yearsPerGen),
       children: node.childrenIds.length
         ? node.childrenIds.map((cid) => build(cid))
         : undefined,
@@ -83,6 +87,9 @@ export function LanguageTreeView() {
   const selectLanguage = useSimStore((s) => s.selectLanguage);
   const selectedMeaning = useSimStore((s) => s.selectedMeaning);
   const script = useSimStore((s) => s.displayScript);
+  const yearsPerGen = useSimStore(
+    (s) => s.config.yearsPerGeneration ?? YEARS_PER_GENERATION,
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 600, h: 400 });
@@ -101,7 +108,7 @@ export function LanguageTreeView() {
 
   const layout = useMemo(() => {
     const sample = selectedMeaning ?? "water";
-    const data = buildHierarchy(state.tree, state.rootId, sample, state.generation, script);
+    const data = buildHierarchy(state.tree, state.rootId, sample, state.generation, script, yearsPerGen);
     const root = hierarchy(data);
     const margin = 24;
     // Vertical layout: x spreads horizontally, y is depth downward.

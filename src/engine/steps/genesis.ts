@@ -6,6 +6,7 @@ import type { Rng } from "../rng";
 import { genesisRulesFor, pushEvent } from "./helpers";
 import { isFormLegal } from "../phonology/wordShape";
 import { lexicalCapacity } from "../lexicon/tier";
+import { realismMultiplier } from "../phonology/rate";
 
 export function stepGenesis(
   lang: Language,
@@ -49,7 +50,7 @@ export function stepGenesis(
       state.tree,
       rules,
       config.genesis.ruleWeights,
-      config.genesis.globalRate,
+      config.genesis.globalRate * realismMultiplier(config),
       rng,
       need,
     );

@@ -1,6 +1,18 @@
 import { fnv1a } from "../rng";
 
 /**
+ * Realism master multiplier — a single global knob that scales every
+ * stochastic rate the engine consults. 1.0 = stock pacing; 5.0 = fast
+ * / educational; 0.2 = slow / research-grade. Default 1.0 applied
+ * when the config field is missing.
+ */
+export function realismMultiplier(
+  config: { realismMultiplier?: number } | undefined,
+): number {
+  return Math.max(0.05, Math.min(10, config?.realismMultiplier ?? 1));
+}
+
+/**
  * Generation-and-language-specific multiplier that makes effective sound-change
  * rates vary realistically over time:
  *   - a gentle sinusoidal baseline (languages have calmer and faster eras)

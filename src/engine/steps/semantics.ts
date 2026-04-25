@@ -3,6 +3,7 @@ import { driftOneMeaning } from "../semantics/drift";
 import { maybeRecarve } from "../semantics/recarve";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
+import { realismMultiplier } from "../phonology/rate";
 
 export function stepSemantics(
   lang: Language,
@@ -10,7 +11,7 @@ export function stepSemantics(
   rng: Rng,
   generation: number,
 ): void {
-  const p = Math.min(1, config.semantics.driftProbabilityPerGeneration * lang.conservatism);
+  const p = Math.min(1, config.semantics.driftProbabilityPerGeneration * lang.conservatism * realismMultiplier(config));
   if (rng.chance(p)) {
     // localNeighbors is a per-language override map populated at coinage
     // time for compound / derived meanings — pass it as the static

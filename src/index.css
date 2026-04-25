@@ -1133,7 +1133,12 @@ input[type="range"]:hover::-moz-range-thumb {
 }
 
 .lexicon-table td.changed {
-  animation: flash 0.8s ease-out;
+  /* Softer mutation flash — was 0.8s ease-out with a hard-on
+     `--change` background; now 1.2s with a quick rise + slow fade
+     and a subtler accent-tinted bg. Reads as a warm pulse rather
+     than a jarring colour swap. Honours prefers-reduced-motion via
+     the global override at the bottom of this file. */
+  animation: cell-flash 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .origin-glyph {
@@ -1143,8 +1148,15 @@ input[type="range"]:hover::-moz-range-thumb {
   font-size: 0.85em;
 }
 
+@keyframes cell-flash {
+  0%   { background: transparent; color: var(--text); }
+  20%  { background: var(--accent-soft); color: var(--text); }
+  100% { background: transparent; color: var(--text); }
+}
+
+/* Legacy alias kept for any callers that reference @keyframes flash. */
 @keyframes flash {
-  0% { background: var(--change); color: #0a1520; }
+  0%   { background: var(--accent-soft); color: var(--text); }
   100% { background: transparent; color: var(--text); }
 }
 

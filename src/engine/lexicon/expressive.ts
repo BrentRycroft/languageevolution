@@ -9,10 +9,15 @@ import type { Meaning } from "../types";
  * Words tagged here skip phonological mutation with high probability.
  */
 export const EXPRESSIVE_MEANINGS: ReadonlySet<Meaning> = new Set([
-  // None tagged in the default seed lexicon yet — add as ideophone-ish
-  // meanings ("sharp", "loud", "tiny") get introduced.
-  // The compound rule in genesis may also produce expressive forms; we
-  // treat the `-intens` reduplication suffix as expressive below.
+  // Sensory ideophones — sharp / loud / tiny / bright vocabulary that
+  // cross-linguistically resists regular sound change. The list draws
+  // from typologically common iconic categories (Dingemanse 2012).
+  "sharp", "loud", "tiny", "bright",
+  // Animal calls — onomatopoetic and similarly resistant.
+  "crow", "buzz", "hum", "growl",
+  // Quick / sudden motions
+  "flash", "snap", "burst",
+  // Reduplicated intensifier suffix is handled by the regex below.
 ]);
 
 export function isExpressive(meaning: Meaning): boolean {
