@@ -1,4 +1,4 @@
-import type { CoinageMechanism } from "./index";
+import type { CoinageMechanism } from "./types";
 import { clusterOf } from "../../semantics/clusters";
 
 /**

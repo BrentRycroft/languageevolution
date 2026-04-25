@@ -1,0 +1,55 @@
+/*
+ * Tiny utility-class layer for the most-repeated inline styles in the
+ * UI tree. Each utility maps to one or two declarations only — anything
+ * larger should grow into a named component class instead.
+ *
+ * Driver: a baseline survey found ~330 inline `style={{}}` instances in
+ * src/ui/*.tsx, with the same 8-10 patterns dominating. Migrating those
+ * patterns alone eliminates ~100 inline styles and removes a large
+ * chunk of inline cognitive load.
+ */
+
+/* ---- text colour shortcuts ---- */
+.t-muted { color: var(--muted); }
+.t-text  { color: var(--text); }
+.t-accent { color: var(--accent); }
+.t-danger { color: var(--danger); }
+
+/* ---- text size shortcuts (token-aligned) ---- */
+.fs-1 { font-size: var(--fs-1); }
+.fs-2 { font-size: var(--fs-2); }
+
+/* ---- alignment ---- */
+.text-right  { text-align: right; }
+.text-left   { text-align: left; }
+.text-center { text-align: center; }
+.ml-auto     { margin-left: auto; }
+
+/* ---- compact flex stacks ---- */
+.row     { display: flex; }
+.row-2   { display: flex; gap: 2px; }
+.row-4   { display: flex; gap: 4px; }
+.row-6   { display: flex; gap: 6px; }
+.row-8   { display: flex; gap: 8px; }
+.row-12  { display: flex; gap: 12px; }
+.col     { display: flex; flex-direction: column; }
+.col-2   { display: flex; flex-direction: column; gap: 2px; }
+.col-4   { display: flex; flex-direction: column; gap: 4px; }
+.col-6   { display: flex; flex-direction: column; gap: 6px; }
+.col-8   { display: flex; flex-direction: column; gap: 8px; }
+.col-12  { display: flex; flex-direction: column; gap: 12px; }
+.items-center { align-items: center; }
+.items-start  { align-items: flex-start; }
+.items-end    { align-items: flex-end; }
+.flex-wrap    { flex-wrap: wrap; }
+
+/* ---- composed convenience classes for the dominant patterns ---- */
+.section-empty {
+  color: var(--muted);
+  font-size: var(--fs-2);
+  padding: 12px;
+}
+.label-line {
+  color: var(--muted);
+  font-size: var(--fs-1);
+}

@@ -44,14 +44,14 @@ export function RulesTimeline({
 
   if (!node) {
     return (
-      <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
+      <div className="section-empty">
         Pick a language to see its sound-law timeline.
       </div>
     );
   }
   if (rows.length === 0) {
     return (
-      <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
+      <div className="section-empty">
         No sound laws yet for {node.language.name}. Run more generations — new
         laws typically start landing around gen 8–16.
       </div>

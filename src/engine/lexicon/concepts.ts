@@ -1,7 +1,6 @@
 import type { Meaning } from "../types";
-import { BASIC_240 } from "./basic240";
+import { BASIC_240, CLUSTERS as BASIC_CLUSTERS } from "./basic240";
 import { posOf, type POS } from "./pos";
-import { clusterOf } from "../semantics/clusters";
 import { frequencyFor } from "./frequency";
 import { EXPANDED_CONCEPTS } from "./expanded_concepts";
 
@@ -223,9 +222,21 @@ const COLEX_PAIRS: ReadonlyArray<readonly [Meaning, Meaning]> = [
   ["war", "fight"],         // many
 ];
 
+// Local BASIC_240 cluster lookup: built directly from BASIC_CLUSTERS
+// so this module doesn't need to import `clusterOf` (which would create
+// an init-time cycle with semantics/clusters.ts now that the latter
+// reads back from CONCEPTS).
+const BASIC_CLUSTER_OF: Record<Meaning, string> = (() => {
+  const out: Record<Meaning, string> = {};
+  for (const [name, members] of Object.entries(BASIC_CLUSTERS)) {
+    for (const m of members) out[m] = name;
+  }
+  return out;
+})();
+
 /** Cluster name for any Basic concept. Falls back to "other" for strays. */
 function inferCluster(id: Meaning): string {
-  return clusterOf(id) ?? "other";
+  return BASIC_CLUSTER_OF[id] ?? "other";
 }
 
 /** Assign a FrequencyClass from the hand-tuned numeric hints in frequency.ts. */

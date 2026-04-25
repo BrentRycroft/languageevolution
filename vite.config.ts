@@ -56,5 +56,22 @@ export default defineConfig(({ command }) => ({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // Long-running property + multi-thousand-generation smoke tests
+    // are gated behind RUN_SLOW=1 so the default `npm test` returns
+    // under 90s. CI / pre-push runs `npm run test:slow` for the full
+    // surface.
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      ...(process.env.RUN_SLOW
+        ? []
+        : [
+            "**/properties.test.ts",
+            "**/smoke_2k.test.ts",
+            "**/lexicogenesis_e2e.test.ts",
+            "**/presets.test.ts",
+            "**/render_every_tab.test.tsx",
+          ]),
+    ],
   },
 }));

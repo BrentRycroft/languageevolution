@@ -1,0 +1,32 @@
+import type { Language, LanguageTree, Meaning, WordForm } from "../../types";
+import type { Rng } from "../../rng";
+
+/**
+ * Common interface for word-coinage mechanisms. Each mechanism takes the
+ * language's state + the desired target meaning and either returns a
+ * concrete coinage or null if it can't feed (no usable source material,
+ * illegal phonotactics, etc.).
+ *
+ * The orchestrator picks a target meaning from the lexical-need vector,
+ * then polls mechanisms in a weighted order until one accepts.
+ */
+export interface CoinageMechanism {
+  id: string;
+  label: string;
+  /** "compound" etc. — shown in the lexicon glyph strip. */
+  originTag: string;
+  /** Register assigned to the resulting word. */
+  register?: "high" | "low";
+  /** Weight relative to the other mechanisms, per language style. */
+  baseWeight: number;
+  /**
+   * Attempt to coin for `target`. Return null if the mechanism doesn't
+   * fit. `tree` lets calque reach into sister languages.
+   */
+  tryCoin: (
+    lang: Language,
+    target: Meaning,
+    tree: LanguageTree,
+    rng: Rng,
+  ) => { form: WordForm } | null;
+}

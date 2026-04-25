@@ -122,7 +122,7 @@ export function LanguageTreeView() {
           gap: 8,
         }}
       >
-        <div role="tablist" aria-label="Tree mode" style={{ display: "flex", gap: 4 }}>
+        <div role="tablist" aria-label="Tree mode" className="row-4">
           <button
             role="tab"
             aria-selected={mode === "phylogeny"}

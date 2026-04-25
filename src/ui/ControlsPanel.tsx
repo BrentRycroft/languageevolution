@@ -266,7 +266,7 @@ export function ControlsPanel() {
       </Section>
 
       <Section title="Seed" defaultOpen={false}>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div className="row-4">
           <input
             type="text"
             value={config.seed}

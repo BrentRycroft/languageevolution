@@ -70,8 +70,8 @@ export function SelectedLanguageBar() {
         }}
         title="Switch the selected language"
       >
-        <span style={{ color: "var(--text)" }}>★ {selected.name}</span>
-        <span style={{ color: "var(--muted)" }}>▾</span>
+        <span className="t-text">★ {selected.name}</span>
+        <span className="t-muted">▾</span>
       </button>
       <span title={`Cultural tier: ${TIER_LABELS[tier]}`}>{tierIcon} {TIER_LABELS[tier]}</span>
       <span title={`Conservatism ${selected.conservatism.toFixed(2)}`}>
@@ -80,7 +80,7 @@ export function SelectedLanguageBar() {
       <span>{speakers.toLocaleString()} speakers</span>
       <span>{Object.keys(selected.lexicon).length} words</span>
       {selected.extinct && (
-        <span style={{ color: "var(--danger)" }}>† extinct</span>
+        <span className="t-danger">† extinct</span>
       )}
       {open && (
         <div

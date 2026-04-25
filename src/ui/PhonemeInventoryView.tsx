@@ -104,11 +104,11 @@ export function PhonemeInventoryView() {
           fontSize: "var(--fs-2)",
         }}
       >
-        <span style={{ color: "var(--muted)" }}>
+        <span className="t-muted">
           {lang.name} · {lang.phonemeInventory.segmental.length} segmental
           {usesTones ? ` + ${tones.length} tones` : ""}
         </span>
-        <span style={{ color: "var(--muted)", fontSize: "var(--fs-1)" }}>
+        <span className="label-line">
           <span style={{ color: "var(--accent-2)" }}>●</span> innovative vs proto · 🤝 areal · 🔧 internal rule
         </span>
       </div>

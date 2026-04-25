@@ -1,4 +1,4 @@
-import type { Phoneme } from "../types";
+import type { Phoneme } from "../primitives";
 
 export const VOWELS: ReadonlySet<Phoneme> = new Set([
   "a", "e", "i", "o", "u",

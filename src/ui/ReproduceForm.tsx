@@ -129,8 +129,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Close"
-            className="ghost icon-only"
-            style={{ marginLeft: "auto" }}
+            className="ghost icon-only ml-auto"
           >
             <CloseIcon size={16} />
           </button>
@@ -142,7 +141,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
           {origin && (
             <>
               {" "}
-              <span style={{ color: "var(--text)" }}>
+              <span className="t-text">
                 Origin: {origin.startsWith("borrow:") ? `borrowed from ${origin.slice(7)}` : origin}.
               </span>
             </>
@@ -158,7 +157,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
             .
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div className="col-4">
             {seedForm && lang && (
               <Row generation={0} language="Proto seed" form={formatForm(seedForm, lang, script)} accent />
             )}
@@ -178,7 +177,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
             <div className="grammar-section-label" style={{ marginBottom: 6 }}>
               Recent sound changes in {lang.name}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div className="col-2">
               {recentChanges.map((e, i) => (
                 <div
                   key={i}
@@ -192,7 +191,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
                   }}
                 >
                   <span>g{e.generation}</span>
-                  <span style={{ color: "var(--text)" }}>{e.description}</span>
+                  <span className="t-text">{e.description}</span>
                 </div>
               ))}
             </div>
@@ -228,9 +227,9 @@ function Row({
         fontSize: "var(--fs-2)",
       }}
     >
-      <span style={{ color: "var(--muted)" }}>g{generation}</span>
+      <span className="t-muted">g{generation}</span>
       <span>{language}</span>
-      <span style={{ color: "var(--accent)" }}>{form}</span>
+      <span className="t-accent">{form}</span>
     </div>
   );
 }

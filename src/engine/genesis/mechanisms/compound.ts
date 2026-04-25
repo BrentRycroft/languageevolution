@@ -1,4 +1,4 @@
-import type { CoinageMechanism } from "./index";
+import type { CoinageMechanism } from "./types";
 import { relatedMeanings } from "../../semantics/clusters";
 import { neighborsOf } from "../../semantics/neighbors";
 import { complexityFor } from "../../lexicon/complexity";

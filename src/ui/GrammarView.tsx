@@ -4,6 +4,7 @@ import { inflect } from "../engine/morphology/evolve";
 import type { MorphCategory } from "../engine/morphology/types";
 import { formToString } from "../engine/phonology/ipa";
 import { formatForm } from "../engine/phonology/display";
+import { posOf } from "../engine/lexicon/pos";
 import { ScriptPicker } from "./ScriptPicker";
 
 export function GrammarView() {
@@ -30,8 +31,8 @@ export function GrammarView() {
             }}
           >
             <strong>{selected.name}</strong>{" "}
-            {selected.extinct && <span style={{ color: "var(--danger)" }}>(extinct)</span>}
-            <span style={{ marginLeft: "auto" }}>
+            {selected.extinct && <span className="t-danger">(extinct)</span>}
+            <span className="ml-auto">
               <ScriptPicker />
             </span>
           </div>
@@ -40,7 +41,7 @@ export function GrammarView() {
           <ParadigmTable lang={selected} />
         </>
       ) : (
-        <div style={{ color: "var(--muted)" }}>Select a language to view grammar.</div>
+        <div className="t-muted">Select a language to view grammar.</div>
       )}
 
       <div style={{ marginTop: 12, display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -90,29 +91,93 @@ function InventoryDisplay({ lang }: { lang: import("../engine/types").Language }
   );
 }
 
+/**
+ * Pick a demo stem for the given POS — preferring short, single-token
+ * meanings so the inflected forms read cleanly. Returns undefined if
+ * the language has no lexicon entry of that POS.
+ */
+function pickDemoStem(
+  lang: import("../engine/types").Language,
+  pos: "noun" | "verb",
+): string | undefined {
+  const candidates = Object.keys(lang.lexicon).filter((m) => !m.includes("-"));
+  for (const m of candidates) if (posOf(m) === pos) return m;
+  // Fall back: include hyphenated meanings when no clean stem is available.
+  for (const m of Object.keys(lang.lexicon)) if (posOf(m) === pos) return m;
+  return undefined;
+}
+
 function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
-  const script = useSimStore((s) => s.displayScript);
   const paradigms = lang.morphology.paradigms;
   const cats = Object.keys(paradigms) as MorphCategory[];
   if (cats.length === 0) {
     return (
-      <div style={{ color: "var(--muted)", marginTop: 10, fontSize: 11 }}>
+      <div className="t-muted" style={{ marginTop: 10, fontSize: 11 }}>
         No morphology yet.
       </div>
     );
   }
-  const lexMeanings = Object.keys(lang.lexicon);
-  // Use the first short meaning as a demo noun/verb stem.
-  const demo = lexMeanings.find((m) => !m.includes("-")) ?? lexMeanings[0];
-  const demoForm = demo ? lang.lexicon[demo] : undefined;
+  // Split paradigms by POS gate so a noun's row never gets shown
+  // inflected through a verb's tense category (and vice versa).
+  const nounCats = cats.filter((c) => c.startsWith("noun."));
+  const verbCats = cats.filter((c) => c.startsWith("verb."));
+  const otherCats = cats.filter(
+    (c) => !c.startsWith("noun.") && !c.startsWith("verb."),
+  );
+  const nounStem = pickDemoStem(lang, "noun");
+  const verbStem = pickDemoStem(lang, "verb");
   return (
     <div style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
-        Morphology
-        {demo && (
+      {nounCats.length > 0 && (
+        <ParadigmGroup
+          lang={lang}
+          stem={nounStem}
+          label="Noun morphology"
+          cats={nounCats}
+        />
+      )}
+      {verbCats.length > 0 && (
+        <ParadigmGroup
+          lang={lang}
+          stem={verbStem}
+          label="Verb morphology"
+          cats={verbCats}
+        />
+      )}
+      {otherCats.length > 0 && (
+        <ParadigmGroup
+          lang={lang}
+          stem={nounStem ?? verbStem}
+          label="Other morphology"
+          cats={otherCats}
+        />
+      )}
+    </div>
+  );
+}
+
+function ParadigmGroup({
+  lang,
+  stem,
+  label,
+  cats,
+}: {
+  lang: import("../engine/types").Language;
+  stem: string | undefined;
+  label: string;
+  cats: MorphCategory[];
+}) {
+  const script = useSimStore((s) => s.displayScript);
+  const paradigms = lang.morphology.paradigms;
+  const stemForm = stem ? lang.lexicon[stem] : undefined;
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className="label-line" style={{ marginBottom: 4 }}>
+        {label}
+        {stem && (
           <>
             {" — "}
-            showing "<span style={{ color: "var(--text)" }}>{demo}</span>" inflected
+            showing "<span className="t-text">{stem}</span>" inflected
           </>
         )}
       </div>
@@ -128,13 +193,15 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
           {cats.map((cat) => {
             const p = paradigms[cat];
             if (!p) return null;
-            const inflected = demoForm
-              ? formatForm(inflect(demoForm, p, lang, demo), lang, script)
+            const inflected = stemForm
+              ? formatForm(inflect(stemForm, p, lang, stem!), lang, script)
               : "—";
             return (
               <tr key={cat}>
-                <td style={{ padding: "2px 6px", color: "var(--muted)" }}>{cat}</td>
-                <td style={{ padding: "2px 6px", color: "var(--muted)" }}>
+                <td className="t-muted" style={{ padding: "2px 6px" }}>
+                  {cat}
+                </td>
+                <td className="t-muted" style={{ padding: "2px 6px" }}>
                   /{formToString(p.affix)}/ ({p.position})
                   {p.source && (
                     <span

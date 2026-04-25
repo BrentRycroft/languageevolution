@@ -1,9 +1,7 @@
 import type { Rng } from "./rng";
 
-export type Phoneme = string;
-export type Meaning = string;
-export type WordForm = Phoneme[];
-export type Lexicon = Record<Meaning, WordForm>;
+export type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
+import type { Meaning, WordForm, Lexicon } from "./primitives";
 
 export type SoundChangeCategory =
   | "lenition"
@@ -131,11 +129,11 @@ export interface Language {
    * subject to. Each rule has a strength that grows with use and decays with
    * disuse; when strength falls below a threshold the rule retires.
    */
-  activeRules: import("./phonology/generated").GeneratedRule[];
+  activeRules: import("./phonology/generated-types").GeneratedRule[];
   /**
    * Retired rules kept for UI history.
    */
-  retiredRules?: import("./phonology/generated").GeneratedRule[];
+  retiredRules?: import("./phonology/generated-types").GeneratedRule[];
   /**
    * Per-family bias vector used by the procedural proposer. Higher numbers
    * mean the language is more inclined to invent rules of that family.
@@ -279,6 +277,107 @@ export interface GrammarFeatures {
   tenseMarking: "none" | "past" | "future" | "both";
   hasCase: boolean;
   genderCount: 0 | 2 | 3;
+  /**
+   * Morphological-typology axes added in PR B.
+   *
+   * `synthesisIndex` — target morphemes-per-word (0..5). 1.0 = English-
+   * like analytical; 2.5 = Latin-like synthetic; 4+ = polysynthetic.
+   * Drives genesis bias (high synthesis prefers compounds + derivations
+   * over single-root coinage) and translator output (more affixes
+   * stacked on each token).
+   *
+   * `fusionIndex` — 0..1. 0 = agglutinative (one-morpheme-per-meaning,
+   * Turkish-like); 1 = fusional (portmanteau affixes, Latin-like).
+   * Drives whether stacked affixes are kept distinct or merged at the
+   * realisation step.
+   *
+   * `articlePresence` — how the language realises definite/indefinite
+   * articles. `none` = no article system (Mandarin, most Slavic);
+   * `free` = standalone words (English `the`, French `le`); `enclitic`
+   * = suffixed to the noun (Romanian `om-ul`, Bulgarian, Macedonian);
+   * `proclitic` = clitic prefix (rarer; some Bantu).
+   *
+   * `caseStrategy` — case morphology, prepositions, postpositions, or
+   * a mix. Decides how oblique arguments are marked at translation.
+   *
+   * `incorporates` — noun-incorporation flag for polysynthesis. When
+   * true, certain object-noun roots can fuse into the verb stem.
+   *
+   * `classifierSystem` — Mandarin-style numeral classifiers. When
+   * true, numerals require a classifier between numeral and noun.
+   *
+   * `prodrop` — whether the language allows subject-pronoun dropping
+   * (Spanish, Italian, Japanese). When true, the translator omits the
+   * subject when verb agreement disambiguates.
+   *
+   * All fields are optional for backward compatibility; pre-PR-B saves
+   * fall back to their declared defaults.
+   */
+  synthesisIndex?: number;
+  fusionIndex?: number;
+  articlePresence?: "none" | "free" | "enclitic" | "proclitic";
+  caseStrategy?: "case" | "preposition" | "postposition" | "mixed";
+  incorporates?: boolean;
+  classifierSystem?: boolean;
+  prodrop?: boolean;
+  /**
+   * Constituent ordering inside an NP / clause beyond the top-level
+   * S/V/O. All optional; defaults are pre-modifier (English-style).
+   *
+   * `adjectivePosition`  — where attributive adjectives sit relative
+   *                        to their head noun. `pre` = English, German,
+   *                        Mandarin; `post` = French, Spanish, Welsh.
+   * `possessorPosition`  — where the possessor sits relative to the
+   *                        possessed noun. `pre` = English ("John's
+   *                        book"), `post` = Italian ("il libro di
+   *                        Giovanni").
+   * `numeralPosition`    — where a cardinal numeral sits relative to
+   *                        its noun. `pre` = English, Spanish; `post`
+   *                        = some Bantu, some Mayan.
+   * `negationPosition`   — `pre-verb` = English (`do not see`),
+   *                        Spanish (`no veo`); `post-verb` = some
+   *                        Romance archaisms; `prefix` = morphological
+   *                        ne- on the verb; `suffix` = morphological
+   *                        -nai on the verb (Japanese).
+   */
+  adjectivePosition?: "pre" | "post";
+  possessorPosition?: "pre" | "post";
+  numeralPosition?: "pre" | "post";
+  negationPosition?: "pre-verb" | "post-verb" | "prefix" | "suffix";
+  /**
+   * Aspect / mood / voice / interrogative typology added in PR B
+   * follow-up. All optional; defaults applied at read-site.
+   *
+   * `aspectMarking`        — "none" | "perfective" | "imperfective" |
+   *                          "progressive". Drives which verb.aspect.*
+   *                          paradigm fires by default; tokeniser
+   *                          cues (e.g. "is going") override per-line.
+   * `voice`                — "active" | "mixed". When `mixed` the
+   *                          translator emits passive when the input
+   *                          contains "is/was/were Xed" pattern, via
+   *                          verb.voice.pass.
+   * `moodMarking`          — declarative | subjunctive | imperative.
+   *                          Cues: "should/might/may" → subjunctive;
+   *                          imperative input "do X!" → imperative.
+   * `interrogativeStrategy` — how yes/no questions surface:
+   *                          "particle"  = a sentence-final / initial
+   *                                        particle (Mandarin 吗,
+   *                                          Japanese か).
+   *                          "inversion" = subject-verb inversion
+   *                                        (English "Is the king …").
+   *                          "intonation" = no morphological cue;
+   *                                        the realiser appends "?"
+   *                                        as a marker.
+   * `interrogativeParticle` — when `interrogativeStrategy` is
+   *                          "particle", the lemma the closed-class
+   *                          table renders for it (treated like a
+   *                          discourse.q particle).
+   */
+  aspectMarking?: "none" | "perfective" | "imperfective" | "progressive";
+  voice?: "active" | "mixed";
+  moodMarking?: "declarative" | "subjunctive" | "imperative";
+  interrogativeStrategy?: "particle" | "inversion" | "intonation";
+  interrogativeParticle?: "initial" | "final";
 }
 
 export interface SimulationConfig {

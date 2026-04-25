@@ -44,11 +44,11 @@ export function EventsLog() {
         {selected.name} · {events.length} events
       </div>
       {events.length === 0 && (
-        <div style={{ color: "var(--muted)" }}>
+        <div className="t-muted">
           No events yet — run the simulation to see this language's history.
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div className="col-2">
         {events.map((e, i) => (
           <div
             key={i}
@@ -62,7 +62,7 @@ export function EventsLog() {
               fontSize: 11,
             }}
           >
-            <span style={{ color: "var(--muted)" }}>g{e.generation}</span>
+            <span className="t-muted">g{e.generation}</span>
             <span style={{ color: KIND_COLOR[e.kind] }}>{KIND_LABEL[e.kind]}</span>
             <span>{e.description}</span>
           </div>

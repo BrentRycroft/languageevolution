@@ -65,7 +65,7 @@ export function SoundLawsView() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <header style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
         <h4 style={{ margin: 0 }}>{lang.name}</h4>
-        <span style={{ color: "var(--muted)", fontSize: "var(--fs-1)" }}>
+        <span className="label-line">
           {active.length} active · {retired.length} retired · gen {generation}
         </span>
       </header>

@@ -114,7 +114,7 @@ export function SeedLexiconEditor({ onClose }: { onClose: () => void }) {
           <span style={{ marginLeft: 8, color: "var(--muted)", fontSize: 11 }}>
             {sorted.length} entries — ASCII digraphs (th, sh, aa) are normalized to IPA
           </span>
-          <button onClick={onClose} style={{ marginLeft: "auto" }}>×</button>
+          <button onClick={onClose} className="ml-auto">×</button>
         </div>
 
         <div
@@ -139,7 +139,7 @@ export function SeedLexiconEditor({ onClose }: { onClose: () => void }) {
                 fontSize: 12,
               }}
             >
-              <span style={{ color: "var(--muted)" }}>{m}</span>
+              <span className="t-muted">{m}</span>
               <input
                 type="text"
                 defaultValue={formToString(draft[m]!)}

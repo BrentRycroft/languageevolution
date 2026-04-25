@@ -1,4 +1,4 @@
-import type { Phoneme } from "../types";
+import type { Phoneme } from "../primitives";
 import { isVowel } from "./ipa";
 
 export type Place =
@@ -288,11 +288,11 @@ export function matchesQuery(p: Phoneme, q: FeatureQuery | undefined): boolean {
   const f = featuresOf(p);
   if (!f) return false;
   if (q.type && f.type !== q.type) return false;
+  const fRecord = f as unknown as Record<string, unknown>;
   for (const [k, v] of Object.entries(q)) {
     if (k === "type") continue;
     if (v === undefined) continue;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((f as any)[k] !== v) return false;
+    if (fRecord[k] !== v) return false;
   }
   return true;
 }

@@ -23,7 +23,7 @@ export function StemmaView() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+      <div className="label-line">
         Branches group languages by shared procedural rules. Siblings share
         more rule templates than cousins. Distance = 1 − Jaccard similarity
         over active-rule templates.

@@ -11,6 +11,8 @@ import {
   randomNarrativeSeed,
   type NarrativeLine,
 } from "../engine/narrative/generate";
+import { generateDiscourseNarrative } from "../engine/narrative/discourse_generate";
+import type { DiscourseGenre } from "../engine/narrative/discourse";
 import { traceEtymology } from "../engine/translator/cognates";
 
 type CompareMode = "lexicon" | "narrative" | "cognate";
@@ -90,13 +92,13 @@ export function CompareView() {
             {modeLabel(m)}
           </button>
         ))}
-        <span style={{ marginLeft: "auto" }}>
+        <span className="ml-auto">
           <ScriptPicker />
         </span>
       </div>
 
       {pair.length < 2 && mode !== "cognate" ? (
-        <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
+        <div className="section-empty">
           Check two or more languages in the Lexicon → Compare chip to populate
           this view, or select one in the Tree and we'll auto-pair it with a
           sibling.
@@ -353,7 +355,7 @@ function EventList({ events }: { events: LanguageEvent[] }) {
     );
   }
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <div className="col-2">
       {recent.map((e, i) => (
         <div
           key={i}
@@ -366,7 +368,7 @@ function EventList({ events }: { events: LanguageEvent[] }) {
             padding: "2px 4px",
           }}
         >
-          <span style={{ color: "var(--muted)" }}>g{e.generation}</span>
+          <span className="t-muted">g{e.generation}</span>
           <span>{e.description}</span>
         </div>
       ))}
@@ -394,29 +396,46 @@ function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }
   const generation = useSimStore((s) => s.state.generation);
   const [seed, setSeed] = useState<string>(() => randomNarrativeSeed());
   const [lineCount, setLineCount] = useState(6);
+  // §2.2: genre selector for discourse-coherent narratives.
+  // "skeleton" = legacy template generator (apple-to-apple compare on
+  //              identical English skeletons across both languages).
+  // "myth" / "legend" / "daily" / "dialogue" = discourse generator
+  //              with reference tracking + pronoun substitution +
+  //              full grammar realisation through the §2.1 tree.
+  const [genre, setGenre] = useState<"skeleton" | DiscourseGenre>("skeleton");
 
   const linesA = useMemo(
-    () => generateNarrative(langA, seed, lineCount, script),
-    // generation in deps so the text refreshes as the sim steps.
+    () =>
+      genre === "skeleton"
+        ? generateNarrative(langA, seed, lineCount, script)
+        : discourseToNarrativeLines(
+            langA,
+            seed,
+            lineCount,
+            genre,
+            script,
+          ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [langA, seed, lineCount, script, generation],
+    [langA, seed, lineCount, script, generation, genre],
   );
   const linesB = useMemo(
-    () => generateNarrative(langB, seed, lineCount, script),
+    () =>
+      genre === "skeleton"
+        ? generateNarrative(langB, seed, lineCount, script)
+        : discourseToNarrativeLines(
+            langB,
+            seed,
+            lineCount,
+            genre,
+            script,
+          ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [langB, seed, lineCount, script, generation],
+    [langB, seed, lineCount, script, generation, genre],
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
+    <div className="col-8">
+      <div className="row-8 items-center flex-wrap">
         <button
           className="primary"
           onClick={() => setSeed(randomNarrativeSeed())}
@@ -424,6 +443,18 @@ function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }
         >
           🎲 New story
         </button>
+        <select
+          value={genre}
+          onChange={(e) => setGenre(e.target.value as "skeleton" | DiscourseGenre)}
+          aria-label="Narrative genre"
+          title="Genre — skeleton mode keeps the legacy template comparison; named genres use discourse-coherent generation with pronoun reference"
+        >
+          <option value="skeleton">skeleton (compare)</option>
+          <option value="myth">myth</option>
+          <option value="legend">legend</option>
+          <option value="daily">daily life</option>
+          <option value="dialogue">dialogue</option>
+        </select>
         <select
           value={lineCount}
           onChange={(e) => setLineCount(parseInt(e.target.value, 10))}
@@ -433,16 +464,37 @@ function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }
             <option key={n} value={n}>{n} lines</option>
           ))}
         </select>
-        <span style={{ fontSize: "var(--fs-1)", color: "var(--muted)", marginLeft: 4 }}>
-          Same skeleton in both columns — only the realised forms differ.
+        <span className="label-line" style={{ marginLeft: 4 }}>
+          {genre === "skeleton"
+            ? "Same skeleton in both columns — only the realised forms differ."
+            : "Same English plot in both columns — each language renders it through its own grammar."}
         </span>
       </div>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
+      <div className="row-12 flex-wrap items-start">
         <NarrativePane lang={langA} lines={linesA} />
         <NarrativePane lang={langB} lines={linesB} />
       </div>
     </div>
   );
+}
+
+/**
+ * Adapter: convert §2.2 DiscourseLine[] into the legacy NarrativeLine
+ * shape so NarrativePane can render either generator's output.
+ */
+function discourseToNarrativeLines(
+  lang: Language,
+  seed: string,
+  lines: number,
+  genre: DiscourseGenre,
+  // script kept for API symmetry; the discourse generator already
+  // emits surface forms via translateSentence, so we don't re-render.
+  _script: import("../engine/phonology/display").DisplayScript,
+): NarrativeLine[] {
+  void lang;
+  void _script;
+  const out = generateDiscourseNarrative(lang, seed, { lines, genre });
+  return out.map((l) => ({ text: l.text, gloss: l.english }));
 }
 
 function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[] }) {
@@ -527,9 +579,9 @@ function CognateTrace({
   const [meaningInput, setMeaningInput] = useState(meaning);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="col-8">
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <label style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+        <label className="label-line">
           Meaning:
         </label>
         <input
@@ -539,13 +591,13 @@ function CognateTrace({
           placeholder="e.g. water"
           aria-label="Meaning to trace"
         />
-        <span style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+        <span className="label-line">
           Showing how this meaning's form changed from proto to each selected leaf.
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="col-8">
         {leafIds.length === 0 ? (
-          <div style={{ color: "var(--muted)" }}>
+          <div className="t-muted">
             Select languages in the Lexicon → Compare chip to populate.
           </div>
         ) : (
@@ -567,7 +619,7 @@ function CognateTrace({
                   {lang.name}
                 </div>
                 {steps.length === 0 ? (
-                  <div style={{ color: "var(--muted)", fontSize: "var(--fs-1)" }}>
+                  <div className="label-line">
                     {lang.name} has no entry for "{meaningInput}".
                   </div>
                 ) : (
@@ -587,9 +639,9 @@ function CognateTrace({
                           <div style={{ fontSize: 10, color: "var(--muted)" }}>
                             {s.languageName} @ g{s.generation}
                           </div>
-                          <div style={{ color: "var(--accent)" }}>{s.form}</div>
+                          <div className="t-accent">{s.form}</div>
                         </div>
-                        {i < steps.length - 1 && <span style={{ color: "var(--muted)" }}>→</span>}
+                        {i < steps.length - 1 && <span className="t-muted">→</span>}
                       </div>
                     ))}
                   </div>

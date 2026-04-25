@@ -7,6 +7,43 @@ import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS } from "../lexicon/pos";
 import { corenessResistance } from "../lexicon/coreness";
+import { CONCEPT_IDS, tierOf, type Tier } from "../lexicon/concepts";
+import { BASIC_240 } from "../lexicon/basic240";
+
+// Cached set of expansion concept ids (those NOT in BASIC_240). Tier-0
+// languages have nothing to add to the candidate pool from this set, so
+// drift behaviour is unchanged for proto-foragers; tier-1+ languages
+// gain access to abstract concepts like "democracy", "computer", etc.
+// as drift targets.
+const EXPANSION_IDS_BY_TIER: ReadonlyMap<Tier, readonly string[]> = (() => {
+  const basicSet = new Set<string>(BASIC_240);
+  const buckets: Record<number, string[]> = { 0: [], 1: [], 2: [], 3: [] };
+  for (const id of CONCEPT_IDS) {
+    if (basicSet.has(id)) continue;
+    const t = tierOf(id);
+    buckets[t]!.push(id);
+  }
+  const m = new Map<Tier, readonly string[]>();
+  m.set(0, Object.freeze([...buckets[0]!]));
+  m.set(
+    1 as Tier,
+    Object.freeze([...buckets[0]!, ...buckets[1]!]),
+  );
+  m.set(
+    2 as Tier,
+    Object.freeze([...buckets[0]!, ...buckets[1]!, ...buckets[2]!]),
+  );
+  m.set(
+    3 as Tier,
+    Object.freeze([
+      ...buckets[0]!,
+      ...buckets[1]!,
+      ...buckets[2]!,
+      ...buckets[3]!,
+    ]),
+  );
+  return m;
+})();
 
 export type SemanticShiftKind =
   | "metonymy"
@@ -100,13 +137,25 @@ export function driftOneMeaning(
       // roughly half the rate of ordinary words.
       if (rng.chance(1 - corenessResistance(m))) continue;
       const overrideNeighbors = override?.[m];
+      // Candidate pool: in-lexicon meanings (classic swap targets) PLUS
+      // tier-eligible expansion concepts (so an existing word can
+      // overtake a previously-unfilled abstract slot like "democracy"
+      // by semantic gravity). At tier 0 the expansion bucket is empty,
+      // so the candidate pool — and downstream RNG sequence — is
+      // identical to the pre-expansion behaviour.
+      const langTier = (lang.culturalTier ?? 0) as Tier;
+      const expansionExtras = EXPANSION_IDS_BY_TIER.get(langTier) ?? [];
+      const candidates =
+        expansionExtras.length === 0
+          ? meanings
+          : Array.from(new Set([...meanings, ...expansionExtras]));
+      const embeddingNearest = nearestMeanings(m, candidates, 5);
+      const related = relatedMeanings(m);
       // Preference order:
       //   1. Explicit override (AI-generated LLM neighbors if enabled).
       //   2. Embedding-space nearest meanings (cosine similarity).
       //   3. Hand-curated semantic cluster (relatedMeanings()).
       //   4. Static neighbor table (neighborsOf()).
-      const embeddingNearest = nearestMeanings(m, meanings, 5);
-      const related = relatedMeanings(m);
       const neighbors =
         overrideNeighbors && overrideNeighbors.length > 0
           ? overrideNeighbors
