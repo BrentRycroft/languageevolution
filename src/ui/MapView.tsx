@@ -25,6 +25,12 @@ export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 600, h: 400 });
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
+  // Per-language smoothed label position (exponential moving average).
+  // Keys are language ids; values are the previous-render projected
+  // centroids. Without this, every territory step moves the label by a
+  // fraction of a cell and the user sees visible jitter on stable
+  // languages.
+  const smoothedLabelRef = useRef<Record<string, { x: number; y: number }>>({});
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -69,10 +75,18 @@ export function MapView() {
     drag.current = { startX: e.clientX, startY: e.clientY, vx: view.x, vy: view.y };
   };
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!drag.current) return;
-    const dx = e.clientX - drag.current.startX;
-    const dy = e.clientY - drag.current.startY;
-    setView((v) => ({ ...v, x: drag.current!.vx + dx, y: drag.current!.vy + dy }));
+    const d = drag.current;
+    if (!d) return;
+    // Capture vx/vy NOW — the setView updater runs asynchronously via
+    // React's scheduler, and `drag.current` can be null by then if
+    // onPointerUp fired between move and React's flush. The previous
+    // `drag.current!.vx` inside the updater crashed when this race
+    // happened on touch devices.
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    const baseVx = d.vx;
+    const baseVy = d.vy;
+    setView((v) => ({ ...v, x: baseVx + dx, y: baseVy + dy }));
   };
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
     drag.current = null;
@@ -94,7 +108,11 @@ export function MapView() {
     for (let i = 0; i < worldMap.cells.length; i++) {
       const cell = worldMap.cells[i]!;
       if (cell.biome === "ocean") {
-        out[i] = "#1d3a55"; // deep blue
+        // Two ocean shades: shallow shelf for cells with elevation >
+        // 0 (close to coast — bilinear-blended on the bitmap), deep
+        // open ocean for the rest. Reads as a coastline halo and
+        // makes the continent silhouettes pop.
+        out[i] = cell.elevation > 0.05 ? "#2c5275" : "#15293c";
         continue;
       }
       const ownerId = ownership[cell.id];
@@ -154,8 +172,10 @@ export function MapView() {
             }
           />
         ))}
-        {/* Language name labels — one per alive leaf at its centroid. */}
-        {labelsForAliveLeaves(state.tree, worldMap).map(({ langId, lang, point }) => {
+        {/* Language name labels — one per alive leaf at its centroid.
+            Positions are smoothed by a per-language ref so a 1-cell
+            territory shift doesn't visibly jitter the label every step. */}
+        {labelsForAliveLeavesSmoothed(state.tree, worldMap, smoothedLabelRef.current).map(({ langId, lang, point }) => {
           const { px, py } = project(point.x, point.y);
           const sample =
             selectedMeaning && lang.lexicon[selectedMeaning]
@@ -276,8 +296,22 @@ function MapCellShape({
   for (const n of cell.neighbours) {
     if (ownership[n] !== ownerId) isoglossEdges++;
   }
-  const stroke = isOwnerSelected ? "var(--accent-2)" : "rgba(0,0,0,0.4)";
-  const strokeWidth = isOwnerSelected ? 2.5 : isoglossEdges > 0 ? 0.6 : 0.2;
+  // Coastline stroke — darker + thicker so continent outlines pop
+  // against the ocean. Falls through to the isogloss / selected
+  // styling for non-coastal land.
+  const isCoast = !!cell.isCoast;
+  const stroke = isOwnerSelected
+    ? "var(--accent-2)"
+    : isCoast
+      ? "rgba(0,0,0,0.85)"
+      : "rgba(0,0,0,0.4)";
+  const strokeWidth = isOwnerSelected
+    ? 2.5
+    : isCoast
+      ? 1.4
+      : isoglossEdges > 0
+        ? 0.6
+        : 0.2;
   return (
     <polygon
       points={points}
@@ -331,18 +365,23 @@ function biomeColor(biome: MapCell["biome"]): string {
   }
 }
 
-function labelsForAliveLeaves(
+function labelsForAliveLeavesSmoothed(
   tree: LanguageTree,
   worldMap: WorldMap,
+  cache: Record<string, { x: number; y: number }>,
 ): Array<{ langId: string; lang: Language; point: { x: number; y: number } }> {
   const out: Array<{ langId: string; lang: Language; point: { x: number; y: number } }> = [];
+  // Exponential moving average — a high alpha keeps the label
+  // tracking territory expansion smoothly while damping the per-step
+  // wobble that comes from a 1-cell shift.
+  const ALPHA = 0.18;
+  const seen = new Set<string>();
   for (const id of Object.keys(tree)) {
     const node: LanguageNode = tree[id]!;
     if (node.childrenIds.length > 0) continue;
     const lang = node.language;
     const cells = lang.territory?.cells;
     if (!cells || cells.length === 0) continue;
-    // Use the centroid of the territory for label placement.
     let cx = 0, cy = 0, n = 0;
     for (const cellId of cells) {
       const cell = worldMap.cells[cellId];
@@ -352,7 +391,20 @@ function labelsForAliveLeaves(
       n++;
     }
     if (n === 0) continue;
-    out.push({ langId: id, lang, point: { x: cx / n, y: cy / n } });
+    const target = { x: cx / n, y: cy / n };
+    const prev = cache[id];
+    const smoothed = prev
+      ? { x: prev.x + (target.x - prev.x) * ALPHA, y: prev.y + (target.y - prev.y) * ALPHA }
+      : target;
+    cache[id] = smoothed;
+    seen.add(id);
+    out.push({ langId: id, lang, point: smoothed });
+  }
+  // Evict cache entries for languages that no longer have a label
+  // (extinct, became internal node) so the cache doesn't grow
+  // unbounded over long runs.
+  for (const id of Object.keys(cache)) {
+    if (!seen.has(id)) delete cache[id];
   }
   return out;
 }
