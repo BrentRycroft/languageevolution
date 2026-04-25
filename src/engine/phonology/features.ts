@@ -75,6 +75,22 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   "bʰ": { type: "consonant", place: "labial", manner: "stop", voice: true, aspirated: true },
   "dʰ": { type: "consonant", place: "alveolar", manner: "stop", voice: true, aspirated: true },
   "gʰ": { type: "consonant", place: "velar", manner: "stop", voice: true, aspirated: true },
+  // Ejectives (glottalic egressive). Same place/manner as the plain
+  // stop; the glottalic-egressive feature isn't tracked separately
+  // because no rule distinguishes ejective from preglottal at the
+  // feature-query level — both are "glottalised stops" for our purposes.
+  "pʼ": { type: "consonant", place: "labial", manner: "stop", voice: false },
+  "tʼ": { type: "consonant", place: "alveolar", manner: "stop", voice: false },
+  "kʼ": { type: "consonant", place: "velar", manner: "stop", voice: false },
+  "qʼ": { type: "consonant", place: "uvular", manner: "stop", voice: false },
+  "tsʼ": { type: "consonant", place: "alveolar", manner: "affricate", voice: false },
+  "tʃʼ": { type: "consonant", place: "postalveolar", manner: "affricate", voice: false },
+  // Preglottalised stops — modelled as a stop (the inherent place /
+  // manner take precedence; the leading glottal is a phasing
+  // detail).
+  "ʔp": { type: "consonant", place: "labial", manner: "stop", voice: false },
+  "ʔt": { type: "consonant", place: "alveolar", manner: "stop", voice: false },
+  "ʔk": { type: "consonant", place: "velar", manner: "stop", voice: false },
   "ʈ": { type: "consonant", place: "retroflex", manner: "stop", voice: false },
   "ɖ": { type: "consonant", place: "retroflex", manner: "stop", voice: true },
 

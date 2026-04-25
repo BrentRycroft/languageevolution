@@ -187,6 +187,11 @@ export function splitLeaf(
         tones: parentLang.phonemeInventory.tones.slice(),
         usesTones: parentLang.phonemeInventory.usesTones,
       },
+      inventoryProvenance: parentLang.inventoryProvenance
+        ? Object.fromEntries(
+            Object.entries(parentLang.inventoryProvenance).map(([k, v]) => [k, { ...v }]),
+          )
+        : undefined,
       morphology: cloneMorphology(parentLang.morphology),
       localNeighbors: Object.fromEntries(
         Object.entries(parentLang.localNeighbors).map(([k, v]) => [k, v.slice()]),

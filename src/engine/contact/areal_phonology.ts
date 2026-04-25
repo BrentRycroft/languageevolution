@@ -127,6 +127,14 @@ export function maybeArealPhonemeShare(
   recipient.phonemeInventory.segmental = Array.from(
     new Set([...recipient.phonemeInventory.segmental, target]),
   ).sort();
+  // Record provenance — the Phonemes tab will surface a 🤝 badge
+  // pointing back at the donor language.
+  if (!recipient.inventoryProvenance) recipient.inventoryProvenance = {};
+  recipient.inventoryProvenance[target] = {
+    source: "areal",
+    sourceLangId: donor.id,
+    sourceLangName: donor.name,
+  };
 
   return {
     donorId: donor.id,

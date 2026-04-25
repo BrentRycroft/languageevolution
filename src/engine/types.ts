@@ -85,6 +85,20 @@ export interface Language {
    * grows as generative rules introduce new phonemes (clicks, tones, etc.).
    */
   phonemeInventory: PhonemeInventory;
+  /**
+   * Per-phoneme provenance: how did this phoneme enter the
+   * language's inventory? "native" (seeded from the proto), "areal"
+   * (borrowed from a contact sister), or "internal-rule" (produced
+   * by an internal sound change). Surfaced in the Phonemes tab as
+   * 🏠 / 🤝 / 🔧 badges. Optional — pre-provenance saves don't
+   * have it; the UI defaults missing entries to "native".
+   */
+  inventoryProvenance?: Record<string, {
+    source: "native" | "areal" | "internal-rule";
+    sourceLangId?: string;
+    sourceLangName?: string;
+    generation?: number;
+  }>;
   morphology: import("./morphology/types").Morphology;
   /**
    * Per-language semantic neighbor overrides, populated at runtime for
@@ -230,6 +244,23 @@ export interface Language {
    * `tongue → [language]`. Empty / missing means no merges yet.
    */
   colexifiedAs?: Record<Meaning, Meaning[]>;
+  /**
+   * Substrate-simplification phase tracking. When a language's recent
+   * loan rate exceeds the threshold (`loanRate10gen` averaged across
+   * a 10-gen window), an accelerated-simplification phase fires —
+   * paradigm-merger probability triples for `accelerationRemaining`
+   * generations. Models the mass-loaning + simplification we see in
+   * conquered languages (Old English under Norse, Persian under
+   * Arabic). Optional + transient state.
+   */
+  substrateAccelerationRemaining?: number;
+  /**
+   * Loan-event timestamps (last `LOAN_HISTORY_WINDOW` generations
+   * worth) so we can compute a moving rate without scanning the
+   * full event log every step. Stored on the language; trimmed
+   * each generation.
+   */
+  recentLoanGens?: number[];
 }
 
 export interface LanguageNode {

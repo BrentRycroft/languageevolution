@@ -121,7 +121,25 @@ export function stepPhonology(
     }
   }
   if (mutated > 0) {
+    // Snapshot the inventory BEFORE refresh so we can mark any
+    // newly-introduced phoneme as "internal-rule" provenance. The
+    // refresh defaults missing entries to "native"; we override
+    // here so the Phonemes tab can show 🔧 for engine-coined
+    // phonemes (umlaut outputs, palatalisation outputs, etc.).
+    const oldInventory = new Set(lang.phonemeInventory.segmental);
     refreshInventory(lang);
+    for (const p of lang.phonemeInventory.segmental) {
+      if (!oldInventory.has(p) && lang.inventoryProvenance) {
+        // refreshInventory just defaulted this to "native"; correct
+        // it to "internal-rule" since it was produced this step.
+        if (lang.inventoryProvenance[p]?.source === "native") {
+          lang.inventoryProvenance[p] = {
+            source: "internal-rule",
+            generation,
+          };
+        }
+      }
+    }
     pushEvent(lang, {
       generation,
       kind: "sound_change",

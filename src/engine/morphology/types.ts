@@ -24,7 +24,10 @@ export type MorphCategory =
   | "verb.aspect.ipfv"
   | "verb.person.1sg"
   | "verb.person.2sg"
-  | "verb.person.3sg";
+  | "verb.person.3sg"
+  | "discourse.q"
+  | "discourse.topic"
+  | "discourse.emph";
 
 /**
  * Phonological condition for selecting a paradigm variant. Real

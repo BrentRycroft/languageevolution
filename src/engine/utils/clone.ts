@@ -115,6 +115,17 @@ export function cloneLanguage(lang: Language): Language {
     territory: lang.territory
       ? { cells: lang.territory.cells.slice() }
       : undefined,
+    // Phoneme-provenance map: shallow per-entry copy is enough since
+    // the inner objects are flat.
+    inventoryProvenance: lang.inventoryProvenance
+      ? Object.fromEntries(
+          Object.entries(lang.inventoryProvenance).map(([k, v]) => [k, { ...v }]),
+        )
+      : undefined,
+    // Substrate-acceleration timer is a primitive; spread above already
+    // copied it. recentLoanGens needs a slice so the snapshot's array
+    // is independent of the live language's running window.
+    recentLoanGens: lang.recentLoanGens ? lang.recentLoanGens.slice() : undefined,
   };
 }
 
