@@ -6,6 +6,8 @@ import {
   SUBJECT_NOUN_POOL,
   OBJECT_NOUN_POOL,
   VERB_POOL,
+  TRANSITIVE_VERB_POOL,
+  INTRANSITIVE_VERB_POOL,
   ADJECTIVE_POOL,
   TIME_POOL,
   PLACE_POOL,
@@ -90,11 +92,18 @@ function fillTemplate(
     slots.push(p);
   }
 
-  // Tense-aware verb realisation. The translator's tokeniser reads
-  // tense from the surface form (-ed / irregular = past; "will" = fut)
-  // so we just emit the right surface here and let translateSentence
-  // pick up the tense and route it to verb.tense.* paradigms.
-  const verb = pick(VERB_POOL, rng);
+  // Tense-aware verb realisation. Verb pool depends on the
+  // template's transitivity demands so we don't emit "the fish die
+  // the horse" — die is intransitive. Templates with {O} draw from
+  // TRANSITIVE_VERB_POOL only; no-object templates draw from the
+  // intransitive pool (or full pool when neither distinction
+  // applies).
+  const verbPool = template.needs.object
+    ? TRANSITIVE_VERB_POOL
+    : INTRANSITIVE_VERB_POOL.length > 0
+      ? INTRANSITIVE_VERB_POOL
+      : VERB_POOL;
+  const verb = pick(verbPool, rng);
   const tense = template.tense ?? "present";
   const surfaceVerb =
     tense === "past" ? pastForm(verb) :

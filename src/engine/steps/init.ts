@@ -60,7 +60,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     enabledChangeIds: enabled,
     changeWeights: weights,
     birthGeneration: 0,
-    grammar: { ...DEFAULT_GRAMMAR },
+    grammar: { ...DEFAULT_GRAMMAR, ...(config.seedGrammar ?? {}) },
     events: [],
     wordFrequencyHints: { ...(config.seedFrequencyHints ?? {}) },
     phonemeInventory: inventoryFromLexicon(seedLex),

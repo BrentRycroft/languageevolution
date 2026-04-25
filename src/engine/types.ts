@@ -477,6 +477,13 @@ export interface SimulationConfig {
   seedFrequencyHints?: Record<Meaning, number>;
   seedMorphology?: import("./morphology/types").Morphology;
   /**
+   * Per-preset grammar overrides. Merged into DEFAULT_GRAMMAR at proto
+   * birth so presets can declare their typology (Germanic gets a
+   * `the`-style article system, Romance gets free articles + SVO,
+   * etc.) without engine changes.
+   */
+  seedGrammar?: Partial<GrammarFeatures>;
+  /**
    * Opt-in: run fast-forward steps in a Web Worker so the UI thread
    * stays responsive during long runs.
    */

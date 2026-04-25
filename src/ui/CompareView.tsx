@@ -402,7 +402,11 @@ function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }
   // "myth" / "legend" / "daily" / "dialogue" = discourse generator
   //              with reference tracking + pronoun substitution +
   //              full grammar realisation through the §2.1 tree.
-  const [genre, setGenre] = useState<"skeleton" | DiscourseGenre>("skeleton");
+  // Default to discourse-coherent generation rather than the legacy
+  // skeleton mode — readers see proper grammar (articles, agreement,
+  // tense) right away. Skeleton stays available for the apple-to-apple
+  // compare view.
+  const [genre, setGenre] = useState<"skeleton" | DiscourseGenre>("myth");
 
   const linesA = useMemo(
     () =>

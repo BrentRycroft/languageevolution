@@ -135,6 +135,19 @@ const LEXICON: Lexicon = {
   law: ["l", "a", "w", "a"],        // lawa (extended)
   gift: ["p", "a", "n", "a"],       // pana
   story: ["t", "o", "k", "i"],      // toki
+  // — closed-class roots (toki pona has no articles; coordinator
+  //   `en`; preposition particles; negator `ala`). —
+  he: ["o", "n", "a"],              // ona
+  she: ["o", "n", "a"],             // ona
+  it: ["n", "i"],                   // ni
+  and: ["e", "n"],                  // en (with subjects); coord
+  or: ["a", "n", "u"],              // anu
+  not: ["a", "l", "a"],             // ala
+  in: ["l", "o", "n"],              // lon
+  on: ["s", "u", "p", "a"],         // supa
+  to: ["t", "a", "w", "a"],         // tawa
+  for: ["t", "a", "w", "a"],        // tawa (covers benefactive)
+  by: ["k", "e", "p", "e", "k", "e", "n"], // kepeken (instrument/by)
 };
 
 /** Per-meaning default frequency hint. Toki pona has no "rare" words to
@@ -174,6 +187,19 @@ export function presetTokipona(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    // Toki Pona typology: SVO; no articles; minimalist analytical
+    // (synthesisIndex 1.0); preposition strategy via particles like
+    // `lon` / `tawa` / `kepeken`; pre-noun modifier convention
+    // (sona ike = "bad knowledge").
+    seedGrammar: {
+      wordOrder: "SVO",
+      articlePresence: "none",
+      caseStrategy: "preposition",
+      adjectivePosition: "pre",
+      possessorPosition: "pre",
+      synthesisIndex: 1.0,
+      hasCase: false,
+    },
     preset: "tokipona",
   };
 }

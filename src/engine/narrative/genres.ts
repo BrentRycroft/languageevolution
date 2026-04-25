@@ -146,10 +146,31 @@ export const OBJECT_NOUN_POOL: readonly Meaning[] = [
   "bread", "meat", "milk",
 ];
 
+/**
+ * Verb pools split by transitivity. Templates that include {O} draw
+ * from TRANSITIVE_VERB_POOL only — keeps narratives from generating
+ * "the fish die the horse" (die is intransitive).
+ *
+ * Heuristic split: anything that takes an object in everyday English
+ * goes in transitive; verbs that don't (die, sleep, fall, walk, run,
+ * fly, come, go) go in intransitive.
+ */
+export const TRANSITIVE_VERB_POOL: readonly Meaning[] = [
+  "see", "know", "eat", "drink", "give", "take", "speak",
+  "hold", "fight", "make", "break",
+];
+
+export const INTRANSITIVE_VERB_POOL: readonly Meaning[] = [
+  "go", "come", "fall", "sleep", "die", "run", "walk", "fly",
+];
+
+/**
+ * Combined pool — used when transitivity doesn't matter (e.g. a
+ * subject-only template like "{TOPIC} {V}.").
+ */
 export const VERB_POOL: readonly Meaning[] = [
-  "go", "come", "see", "know", "eat", "drink", "give", "take", "speak",
-  "hold", "fight", "make", "break", "fall", "sleep", "die", "run",
-  "walk", "fly",
+  ...TRANSITIVE_VERB_POOL,
+  ...INTRANSITIVE_VERB_POOL,
 ];
 
 export const ADJECTIVE_POOL: readonly Meaning[] = [

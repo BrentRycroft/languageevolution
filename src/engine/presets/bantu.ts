@@ -253,6 +253,20 @@ const LEXICON: Lexicon = {
   you: ["w", "e", "w", "e"],
   we: ["s", "i", "s", "i"],
   they: ["w", "a˩"],
+  // — closed-class roots (Swahili-flavoured Proto-Bantu shapes;
+  //   articles handled morphologically by the noun-class prefix
+  //   system, so we leave articlePresence at "none"). —
+  he: ["y", "e", "e"],
+  she: ["y", "e", "e"],
+  it: ["i˩", "n", "i"],
+  and: ["n", "a"],
+  or: ["a˩", "u"],
+  not: ["s", "i˩"],
+  in: ["k", "a", "t", "i"],
+  on: ["j", "u", "u"],
+  to: ["k", "w", "a"],
+  for: ["k", "w", "a"],
+  by: ["n", "a"],
 };
 
 const FREQ: Record<Meaning, number> = {
@@ -295,6 +309,17 @@ export function presetBantu(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    // Bantu typology: SVO; no articles (definiteness via noun-class
+    // prefixes); preposition strategy; pre-noun adjectives in Swahili
+    // ("kitabu kikubwa" — but we keep adj=pre as a coarse default);
+    // post-noun possessor ("kitabu cha mtoto").
+    seedGrammar: {
+      wordOrder: "SVO",
+      articlePresence: "none",
+      caseStrategy: "preposition",
+      adjectivePosition: "post",
+      possessorPosition: "post",
+    },
     preset: "bantu",
     // Bantu starts with tones already active via tone-bearing vowels in the lexicon.
   };
