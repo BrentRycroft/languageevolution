@@ -30,6 +30,15 @@ export function cloneMorphology(morph: Morphology | undefined): Morphology {
       affix: p.affix.slice(),
       position: p.position,
       category: p.category,
+      // Conjugation/declension class variants and grammaticalisation
+      // source — both optional, both must survive a clone or sister
+      // languages would lose their class structure / etymology trail
+      // every time `cloneLanguage` runs (snapshot boundary, share,
+      // post-bias mutation).
+      variants: p.variants
+        ? p.variants.map((v) => ({ when: v.when, affix: v.affix.slice() }))
+        : undefined,
+      source: p.source ? { ...p.source } : undefined,
     };
   }
   return { paradigms };
@@ -72,6 +81,35 @@ export function cloneLanguage(lang: Language): Language {
     orthography: { ...lang.orthography },
     otRanking: lang.otRanking.slice(),
     lastChangeGeneration: { ...lang.lastChangeGeneration },
+    // New optional containers must be deep-cloned (the spread above
+    // only copies their reference). Without this, mutations to a
+    // cloned language would leak back into the original — caught by
+    // the integration tests when a snapshot's `colexifiedAs` got
+    // appended to and the original tree saw the new entries too.
+    colexifiedAs: lang.colexifiedAs
+      ? Object.fromEntries(
+          Object.entries(lang.colexifiedAs).map(([k, v]) => [k, v.slice()]),
+        )
+      : undefined,
+    derivationalSuffixes: lang.derivationalSuffixes
+      ? lang.derivationalSuffixes.map((s) => ({
+          tag: s.tag,
+          affix: s.affix.slice(),
+        }))
+      : undefined,
+    suppletion: lang.suppletion
+      ? Object.fromEntries(
+          Object.entries(lang.suppletion).map(([m, slots]) => [
+            m,
+            Object.fromEntries(
+              Object.entries(slots).map(([cat, form]) => [
+                cat,
+                form ? form.slice() : form,
+              ]),
+            ),
+          ]),
+        )
+      : undefined,
   };
 }
 
