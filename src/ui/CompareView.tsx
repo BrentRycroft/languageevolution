@@ -491,13 +491,12 @@ function discourseToNarrativeLines(
   seed: string,
   lines: number,
   genre: DiscourseGenre,
-  // script kept for API symmetry; the discourse generator already
-  // emits surface forms via translateSentence, so we don't re-render.
-  _script: import("../engine/phonology/display").DisplayScript,
+  script: import("../engine/phonology/display").DisplayScript,
 ): NarrativeLine[] {
-  void lang;
-  void _script;
-  const out = generateDiscourseNarrative(lang, seed, { lines, genre });
+  // Plumb the user's script preference into the discourse generator
+  // so myth / legend / daily / dialogue render in IPA / Roman / both
+  // alongside skeleton mode (which already routed through formatForm).
+  const out = generateDiscourseNarrative(lang, seed, { lines, genre, script });
   return out.map((l) => ({ text: l.text, gloss: l.english }));
 }
 

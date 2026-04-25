@@ -1,7 +1,7 @@
 import type { Language } from "../types";
 import { makeRng, type Rng } from "../rng";
 import { translateSentence } from "../translator/sentence";
-import type { DisplayScript } from "../phonology/display";
+import { formatForm, type DisplayScript } from "../phonology/display";
 import {
   SUBJECT_NOUN_POOL,
   OBJECT_NOUN_POOL,
@@ -142,6 +142,7 @@ export function generateDiscourseNarrative(
   } = {},
 ): DiscourseLine[] {
   const lines = options.lines ?? 5;
+  const script: DisplayScript = options.script ?? "ipa";
   const genre = options.genre ?? "myth";
   const rng = makeRng(`narrative.${seedStr}.${genre}`);
   const ctx = makeDiscourse(genre);
@@ -173,11 +174,29 @@ export function generateDiscourseNarrative(
     void shouldPronominalise;
 
     // Realise via translateSentence — this gets us all the §2.1
-    // grammar+typology behaviour for free.
+    // grammar+typology behaviour for free. Then re-render each
+    // token's WordForm through formatForm so the user's script
+    // preference (IPA / Roman / both) is honoured. Without this we
+    // emit raw phoneme concatenations and the narrative reads in
+    // bare IPA regardless of the picker.
     const tx = translateSentence(lang, english);
-    const text = tx.targetTokens.map((t) => t.targetSurface).filter((s) => s.length > 0).join(" ");
+    const renderToken = (t: typeof tx.targetTokens[number]): string => {
+      // Quoted unresolved tokens (`"dragon"`, `"?"`) and synthesised
+      // closed-class forms (NEG / Q / DET) live on `targetSurface`
+      // only — they don't carry a real WordForm to romanise. Pass
+      // those through verbatim. Everything else goes through
+      // formatForm so the language's drifted Latin orthography
+      // (when picked) actually surfaces.
+      const surf = t.targetSurface;
+      if (!surf) return "";
+      if (t.targetForm && t.targetForm.length > 0 && surf !== `“${t.englishLemma}”` && surf !== "?") {
+        return formatForm(t.targetForm, lang, script);
+      }
+      return surf;
+    };
+    const text = tx.targetTokens.map(renderToken).filter((s) => s.length > 0).join(" ");
     const gloss = tx.targetTokens
-      .map((t) => `${t.targetSurface || "·"}[${t.englishLemma}${t.glossNote ? ":" + t.glossNote : ""}]`)
+      .map((t) => `${renderToken(t) || "·"}[${t.englishLemma}${t.glossNote ? ":" + t.glossNote : ""}]`)
       .join(" ");
 
     out.push({ english, text, gloss });
