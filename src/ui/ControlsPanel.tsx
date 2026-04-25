@@ -6,7 +6,6 @@ import { StatsPanel } from "./StatsPanel";
 import { AchievementsStrip } from "./Achievements";
 import { shareUrl } from "../share/url";
 import { SeedLexiconEditor } from "./SeedLexiconEditor";
-import { AiSemantics } from "./AiSemantics";
 import { PresetPicker } from "./PresetPicker";
 import { EvolutionSpeedPicker } from "./EvolutionSpeedPicker";
 import {
@@ -357,10 +356,6 @@ export function ControlsPanel() {
         </div>
       </Section>
 
-      <Section title="AI semantic drift" defaultOpen={false}>
-        <AiSemantics />
-      </Section>
-
       <Section title="Saved runs" defaultOpen={false}>
         <SavedRunsList />
       </Section>
@@ -426,7 +421,6 @@ function ExportButtons() {
 function ShareUrlButton() {
   const config = useSimStore((s) => s.config);
   const state = useSimStore((s) => s.state);
-  const aiNeighbors = useSimStore((s) => s.aiNeighbors);
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState("");
 
@@ -436,17 +430,10 @@ function ShareUrlButton() {
       const b = state.tree[id]!.language.ruleBias;
       if (b) biases[id] = b;
     }
-    // Bundle AI neighbors if the user has generated any — the receiver
-    // can reproduce drift behaviour without downloading the model.
-    const neighborPayload =
-      aiNeighbors && Object.keys(aiNeighbors).length > 0
-        ? aiNeighbors
-        : undefined;
     const link = shareUrl({
       v: 1,
       seed: config.seed,
       config,
-      aiNeighbors: neighborPayload,
       biases: Object.keys(biases).length > 0 ? biases : undefined,
       replay: state.generation,
     });

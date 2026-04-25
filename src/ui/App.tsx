@@ -9,9 +9,7 @@ import { CompareView } from "./CompareView";
 import { NarrativeView } from "./NarrativeView";
 import { MapView } from "./MapView";
 import { SoundLawsView } from "./SoundLawsView";
-import { StemmaView } from "./StemmaView";
 import { Glossary } from "./Glossary";
-import { ReconstructionQuiz } from "./ReconstructionQuiz";
 import { AchievementToast } from "./Achievements";
 import { UpdateBanner } from "./UpdateBanner";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
@@ -75,12 +73,10 @@ type Tab =
   | "grammar"
   | "phonemes"
   | "laws"
-  | "stemma"
   | "events"
   | "translate"
   | "compare"
   | "narrative"
-  | "quiz"
   | "glossary";
 
 const TABS: { id: Tab; label: string; title: string }[] = [
@@ -91,7 +87,6 @@ const TABS: { id: Tab; label: string; title: string }[] = [
   { id: "grammar", label: "Grammar", title: "Grammar features of the selected language" },
   { id: "phonemes", label: "Phonemes", title: "Segmental + tonal inventory for the selected language" },
   { id: "laws", label: "Sound laws", title: "Procedurally-invented sound laws per language" },
-  { id: "stemma", label: "Stemma", title: "Rule-similarity tree (vs phylogeny)" },
   { id: "events", label: "History", title: "Event log for the selected language" },
   {
     id: "translate",
@@ -100,7 +95,6 @@ const TABS: { id: Tab; label: string; title: string }[] = [
   },
   { id: "compare", label: "Compare", title: "Side-by-side diff of two languages" },
   { id: "narrative", label: "Narrative", title: "AI-generated folk tale in a language" },
-  { id: "quiz", label: "Quiz", title: "Guess which sound law produced a form" },
   { id: "glossary", label: "Glossary", title: "Reference for rule families, shift taxa, register" },
 ];
 
@@ -134,24 +128,6 @@ export function App() {
       for (const [langId, bias] of Object.entries(payload.biases)) {
         applyRuleBiasToLanguage(langId, bias);
       }
-    }
-    if (payload.aiNeighbors && Object.keys(payload.aiNeighbors).length > 0) {
-      // Seed the AI-neighbor map directly on the sim so drift behaves the
-      // same as the sender without needing to download the model.
-      // Filter to meanings that exist in the current seed lexicon — if
-      // the sender used a different preset/seed, the receiver's lexicon
-      // may not contain the foreign meanings, and we don't want stale
-      // hints attaching to nothing.
-      const { sim, config } = useSimStore.getState();
-      const validMeanings = new Set(Object.keys(config.seedLexicon));
-      const filtered: Record<string, string[]> = {};
-      for (const [m, ns] of Object.entries(payload.aiNeighbors)) {
-        if (!validMeanings.has(m)) continue;
-        const okNs = ns.filter((n) => validMeanings.has(n));
-        if (okNs.length > 0) filtered[m] = okNs;
-      }
-      sim.setAiNeighbors(filtered);
-      useSimStore.setState({ aiNeighbors: filtered });
     }
     clearShareFromLocation();
   }, []);
@@ -316,18 +292,6 @@ export function App() {
           <div className="panel panel-single">
             <h3>Sound laws</h3>
             <SoundLawsView />
-          </div>
-        )}
-        {activeTab === "stemma" && (
-          <div className="panel panel-single">
-            <h3>Stemma</h3>
-            <StemmaView />
-          </div>
-        )}
-        {activeTab === "quiz" && (
-          <div className="panel panel-single">
-            <h3>Reconstruction quiz</h3>
-            <ReconstructionQuiz />
           </div>
         )}
         {activeTab === "glossary" && (

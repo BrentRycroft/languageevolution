@@ -5,11 +5,6 @@ import type { SimulationConfig } from "../engine/types";
  * ruleBias overrides (applied post-load) — not the full simulation state, since
  * the procedural engine is deterministic from those inputs. This keeps the
  * share link short (typically < 2 KB after base64).
- *
- * Optional AI neighbors: if the sender has generated LLM-backed semantic
- * neighbors, they can be bundled so that the receiver's drift behaves the
- * same without having to re-download the Ministral 3B model first. Adds
- * ~5 KB to the payload when present.
  */
 export interface SharePayload {
   v: 1;
@@ -19,8 +14,6 @@ export interface SharePayload {
   biases?: Record<string, Record<string, number>>;
   /** Generations to replay from the seed state. */
   replay?: number;
-  /** Optional LLM-generated semantic neighbors (meaning → string[]). */
-  aiNeighbors?: Record<string, string[]>;
 }
 
 /**

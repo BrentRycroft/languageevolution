@@ -7,7 +7,6 @@ import type {
 } from "../engine/types";
 import { createSimulation, type Simulation } from "../engine/simulation";
 import { defaultConfig } from "../engine/config";
-import type { NeighborOverride } from "../engine/semantics/drift";
 import {
   recordHistory,
   recordActivity,
@@ -91,8 +90,6 @@ interface SimStore {
   activityHistory: ActivityPoint[];
   history: HistoryByLangMeaning;
   seedFormsByMeaning: Record<Meaning, WordForm>;
-  aiNeighbors: NeighborOverride;
-  aiStatus: { ready: boolean; progress: number; text: string; error: string | null };
   /** Ids of procedural-engine achievements unlocked across this session. */
   unlockedAchievements: string[];
   /** Most recently unlocked achievement id, for the toast. null = dismissed. */
@@ -140,10 +137,6 @@ interface SimStore {
     generationsToReplay?: number,
     stateSnapshot?: SimulationState,
   ) => void;
-  enableAiNeighbors: () => Promise<void>;
-  loadCachedAiNeighbors: () => Promise<void>;
-  clearAiNeighbors: () => Promise<void>;
-  downloadAiModel: () => Promise<void>;
 }
 
 function initFromConfig(config: SimulationConfig) {
@@ -235,8 +228,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
   activityHistory: [],
   history: initial.history,
   seedFormsByMeaning: initial.seedForms,
-  aiNeighbors: {},
-  aiStatus: { ready: false, progress: 0, text: "", error: null },
   unlockedAchievements: loadPersistedAchievements(),
   lastAchievement: null,
   step: () => {
@@ -469,8 +460,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
   },
   loadConfig: (config, generationsToReplay, stateSnapshot) => {
     const init = initFromConfig(config);
-    const { aiNeighbors } = get();
-    init.sim.setAiNeighbors(aiNeighbors);
     if (stateSnapshot) {
       init.sim.restoreState(stateSnapshot);
       const restored = init.sim.getState();
@@ -524,106 +513,5 @@ export const useSimStore = create<SimStore>((set, get) => ({
    */
   clearAutosave: () => {
     clearAutosave();
-  },
-  loadCachedAiNeighbors: async () => {
-    const { config } = get();
-    const { loadCachedNeighbors } = await import("../engine/semantics/llm");
-    const cached = await loadCachedNeighbors(Object.keys(config.seedLexicon));
-    const { sim } = get();
-    sim.setAiNeighbors(cached);
-    set((s) => ({
-      aiNeighbors: cached,
-      aiStatus: { ...s.aiStatus, ready: Object.keys(cached).length > 0 },
-    }));
-  },
-  enableAiNeighbors: async () => {
-    const { config, sim } = get();
-    set({ aiStatus: { ready: false, progress: 0, text: "Loading model…", error: null } });
-    try {
-      const { prefillNeighbors, DEFAULT_LLM_CONFIG } = await import("../engine/semantics/llm");
-      const meanings = Object.keys(config.seedLexicon);
-      const neighbors = await prefillNeighbors(meanings, DEFAULT_LLM_CONFIG, (info) => {
-        set({
-          aiStatus: {
-            ready: false,
-            progress: info.progress,
-            text: info.text,
-            error: null,
-          },
-        });
-      });
-      sim.setAiNeighbors(neighbors);
-      set({
-        aiNeighbors: neighbors,
-        aiStatus: {
-          ready: true,
-          progress: 1,
-          text: `AI neighbors loaded for ${Object.keys(neighbors).length} meanings`,
-          error: null,
-        },
-      });
-    } catch (e) {
-      set({
-        aiStatus: {
-          ready: false,
-          progress: 0,
-          text: "",
-          error: e instanceof Error ? e.message : String(e),
-        },
-      });
-    }
-  },
-  clearAiNeighbors: async () => {
-    const { sim } = get();
-    const { clearCache } = await import("../engine/semantics/llm");
-    await clearCache();
-    sim.setAiNeighbors(undefined);
-    set({
-      aiNeighbors: {},
-      aiStatus: { ready: false, progress: 0, text: "", error: null },
-    });
-  },
-  downloadAiModel: async () => {
-    set({ aiStatus: { ready: false, progress: 0, text: "Starting…", error: null } });
-    try {
-      const { loadEngine, DEFAULT_LLM_CONFIG, validateModelAvailable } = await import("../engine/semantics/llm");
-      // Fail fast with a clear error if the configured id isn't in the
-      // prebuilt list, rather than letting WebLLM throw "Cannot find
-      // model record in appConfig" mid-download.
-      const validation = await validateModelAvailable(DEFAULT_LLM_CONFIG);
-      if (validation) {
-        set({
-          aiStatus: { ready: false, progress: 0, text: "", error: validation },
-        });
-        return;
-      }
-      await loadEngine(DEFAULT_LLM_CONFIG, (info) => {
-        set({
-          aiStatus: {
-            ready: false,
-            progress: info.progress,
-            text: info.text,
-            error: null,
-          },
-        });
-      });
-      set({
-        aiStatus: {
-          ready: true,
-          progress: 1,
-          text: "Model downloaded and ready.",
-          error: null,
-        },
-      });
-    } catch (e) {
-      set({
-        aiStatus: {
-          ready: false,
-          progress: 0,
-          text: "",
-          error: e instanceof Error ? e.message : String(e),
-        },
-      });
-    }
   },
 }));
