@@ -414,6 +414,80 @@ const DEBUCCALIZATION: RuleTemplate = {
   },
 };
 
+// Glottalisation cycle as procedural templates. Lifted out of the
+// hardcoded catalog (see `phonology/catalog.ts::glottalization.*`)
+// so the procedural rule proposer can pick them up organically and
+// the areal-spread machinery in `propagateArealRule` carries them
+// across sister languages — that's the typological pattern in NW
+// Caucasus, Salishan, and Ethio-Semitic glottalisation areas.
+
+const PREGLOTTAL_FINAL_STOP: RuleTemplate = {
+  id: "fortition.preglottal_final_stop",
+  family: "fortition",
+  propose(lang) {
+    const inv = new Set(lang.phonemeInventory.segmental);
+    const map: Record<string, string> = {};
+    if (inv.has("p")) map.p = "ʔp";
+    if (inv.has("t")) map.t = "ʔt";
+    if (inv.has("k")) map.k = "ʔk";
+    if (Object.keys(map).length === 0) return null;
+    return {
+      family: "fortition",
+      templateId: this.id,
+      description: "Word-final voiceless stops gain a glottal onset (preglottalisation)",
+      from: { type: "consonant", manner: "stop", voice: false },
+      context: { position: "final" },
+      outputMap: map,
+    };
+  },
+};
+
+const INITIAL_EJECTIVE: RuleTemplate = {
+  id: "fortition.initial_ejective",
+  family: "fortition",
+  propose(lang) {
+    const inv = new Set(lang.phonemeInventory.segmental);
+    const map: Record<string, string> = {};
+    if (inv.has("p")) map.p = "pʼ";
+    if (inv.has("t")) map.t = "tʼ";
+    if (inv.has("k")) map.k = "kʼ";
+    if (Object.keys(map).length === 0) return null;
+    return {
+      family: "fortition",
+      templateId: this.id,
+      description: "Word-initial voiceless stops become ejectives (glottalic egressive)",
+      from: { type: "consonant", manner: "stop", voice: false },
+      context: { position: "initial" },
+      outputMap: map,
+    };
+  },
+};
+
+const DEBUCCAL_GLOTTAL: RuleTemplate = {
+  id: "lenition.glottal_debuccalisation",
+  family: "lenition",
+  propose(lang) {
+    // The tail of the glottalic cycle: preglottalised + ejective stops
+    // collapse to bare /ʔ/. Only viable when the language already has
+    // glottalised consonants in inventory.
+    const inv = new Set(lang.phonemeInventory.segmental);
+    const candidates = ["ʔp", "ʔt", "ʔk", "pʼ", "tʼ", "kʼ"];
+    const map: Record<string, string> = {};
+    for (const c of candidates) {
+      if (inv.has(c)) map[c] = "ʔ";
+    }
+    if (Object.keys(map).length === 0) return null;
+    return {
+      family: "lenition",
+      templateId: this.id,
+      description: "Glottalised stops debuccalise to bare /ʔ/",
+      from: { type: "consonant", place: "glottal" },
+      context: { locus: "any" },
+      outputMap: map,
+    };
+  },
+};
+
 const PLACE_SHIFT_CORONAL: RuleTemplate = {
   id: "place_assim.coronal_retraction",
   family: "place_assim",
@@ -532,6 +606,9 @@ export const TEMPLATES: readonly RuleTemplate[] = [
   VOWEL_SINGLE_RAISE,
   SCHWA_REDUCTION,
   NASAL_ASSIMILATION,
+  PREGLOTTAL_FINAL_STOP,
+  INITIAL_EJECTIVE,
+  DEBUCCAL_GLOTTAL,
   FINAL_C_DELETION,
   H_LOSS,
   VOWEL_FRONTING_BEFORE_PALATAL,

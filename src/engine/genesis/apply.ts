@@ -44,6 +44,7 @@ export function tryCoin(
   }
 
   // 2. Pick a mechanism weighted by language style + mechanism bias.
+  const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
   const weighted = MECHANISMS.map((m) => {
     let w = m.baseWeight;
     // Isolating grammar: boost compound + clipping.
@@ -55,6 +56,21 @@ export function tryCoin(
     } else {
       if (m.id === "mechanism.derivation") w *= 1 + paradigms * 0.15;
     }
+    // Per-tier bias. Each cultural transition shifts which coinage
+    // mechanism feels most natural:
+    //   tier 0 (forager) — reduplication + ideophone are alive
+    //   tier 1 (agricultural) — compounding flourishes (millstone,
+    //                            cowherd) + calque from neighbours
+    //   tier 2 (iron-age) — derivation + borrow (Latin into English)
+    //   tier 3 (modern) — blending + clipping (portmanteau, abbrev)
+    const TIER_MECHANISM_BIAS: Record<number, Record<string, number>> = {
+      0: { "mechanism.reduplication": 1.3, "mechanism.ideophone": 1.2 },
+      1: { "mechanism.compound": 1.4, "mechanism.calque": 1.3 },
+      2: { "mechanism.derivation": 1.4 },
+      3: { "mechanism.blending": 1.4, "mechanism.clipping": 1.3 },
+    };
+    const tierBias = TIER_MECHANISM_BIAS[tier]?.[m.id];
+    if (typeof tierBias === "number") w *= tierBias;
     // Calque only viable when the meaning is compound-shaped.
     if (m.id === "mechanism.calque" && !target.includes("-")) w = 0;
     return { mech: m, weight: w };

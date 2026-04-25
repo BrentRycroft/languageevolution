@@ -39,6 +39,21 @@ export function inventoryFromLexicon(lex: Lexicon): PhonemeInventory {
   };
 }
 
+/**
+ * Seed the per-phoneme provenance map with "native" for every
+ * phoneme already in the inventory. Called from init.ts so the
+ * proto's inventory has a recorded provenance baseline; subsequent
+ * refreshInventory calls maintain it.
+ */
+export function seedNativeProvenance(lang: Language): void {
+  if (!lang.inventoryProvenance) lang.inventoryProvenance = {};
+  for (const p of lang.phonemeInventory.segmental) {
+    if (!lang.inventoryProvenance[p]) {
+      lang.inventoryProvenance[p] = { source: "native" };
+    }
+  }
+}
+
 export function refreshInventory(lang: Language): void {
   const observed = new Set<string>();
   const tones = new Set<string>();
@@ -52,6 +67,19 @@ export function refreshInventory(lang: Language): void {
   lang.phonemeInventory.segmental = Array.from(observed).sort();
   lang.phonemeInventory.tones = Array.from(tones).sort();
   lang.phonemeInventory.usesTones = tones.size > 0;
+  // Provenance bookkeeping: any phoneme that's in the inventory but
+  // not in the provenance map gets defaulted to "native". Phonemes
+  // that disappeared from the inventory have their provenance entry
+  // cleared (avoids stale entries piling up over millennia).
+  if (!lang.inventoryProvenance) lang.inventoryProvenance = {};
+  for (const p of observed) {
+    if (!lang.inventoryProvenance[p]) {
+      lang.inventoryProvenance[p] = { source: "native" };
+    }
+  }
+  for (const p of Object.keys(lang.inventoryProvenance)) {
+    if (!observed.has(p)) delete lang.inventoryProvenance[p];
+  }
 }
 
 export function changesForLang(lang: Language): SoundChange[] {

@@ -109,7 +109,7 @@ export function PhonemeInventoryView() {
           {usesTones ? ` + ${tones.length} tones` : ""}
         </span>
         <span style={{ color: "var(--muted)", fontSize: "var(--fs-1)" }}>
-          <span style={{ color: "var(--accent-2)" }}>●</span> innovative vs proto
+          <span style={{ color: "var(--accent-2)" }}>●</span> innovative vs proto · 🤝 areal · 🔧 internal rule
         </span>
       </div>
 
@@ -137,14 +137,25 @@ export function PhonemeInventoryView() {
             {items.map((p) => {
               const isNew = !protoSet.has(p);
               const isNucleus = isVowel(p) || isSyllabic(p);
+              const prov = lang.inventoryProvenance?.[p];
+              const provIcon =
+                prov?.source === "areal"
+                  ? "🤝"
+                  : prov?.source === "internal-rule"
+                    ? "🔧"
+                    : "";
+              const provText =
+                prov?.source === "areal"
+                  ? prov.sourceLangName
+                    ? `Areal — borrowed from ${prov.sourceLangName}`
+                    : "Areal — borrowed from a sister"
+                  : prov?.source === "internal-rule"
+                    ? `Internal rule${prov.generation ? ` (gen ${prov.generation})` : ""}`
+                    : "Native (inherited from proto)";
               return (
                 <span
                   key={p}
-                  title={
-                    isNew
-                      ? `${p} — new since proto`
-                      : `${p} — inherited from proto`
-                  }
+                  title={`${p} — ${provText}${isNew ? " · new since proto" : ""}`}
                   style={{
                     minWidth: 28,
                     padding: "2px 8px",
@@ -158,9 +169,15 @@ export function PhonemeInventoryView() {
                       : "var(--panel)",
                     color: "var(--text)",
                     fontSize: "var(--fs-2)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 2,
                   }}
                 >
                   {p}
+                  {provIcon && (
+                    <span style={{ fontSize: 9, opacity: 0.85 }}>{provIcon}</span>
+                  )}
                 </span>
               );
             })}

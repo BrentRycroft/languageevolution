@@ -89,10 +89,19 @@ export function stepMorphology(
   // ones. Multiplies into the configured probability so very small
   // languages mostly hold onto their inflections.
   const trudgill = simplificationFactor(lang.speakers);
+  // Substrate-acceleration phase (set by contact.ts when the loan
+  // rate exceeds the threshold). Triples the merger probability for
+  // up to 50 gens — models the case-system collapse we see in
+  // languages that absorb mass loans (Old English under Norse).
+  const substrateBoost =
+    (lang.substrateAccelerationRemaining ?? 0) > 0 ? 3 : 1;
   const merge = maybeMergeParadigms(
     lang,
     rng,
-    config.morphology.paradigmMergeProbability * lang.conservatism * trudgill,
+    config.morphology.paradigmMergeProbability *
+      lang.conservatism *
+      trudgill *
+      substrateBoost,
   );
   if (merge) {
     pushEvent(lang, {

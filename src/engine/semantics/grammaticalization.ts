@@ -17,7 +17,10 @@ export type SemanticTag =
   | "quantifier" // one, two, three, all, many
   | "perception" // see, hear, know, say, think
   | "life" // eat, drink, sleep, die, bear_child
-  | "deixis"; // this, that, here, there
+  | "deixis" // this, that, here, there
+  | "interrogative" // who, what, where, when, why, how → question particle
+  | "topic_noun" // name, word, thing → topic marker
+  | "emphasis"; // very, really, indeed → emphasis particle
 
 export const SEMANTIC_TAG: Record<string, SemanticTag> = {
   // motion
@@ -80,6 +83,18 @@ export const SEMANTIC_TAG: Record<string, SemanticTag> = {
   that: "deixis",
   here: "deixis",
   there: "deixis",
+  // interrogatives → question particles (Mandarin ma, Japanese ka)
+  who: "interrogative",
+  what: "interrogative",
+  where: "interrogative",
+  when: "interrogative",
+  why: "interrogative",
+  how: "interrogative",
+  // topic-marking source nouns (Korean eun/neun, Japanese wa)
+  name: "topic_noun",
+  word: "topic_noun",
+  // emphasis adverbs (Mandarin de, Japanese ne, English "really")
+  truth: "emphasis",
 };
 
 /**
@@ -114,6 +129,16 @@ export const PATHWAYS: Record<SemanticTag, MorphCategory[]> = {
   life: ["verb.aspect.pfv"],
   // Demonstratives → definite article is a top-10 pathway.
   deixis: ["noun.case.nom"],
+  // Discourse pathways. Question particles from interrogative
+  // pronouns (Mandarin "ma" from "mā" 'mother' is a folk-etymology
+  // — it's actually from a final particle that grammaticalised
+  // from interrogative roots; Japanese "ka" similarly derives from
+  // an interrogative pronoun stem). Topic markers from topic-noun
+  // sources ("name" / "word"). Emphasis particles from
+  // truth/intensifier adverbs.
+  interrogative: ["discourse.q"],
+  topic_noun: ["discourse.topic"],
+  emphasis: ["discourse.emph"],
 };
 
 export function semanticTagOf(meaning: string): SemanticTag | undefined {

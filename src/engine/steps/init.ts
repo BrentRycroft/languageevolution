@@ -11,7 +11,7 @@ import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
-import { inventoryFromLexicon } from "./helpers";
+import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
 import {
@@ -92,6 +92,8 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // assembled so we can read the phoneme inventory off it.
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
+  // Phoneme provenance: every seed phoneme is "native" by definition.
+  seedNativeProvenance(rootLang);
   // World-map territory: pick the seed cell from the user-chosen
   // origin (when the picker was used) or fall back to the preset's
   // suggestion (Earth) / a random viable land cell (random).
