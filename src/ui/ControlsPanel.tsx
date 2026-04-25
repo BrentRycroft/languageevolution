@@ -8,6 +8,7 @@ import { shareUrl } from "../share/url";
 import { SeedLexiconEditor } from "./SeedLexiconEditor";
 import { PresetPicker } from "./PresetPicker";
 import { EvolutionSpeedPicker } from "./EvolutionSpeedPicker";
+import { WorldMapPicker } from "./WorldMapPicker";
 import {
   exportLexiconsJSON,
   exportLexiconsCSV,
@@ -120,6 +121,10 @@ export function ControlsPanel() {
 
       <Section title="Evolution speed" defaultOpen>
         <EvolutionSpeedPicker />
+      </Section>
+
+      <Section title="World map" defaultOpen={false}>
+        <WorldMapPicker />
       </Section>
 
       <Section title="Playback" defaultOpen>

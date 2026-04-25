@@ -6,12 +6,13 @@ import {
   translateBetween,
   type TranslationResult,
 } from "../engine/translator/translate";
+import { translateSentence, type SentenceTranslation } from "../engine/translator/sentence";
 import { findCognates, traceEtymology } from "../engine/translator/cognates";
 import { formatForm } from "../engine/phonology/display";
 import type { MorphCategory } from "../engine/morphology/types";
 import { ScriptPicker } from "./ScriptPicker";
 
-type Mode = "en-to-lang" | "lang-to-lang" | "cognates" | "etymology";
+type Mode = "sentence" | "word" | "lang-to-lang" | "cognates" | "etymology";
 
 export function Translator() {
   const state = useSimStore((s) => s.state);
@@ -19,12 +20,13 @@ export function Translator() {
   const leaves = useMemo(() => leafIds(state.tree), [state.tree]);
   const alive = leaves.filter((id) => !state.tree[id]!.language.extinct);
 
-  const [mode, setMode] = useState<Mode>("en-to-lang");
+  const [mode, setMode] = useState<Mode>("sentence");
   const [langId, setLangId] = useState<string>(alive[0] ?? "");
   const [langIdB, setLangIdB] = useState<string>(alive[1] ?? alive[0] ?? "");
-  const [word, setWord] = useState("");
+  const [text, setText] = useState("");
   const [category, setCategory] = useState<MorphCategory | "">("");
-  const [result, setResult] = useState<TranslationResult | null>(null);
+  const [wordResult, setWordResult] = useState<TranslationResult | null>(null);
+  const [sentenceResult, setSentenceResult] = useState<SentenceTranslation | null>(null);
 
   const lang = langId ? state.tree[langId]?.language : undefined;
   const langB = langIdB ? state.tree[langIdB]?.language : undefined;
@@ -33,25 +35,34 @@ export function Translator() {
     : [];
 
   const run = () => {
-    if (!lang || !word.trim()) return;
-    if (mode === "lang-to-lang" && langB) {
-      setResult(translateBetween(lang, langB, word.trim()));
+    if (!lang || !text.trim()) return;
+    setSentenceResult(null);
+    setWordResult(null);
+    if (mode === "sentence") {
+      setSentenceResult(translateSentence(lang, text.trim()));
       return;
     }
-    const opts = category ? { inflect: category } : {};
-    setResult(translate(lang, word, opts));
+    if (mode === "lang-to-lang" && langB) {
+      setWordResult(translateBetween(lang, langB, text.trim()));
+      return;
+    }
+    if (mode === "word") {
+      const opts = category ? { inflect: category } : {};
+      setWordResult(translate(lang, text, opts));
+    }
   };
 
   return (
-    <div style={{ fontSize: 13, maxWidth: 720 }}>
+    <div style={{ fontSize: 13, maxWidth: 760 }}>
       <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-        {(["en-to-lang", "lang-to-lang", "cognates", "etymology"] as const).map((m) => (
+        {(["sentence", "word", "lang-to-lang", "cognates", "etymology"] as const).map((m) => (
           <button
             key={m}
             className={mode === m ? "primary" : ""}
             onClick={() => {
               setMode(m);
-              setResult(null);
+              setWordResult(null);
+              setSentenceResult(null);
             }}
           >
             {label(m)}
@@ -62,13 +73,14 @@ export function Translator() {
         </span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: mode === "sentence" ? "1fr" : "1fr 1fr", gap: 8 }}>
         <select
           aria-label="Source language"
           value={langId}
           onChange={(e) => {
             setLangId(e.target.value);
-            setResult(null);
+            setWordResult(null);
+            setSentenceResult(null);
           }}
         >
           {alive.map((id) => (
@@ -77,7 +89,7 @@ export function Translator() {
             </option>
           ))}
         </select>
-        {mode === "lang-to-lang" ? (
+        {mode === "lang-to-lang" && (
           <select
             aria-label="Target language"
             value={langIdB}
@@ -89,25 +101,53 @@ export function Translator() {
               </option>
             ))}
           </select>
-        ) : (
+        )}
+        {(mode === "word" || mode === "etymology" || mode === "cognates") && (
           <input
             type="text"
-            placeholder={mode === "etymology" ? "meaning (e.g. water)" : "English word"}
-            value={word}
-            onChange={(e) => setWord(e.target.value)}
+            placeholder={
+              mode === "etymology" || mode === "cognates"
+                ? "meaning (e.g. water)"
+                : "English word"
+            }
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && run()}
-            aria-label="Input word"
+            aria-label="Input"
           />
         )}
       </div>
+
+      {mode === "sentence" && (
+        <div style={{ marginTop: 8 }}>
+          <textarea
+            placeholder="Enter an English sentence (e.g. The dog sees the mother by the water)."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={3}
+            aria-label="English sentence"
+            style={{
+              width: "100%",
+              fontFamily: "inherit",
+              fontSize: "var(--fs-2)",
+              padding: 8,
+              background: "var(--panel-2)",
+              color: "var(--text)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              resize: "vertical",
+            }}
+          />
+        </div>
+      )}
 
       {mode === "lang-to-lang" && (
         <div style={{ marginTop: 8 }}>
           <input
             type="text"
             placeholder="form in source language (e.g. vaθar)"
-            value={word}
-            onChange={(e) => setWord(e.target.value)}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && run()}
             aria-label="Source form"
             style={{ width: "100%" }}
@@ -115,19 +155,7 @@ export function Translator() {
         </div>
       )}
 
-      {mode === "cognates" && (
-        <input
-          type="text"
-          placeholder="meaning (e.g. water)"
-          value={word}
-          onChange={(e) => setWord(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && run()}
-          aria-label="Meaning for cognate lookup"
-          style={{ width: "100%" }}
-        />
-      )}
-
-      {mode === "en-to-lang" && paradigmCats.length > 0 && (
+      {mode === "word" && paradigmCats.length > 0 && (
         <div style={{ marginTop: 6 }}>
           <label style={{ fontSize: 11, color: "var(--muted)", marginRight: 6 }}>
             Inflect as:
@@ -145,7 +173,7 @@ export function Translator() {
         </div>
       )}
 
-      {(mode === "en-to-lang" || mode === "lang-to-lang") && (
+      {(mode === "sentence" || mode === "word" || mode === "lang-to-lang") && (
         <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
           <button className="primary" onClick={run}>
             Translate
@@ -153,7 +181,11 @@ export function Translator() {
         </div>
       )}
 
-      {result && (mode === "en-to-lang" || mode === "lang-to-lang") && (
+      {mode === "sentence" && sentenceResult && lang && (
+        <SentenceOutput result={sentenceResult} lang={lang} script={script} />
+      )}
+
+      {wordResult && (mode === "word" || mode === "lang-to-lang") && (
         <div
           style={{
             marginTop: 12,
@@ -171,35 +203,120 @@ export function Translator() {
             }}
           >
             {mode === "lang-to-lang" && langB
-              ? result.phonemes.length > 0
-                ? formatForm(result.phonemes, langB, script)
-                : result.form
-              : lang && result.phonemes.length > 0
-                ? formatForm(result.phonemes, lang, script)
-                : result.form}
+              ? wordResult.phonemes.length > 0
+                ? formatForm(wordResult.phonemes, langB, script)
+                : wordResult.form
+              : lang && wordResult.phonemes.length > 0
+                ? formatForm(wordResult.phonemes, lang, script)
+                : wordResult.form}
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-            source: {result.source} — {result.notes}
+            source: {wordResult.source} — {wordResult.notes}
           </div>
         </div>
       )}
 
-      {mode === "cognates" && word.trim() && (
-        <CognatesTable meaning={word.trim().toLowerCase()} tree={state.tree} />
+      {mode === "cognates" && text.trim() && (
+        <CognatesTable meaning={text.trim().toLowerCase()} tree={state.tree} />
       )}
 
-      {mode === "etymology" && lang && word.trim() && (
-        <EtymologyTrace leafId={lang.id} meaning={word.trim().toLowerCase()} />
+      {mode === "etymology" && lang && text.trim() && (
+        <EtymologyTrace leafId={lang.id} meaning={text.trim().toLowerCase()} />
       )}
     </div>
   );
 }
 
+function SentenceOutput({
+  result,
+  lang,
+  script,
+}: {
+  result: SentenceTranslation;
+  lang: import("../engine/types").Language;
+  script: import("../engine/phonology/display").DisplayScript;
+}) {
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        padding: 12,
+        background: "var(--panel-2)",
+        border: "1px solid var(--border)",
+        borderRadius: 6,
+      }}
+    >
+      {/* Surface row — narrow IPA / romanised, depending on script */}
+      <div
+        style={{
+          fontSize: "var(--fs-3)",
+          fontFamily: "var(--font-mono)",
+          color: "var(--accent)",
+          marginBottom: 6,
+        }}
+      >
+        {result.targetTokens.length === 0
+          ? "—"
+          : result.arranged
+              .map((_, i) => {
+                const tok = result.targetTokens[i]!;
+                if (tok.targetForm.length === 0) return tok.targetSurface;
+                return formatForm(tok.targetForm, lang, script);
+              })
+              .join(" ")}
+      </div>
+      {/* Per-token gloss row */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 12,
+          padding: "6px 0",
+          borderTop: "1px dashed var(--border)",
+        }}
+      >
+        {result.targetTokens.map((t, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              fontFamily: "var(--font-mono)",
+              minWidth: 60,
+            }}
+            title={`${t.englishLemma} (${t.englishTag})${t.inflectedAs ? " · " + t.inflectedAs : ""}${t.glossNote ? " · " + t.glossNote : ""} · ${t.resolution}`}
+          >
+            <span style={{ fontSize: "var(--fs-2)", color: "var(--text)" }}>
+              {t.targetForm.length > 0 ? formatForm(t.targetForm, lang, script) : t.targetSurface}
+            </span>
+            <span style={{ fontSize: 10, color: "var(--muted)" }}>
+              {t.englishLemma}
+              {t.glossNote && <> · {t.glossNote}</>}
+            </span>
+          </div>
+        ))}
+      </div>
+      {result.missing.length > 0 && (
+        <div style={{ fontSize: "var(--fs-1)", color: "#ffcc66", marginTop: 4 }}>
+          Unresolved: {result.missing.join(", ")}
+        </div>
+      )}
+      <div style={{ fontSize: "var(--fs-1)", color: "var(--muted)", marginTop: 4 }}>
+        {result.notes}
+      </div>
+    </div>
+  );
+}
+
 function label(m: Mode): string {
-  if (m === "en-to-lang") return "English → Language";
-  if (m === "lang-to-lang") return "Language → Language";
-  if (m === "cognates") return "Cognates";
-  return "Etymology";
+  switch (m) {
+    case "sentence": return "English → Language";
+    case "word": return "Single word";
+    case "lang-to-lang": return "Language → Language";
+    case "cognates": return "Cognates";
+    case "etymology": return "Etymology";
+  }
 }
 
 function CognatesTable({ meaning, tree }: { meaning: string; tree: import("../engine/types").LanguageTree }) {

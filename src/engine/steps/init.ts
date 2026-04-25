@@ -14,6 +14,12 @@ import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
+import {
+  getWorldMap,
+  randomLandCell,
+  suggestedEarthOrigin,
+  territoryCentroid,
+} from "../geo/map";
 
 /** Capacity at language birth. Age=0 so this is tier + speaker driven. */
 function initialLexicalCapacity(lang: Language): number {
@@ -86,6 +92,27 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // assembled so we can read the phoneme inventory off it.
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
+  // World-map territory: pick the seed cell from the user-chosen
+  // origin (when the picker was used) or fall back to the preset's
+  // suggestion (Earth) / a random viable land cell (random).
+  const mapMode = config.mapMode ?? "random";
+  const worldMap = getWorldMap(mapMode, config.seed);
+  let originId: number | null =
+    config.originCellId !== undefined && worldMap.cells[config.originCellId]
+      ? config.originCellId
+      : null;
+  if (originId === null) {
+    if (mapMode === "earth") {
+      originId = suggestedEarthOrigin(config.preset, worldMap);
+    }
+    if (originId === null) {
+      originId = randomLandCell(worldMap, rng);
+    }
+  }
+  if (originId !== null && worldMap.cells[originId]) {
+    rootLang.territory = { cells: [originId] };
+    rootLang.coords = territoryCentroid(worldMap, [originId]);
+  }
   const rootNode: LanguageNode = {
     language: rootLang,
     parentId: null,

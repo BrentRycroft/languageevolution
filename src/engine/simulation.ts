@@ -14,6 +14,8 @@ import { computeTierCandidate, lexicalCapacity, populationCap } from "./lexicon/
 import { pushEvent } from "./steps/helpers";
 import { TIER_LABELS } from "./lexicon/concepts";
 import { applyKinshipSimplification } from "./semantics/recarve";
+import { getWorldMap } from "./geo/map";
+import { tickTerritory } from "./geo/territory";
 
 export interface Simulation {
   getState: () => SimulationState;
@@ -51,7 +53,10 @@ export function createSimulation(
       // two lineages at the first dispersal (Proto-Bantu → 3-4,
       // Proto-Austronesian → many more). See `pickFirstSplitChildCount`.
       const childCount = pickFirstSplitChildCount(rng);
-      splitLeaf(state.tree, state.rootId, nextGen, rng, { childCount });
+      splitLeaf(state.tree, state.rootId, nextGen, rng, {
+        childCount,
+        worldMap: getWorldMap(config.mapMode ?? "random", config.seed),
+      });
     }
 
     const leaves = leafIds(state.tree);
@@ -76,21 +81,14 @@ export function createSimulation(
         const drift = Math.exp(malthusian + noise);
         lang.speakers = Math.max(50, Math.round(lang.speakers * drift));
       }
-      // Migration. Each alive community drifts on the map at a slow
-      // rate — real language groups don't stay at the exact point
-      // where they diverged, they spread. Step size scales down with
-      // population (big populations are more anchored) and with
-      // generation depth (fine-grained late drift vs bold early
-      // dispersals). Independent of phylogenetic distance so sisters
-      // can grow apart or draw closer.
-      if (lang.coords) {
-        const pop = lang.speakers ?? 10000;
-        const anchorFactor = Math.min(1, 10000 / Math.max(100, pop));
-        const step = 1.2 * anchorFactor;
-        const dx = (rng.next() - 0.5) * 2 * step;
-        const dy = (rng.next() - 0.5) * 2 * step;
-        lang.coords = { x: lang.coords.x + dx, y: lang.coords.y + dy };
-      }
+      // Territory dynamics. Replaces the old free-floating coord
+      // drift with a Voronoi-cell-based spread on the world map.
+      // Languages with more speakers expand faster; contested cells
+      // require population dominance to take. `lang.coords` is kept
+      // updated in lockstep (centroid of the current territory) so
+      // the existing distance-based areal mechanics still work.
+      const worldMap = getWorldMap(config.mapMode ?? "random", config.seed);
+      tickTerritory(lang, state.tree, worldMap, rng);
       // Cultural-tier advancement. Checked every 20 generations to
       // keep the cost negligible — age pressure accumulates slowly
       // so there's no benefit to firing this every gen.

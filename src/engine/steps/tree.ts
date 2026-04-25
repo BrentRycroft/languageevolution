@@ -2,6 +2,8 @@ import type { Language, SimulationConfig, SimulationState, LanguageTree } from "
 import { leafIds, splitLeaf } from "../tree/split";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
+import { releaseTerritory } from "../geo/territory";
+import { getWorldMap } from "../geo/map";
 
 export function stepTreeSplit(
   state: SimulationState,
@@ -27,7 +29,9 @@ export function stepTreeSplit(
     : capSoftness(aliveLeaves.length, config.tree.maxLeaves);
   const p = config.tree.splitProbabilityPerGeneration * capPressure;
   if (rng.chance(p)) {
-    splitLeaf(state.tree, leafId, state.generation + 1, rng);
+    splitLeaf(state.tree, leafId, state.generation + 1, rng, {
+      worldMap: getWorldMap(config.mapMode ?? "random", config.seed),
+    });
   }
 }
 
@@ -139,6 +143,9 @@ export function stepDeath(
   if (rng.chance(p)) {
     lang.extinct = true;
     lang.deathGeneration = state.generation + 1;
+    // Free the language's territory so neighbouring alive sisters
+    // can absorb it via normal growth next gen.
+    releaseTerritory(lang);
     pushEvent(lang, {
       generation: state.generation + 1,
       kind: "sound_change",
