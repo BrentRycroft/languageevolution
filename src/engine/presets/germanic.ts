@@ -275,7 +275,7 @@ const LEXICON: Lexicon = {
   not: ["n", "e"],
   in: ["i", "n"],
   on: ["a", "n", "a"],
-  to: ["t", "ɵː"],
+  to: ["t", "oː"],
   for: ["f", "u", "r", "i"],
   by: ["b", "i"],
 };

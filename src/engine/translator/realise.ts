@@ -135,6 +135,22 @@ export function realiseSentence(
     O: objectTokens,
   };
   const out: RealisedToken[] = [];
+  // Wh-fronting: surface a translation of the leading wh-word at
+  // sentence start. The parser tags wh-words as PUNCT to keep them
+  // out of NP collection and stores the lemma on `leadingWh`; the
+  // closed-class table provides the per-language form so wh-questions
+  // and relative clauses don't silently drop the wh-pronoun.
+  if (s.leadingWh) {
+    const wf = closedClassForm(lang, s.leadingWh.lemma) ?? [];
+    if (wf.length > 0) {
+      out.push({
+        surface: wf.join(""),
+        english: s.leadingWh.lemma,
+        role: "DET",
+        resolution: "concept",
+      });
+    }
+  }
   // Leading discourse coordinator ("and", "but", "or") surfaces
   // first so the connective isn't silently lost.
   if (s.leadingConj) {

@@ -22,7 +22,7 @@ import type { WordForm } from "../types";
 
 export type Person = "1" | "2" | "3";
 export type Number_ = "sg" | "pl";
-export type Case = "nom" | "acc" | "dat" | "gen" | "obl";
+export type Case = "nom" | "acc" | "dat" | "gen" | "obl" | "inst";
 
 /** How an open-class lemma was resolved against a target language. */
 export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback";
@@ -131,4 +131,13 @@ export interface Sentence {
    *  Surfaces before the subject so the connective isn't silently
    *  lost. */
   leadingConj?: { lemma: string };
+  /**
+   * Leading wh-word (`who`, `what`, `where`, `when`, `why`, `how`,
+   * `which`, `whose`, `whom`). When set, the realiser emits a
+   * closed-class translation of the wh-lemma at sentence start
+   * (English-style fronting). Without this, wh-questions parse but
+   * silently drop the wh-word, since it's tagged PUNCT to keep it
+   * out of NP collection.
+   */
+  leadingWh?: { lemma: string };
 }

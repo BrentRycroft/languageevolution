@@ -36,6 +36,12 @@ export type ClosedClassLemma =
   // tokens. Languages that conflate (e.g. genitive of pronoun)
   // ignore the synthesised form via the open-class lookup chain.
   | "my" | "your" | "his" | "her" | "its" | "our" | "their"
+  // Wh-words. Synthesised once per language; emitted at sentence
+  // start when `Sentence.leadingWh` is set so that wh-questions
+  // and relative clauses surface a translation of the wh-pronoun
+  // instead of silently dropping it.
+  | "who" | "whom" | "whose" | "what" | "which"
+  | "where" | "when" | "why" | "how"
   // Numeral classifier: synthesised once per language; emitted
   // between numeral + noun when `lang.grammar.classifierSystem` is
   // true (Mandarin 个, Japanese 本, etc.).
@@ -55,6 +61,8 @@ const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "very", "now", "then",
   "this", "that",
   "my", "your", "his", "her", "its", "our", "their",
+  "who", "whom", "whose", "what", "which",
+  "where", "when", "why", "how",
   "CLF", "Q",
 ];
 

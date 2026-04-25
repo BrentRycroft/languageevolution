@@ -4,7 +4,7 @@ import { posOf } from "../lexicon/pos";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassForm } from "./closedClass";
-import { parseSyntax } from "./parse";
+import { parseSyntaxAll } from "./parse";
 import { realiseSentence } from "./realise";
 import { sliceOrder } from "./wordOrder";
 
@@ -144,6 +144,9 @@ const BARE_VERBS = new Set([
   // common short
   "want", "need", "like", "find", "lose", "win", "open", "close",
   "start", "stop", "wait", "help",
+  // pursuit / interaction
+  "chase", "follow", "attack", "meet", "leave", "send", "save",
+  "catch", "reach", "join", "leave", "show", "tell", "ask",
 ]);
 // Bare adjectives the tokeniser can recognise without -er/-est suffix.
 const BARE_ADJECTIVES = new Set([
@@ -227,8 +230,13 @@ function stripVerbSuffix(s: string): string {
     const stem = s.slice(0, -2);
     return stem;
   }
-  // -es → drop
+  // -es → drop. Disambiguate `chases` (lemma `chase`) from `washes`
+  // (lemma `wash`) by checking the stripped-`s` stem against
+  // BARE_VERBS first — a bare verb in the dictionary wins over the
+  // naive `-es → 0` rule.
   if (s.length >= 4 && s.endsWith("es")) {
+    const dropS = s.slice(0, -1);
+    if (BARE_VERBS.has(dropS)) return dropS;
     return s.slice(0, -2);
   }
   // -s
@@ -450,20 +458,52 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       }
       // Otherwise fall through to noun/verb detection below.
     }
-    // Verb detection: ends in -ed, -ing, or matches an irregular form.
+    // Past-participle forms whose surface differs from both their
+    // present and preterite. Used downstream to mark passive cues
+    // ("the king was seen") and perfect-aspect cues
+    // ("the king has been seen") that would otherwise miss because
+    // the participle doesn't end in `-ed` and isn't tagged past.
+    const PAST_PARTICIPLES = new Set([
+      "seen", "gone", "taken", "given", "made", "fallen", "flown",
+      "swum", "written", "broken", "spoken", "known", "heard",
+      "felt", "brought", "bought", "sold", "thought", "built",
+      "fought", "been", "done", "eaten", "drunk", "said", "had",
+      "told", "kept", "left", "lost", "met", "paid", "sent",
+      "shown", "sung", "sat", "stood", "found",
+    ]);
+    // Verb detection: ends in -ed, -ing, matches an irregular form, OR
+    // is a 3sg-present `-es` / `-s` form whose stripped stem hits the
+    // bare-verb list. The 3sg branch fixes coordinated VPs ("the king
+    // runs and chases the wolf") whose second verb otherwise falls
+    // through to the noun fallback and breaks multi-clause splitting.
     const looksVerb =
       IRREGULAR_VERBS[w] !== undefined ||
       (w.length >= 4 && (w.endsWith("ed") || w.endsWith("ing"))) ||
+      (w.length >= 4 && w.endsWith("es") && BARE_VERBS.has(w.slice(0, -2))) ||
+      (w.length >= 3 &&
+        w.endsWith("s") &&
+        !w.endsWith("ss") &&
+        BARE_VERBS.has(w.slice(0, -1))) ||
       (lastWasVerb === false && i > 0 && raw[i - 1] === "to");
     if (looksVerb) {
       const lemma = stripVerbSuffix(w);
+      const isParticiple = PAST_PARTICIPLES.has(w);
+      // Past participles override pendingTense — "is seen" /
+      // "has been seen" still mark the verb as past so the parser
+      // can detect passive / perfect aspect, not echo the AUX's
+      // present tense.
       const tense: "past" | "present" | "future" | undefined =
-        pendingTense ??
-        (w.endsWith("ed") || (IRREGULAR_VERBS[w] && /^(went|came|saw|said|knew|ate|drank|slept|died|had|took|gave|made|fell|ran|flew|swam|fought|brought|bought|sold|thought|built|broke|wrote|read|spoke|heard|felt)$/.test(w))
+        isParticiple
           ? "past"
-          : w.endsWith("ing")
-            ? "present"
-            : "present");
+          : pendingTense ??
+            (
+              w.endsWith("ed") ||
+              (IRREGULAR_VERBS[w] && /^(went|came|saw|said|knew|ate|drank|slept|died|had|took|gave|made|fell|ran|flew|swam|fought|brought|bought|sold|thought|built|broke|wrote|read|spoke|heard|felt)$/.test(w))
+                ? "past"
+                : w.endsWith("ing")
+                  ? "present"
+                  : "present"
+            );
       tokens.push({
         surface: w,
         lemma,
@@ -686,14 +726,15 @@ function rearrangeClause(
 export function translateSentence(lang: Language, english: string): SentenceTranslation {
   const englishTokens = tokeniseEnglish(english);
 
-  // §2.1 path: try to parse a single clause into a syntax tree and run
-  // the tree-driven realiser. Handles agreement, adjective placement,
-  // possessor placement, negation, prodrop, and PP order. Falls
-  // through to the legacy linear path when parsing fails (no verb
-  // found, multi-clause input, etc.).
-  const parsed = parseSyntax(englishTokens);
-  if (parsed) {
-    return translateViaTree(lang, english, englishTokens, parsed);
+  // §2.1 path: try to parse the input into one or more clauses and run
+  // the tree-driven realiser on each. Handles agreement, adjective
+  // placement, possessor placement, negation, prodrop, PP order, and
+  // multi-clause input ("X sees Y AND Z runs", "X runs BECAUSE Y
+  // chases X"). Falls through to the legacy linear path when
+  // parseSyntaxAll returns zero clauses (no verb at all).
+  const parsedAll = parseSyntaxAll(englishTokens);
+  if (parsedAll.length > 0) {
+    return translateViaTree(lang, english, englishTokens, parsedAll);
   }
 
   const targetTokens: TranslatedToken[] = [];
@@ -906,19 +947,25 @@ function translateViaTree(
   lang: Language,
   english: string,
   englishTokens: EnglishToken[],
-  parsed: import("./syntax").Sentence,
+  parsedAll: import("./syntax").Sentence[],
 ): SentenceTranslation {
   const missing: string[] = [];
-  const realised = realiseSentence(parsed, lang, {
-    resolveOpen: (lemma) => {
-      const r = resolveLemma(lang, lemma);
-      if (!r.form) {
-        missing.push(lemma);
-        return { form: null, resolution: r.resolution };
-      }
-      return { form: r.form, resolution: r.resolution };
-    },
-  });
+  const resolveOpen = (lemma: string) => {
+    const r = resolveLemma(lang, lemma);
+    if (!r.form) {
+      missing.push(lemma);
+      return { form: null, resolution: r.resolution };
+    }
+    return { form: r.form, resolution: r.resolution };
+  };
+  // Realise each clause and concatenate. Multi-clause input ("X sees
+  // Y and Z runs") emits clause 1 then clause 2's tokens (with its
+  // leading conjunction surfaced first via realiseSentence's
+  // leadingConj branch), so the user sees both clauses joined by the
+  // language's "and".
+  const realised = parsedAll.flatMap((s) =>
+    realiseSentence(s, lang, { resolveOpen }),
+  );
 
   // Map RealisedToken[] → TranslatedToken[]. Only open-class slots
   // (S, V, O, ADJ, ADV, possessive heads) carry a real englishLemma;
