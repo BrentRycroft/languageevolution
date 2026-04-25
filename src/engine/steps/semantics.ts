@@ -1,5 +1,5 @@
 import type { Language, SimulationConfig } from "../types";
-import { driftOneMeaning, type NeighborOverride } from "../semantics/drift";
+import { driftOneMeaning } from "../semantics/drift";
 import { maybeRecarve } from "../semantics/recarve";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
@@ -9,15 +9,14 @@ export function stepSemantics(
   config: SimulationConfig,
   rng: Rng,
   generation: number,
-  override?: NeighborOverride,
 ): void {
   const p = Math.min(1, config.semantics.driftProbabilityPerGeneration * lang.conservatism);
   if (rng.chance(p)) {
-    const merged: NeighborOverride = { ...(override ?? {}) };
-    for (const [m, ns] of Object.entries(lang.localNeighbors)) {
-      if (!merged[m]) merged[m] = ns;
-    }
-    const drift = driftOneMeaning(lang, rng, merged);
+    // localNeighbors is a per-language override map populated at coinage
+    // time for compound / derived meanings — pass it as the static
+    // neighbour table so semantic drift on a compound can still find
+    // adjacent meanings.
+    const drift = driftOneMeaning(lang, rng, lang.localNeighbors);
     if (drift) {
       // Frequency + register transfer now happens inside driftOneMeaning
       // so takeovers preserve the old usage profile too.

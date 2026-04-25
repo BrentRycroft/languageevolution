@@ -4,9 +4,6 @@ import { leafIds } from "../engine/tree/split";
 import {
   translate,
   translateBetween,
-  translateWithAI,
-  translateSentenceWithAI,
-  type SentenceTranslation,
   type TranslationResult,
 } from "../engine/translator/translate";
 import { findCognates, traceEtymology } from "../engine/translator/cognates";
@@ -14,7 +11,7 @@ import { formatForm } from "../engine/phonology/display";
 import type { MorphCategory } from "../engine/morphology/types";
 import { ScriptPicker } from "./ScriptPicker";
 
-type Mode = "en-to-lang" | "lang-to-lang" | "ai-sentence" | "cognates" | "etymology";
+type Mode = "en-to-lang" | "lang-to-lang" | "cognates" | "etymology";
 
 export function Translator() {
   const state = useSimStore((s) => s.state);
@@ -28,9 +25,6 @@ export function Translator() {
   const [word, setWord] = useState("");
   const [category, setCategory] = useState<MorphCategory | "">("");
   const [result, setResult] = useState<TranslationResult | null>(null);
-  const [sentenceResult, setSentenceResult] = useState<SentenceTranslation | null>(null);
-  const [aiBusy, setAiBusy] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
 
   const lang = langId ? state.tree[langId]?.language : undefined;
   const langB = langIdB ? state.tree[langIdB]?.language : undefined;
@@ -46,50 +40,18 @@ export function Translator() {
     }
     const opts = category ? { inflect: category } : {};
     setResult(translate(lang, word, opts));
-    setAiError(null);
-  };
-
-  const runAI = async () => {
-    if (!lang || !word.trim()) return;
-    setAiBusy(true);
-    setAiError(null);
-    try {
-      const r = await translateWithAI(lang, word);
-      setResult(r);
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setAiBusy(false);
-    }
-  };
-
-  const runSentenceAI = async () => {
-    if (!lang || !word.trim()) return;
-    setAiBusy(true);
-    setAiError(null);
-    setSentenceResult(null);
-    try {
-      const r = await translateSentenceWithAI(lang, word);
-      setSentenceResult(r);
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setAiBusy(false);
-    }
   };
 
   return (
     <div style={{ fontSize: 13, maxWidth: 720 }}>
       <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-        {(["en-to-lang", "ai-sentence", "lang-to-lang", "cognates", "etymology"] as const).map((m) => (
+        {(["en-to-lang", "lang-to-lang", "cognates", "etymology"] as const).map((m) => (
           <button
             key={m}
             className={mode === m ? "primary" : ""}
             onClick={() => {
               setMode(m);
               setResult(null);
-              setSentenceResult(null);
-              setAiError(null);
             }}
           >
             {label(m)}
@@ -100,16 +62,26 @@ export function Translator() {
         </span>
       </div>
 
-      {(mode === "en-to-lang" || mode === "lang-to-lang" || mode === "etymology" || mode === "ai-sentence") && (
-        <div style={{ display: "grid", gridTemplateColumns: mode === "ai-sentence" ? "1fr" : "1fr 1fr", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <select
+          aria-label="Source language"
+          value={langId}
+          onChange={(e) => {
+            setLangId(e.target.value);
+            setResult(null);
+          }}
+        >
+          {alive.map((id) => (
+            <option key={id} value={id}>
+              {state.tree[id]!.language.name}
+            </option>
+          ))}
+        </select>
+        {mode === "lang-to-lang" ? (
           <select
-            aria-label="Source language"
-            value={langId}
-            onChange={(e) => {
-              setLangId(e.target.value);
-              setResult(null);
-              setSentenceResult(null);
-            }}
+            aria-label="Target language"
+            value={langIdB}
+            onChange={(e) => setLangIdB(e.target.value)}
           >
             {alive.map((id) => (
               <option key={id} value={id}>
@@ -117,61 +89,17 @@ export function Translator() {
               </option>
             ))}
           </select>
-          {mode === "lang-to-lang" ? (
-            <select
-              aria-label="Target language"
-              value={langIdB}
-              onChange={(e) => setLangIdB(e.target.value)}
-            >
-              {alive.map((id) => (
-                <option key={id} value={id}>
-                  {state.tree[id]!.language.name}
-                </option>
-              ))}
-            </select>
-          ) : mode === "ai-sentence" ? null : (
-            <input
-              type="text"
-              placeholder={mode === "etymology" ? "meaning (e.g. water)" : "English word"}
-              value={word}
-              onChange={(e) => setWord(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && run()}
-              aria-label="Input word"
-            />
-          )}
-        </div>
-      )}
-
-      {mode === "ai-sentence" && (
-        <div style={{ marginTop: 8 }}>
-          <textarea
-            placeholder="Enter an English sentence (e.g. The dog sees the mother by the water)."
+        ) : (
+          <input
+            type="text"
+            placeholder={mode === "etymology" ? "meaning (e.g. water)" : "English word"}
             value={word}
             onChange={(e) => setWord(e.target.value)}
-            rows={3}
-            aria-label="English sentence"
-            style={{
-              width: "100%",
-              fontFamily: "inherit",
-              fontSize: "var(--fs-2)",
-              padding: 8,
-              background: "var(--panel-2)",
-              color: "var(--text)",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              resize: "vertical",
-            }}
+            onKeyDown={(e) => e.key === "Enter" && run()}
+            aria-label="Input word"
           />
-          <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
-            <button className="primary" onClick={runSentenceAI} disabled={aiBusy}>
-              {aiBusy ? "Translating…" : "Translate sentence"}
-            </button>
-            <span style={{ color: "var(--muted)", fontSize: "var(--fs-1)" }}>
-              Uses the on-device LLM. First run downloads the model (~1.9 GB).
-            </span>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {mode === "lang-to-lang" && (
         <div style={{ marginTop: 8 }}>
@@ -222,74 +150,6 @@ export function Translator() {
           <button className="primary" onClick={run}>
             Translate
           </button>
-          {mode === "en-to-lang" && (
-            <button onClick={runAI} disabled={aiBusy}>
-              {aiBusy ? "Loading AI…" : "Try with AI"}
-            </button>
-          )}
-        </div>
-      )}
-
-      {aiError && (
-        <div style={{ color: "var(--danger)", marginTop: 6, fontSize: 11 }}>{aiError}</div>
-      )}
-
-      {mode === "ai-sentence" && sentenceResult && (
-        <div
-          style={{
-            marginTop: 12,
-            padding: 12,
-            background: "var(--panel-2)",
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-          }}
-        >
-          <div
-            style={{
-              fontSize: "var(--fs-3)",
-              fontFamily: "var(--font-mono)",
-              color: "var(--accent)",
-              marginBottom: 6,
-            }}
-          >
-            {sentenceResult.target || "—"}
-          </div>
-          {sentenceResult.tokens.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 10,
-                padding: "6px 0",
-                borderTop: "1px dashed var(--border)",
-              }}
-            >
-              {sentenceResult.tokens.map((t, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    fontFamily: "var(--font-mono)",
-                  }}
-                >
-                  <span style={{ fontSize: "var(--fs-2)", color: "var(--text)" }}>{t.form}</span>
-                  <span style={{ fontSize: 10, color: "var(--muted)" }}>{t.gloss}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {sentenceResult.missing.length > 0 && (
-            <div style={{ fontSize: "var(--fs-1)", color: "#ffcc66", marginTop: 4 }}>
-              Missing: {sentenceResult.missing.join(", ")}
-            </div>
-          )}
-          {sentenceResult.notes && (
-            <div style={{ fontSize: "var(--fs-1)", color: "var(--muted)", marginTop: 4 }}>
-              {sentenceResult.notes}
-            </div>
-          )}
         </div>
       )}
 
@@ -337,7 +197,6 @@ export function Translator() {
 
 function label(m: Mode): string {
   if (m === "en-to-lang") return "English → Language";
-  if (m === "ai-sentence") return "AI sentence";
   if (m === "lang-to-lang") return "Language → Language";
   if (m === "cognates") return "Cognates";
   return "Etymology";

@@ -1,5 +1,4 @@
 import type { SimulationConfig, SimulationState } from "./types";
-import type { NeighborOverride } from "./semantics/drift";
 import { leafIds, pickFirstSplitChildCount, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
 import { buildInitialState } from "./steps/init";
@@ -21,20 +20,16 @@ export interface Simulation {
   getConfig: () => SimulationConfig;
   step: () => void;
   reset: () => void;
-  setAiNeighbors: (n: NeighborOverride | undefined) => void;
   restoreState: (snapshot: SimulationState) => void;
 }
 
-export interface SimulationOptions {
-  aiNeighbors?: NeighborOverride;
-}
+export interface SimulationOptions {}
 
 export function createSimulation(
   config: SimulationConfig,
-  options: SimulationOptions = {},
+  _options: SimulationOptions = {},
 ): Simulation {
   let state: SimulationState = buildInitialState(config);
-  let aiNeighbors = options.aiNeighbors;
 
   const step = (): void => {
     const rng = makeRng(state.rngState);
@@ -141,7 +136,7 @@ export function createSimulation(
         stepGrammar(lang, config, rng, nextGen);
         stepMorphology(lang, config, rng, nextGen);
       }
-      if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen, aiNeighbors);
+      if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
       stepContact(state, lang, config, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
       if (config.modes.death) stepDeath(state, lang, config, rng);
@@ -159,9 +154,6 @@ export function createSimulation(
     step,
     reset: () => {
       state = buildInitialState(config);
-    },
-    setAiNeighbors: (n) => {
-      aiNeighbors = n;
     },
     restoreState: (snapshot) => {
       state = {

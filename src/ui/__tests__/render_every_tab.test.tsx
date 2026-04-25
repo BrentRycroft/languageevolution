@@ -1,18 +1,5 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
-
-// Stub the WebLLM-backed semantics module before any UI module loads it.
-// The real module pulls in `@mlc-ai/web-llm` which doesn't run in JSDOM
-// (timeouts on chunk fetches). The stub returns a clean inert API so any
-// store action that lazy-imports it completes immediately.
-vi.mock("../../engine/semantics/llm", () => ({
-  prefillNeighbors: async () => ({}),
-  loadCachedNeighbors: async () => ({}),
-  clearCache: async () => undefined,
-  loadEngine: async () => undefined,
-  validateModelAvailable: async () => null,
-  DEFAULT_LLM_CONFIG: {},
-}));
 
 import { useSimStore } from "../../state/store";
 import { App } from "../App";
@@ -29,7 +16,6 @@ import { MapView } from "../MapView";
 import { SoundLawsView } from "../SoundLawsView";
 import { StemmaView } from "../StemmaView";
 import { Glossary } from "../Glossary";
-import { ReconstructionQuiz } from "../ReconstructionQuiz";
 import { PhonemeInventoryView } from "../PhonemeInventoryView";
 import { ActivityHeatmap } from "../ActivityHeatmap";
 import { GlobalSearch } from "../GlobalSearch";
@@ -43,7 +29,6 @@ import { EvolutionSpeedPicker } from "../EvolutionSpeedPicker";
 import { ThemeToggle } from "../ThemeToggle";
 import { AchievementsStrip, AchievementToast } from "../Achievements";
 import { UpdateBanner } from "../UpdateBanner";
-import { AiSemantics } from "../AiSemantics";
 import { ReproduceForm } from "../ReproduceForm";
 import { RulesTimeline } from "../RulesTimeline";
 import { LanguageTreeView } from "../LanguageTreeView";
@@ -100,7 +85,6 @@ describe("UI render harness — every tab and every standalone component", () =>
     ["SoundLawsView", () => <SoundLawsView />],
     ["StemmaView", () => <StemmaView />],
     ["Glossary", () => <Glossary />],
-    ["ReconstructionQuiz", () => <ReconstructionQuiz />],
     ["PhonemeInventoryView", () => <PhonemeInventoryView />],
     ["ActivityHeatmap", () => <ActivityHeatmap />],
     ["GlobalSearch", () => <GlobalSearch onJumpToLexicon={() => undefined} />],
@@ -115,7 +99,6 @@ describe("UI render harness — every tab and every standalone component", () =>
     ["AchievementsStrip", () => <AchievementsStrip />],
     ["AchievementToast", () => <AchievementToast />],
     ["UpdateBanner", () => <UpdateBanner />],
-    ["AiSemantics", () => <AiSemantics />],
     ["ReproduceForm", () => (
       <ReproduceForm langId="L-0" meaning="water" onClose={() => undefined} />
     )],

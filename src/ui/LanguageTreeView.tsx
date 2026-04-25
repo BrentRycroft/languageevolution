@@ -4,6 +4,9 @@ import { useSimStore } from "../state/store";
 import { formatForm, type DisplayScript } from "../engine/phonology/display";
 import type { LanguageTree } from "../engine/types";
 import { ScriptPicker } from "./ScriptPicker";
+import { StemmaView } from "./StemmaView";
+
+type TreeMode = "phylogeny" | "stemma";
 
 interface NodeDatum {
   id: string;
@@ -83,6 +86,7 @@ export function LanguageTreeView() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 600, h: 400 });
+  const [mode, setMode] = useState<TreeMode>("phylogeny");
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -109,9 +113,40 @@ export function LanguageTreeView() {
 
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 220 }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 0 4px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0 0 4px",
+          gap: 8,
+        }}
+      >
+        <div role="tablist" aria-label="Tree mode" style={{ display: "flex", gap: 4 }}>
+          <button
+            role="tab"
+            aria-selected={mode === "phylogeny"}
+            className={mode === "phylogeny" ? "active" : ""}
+            onClick={() => setMode("phylogeny")}
+            title="Parent / child split history"
+          >
+            Phylogeny
+          </button>
+          <button
+            role="tab"
+            aria-selected={mode === "stemma"}
+            className={mode === "stemma" ? "active" : ""}
+            onClick={() => setMode("stemma")}
+            title="Cluster languages by shared procedural rules — reveals areal convergence"
+          >
+            Rule similarity
+          </button>
+        </div>
         <ScriptPicker />
       </div>
+      {mode === "stemma" ? (
+        <StemmaView />
+      ) : (
       <svg className="tree-svg" width={size.w} height={size.h}>
         <g transform={`translate(${layout.margin},${layout.margin})`}>
           {layout.root.links().map((link, i) => {
@@ -178,6 +213,7 @@ export function LanguageTreeView() {
           })}
         </g>
       </svg>
+      )}
     </div>
   );
 }
