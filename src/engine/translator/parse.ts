@@ -1,4 +1,4 @@
-import type { EnglishToken } from "./sentence";
+import type { EnglishToken } from "./tokens";
 import type {
   NP,
   PP,
@@ -128,7 +128,15 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   // Synthesize a 2sg "you" subject for imperatives so the realiser
   // still has a Sentence to walk; for AUX-initial questions the real
   // subject sits between AUX and V.
-  let subject = collectNP(tokens, verbIdx, "left");
+  // Shared consumed-set: collectNP claims every index it folds into a
+  // sub-NP, so the top-level collectPPs walk doesn't re-emit PPs that
+  // are already attributed to subject / object NPs. Without this,
+  // long PP chains ("from the village to the river by the road on
+  // the horse") get exponential PP duplication.
+  const consumed = new Set<number>();
+  consumed.add(verbIdx);
+
+  let subject = collectNP(tokens, verbIdx, "left", consumed);
   if (!subject) {
     if (verbIdx === 0 || (verbIdx > 0 && tokens[0]!.tag === "AUX")) {
       subject = {
@@ -150,7 +158,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   }
 
   // ---- Object NP: closest noun-phrase head to the RIGHT of the verb ----
-  const object = collectNP(tokens, verbIdx, "right") ?? undefined;
+  const object = collectNP(tokens, verbIdx, "right", consumed) ?? undefined;
 
   // ---- Predicate complement (copula): when the verb is "be" and there's
   // no object NP, look right of the verb for an ADJ chain — these are
@@ -172,10 +180,9 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   }
 
   // ---- PPs: walk all PREPs not already consumed ----
-  // Object collection now stops at PREP boundaries, so the PPs we
-  // collect here can't double-count the object's tokens.
-  const consumed = new Set<number>();
-  consumed.add(verbIdx);
+  // Object collection now stops at PREP boundaries, AND we now thread
+  // `consumed` through collectNP so PPs already absorbed by subject /
+  // object don't get re-emitted by the top-level walk.
   const pps = collectPPs(tokens, consumed);
 
   const tense: "past" | "present" | "future" =
@@ -209,7 +216,16 @@ function collectNP(
   tokens: EnglishToken[],
   pivot: number,
   direction: "left" | "right",
+  consumed?: Set<number>,
 ): NP | null {
+  // `consumed` tracks every token index this NP (and its sub-NPs / PPs)
+  // claims, so the top-level `collectPPs` walk doesn't re-emit
+  // PPs that are already attributed to subject / object NPs.
+  // Without it, "the king goes from the village to the river" stacks
+  // the same PP up to 6× because every recursive collectNP("right")
+  // re-walks subsequent PPs and `collectPPs` then re-walks them
+  // again.
+  const claim = (i: number) => consumed?.add(i);
   // Find the head noun (or pronoun) on the requested side closest to
   // the pivot. `pre` modifiers (DET, ADJ, NUM) extend backwards from
   // the head; `post` modifiers (PP) extend forwards.
@@ -236,6 +252,7 @@ function collectNP(
     if (t.tag === "PREP") break;
   }
   if (headIdx < 0) return null;
+  claim(headIdx);
 
   let headTokRef = tokens[headIdx]!;
   let number_: Number_ = headTokRef.features.number === "pl" ? "pl" : "sg";
@@ -279,8 +296,13 @@ function collectNP(
           adjectives: [],
           pps: [],
         };
+        // Mark the "of" PREP and any DETs between the original head
+        // and "of" as consumed too, so the top-level collectPPs walk
+        // doesn't re-emit them.
+        for (let k = scan; k <= headIdx; k++) claim(k);
         // Swap to the real head.
         headIdx = realHeadIdx;
+        claim(headIdx);
         headTokRef = tokens[headIdx]!;
         number_ = headTokRef.features.number === "pl" ? "pl" : "sg";
         person = (headTokRef.features.person ?? "3") as Person;
@@ -303,16 +325,19 @@ function collectNP(
         ...(deg && deg !== "positive" ? { degree: deg } : {}),
       });
       leftEdge = i;
+      claim(i);
       continue;
     }
     if (t.tag === "DET") {
       determiner = { lemma: t.lemma };
       leftEdge = i;
+      claim(i);
       continue;
     }
     if (t.tag === "NUM") {
       numeral = { lemma: t.lemma };
       leftEdge = i;
+      claim(i);
       continue;
     }
     // Possessive `'s` — the previous noun owns this one. Build a
@@ -332,6 +357,7 @@ function collectNP(
         pps: [],
       };
       leftEdge = i;
+      claim(i);
       // Walk further back from the possessor to pick up its own
       // determiner ("the king's wolf" → possessor = NP{king, det=the}).
       for (let j = i - 1; j >= 0; j--) {
@@ -339,6 +365,7 @@ function collectNP(
         if (pt.tag === "DET") {
           possessor.determiner = { lemma: pt.lemma };
           leftEdge = j;
+          claim(j);
           continue;
         }
         break;
@@ -356,7 +383,8 @@ function collectNP(
   if (direction === "left" && leftEdge > 0) {
     const conjTok = tokens[leftEdge - 1];
     if (conjTok && conjTok.tag === "CONJ") {
-      const leftCoord = collectNP(tokens, leftEdge - 1, "left");
+      claim(leftEdge - 1);
+      const leftCoord = collectNP(tokens, leftEdge - 1, "left", consumed);
       if (leftCoord) {
         // Build the rightmost member's NP first, then attach it as
         // the coord of the leftmost member.
@@ -388,24 +416,34 @@ function collectNP(
     }
   }
 
-  // Walk forward collecting trailing PPs that modify this noun. The
-  // first "of X" PP becomes the possessor (so "the dog of the king"
-  // surfaces with the king as a genitive-marked possessor); the rest
-  // become ordinary PPs.
+  // Walk forward collecting trailing PPs that modify this noun.
+  // ONLY the first "of X" PP attaches as a possessor — every other
+  // trailing PP belongs to a higher slot (the verb, or another
+  // sibling NP) and is collected by the top-level `collectPPs` sweep
+  // in parseSyntax. Without this restriction, a PP chain like
+  // "from the village to the river by the road" cascades:
+  // village's NP greedily nests `to+river+by+road`, river greedily
+  // nests `by+road`, etc. — and the realiser then emits each
+  // nested PP at every depth, producing exponential duplication.
   const pps: PP[] = [];
   let rightEdge = headIdx;
-  for (let i = headIdx + 1; i < tokens.length; i++) {
-    const t = tokens[i]!;
-    if (t.tag !== "PREP") break;
-    const sub = collectNP(tokens, i, "right");
-    if (!sub) break;
-    if (t.lemma === "of" && !possessor) {
+  if (
+    headIdx + 1 < tokens.length &&
+    tokens[headIdx + 1]!.tag === "PREP" &&
+    tokens[headIdx + 1]!.lemma === "of" &&
+    !possessor
+  ) {
+    const ofIdx = headIdx + 1;
+    claim(ofIdx);
+    const sub = collectNP(tokens, ofIdx, "right", consumed);
+    if (sub) {
       possessor = { ...sub, head: { ...sub.head, case: "gen" } };
-    } else {
-      pps.push({ kind: "PP", prep: { lemma: t.lemma }, np: sub });
     }
-    // Skip past the PP's NP.
-    while (i + 1 < tokens.length && tokens[i + 1]!.tag !== "PREP") i++;
+    let i = ofIdx;
+    while (i + 1 < tokens.length && tokens[i + 1]!.tag !== "PREP") {
+      i++;
+      claim(i);
+    }
     rightEdge = i;
   }
 
@@ -417,7 +455,8 @@ function collectNP(
   if (direction === "right" && rightEdge + 1 < tokens.length) {
     const conjTok = tokens[rightEdge + 1];
     if (conjTok && conjTok.tag === "CONJ") {
-      const next = collectNP(tokens, rightEdge + 1, "right");
+      claim(rightEdge + 1);
+      const next = collectNP(tokens, rightEdge + 1, "right", consumed);
       if (next) {
         rightCoord = { lemma: conjTok.lemma, np: next };
       }
@@ -448,7 +487,13 @@ function collectPPs(tokens: EnglishToken[], consumed: Set<number>): PP[] {
   for (let i = 0; i < tokens.length; i++) {
     if (consumed.has(i)) continue;
     if (tokens[i]!.tag !== "PREP") continue;
-    const np = collectNP(tokens, i, "right");
+    consumed.add(i);
+    // Pass `consumed` through so the recursive NP walk claims its
+    // own indices — without this, `collectPPs` would re-enter on
+    // PREPs that the just-collected NP folded in as nested PPs and
+    // emit them again, producing exponential PP duplication on
+    // chains like "from the village to the river by the road".
+    const np = collectNP(tokens, i, "right", consumed);
     if (!np) continue;
     out.push({ kind: "PP", prep: { lemma: tokens[i]!.lemma }, np });
   }
