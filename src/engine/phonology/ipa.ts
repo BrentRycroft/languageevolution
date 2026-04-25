@@ -3,6 +3,12 @@ import type { Phoneme } from "../types";
 export const VOWELS: ReadonlySet<Phoneme> = new Set([
   "a", "e", "i", "o", "u",
   "ɛ", "ɔ", "ə", "ɨ", "ɯ", "ø", "y", "œ",
+  // Near-open / open / lax series. Produced by umlaut/harmony rules
+  // and used in narrow transcription (laxing of i/u/e/o). Previously
+  // absent from the canonical set, which caused `isVowel` to reject
+  // umlaut outputs like `æ` and `ʏ` even though the catalog rule
+  // deliberately emits them.
+  "æ", "ɑ", "ɒ", "ʏ", "ɪ", "ʊ",
   "aː", "eː", "iː", "oː", "uː",
   "á", "é", "í", "ó", "ú",
   "à", "è", "ì", "ò", "ù",
@@ -32,20 +38,23 @@ export const CONSONANTS: ReadonlySet<Phoneme> = new Set([
   // Both are accepted so older saves and hand-typed forms still work.
   "r̩", "l̩", "m̩", "n̩",
   "r̥", "l̥", "m̥", "n̥", "w̥", "y̥",
-  // PIE labiovelars (already IPA) and palatalised velars. The engine
-  // accepts the Indo-Europeanist acute-over-consonant too (`ḱ`, `ǵ`)
-  // as a deprecated alias; new presets should use `kʲ`, `gʲ`.
+  // PIE labiovelars and palatalised consonants. The engine accepts the
+  // Indo-Europeanist acute-over-consonant (`ḱ`, `ǵ`) as deprecated
+  // aliases. Canonical form uses U+02B2 superscript j for palatalisation.
   "kʷ", "gʷ", "gʷʰ",
-  "kʲ", "gʲ", "gʲʰ",
+  "kʲ", "gʲ", "gʲʰ", "tʲ", "dʲ",
   "ḱ", "ǵ", "g̑",
   // Voiced aspirated stops (PIE)
   "bʰ", "dʰ", "gʰ",
   // Clicks
   "ǀ", "ǃ", "ǂ", "ǁ", "ʘ",
-  // Palatalized segments
-  "kj", "gj", "tj", "dj",
   // Nasalization diacritic (pre-nasal cluster marker)
   "ⁿ",
+  // Prenasalised consonants (Bantu, Austronesian, Mande). Written as
+  // superscript-n + stop since Bantu phonology treats them as single
+  // segments, not clusters. The homorganic nasal assimilates to the
+  // following stop's place, so a single `ⁿ` modifier is sufficient.
+  "ⁿp", "ⁿb", "ⁿt", "ⁿd", "ⁿk", "ⁿg", "ⁿj",
 ]);
 
 export function isVowel(p: Phoneme): boolean {
@@ -128,6 +137,14 @@ const ASCII_TO_IPA: Record<string, Phoneme> = {
   eh: "ɛ",
   oh: "ɔ",
   ae: "æ",
+  // ASCII palatalisation fallbacks — map to the canonical IPA
+  // superscript-j form so the engine's stored phonemes stay uniform
+  // regardless of how a user types them. Added when the non-IPA
+  // `kj/gj/tj/dj` duplicates were removed from the CONSONANTS set.
+  kj: "kʲ",
+  gj: "gʲ",
+  tj: "tʲ",
+  dj: "dʲ",
 };
 
 export function asciiToIpa(s: string): Phoneme {

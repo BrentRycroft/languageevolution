@@ -172,6 +172,17 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   "œ": { type: "vowel", height: "mid-low", backness: "front", round: true },
   "ɔ": { type: "vowel", height: "mid-low", backness: "back", round: true },
   a: { type: "vowel", height: "low", backness: "central", round: false },
+  // Near-open / lax / non-central vowels. Previously absent from the
+  // feature table, which meant the generative rule templates couldn't
+  // target or produce them even though the hardcoded umlaut / harmony
+  // rules emit them. Added so `featuresOf` returns a proper bundle for
+  // every phoneme the engine can store.
+  "æ": { type: "vowel", height: "low", backness: "front", round: false },
+  "ɑ": { type: "vowel", height: "low", backness: "back", round: false },
+  "ɒ": { type: "vowel", height: "low", backness: "back", round: true },
+  "ɪ": { type: "vowel", height: "high", backness: "front", round: false, tense: false },
+  "ʊ": { type: "vowel", height: "high", backness: "back", round: true, tense: false },
+  "ʏ": { type: "vowel", height: "high", backness: "front", round: true, tense: false },
   // Accented vowels (PIE stress / reconstruction convention) — same as
   // their bare counterparts but let feature queries targeting "vowel"
   // still match them. Stress / tone don't propagate through `featuresOf`

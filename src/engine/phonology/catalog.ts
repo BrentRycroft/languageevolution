@@ -1,5 +1,5 @@
 import type { SoundChange, WordForm, Phoneme } from "../types";
-import { isVowel, isConsonant } from "./ipa";
+import { isVowel, isConsonant, isSyllabic } from "./ipa";
 import { HIGH, LOW, stripTone, toneOf } from "./tone";
 import { UNSTRESSED_REDUCTION } from "./stress";
 
@@ -186,12 +186,25 @@ export const CATALOG: SoundChange[] = [
     id: "deletion.final_vowel",
     label: "V → ∅ / _#",
     category: "deletion",
-    description: "Drop word-final vowel (if word would remain >= 2 phonemes).",
-    probabilityFor: (w) => (w.length >= 3 && isVowel(w[w.length - 1]!) ? 0.07 : 0),
+    description: "Drop word-final vowel (if a nucleus still remains).",
+    probabilityFor: (w) => {
+      if (w.length < 3) return 0;
+      if (!isVowel(w[w.length - 1]!)) return 0;
+      // Block deletion if the final vowel is the last remaining nucleus
+      // — otherwise the word collapses to an all-consonant form like
+      // `dw`, which `isFormLegal` later rejects anyway. Catching it
+      // here keeps the probability budget honest and prevents
+      // deterministic RNG waste on always-rejected outcomes.
+      const remainder = w.slice(0, -1);
+      if (!remainder.some((p) => isSyllabic(p))) return 0;
+      return 0.07;
+    },
     apply: (word) => {
       if (word.length < 3) return word;
       if (!isVowel(word[word.length - 1]!)) return word;
-      return word.slice(0, -1);
+      const remainder = word.slice(0, -1);
+      if (!remainder.some((p) => isSyllabic(p))) return word;
+      return remainder;
     },
     enabledByDefault: true,
     baseWeight: 1,
@@ -587,11 +600,11 @@ export const CATALOG: SoundChange[] = [
   ),
   mappingSub(
     "palatalization.cascade",
-    "tʃ → ʃ, kj → tʃ",
+    "tʃ → ʃ, kʲ → tʃ",
     "palatalization",
     [
       ["tʃ", "ʃ"],
-      ["kj", "tʃ"],
+      ["kʲ", "tʃ"],
     ],
     0.05,
     "Palatal cascade: earlier palatalization outputs lenite, new palatalizations fill in.",
