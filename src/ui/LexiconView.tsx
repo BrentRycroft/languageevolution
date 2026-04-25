@@ -5,6 +5,8 @@ import { formatForm } from "../engine/phonology/display";
 import { ReproduceForm } from "./ReproduceForm";
 import { useDebounced } from "./hooks/useDebounced";
 import { ScriptPicker } from "./ScriptPicker";
+import { clusterOf } from "../engine/semantics/clusters";
+import { frequencyFor } from "../engine/lexicon/frequency";
 
 export function LexiconView() {
   const state = useSimStore((s) => s.state);
@@ -22,6 +24,10 @@ export function LexiconView() {
   const clearCompare = useSimStore((s) => s.clearCompareLangs);
   const search = useSimStore((s) => s.lexiconSearch);
   const setSearch = useSimStore((s) => s.setLexiconSearch);
+  const sort = useSimStore((s) => s.lexiconSort);
+  const setSort = useSimStore((s) => s.setLexiconSort);
+  const groupByCluster = useSimStore((s) => s.lexiconGroupByCluster);
+  const setGroupByCluster = useSimStore((s) => s.setLexiconGroupByCluster);
   const script = useSimStore((s) => s.displayScript);
   const [inspect, setInspect] = useState<{ langId: string; meaning: string } | null>(null);
 
@@ -41,11 +47,57 @@ export function LexiconView() {
 
   const allMeanings = useMemo(() => Object.keys(seedForms).sort(), [seedForms]);
   const debouncedSearch = useDebounced(search, 150);
+
+  // Pre-compute "last changed gen" + frequency hint per meaning,
+  // averaged across visible languages, for the non-alpha sorts.
+  const sortKeyForMeaning = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const m of allMeanings) {
+      if (sort === "frequency") {
+        out[m] = -frequencyFor(m); // higher freq → smaller key (top of table)
+      } else if (sort === "last-changed") {
+        // Most-recently-changed comes first; aggregate over visible leaves.
+        let maxGen = -1;
+        for (const lid of visibleLeaves) {
+          const g = state.tree[lid]?.language.lastChangeGeneration?.[m];
+          if (typeof g === "number" && g > maxGen) maxGen = g;
+        }
+        out[m] = -maxGen;
+      } else if (sort === "cluster") {
+        out[m] = 0; // cluster ordering applied below as a string sort
+      } else {
+        out[m] = 0;
+      }
+    }
+    return out;
+    // visibleLeaves is the dependency but referenced via state.tree below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMeanings, sort, state.tree]);
+
   const meanings = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
-    if (!q) return allMeanings;
-    return allMeanings.filter((m) => m.toLowerCase().includes(q));
-  }, [allMeanings, debouncedSearch]);
+    let filtered = q
+      ? allMeanings.filter((m) => m.toLowerCase().includes(q))
+      : allMeanings.slice();
+    if (sort === "alpha") {
+      filtered.sort();
+    } else if (sort === "cluster") {
+      filtered.sort((a, b) => {
+        const ca = clusterOf(a) ?? "z-other";
+        const cb = clusterOf(b) ?? "z-other";
+        if (ca !== cb) return ca.localeCompare(cb);
+        return a.localeCompare(b);
+      });
+    } else {
+      filtered.sort((a, b) => {
+        const ka = sortKeyForMeaning[a] ?? 0;
+        const kb = sortKeyForMeaning[b] ?? 0;
+        if (ka !== kb) return ka - kb;
+        return a.localeCompare(b);
+      });
+    }
+    return filtered;
+  }, [allMeanings, debouncedSearch, sort, sortKeyForMeaning]);
 
   const prevCellsRef = useRef<Map<string, string>>(new Map());
   const justChangedRef = useRef<Set<string>>(new Set());
@@ -153,15 +205,47 @@ export function LexiconView() {
           <ScriptPicker />
         </div>
       </div>
-      <div style={{ padding: "4px 0 8px" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          alignItems: "center",
+          padding: "4px 0 8px",
+          flexWrap: "wrap",
+        }}
+      >
         <input
           type="text"
           placeholder={`Search ${allMeanings.length} meanings…`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           aria-label="Search meanings"
-          style={{ width: "100%", fontSize: "var(--fs-2)" }}
+          style={{ flex: "1 1 200px", fontSize: "var(--fs-2)" }}
         />
+        <label style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+          sort:&nbsp;
+          <select
+            value={sort}
+            onChange={(e) =>
+              setSort(e.target.value as "alpha" | "cluster" | "frequency" | "last-changed")
+            }
+            aria-label="Sort meanings by"
+          >
+            <option value="alpha">alphabetic</option>
+            <option value="cluster">cluster</option>
+            <option value="frequency">frequency</option>
+            <option value="last-changed">last changed</option>
+          </select>
+        </label>
+        <label style={{ fontSize: "var(--fs-1)", color: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}>
+          <input
+            type="checkbox"
+            checked={groupByCluster}
+            onChange={(e) => setGroupByCluster(e.target.checked)}
+            aria-label="Group rows by cluster"
+          />
+          group by cluster
+        </label>
       </div>
       {filter === "compare" && (
         <div
@@ -240,7 +324,33 @@ export function LexiconView() {
               </tr>
             </thead>
             <tbody>
-              {meanings.map((meaning) => (
+              {(() => {
+                const rows: React.ReactNode[] = [];
+                let currentCluster: string | null = null;
+                const colspan = visibleLeaves.length + 1;
+                for (const meaning of meanings) {
+                  if (groupByCluster) {
+                    const cluster = clusterOf(meaning) ?? "other";
+                    if (cluster !== currentCluster) {
+                      currentCluster = cluster;
+                      rows.push(
+                        <tr key={`__group_${cluster}`} className="lexicon-cluster-row">
+                          <td
+                            colSpan={colspan}
+                            style={{
+                              fontSize: "var(--fs-1)",
+                              color: "var(--muted)",
+                              padding: "6px 6px 2px",
+                              fontWeight: "var(--fw-semi)",
+                            }}
+                          >
+                            {cluster}
+                          </td>
+                        </tr>,
+                      );
+                    }
+                  }
+                  rows.push(
                 <tr key={meaning}>
                   <td className="meaning" onClick={() => selectMeaning(meaning)}>
                     {meaning}
@@ -276,8 +386,11 @@ export function LexiconView() {
                       </td>
                     );
                   })}
-                </tr>
-              ))}
+                </tr>,
+                  );
+                }
+                return rows;
+              })()}
             </tbody>
           </table>
         )}

@@ -1,16 +1,23 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import { levenshtein } from "../engine/phonology/ipa";
 import { formatForm } from "../engine/phonology/display";
-import type { Language, LanguageEvent } from "../engine/types";
+import type { Language, LanguageEvent, LanguageTree } from "../engine/types";
 import { diffActiveRules, diffOtRankings } from "../engine/analysis/ruleDiff";
 import { ScriptPicker } from "./ScriptPicker";
+import {
+  generateNarrative,
+  randomNarrativeSeed,
+  type NarrativeLine,
+} from "../engine/narrative/generate";
+import { traceEtymology } from "../engine/translator/cognates";
+
+type CompareMode = "lexicon" | "narrative" | "cognate";
 
 /**
- * Swadesh-style lexicostatistic similarity: for every shared meaning, count
- * as "cognate" when the Levenshtein edit distance is ≤ 40% of the longer
- * form. Returns a percentage 0–100 plus counts.
+ * Lexicostatistic similarity (Swadesh-style): cognate iff edit
+ * distance ≤ 40 % of the longer form.
  */
 function lexicalSimilarity(
   a: Language,
@@ -31,19 +38,21 @@ function lexicalSimilarity(
 }
 
 /**
- * Two-column side-by-side comparison using the user's "compare" selection.
- * Shows lexicon, grammar features, morphology paradigms, and recent events
- * for the first two checked languages (or the selected + its sibling if no
- * compare selection yet).
+ * Compare tab — three sub-modes:
+ *   - Lexicon (side-by-side word table + grammar diff)
+ *   - Narrative (same skeleton rendered in each selected language)
+ *   - Cognate (one meaning's evolution from proto to leaf)
  */
 export function CompareView() {
   const state = useSimStore((s) => s.state);
   const compareIds = useSimStore((s) => s.compareLangIds);
   const selectedLangId = useSimStore((s) => s.selectedLangId);
+  const selectedMeaning = useSimStore((s) => s.selectedMeaning);
+
+  const [mode, setMode] = useState<CompareMode>("lexicon");
 
   const pair = useMemo<string[]>(() => {
     if (compareIds.length >= 2) return compareIds.slice(0, 2);
-    // Fallbacks: selected + nearest alive sibling, else first two alive leaves.
     const alive = leafIds(state.tree).filter(
       (id) => !state.tree[id]!.language.extinct,
     );
@@ -58,23 +67,74 @@ export function CompareView() {
     return alive.slice(0, 2);
   }, [compareIds, selectedLangId, state.tree]);
 
-  if (pair.length < 2) {
-    return (
-      <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
-        Check two or more languages in the Lexicon → Compare chip to populate
-        this view, or select one in the Tree and we'll auto-pair it with a
-        sibling.
-      </div>
-    );
-  }
-
-  const [a, b] = pair;
-  const langA = state.tree[a!]!.language;
-  const langB = state.tree[b!]!.language;
-  const sim = lexicalSimilarity(langA, langB);
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, height: "100%", minHeight: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "4px 0",
+        }}
+        role="tablist"
+        aria-label="Compare mode"
+      >
+        {(["lexicon", "narrative", "cognate"] as const).map((m) => (
+          <button
+            key={m}
+            role="tab"
+            aria-selected={mode === m}
+            className={mode === m ? "active" : ""}
+            onClick={() => setMode(m)}
+          >
+            {modeLabel(m)}
+          </button>
+        ))}
+        <span style={{ marginLeft: "auto" }}>
+          <ScriptPicker />
+        </span>
+      </div>
+
+      {pair.length < 2 && mode !== "cognate" ? (
+        <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", padding: 12 }}>
+          Check two or more languages in the Lexicon → Compare chip to populate
+          this view, or select one in the Tree and we'll auto-pair it with a
+          sibling.
+        </div>
+      ) : mode === "lexicon" ? (
+        <LexiconCompare langA={state.tree[pair[0]!]!.language} langB={state.tree[pair[1]!]!.language} />
+      ) : mode === "narrative" ? (
+        <NarrativeCompare
+          langA={state.tree[pair[0]!]!.language}
+          langB={state.tree[pair[1]!]!.language}
+        />
+      ) : (
+        <CognateTrace
+          tree={state.tree}
+          leafIds={pair}
+          meaning={selectedMeaning ?? "water"}
+        />
+      )}
+    </div>
+  );
+}
+
+function modeLabel(m: CompareMode): string {
+  switch (m) {
+    case "lexicon": return "Lexicon";
+    case "narrative": return "Narrative";
+    case "cognate": return "Cognate trace";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// LEXICON sub-mode
+// ---------------------------------------------------------------------------
+
+function LexiconCompare({ langA, langB }: { langA: Language; langB: Language }) {
+  const sim = lexicalSimilarity(langA, langB);
+  return (
+    <>
       <div
         style={{
           display: "flex",
@@ -95,10 +155,7 @@ export function CompareView() {
           {sim.pct}%
         </span>
         <span>
-          {sim.cognate}/{sim.shared} shared meanings classify as cognate (edit-dist ≤ 40% of longer form)
-        </span>
-        <span style={{ marginLeft: "auto" }}>
-          <ScriptPicker />
+          {sim.cognate}/{sim.shared} shared meanings classify as cognate (edit-dist ≤ 40 % of longer form)
         </span>
       </div>
       <RuleDiffBanner a={langA} b={langB} />
@@ -106,7 +163,7 @@ export function CompareView() {
         <CompareColumn lang={langA} otherLang={langB} />
         <CompareColumn lang={langB} otherLang={langA} />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -324,6 +381,224 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         {title}
       </div>
       {children}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NARRATIVE sub-mode
+// ---------------------------------------------------------------------------
+
+function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }) {
+  const script = useSimStore((s) => s.displayScript);
+  const generation = useSimStore((s) => s.state.generation);
+  const [seed, setSeed] = useState<string>(() => randomNarrativeSeed());
+  const [lineCount, setLineCount] = useState(6);
+
+  const linesA = useMemo(
+    () => generateNarrative(langA, seed, lineCount, script),
+    // generation in deps so the text refreshes as the sim steps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [langA, seed, lineCount, script, generation],
+  );
+  const linesB = useMemo(
+    () => generateNarrative(langB, seed, lineCount, script),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [langB, seed, lineCount, script, generation],
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          className="primary"
+          onClick={() => setSeed(randomNarrativeSeed())}
+          title="Generate a new randomly-seeded story"
+        >
+          🎲 New story
+        </button>
+        <select
+          value={lineCount}
+          onChange={(e) => setLineCount(parseInt(e.target.value, 10))}
+          aria-label="Number of lines"
+        >
+          {[3, 5, 6, 8, 10].map((n) => (
+            <option key={n} value={n}>{n} lines</option>
+          ))}
+        </select>
+        <span style={{ fontSize: "var(--fs-1)", color: "var(--muted)", marginLeft: 4 }}>
+          Same skeleton in both columns — only the realised forms differ.
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <NarrativePane lang={langA} lines={linesA} />
+        <NarrativePane lang={langB} lines={linesB} />
+      </div>
+    </div>
+  );
+}
+
+function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[] }) {
+  if (lines.length === 0) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          minWidth: 280,
+          padding: 12,
+          border: "1px solid var(--border)",
+          borderRadius: "var(--r-2)",
+          background: "var(--panel-2)",
+          color: "var(--muted)",
+        }}
+      >
+        Not enough vocabulary in {lang.name} to compose a sentence yet.
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        flex: 1,
+        minWidth: 280,
+        padding: 12,
+        border: "1px solid var(--border)",
+        borderRadius: "var(--r-2)",
+        background: "var(--panel-2)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "var(--fs-1)",
+          color: "var(--muted)",
+          fontFamily: "var(--font-mono)",
+          marginBottom: 8,
+        }}
+      >
+        {lang.name} · word order {lang.grammar.wordOrder} · {Object.keys(lang.morphology.paradigms).length} paradigms
+      </div>
+      {lines.map((line, i) => (
+        <div key={i} style={{ marginBottom: 6 }}>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              color: "var(--accent)",
+              fontSize: "var(--fs-3)",
+            }}
+          >
+            {line.text}
+          </div>
+          <div
+            style={{
+              fontSize: "var(--fs-1)",
+              color: "var(--muted)",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            {line.gloss}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// COGNATE TRACE sub-mode
+// ---------------------------------------------------------------------------
+
+function CognateTrace({
+  tree,
+  leafIds,
+  meaning,
+}: {
+  tree: LanguageTree;
+  leafIds: string[];
+  meaning: string;
+}) {
+  const script = useSimStore((s) => s.displayScript);
+  const [meaningInput, setMeaningInput] = useState(meaning);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <label style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+          Meaning:
+        </label>
+        <input
+          type="text"
+          value={meaningInput}
+          onChange={(e) => setMeaningInput(e.target.value)}
+          placeholder="e.g. water"
+          aria-label="Meaning to trace"
+        />
+        <span style={{ fontSize: "var(--fs-1)", color: "var(--muted)" }}>
+          Showing how this meaning's form changed from proto to each selected leaf.
+        </span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {leafIds.length === 0 ? (
+          <div style={{ color: "var(--muted)" }}>
+            Select languages in the Lexicon → Compare chip to populate.
+          </div>
+        ) : (
+          leafIds.map((leafId) => {
+            const lang = tree[leafId]?.language;
+            if (!lang) return null;
+            const steps = traceEtymology(tree, leafId, meaningInput.toLowerCase(), script);
+            return (
+              <div
+                key={leafId}
+                style={{
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--r-2)",
+                  background: "var(--panel-2)",
+                  padding: 10,
+                }}
+              >
+                <div style={{ fontSize: "var(--fs-2)", fontWeight: "var(--fw-semi)", marginBottom: 6 }}>
+                  {lang.name}
+                </div>
+                {steps.length === 0 ? (
+                  <div style={{ color: "var(--muted)", fontSize: "var(--fs-1)" }}>
+                    {lang.name} has no entry for "{meaningInput}".
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                    {steps.map((s, i) => (
+                      <div key={`${s.languageId}-${i}`} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div
+                          style={{
+                            padding: "4px 8px",
+                            background: "var(--panel)",
+                            border: "1px solid var(--border)",
+                            borderRadius: "var(--r-1)",
+                            fontFamily: "var(--font-mono)",
+                            fontSize: "var(--fs-1)",
+                          }}
+                        >
+                          <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                            {s.languageName} @ g{s.generation}
+                          </div>
+                          <div style={{ color: "var(--accent)" }}>{s.form}</div>
+                        </div>
+                        {i < steps.length - 1 && <span style={{ color: "var(--muted)" }}>→</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

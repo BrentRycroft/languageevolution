@@ -8,8 +8,7 @@ type Tab =
   | "grammar"
   | "events"
   | "translate"
-  | "compare"
-  | "narrative";
+  | "compare";
 
 const TAB_ORDER: Tab[] = [
   "tree",
@@ -20,7 +19,6 @@ const TAB_ORDER: Tab[] = [
   "events",
   "translate",
   "compare",
-  "narrative",
 ];
 
 interface Options {

@@ -11,7 +11,6 @@ import { GrammarView } from "../GrammarView";
 import { EventsLog } from "../EventsLog";
 import { Translator } from "../Translator";
 import { CompareView } from "../CompareView";
-import { NarrativeView } from "../NarrativeView";
 import { MapView } from "../MapView";
 import { SoundLawsView } from "../SoundLawsView";
 import { StemmaView } from "../StemmaView";
@@ -80,7 +79,6 @@ describe("UI render harness — every tab and every standalone component", () =>
     ["EventsLog", () => <EventsLog />],
     ["Translator", () => <Translator />],
     ["CompareView", () => <CompareView />],
-    ["NarrativeView", () => <NarrativeView />],
     ["MapView", () => <MapView />],
     ["SoundLawsView", () => <SoundLawsView />],
     ["StemmaView", () => <StemmaView />],

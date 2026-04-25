@@ -1300,11 +1300,50 @@ tr.grammar-diff td:last-child {
 
 .tab-bar > button {
   scroll-snap-align: start;
+  flex: 0 0 auto;
+  /* Ensure decent tap target on mobile. */
+  min-height: 38px;
+  padding: 6px 14px;
+}
+
+/* Hide the scrollbar on the tab bar itself — the row is short enough
+   that flicking is the natural interaction. Keep accessibility by
+   leaving keyboard arrow navigation (the buttons themselves are still
+   focusable). */
+.tab-bar {
+  scrollbar-width: none;
+}
+.tab-bar::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Side-panel slide-in for the Reproduce-form drawer + future right
+   drawers. Respects prefers-reduced-motion via a media query so users
+   who opt out of motion get instant placement instead. */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
