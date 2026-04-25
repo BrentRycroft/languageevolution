@@ -77,6 +77,10 @@ interface SimStore {
   compareLangIds: string[];
   /** Substring search over meanings in the lexicon view. */
   lexiconSearch: string;
+  /** Lexicon row sort key. */
+  lexiconSort: "alpha" | "cluster" | "frequency" | "last-changed";
+  /** When true, rows are grouped by cluster with a header row per cluster. */
+  lexiconGroupByCluster: boolean;
   /** Script mode for the Lexicon view: phonemic (IPA) / orthographic / both. */
   displayScript: "ipa" | "roman" | "both";
   /** Theme selection. "system" follows prefers-color-scheme. */
@@ -122,6 +126,8 @@ interface SimStore {
   toggleCompareLang: (id: string) => void;
   clearCompareLangs: () => void;
   setLexiconSearch: (q: string) => void;
+  setLexiconSort: (sort: "alpha" | "cluster" | "frequency" | "last-changed") => void;
+  setLexiconGroupByCluster: (group: boolean) => void;
   setDisplayScript: (s: "ipa" | "roman" | "both") => void;
   setTheme: (theme: "dark" | "light" | "system") => void;
   setTimelineMode: (mode: "meanings" | "cognates" | "rules") => void;
@@ -221,6 +227,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
   starredLangIds: [],
   compareLangIds: [],
   lexiconSearch: "",
+  lexiconSort: "alpha",
+  lexiconGroupByCluster: false,
   displayScript: "ipa",
   theme: "dark",
   timelineMode: "meanings",
@@ -404,6 +412,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
     }),
   clearCompareLangs: () => set({ compareLangIds: [] }),
   setLexiconSearch: (q) => set({ lexiconSearch: q }),
+  setLexiconSort: (lexiconSort) => set({ lexiconSort }),
+  setLexiconGroupByCluster: (lexiconGroupByCluster) => set({ lexiconGroupByCluster }),
   setDisplayScript: (s) => set({ displayScript: s }),
   setTheme: (theme) => set({ theme }),
   setTimelineMode: (timelineMode) => set({ timelineMode }),

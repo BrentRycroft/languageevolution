@@ -23,25 +23,66 @@ import type { MorphCategory } from "../morphology/types";
  */
 
 const NOUN_POOL = [
-  "mother", "father", "dog", "wolf", "horse", "cow", "bird", "fish",
-  "hand", "foot", "tree", "water", "fire", "stone", "moon", "sun",
+  // kinship
+  "mother", "father", "child", "brother", "sister", "friend",
+  // animals
+  "dog", "wolf", "horse", "cow", "bird", "fish", "snake", "bear",
+  // body
+  "hand", "foot", "eye", "head", "heart",
+  // environment
+  "tree", "water", "fire", "stone", "moon", "sun", "star", "river",
+  "mountain", "forest", "wind", "rain",
+  // social
+  "king", "warrior", "stranger", "village", "house",
 ] as const;
 
-const VERB_POOL = ["go", "come", "see", "know", "eat", "drink", "sleep", "die"] as const;
+const VERB_POOL = [
+  // motion
+  "go", "come", "walk", "run", "fall", "fly",
+  // perception
+  "see", "know", "hear", "think",
+  // metabolism
+  "eat", "drink", "sleep", "die",
+  // action
+  "give", "take", "speak", "hold", "fight", "make", "break",
+] as const;
 
-const ADJECTIVE_POOL = ["big", "small", "new", "old", "good", "bad"] as const;
+const ADJECTIVE_POOL = [
+  "big", "small", "new", "old", "good", "bad",
+  "tall", "short", "fast", "slow", "wise", "young",
+] as const;
+
+const TIME_POOL = ["morning", "evening", "night", "winter", "summer"] as const;
 
 interface SentencePattern {
   template: string;
   needsObject: boolean;
   needsAdj: boolean;
+  /** Time-of-day or season prefix ("In the morning, …"). */
+  needsTime?: boolean;
+  /** Bare (no English connectives) — usable for any language regardless of grammar. */
+  bare?: boolean;
 }
 
 const SENTENCE_PATTERNS: SentencePattern[] = [
-  { template: "The {adj} {S} {V}.", needsObject: false, needsAdj: true },
-  { template: "The {S} {V} the {O}.", needsObject: true, needsAdj: false },
-  { template: "The {S} {V} the {adj} {O}.", needsObject: true, needsAdj: true },
-  { template: "{S} {V}.", needsObject: false, needsAdj: false },
+  // Bare core (work in any preset)
+  { template: "The {S} {V} the {O}.",            needsObject: true,  needsAdj: false, bare: true },
+  { template: "The {S} {V} the {adj} {O}.",      needsObject: true,  needsAdj: true,  bare: true },
+  { template: "The {adj} {S} {V}.",              needsObject: false, needsAdj: true,  bare: true },
+  { template: "{S} {V}.",                         needsObject: false, needsAdj: false, bare: true },
+  // Embellished — add a time prefix
+  { template: "In the {time}, the {S} {V}.",     needsObject: false, needsAdj: false, needsTime: true },
+  { template: "In the {time}, the {S} {V} the {O}.", needsObject: true, needsAdj: false, needsTime: true },
+  { template: "Long ago, the {S} {V} the {O}.",  needsObject: true,  needsAdj: false },
+  // Existential / state
+  { template: "The {S} is {adj}.",                needsObject: false, needsAdj: true,  bare: true },
+  { template: "The {S} is the {O}.",              needsObject: true,  needsAdj: false, bare: true },
+  // Question pattern (declarative answer; the engine renders both as flat)
+  { template: "The {S} {V} where the {O} is.",   needsObject: true,  needsAdj: false },
+  // Cause-effect
+  { template: "The {S} {V}, so the {O} {V}.",    needsObject: true,  needsAdj: false },
+  // Possession / kinship
+  { template: "The {S}'s {O} {V}.",               needsObject: true,  needsAdj: false, bare: true },
 ];
 
 /**
@@ -57,6 +98,7 @@ export interface Skeleton {
   verb: Meaning;
   objectNoun: Meaning;
   adjective: Meaning | null;
+  timePhrase: Meaning | null;
 }
 
 function pickFromPoolByIndex<T extends string>(pool: readonly T[], rng: Rng): T {
@@ -79,12 +121,14 @@ export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
     // dropped.
     const objectCand = pickFromPoolByIndex(NOUN_POOL, rng);
     const adjCand = pickFromPoolByIndex(ADJECTIVE_POOL, rng);
+    const timeCand = pickFromPoolByIndex(TIME_POOL, rng);
     out.push({
       patternIdx,
       subjectNoun: subject,
       verb,
       objectNoun: pattern.needsObject ? objectCand : subject,
       adjective: pattern.needsAdj ? adjCand : null,
+      timePhrase: pattern.needsTime ? timeCand : null,
     });
   }
   return out;
@@ -180,6 +224,10 @@ function realizeSkeleton(
     pattern.needsAdj && skeleton.adjective
       ? resolveMeaning(lang, skeleton.adjective, ADJECTIVE_POOL)
       : null;
+  const timeMeaning =
+    pattern.needsTime && skeleton.timePhrase
+      ? resolveMeaning(lang, skeleton.timePhrase, TIME_POOL)
+      : null;
 
   const sForm = lang.lexicon[subjectMeaning];
   const vForm = lang.lexicon[verbMeaning];
@@ -193,20 +241,27 @@ function realizeSkeleton(
   const V = render(inflectVerb(vForm, lang, verbMeaning));
   const O = render(inflectNoun(oForm, lang, "O", objectMeaning));
   const arranged = arrange(lang.grammar.wordOrder, S, V, O);
+  const timeForm = timeMeaning ? lang.lexicon[timeMeaning] : null;
+  const T = timeForm ? render(timeForm) : "";
+
+  // Time prefix — ":" separator keeps the gloss aligned with the
+  // surface order without imposing English connectives.
+  const timePrefixText = T ? `${T} · ` : "";
+  const timePrefixGloss = timeMeaning ? `[${timeMeaning}] ` : "";
 
   if (pattern.needsObject && pattern.needsAdj && adjectiveMeaning) {
     const adjForm = lang.lexicon[adjectiveMeaning];
     if (!adjForm) return null;
     const A = render(adjForm);
     return {
-      text: `${arranged.first} ${arranged.second} ${arranged.third} · ${A}`,
-      gloss: `[${subjectMeaning}—${verbMeaning}—${adjectiveMeaning} ${objectMeaning}]`,
+      text: `${timePrefixText}${arranged.first} ${arranged.second} ${arranged.third} · ${A}`,
+      gloss: `${timePrefixGloss}[${subjectMeaning}—${verbMeaning}—${adjectiveMeaning} ${objectMeaning}]`,
     };
   }
   if (pattern.needsObject) {
     return {
-      text: `${arranged.first} ${arranged.second} ${arranged.third}`,
-      gloss: `[${subjectMeaning}—${verbMeaning}—${objectMeaning}]`,
+      text: `${timePrefixText}${arranged.first} ${arranged.second} ${arranged.third}`,
+      gloss: `${timePrefixGloss}[${subjectMeaning}—${verbMeaning}—${objectMeaning}]`,
     };
   }
   if (pattern.needsAdj && adjectiveMeaning) {
@@ -214,14 +269,28 @@ function realizeSkeleton(
     if (!adjForm) return null;
     const A = render(adjForm);
     return {
-      text: `${A} ${S} ${V}`,
-      gloss: `[${adjectiveMeaning} ${subjectMeaning}—${verbMeaning}]`,
+      text: `${timePrefixText}${A} ${S} ${V}`,
+      gloss: `${timePrefixGloss}[${adjectiveMeaning} ${subjectMeaning}—${verbMeaning}]`,
     };
   }
   return {
-    text: `${S} ${V}`,
-    gloss: `[${subjectMeaning}—${verbMeaning}]`,
+    text: `${timePrefixText}${S} ${V}`,
+    gloss: `${timePrefixGloss}[${subjectMeaning}—${verbMeaning}]`,
   };
+}
+
+/**
+ * A short, pronounceable random seed for narratives — used by the
+ * "🎲 New story" button so the user gets a fresh skeleton without
+ * thinking about seed values.
+ */
+export function randomNarrativeSeed(): string {
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return out;
 }
 
 /**

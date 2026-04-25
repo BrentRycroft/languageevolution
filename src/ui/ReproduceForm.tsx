@@ -90,26 +90,24 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.55)",
+        background: "rgba(0,0,0,0.35)",
         zIndex: 200,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
+        alignItems: "stretch",
+        justifyContent: "flex-end",
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "var(--panel)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--r-3)",
+          borderLeft: "1px solid var(--border)",
           boxShadow: "var(--shadow-3)",
           padding: 16,
-          maxWidth: 560,
-          width: "100%",
-          maxHeight: "85vh",
+          width: "min(480px, 100%)",
+          height: "100%",
           overflow: "auto",
+          animation: "slide-in-right 200ms ease-out",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", marginBottom: 8, gap: 8 }}>

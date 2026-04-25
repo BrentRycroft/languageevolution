@@ -6,7 +6,6 @@ import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
 import { CompareView } from "./CompareView";
-import { NarrativeView } from "./NarrativeView";
 import { MapView } from "./MapView";
 import { SoundLawsView } from "./SoundLawsView";
 import { Glossary } from "./Glossary";
@@ -20,6 +19,7 @@ import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
 import { WelcomeBanner } from "./Onboarding";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 import { GlobalSearch } from "./GlobalSearch";
+import { SelectedLanguageBar } from "./SelectedLanguageBar";
 import {
   MenuIcon,
   PlayIcon,
@@ -76,7 +76,6 @@ type Tab =
   | "events"
   | "translate"
   | "compare"
-  | "narrative"
   | "glossary";
 
 const TABS: { id: Tab; label: string; title: string }[] = [
@@ -94,7 +93,6 @@ const TABS: { id: Tab; label: string; title: string }[] = [
     title: "Word + sentence translation tools (AI-assisted)",
   },
   { id: "compare", label: "Compare", title: "Side-by-side diff of two languages" },
-  { id: "narrative", label: "Narrative", title: "AI-generated folk tale in a language" },
   { id: "glossary", label: "Glossary", title: "Reference for rule families, shift taxa, register" },
 ];
 
@@ -241,6 +239,7 @@ export function App() {
           </button>
         ))}
       </nav>
+      <SelectedLanguageBar />
 
       <div
         className={`controls-backdrop ${controlsOpen ? "open" : ""}`}
@@ -316,12 +315,6 @@ export function App() {
           <div className="panel panel-single">
             <h3>Compare</h3>
             <CompareView />
-          </div>
-        )}
-        {activeTab === "narrative" && (
-          <div className="panel panel-single">
-            <h3>Narrative</h3>
-            <NarrativeView />
           </div>
         )}
         {activeTab === "map" && (
