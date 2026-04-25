@@ -41,6 +41,10 @@ export interface EnglishToken {
     /** Adjective degree: comparative ("bigger") or superlative
      *  ("biggest"). Default positive when absent. */
     degree?: "positive" | "comparative" | "superlative";
+    /** Set when the source surface ended with `'s` — marks a
+     *  possessor noun ("king's wolf" → king has possessor=true,
+     *  wolf is the head). */
+    possessor?: boolean;
   };
 }
 
@@ -80,7 +84,13 @@ const PUNCT = /^[.,!?;:'"()]+$/;
 const PRONOUNS_OBJ = new Set(["me", "him", "her", "us", "them"]);
 const PRONOUNS_SUBJ = new Set(["i", "he", "she", "we", "they"]);
 const PRONOUNS_BOTH = new Set(["you", "it"]);
-const DETERMINERS = new Set(["the", "a", "an", "this", "that", "these", "those", "some", "any", "all", "no"]);
+const DETERMINERS = new Set([
+  "the", "a", "an",
+  "this", "that", "these", "those",
+  "some", "any", "all", "no", "every", "each",
+  // Possessive determiners — close to articles in distribution.
+  "my", "your", "his", "her", "its", "our", "their",
+]);
 const PREPOSITIONS = new Set([
   "in", "on", "at", "to", "from", "by", "with", "for", "of",
   "under", "over", "through", "near", "after", "before", "across",
@@ -252,11 +262,50 @@ function stripNounSuffix(s: string): string {
 export function tokeniseEnglish(text: string): EnglishToken[] {
   const tokens: EnglishToken[] = [];
   // Split on whitespace + punctuation, keeping punctuation as separate tokens.
-  const raw = text
+  const rawSplit = text
     .toLowerCase()
     .split(/(\s+|[.,!?;:()'"])/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
+
+  // Map common contraction hosts to their full auxiliary form so
+  // "doesn't" round-trips through the tokeniser as `does` + NEG and
+  // gets the right tense / mood signal.
+  const CONTRACTION_HOST: Record<string, string> = {
+    doesn: "does", don: "do", didn: "did",
+    won: "will", wouldn: "would",
+    isn: "is", aren: "are", wasn: "was", weren: "were",
+    hasn: "has", haven: "have", hadn: "had",
+    couldn: "could", shouldn: "should", mustn: "must",
+    shan: "shall", mightn: "might",
+    "can": "can", // bare "can't" leaves the host as "can"
+  };
+
+  // Re-glue possessive `'s` ("king's wolf") and contractions `n't`
+  // ("doesn't"). Without this the apostrophe split scatters them
+  // into 3 tokens — the parser then sees a phantom "s" or "t" noun.
+  const raw: string[] = [];
+  const possessorIndices = new Set<number>();
+  const negatorIndices = new Set<number>();
+  for (let i = 0; i < rawSplit.length; i++) {
+    const w = rawSplit[i]!;
+    const next = rawSplit[i + 1];
+    const after = rawSplit[i + 2];
+    if (next === "'" && after === "s") {
+      raw.push(w);
+      possessorIndices.add(raw.length - 1);
+      i += 2;
+      continue;
+    }
+    if (next === "'" && after === "t") {
+      // contractions like don't / doesn't / won't / can't / isn't
+      raw.push(CONTRACTION_HOST[w] ?? w);
+      negatorIndices.add(raw.length - 1);
+      i += 2;
+      continue;
+    }
+    raw.push(w);
+  }
 
   let pendingTense: "past" | "present" | "future" | undefined;
   let lastWasVerb = false;
@@ -430,11 +479,29 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     lastWasVerb = false;
   }
 
+  // Mark possessor nouns ("king's wolf" → king is possessor) and
+  // contracted negators ("can't" → can is negator).
+  for (const idx of possessorIndices) {
+    const t = tokens[idx];
+    if (t) t.features.possessor = true;
+  }
+  for (const idx of negatorIndices) {
+    // Inject a synthetic NEG token after the contraction host so the
+    // parser's negation detector (which scans by lemma) picks it up.
+    tokens.splice(idx + 1, 0, {
+      surface: "n't",
+      lemma: "not",
+      tag: "PUNCT",
+      features: {},
+    });
+  }
+
   // Second pass: tag the first noun as subject and the second noun as
   // object (very crude; works for simple SVO English).
   let nounsSeen = 0;
   for (const t of tokens) {
     if (t.tag !== "N" && t.tag !== "PRON") continue;
+    if (t.features.possessor) continue; // possessor never plays subj/obj role
     if (t.features.role) continue; // pronoun already marked
     if (nounsSeen === 0) t.features.role = "subject";
     else if (nounsSeen === 1) t.features.role = "object";

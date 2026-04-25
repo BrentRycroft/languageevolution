@@ -290,6 +290,9 @@ function collectNP(
   const adjectives: { lemma: string; baseForm: never[]; degree?: import("./syntax").Degree }[] = [];
   let determiner: { lemma: string } | undefined;
   let numeral: { lemma: string } | undefined;
+  // Track the leftmost token index this NP claimed; used for the
+  // coordination check below.
+  let leftEdge = headIdx;
   for (let i = headIdx - 1; i >= 0; i--) {
     const t = tokens[i]!;
     if (t.tag === "ADJ") {
@@ -299,17 +302,90 @@ function collectNP(
         baseForm: [],
         ...(deg && deg !== "positive" ? { degree: deg } : {}),
       });
+      leftEdge = i;
       continue;
     }
     if (t.tag === "DET") {
       determiner = { lemma: t.lemma };
+      leftEdge = i;
       continue;
     }
     if (t.tag === "NUM") {
       numeral = { lemma: t.lemma };
+      leftEdge = i;
       continue;
     }
+    // Possessive `'s` — the previous noun owns this one. Build a
+    // possessor sub-NP from it, including any DETs that lead it.
+    if ((t.tag === "N" || t.tag === "PRON") && t.features.possessor) {
+      possessor = {
+        kind: "NP",
+        head: {
+          lemma: t.lemma,
+          baseForm: [],
+          number: t.features.number === "pl" ? "pl" : "sg",
+          case: "gen",
+          person: (t.features.person ?? "3") as Person,
+          isPronoun: t.tag === "PRON",
+        },
+        adjectives: [],
+        pps: [],
+      };
+      leftEdge = i;
+      // Walk further back from the possessor to pick up its own
+      // determiner ("the king's wolf" → possessor = NP{king, det=the}).
+      for (let j = i - 1; j >= 0; j--) {
+        const pt = tokens[j]!;
+        if (pt.tag === "DET") {
+          possessor.determiner = { lemma: pt.lemma };
+          leftEdge = j;
+          continue;
+        }
+        break;
+      }
+      break;
+    }
     break;
+  }
+
+  // Coordinated NP detection — when this NP's left edge sits directly
+  // after a CONJ ("the king and the wolf" → wolf's leftEdge=3, CONJ
+  // at 2), recursively collect the NP to the left of the CONJ. The
+  // result is the LEFTMOST member ("king") with `coord: {and, NP{wolf, …}}`
+  // so the realiser emits "king AND wolf" in the right surface order.
+  if (direction === "left" && leftEdge > 0) {
+    const conjTok = tokens[leftEdge - 1];
+    if (conjTok && conjTok.tag === "CONJ") {
+      const leftCoord = collectNP(tokens, leftEdge - 1, "left");
+      if (leftCoord) {
+        // Build the rightmost member's NP first, then attach it as
+        // the coord of the leftmost member.
+        const rightMember: NP = {
+          kind: "NP",
+          head: {
+            lemma: headTokRef.lemma,
+            baseForm: [],
+            number: number_,
+            case: direction === "left" ? "nom" : "acc",
+            person,
+            isPronoun: headTokRef.tag === "PRON",
+          },
+          determiner,
+          adjectives,
+          numeral,
+          possessor,
+          pps: [],
+          // pps fill in below for the OUTER NP; right member gets
+          // empty pps to keep the recursive structure clean. PPs that
+          // belong to the rightmost member of a coordination would
+          // be attributed to the whole coord — close enough for now.
+        };
+        return {
+          ...leftCoord,
+          coord: { lemma: conjTok.lemma, np: rightMember },
+        };
+      }
+    }
   }
 
   // Walk forward collecting trailing PPs that modify this noun. The
@@ -317,6 +393,7 @@ function collectNP(
   // surfaces with the king as a genitive-marked possessor); the rest
   // become ordinary PPs.
   const pps: PP[] = [];
+  let rightEdge = headIdx;
   for (let i = headIdx + 1; i < tokens.length; i++) {
     const t = tokens[i]!;
     if (t.tag !== "PREP") break;
@@ -329,6 +406,22 @@ function collectNP(
     }
     // Skip past the PP's NP.
     while (i + 1 < tokens.length && tokens[i + 1]!.tag !== "PREP") i++;
+    rightEdge = i;
+  }
+
+  // Right-side coordination — when an object NP is followed by a
+  // CONJ ("the king sees the wolf and the dog"), recursively collect
+  // the next NP and attach it as `coord`. Mirrors the left-side
+  // coord detection above.
+  let rightCoord: { lemma: string; np: NP } | undefined;
+  if (direction === "right" && rightEdge + 1 < tokens.length) {
+    const conjTok = tokens[rightEdge + 1];
+    if (conjTok && conjTok.tag === "CONJ") {
+      const next = collectNP(tokens, rightEdge + 1, "right");
+      if (next) {
+        rightCoord = { lemma: conjTok.lemma, np: next };
+      }
+    }
   }
 
   return {
@@ -346,6 +439,7 @@ function collectNP(
     numeral,
     possessor,
     pps,
+    coord: rightCoord,
   };
 }
 
