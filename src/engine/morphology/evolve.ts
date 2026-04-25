@@ -27,6 +27,15 @@ export function applyPhonologyToAffixes(
     const pdm = morph.paradigms[cat];
     if (!pdm) continue;
     pdm.affix = mutate(pdm.affix);
+    // Conjugation/declension class variants must evolve in lockstep
+    // with the base affix — otherwise a class-split paradigm freezes
+    // its variant arm while the main arm drifts, producing nonsense
+    // alternations after a few hundred generations.
+    if (pdm.variants) {
+      for (const v of pdm.variants) {
+        v.affix = mutate(v.affix);
+      }
+    }
   }
 }
 

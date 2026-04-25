@@ -1,4 +1,4 @@
-import type { Language, SimulationConfig, SimulationState } from "../types";
+import type { Language, SimulationConfig, SimulationState, WordForm } from "../types";
 import { applyChangesToLexicon } from "../phonology/apply";
 import { driftOrthography } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
@@ -68,7 +68,7 @@ export function stepPhonology(
     delete lang.localNeighbors[m];
     if (lang.registerOf) delete lang.registerOf[m];
   }
-  applyPhonologyToAffixes(lang.morphology, (form) => {
+  const evolveForm = (form: WordForm): WordForm => {
     return changes.reduce((acc, change) => {
       const base = change.probabilityFor(acc);
       if (base <= 0) return acc;
@@ -78,7 +78,36 @@ export function stepPhonology(
       const next = change.apply(acc, rng);
       return next === acc ? acc : next;
     }, form);
-  });
+  };
+  applyPhonologyToAffixes(lang.morphology, evolveForm);
+  // Suppletive forms evolve too, but at half rate — high-frequency
+  // irregulars (went, was, fuī) historically resist regular sound
+  // change but never freeze entirely (cf. Old English `wende` →
+  // Modern `went`). We do a half-rate Bernoulli gate per suppletive
+  // form so over many generations they drift with the rest of the
+  // language.
+  if (lang.suppletion) {
+    for (const meaning of Object.keys(lang.suppletion)) {
+      const slots = lang.suppletion[meaning]!;
+      for (const cat of Object.keys(slots) as Array<keyof typeof slots>) {
+        const form = slots[cat];
+        if (!form || form.length === 0) continue;
+        if (!rng.chance(0.5)) continue;
+        slots[cat] = evolveForm(form);
+      }
+    }
+  }
+  // Productive derivational suffixes are language-specific and stored
+  // on `lang.derivationalSuffixes`. They must evolve with the rest of
+  // the phonology — otherwise a language whose `-er` was coined as
+  // /er/ keeps the literal /er/ shape forever while every word that
+  // uses it shifts, producing implausibly stable affixes after many
+  // generations.
+  if (lang.derivationalSuffixes) {
+    for (const s of lang.derivationalSuffixes) {
+      s.affix = evolveForm(s.affix);
+    }
+  }
   let mutated = 0;
   for (const m of Object.keys(before)) {
     // Skip meanings that were dropped by applyChangesToLexicon above —

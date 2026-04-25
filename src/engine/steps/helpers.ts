@@ -7,7 +7,9 @@ import type {
 } from "../types";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { generatedToSoundChange } from "../phonology/generated";
-import { toneOf } from "../phonology/tone";
+import { toneOf, stripTone } from "../phonology/tone";
+import { isVowel } from "../phonology/ipa";
+import { stressClass } from "../phonology/stress";
 import { GENESIS_BY_ID } from "../genesis/catalog";
 import type { GenesisRule } from "../genesis/types";
 import type { SimulationConfig } from "../types";
@@ -53,11 +55,66 @@ export function refreshInventory(lang: Language): void {
 }
 
 export function changesForLang(lang: Language): SoundChange[] {
+  const pattern = lang.stressPattern;
   const catalog = lang.enabledChangeIds
     .map((id) => CATALOG_BY_ID[id])
-    .filter((c): c is SoundChange => !!c);
+    .filter((c): c is SoundChange => !!c)
+    // Specialise UNSTRESSED_REDUCTION to the language's actual stress
+    // pattern. The catalog ships a generic penult-default version, but
+    // a language with `stressPattern: "initial"` should reduce
+    // non-initial vowels, not non-penult ones — otherwise stress
+    // pattern drift only changes the narrow-transcription view but
+    // leaves the underlying reduction targeting the wrong syllables.
+    .map((c) =>
+      c.id === "stress.unstressed_reduction" && pattern && pattern !== "penult"
+        ? specialiseUnstressedReduction(c, pattern)
+        : c,
+    );
   const procedural = (lang.activeRules ?? []).map(generatedToSoundChange);
   return [...catalog, ...procedural];
+}
+
+function specialiseUnstressedReduction(
+  base: SoundChange,
+  pattern: NonNullable<Language["stressPattern"]>,
+): SoundChange {
+  // Rebuild a thin wrapper that delegates to stress.ts's per-pattern
+  // `stressClass`. Without this the catalog version always uses
+  // penult, so a language that drifted to initial or final stress
+  // would have its narrow transcription show one stress and its
+  // underlying reduction target a different one.
+  return {
+    ...base,
+    probabilityFor: (word) => {
+      let n = 0;
+      for (let i = 0; i < word.length; i++) {
+        const p = word[i]!;
+        if (!isVowel(stripTone(p))) continue;
+        if (stripTone(p) === "ə") continue;
+        if (stressClass(word, i, pattern) === "unstressed") n++;
+      }
+      return 1 - Math.pow(1 - 0.06, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length; i++) {
+        const p = word[i]!;
+        if (!isVowel(stripTone(p))) continue;
+        if (stripTone(p) === "ə") continue;
+        if (stressClass(word, i, pattern) === "unstressed") sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      const stripped = stripTone(word[idx]!);
+      const t =
+        word[idx]!.length > stripped.length
+          ? word[idx]!.slice(stripped.length)
+          : "";
+      out[idx] = "ə" + t;
+      return out;
+    },
+  };
 }
 
 export function genesisRulesFor(config: SimulationConfig): GenesisRule[] {
