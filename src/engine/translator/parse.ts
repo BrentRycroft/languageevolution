@@ -32,13 +32,33 @@ import type {
  * class lookup, so we don't lose information.
  */
 export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
-  const verbIdx = tokens.findIndex((t) => t.tag === "V");
-  if (verbIdx < 0) return null;
+  let verbIdx = tokens.findIndex((t) => t.tag === "V");
+  // Copula promotion: when no main verb is found, look for an AUX
+  // copula (is / are / was / were / be / been) and promote it to a
+  // verb with lemma "be". This lets the parser handle equational
+  // sentences ("the king is here", "he is not", "the man is a king")
+  // and still produce a Sentence.
+  if (verbIdx < 0) {
+    const copIdx = tokens.findIndex(
+      (t) => t.tag === "AUX" && (t.lemma === "be" || t.lemma === "is" || t.lemma === "are" || t.lemma === "was" || t.lemma === "were" || t.lemma === "been"),
+    );
+    if (copIdx < 0) return null;
+    // Mutate in place: rewrite the AUX as a V with lemma "be" and
+    // its existing tense feature.
+    const cop = tokens[copIdx]!;
+    tokens[copIdx] = {
+      ...cop,
+      tag: "V",
+      lemma: "be",
+      features: { ...cop.features, tense: cop.features.tense ?? "present" },
+    };
+    verbIdx = copIdx;
+  }
   const verbTok = tokens[verbIdx]!;
 
   // ---- Negation detection ----
   let negated = false;
-  for (let i = Math.max(0, verbIdx - 3); i < Math.min(tokens.length, verbIdx + 3); i++) {
+  for (let i = Math.max(0, verbIdx - 3); i < Math.min(tokens.length, verbIdx + 4); i++) {
     const t = tokens[i]!;
     if (t.lemma === "not" || t.lemma === "n't" || t.lemma === "never") {
       negated = true;
