@@ -64,3 +64,65 @@ describe("copula handling — language-agnostic", () => {
     expect(englishLemmas).toContain("man");
   });
 });
+
+describe("copula evolution — erosion + genesis", () => {
+  it("a copula-having language can lose its copula over time", async () => {
+    const { stepCopulaErosion } = await import("../steps/copula");
+    const { makeRng } = await import("../rng");
+    const lang = preset(presetPIE);
+    expect(lang.lexicon["be"]).toBeDefined();
+    // Force loss with p=1 so the test is deterministic.
+    const cfg = { obsolescence: { copulaLossProbability: 1 } } as never;
+    stepCopulaErosion(lang, cfg, makeRng("erosion"), 1);
+    expect(lang.lexicon["be"]).toBeUndefined();
+  });
+
+  it("a zero-copula language can grammaticalise a new copula from a demonstrative", async () => {
+    const { stepCopulaGenesis } = await import("../steps/copula");
+    const { makeRng } = await import("../rng");
+    const lang = preset(presetPIE);
+    delete lang.lexicon["be"];
+    // Force genesis with p=1.
+    const cfg = { obsolescence: { copulaGenesisProbability: 1 } } as never;
+    stepCopulaGenesis(lang, cfg, makeRng("genesis"), 1);
+    expect(lang.lexicon["be"]).toBeDefined();
+    // The new `be` should mirror the donor's form (PIE has 'this'
+    // → so/to-flavoured demonstratives, picked first by pathway
+    // ordering).
+    expect(lang.lexicon["be"]!.length).toBeGreaterThan(0);
+    // wordOrigin should record the pathway.
+    expect(lang.wordOrigin["be"]).toMatch(/^grammaticalization:/);
+  });
+
+  it("genesis preserves the donor word's original meaning (polysemy)", async () => {
+    const { stepCopulaGenesis } = await import("../steps/copula");
+    const { makeRng } = await import("../rng");
+    const lang = preset(presetPIE);
+    delete lang.lexicon["be"];
+    const thisFormBefore = lang.lexicon["this"]?.slice();
+    const cfg = { obsolescence: { copulaGenesisProbability: 1 } } as never;
+    stepCopulaGenesis(lang, cfg, makeRng("polysemy"), 1);
+    // Donor word still has its original meaning.
+    expect(lang.lexicon["this"]).toEqual(thisFormBefore);
+  });
+
+  it("erosion is a no-op when there's no copula to lose", async () => {
+    const { stepCopulaErosion } = await import("../steps/copula");
+    const { makeRng } = await import("../rng");
+    const lang = preset(presetPIE);
+    delete lang.lexicon["be"];
+    const cfg = { obsolescence: { copulaLossProbability: 1 } } as never;
+    stepCopulaErosion(lang, cfg, makeRng("noop"), 1);
+    expect(lang.lexicon["be"]).toBeUndefined();
+  });
+
+  it("genesis is a no-op when the language already has a copula", async () => {
+    const { stepCopulaGenesis } = await import("../steps/copula");
+    const { makeRng } = await import("../rng");
+    const lang = preset(presetPIE);
+    const original = lang.lexicon["be"]!.slice();
+    const cfg = { obsolescence: { copulaGenesisProbability: 1 } } as never;
+    stepCopulaGenesis(lang, cfg, makeRng("noop2"), 1);
+    expect(lang.lexicon["be"]).toEqual(original);
+  });
+});

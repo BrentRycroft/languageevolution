@@ -435,6 +435,22 @@ export interface SimulationConfig {
   obsolescence: {
     probabilityPerPairPerGeneration: number;
     maxDistanceForRivalry: number;
+    /**
+     * Per-generation chance the language drops its `be` copula
+     * lexeme entirely — drives the copula → zero-copula
+     * grammaticalisation pathway (PIE *h₁es- → modern Russian Ø).
+     * Optional; defaults to 0.005. Set 0 to disable.
+     */
+    copulaLossProbability?: number;
+    /**
+     * Per-generation chance a zero-copula language (no `be` lexeme)
+     * grammaticalises a new copula from a demonstrative, pronoun,
+     * posture verb, or locative verb. Mirrors Mandarin 是 ← Old
+     * Chinese demonstrative; Hebrew הוא ← pronoun; Spanish estar
+     * ← stare. Optional; defaults to 0.0025 (genesis is rarer than
+     * loss). Set 0 to disable.
+     */
+    copulaGenesisProbability?: number;
   };
   morphology: {
     grammaticalizationProbability: number;

@@ -60,6 +60,16 @@ export function defaultConfig(): SimulationConfig {
     obsolescence: {
       probabilityPerPairPerGeneration: 0.04,
       maxDistanceForRivalry: 1,
+      // ~0.5% per gen — at 25 yr/gen that's an expected copula
+      // loss in ~5000 years on average, in the right ballpark for
+      // attested Slavic copula erosion (Old Church Slavonic kept
+      // present-tense `jestь` to ~9th century, modern Russian
+      // dropped it in equational sentences by ~16th century).
+      copulaLossProbability: 0.005,
+      // Genesis is rarer than loss but still attested: Mandarin 是
+      // ← Old Chinese demonstrative, Hebrew הוא ← pronoun, Spanish
+      // estar ← Latin stare. Half the loss rate by default.
+      copulaGenesisProbability: 0.0025,
     },
     morphology: {
       grammaticalizationProbability: 0.025,

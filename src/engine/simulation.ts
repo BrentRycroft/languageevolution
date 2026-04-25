@@ -7,6 +7,7 @@ import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
+import { stepCopulaErosion, stepCopulaGenesis } from "./steps/copula";
 import { stepContact } from "./steps/contact";
 import { stepTreeSplit, stepDeath } from "./steps/tree";
 import { stepTaboo } from "./steps/taboo";
@@ -125,6 +126,14 @@ export function createSimulation(
       // Obsolescence runs BEFORE genesis so freshly-coined words are never
       // retired in the same step they were born in.
       stepObsolescence(lang, config, rng, nextGen);
+      // Copula erosion + genesis: rare per-gen chance the language
+      // drops its `be` lexeme (PIE *h₁es- → Russian Ø) OR
+      // grammaticalises a new copula from a demonstrative / pronoun
+      // / posture verb / locative verb (Mandarin 是, Hebrew הוא,
+      // Spanish estar). Together these let any branch evolve toward
+      // either typology over time.
+      stepCopulaErosion(lang, config, rng, nextGen);
+      stepCopulaGenesis(lang, config, rng, nextGen);
       stepTaboo(lang, config, rng, nextGen);
       if (config.modes.genesis) {
         stepGenesis(lang, config, state, rng, nextGen);
