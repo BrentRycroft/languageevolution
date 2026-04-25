@@ -6,6 +6,7 @@ import type { MorphCategory } from "../morphology/types";
 import { closedClassForm } from "./closedClass";
 import { parseSyntax } from "./parse";
 import { realiseSentence } from "./realise";
+import { sliceOrder } from "./wordOrder";
 
 /**
  * Rule-based English-to-target-language sentence translator.
@@ -76,7 +77,24 @@ const PREPOSITIONS = new Set([
   "under", "over", "through", "near", "after", "before", "across",
   "into", "onto", "beside", "between", "without",
 ]);
-const CONJUNCTIONS = new Set(["and", "or", "but", "because", "so", "if", "when", "while", "though", "although"]);
+const CONJUNCTIONS = new Set([
+  "and", "or", "but",
+  "because", "so", "if", "when", "while", "though", "although",
+  // Comparative + similative connectives — without these, "than" /
+  // "as" fall through to the noun fallback and get sucked into the
+  // wrong NP slot ("the king is bigger than the wolf" puts "than"
+  // in as a noun).
+  "than", "as",
+]);
+// Wh-words. Tagged DET when in determiner position (which-X, what-X),
+// and as discourse particles otherwise. Without these, the noun
+// fallback claims them and they steal subject / object slots in
+// relative clauses + wh-questions.
+const WH_WORDS = new Set([
+  "who", "whom", "whose",
+  "what", "which",
+  "where", "when", "why", "how",
+]);
 const AUX_VERBS = new Set([
   "am", "is", "are", "was", "were", "be", "been",
   "do", "does", "did",
@@ -326,6 +344,15 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       tokens.push({ surface: w, lemma: w, tag: "CONJ", features: {} });
       continue;
     }
+    if (WH_WORDS.has(w)) {
+      // Tag as PUNCT so the parser doesn't pull these into NP slots.
+      // The lemma stays so realisation can surface a closed-class
+      // form via closedClassForm if the language has one. Without
+      // this guard "the king who sees the wolf" turns "who" into
+      // the subject head and silently drops "king".
+      tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
+      continue;
+    }
     if (NEGATORS.has(w)) {
       // Tag negators as PUNCT-like — they don't carry inflection but
       // we want a stable lemma for the parser's negation detection.
@@ -501,7 +528,6 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
 function resolveLemma(
   lang: Language,
   lemma: string,
-  tag: EnglishTag,
 ): {
   form: WordForm | null;
   resolution: TranslatedToken["resolution"];
@@ -566,7 +592,6 @@ function resolveLemma(
   }
   // 6. Total miss.
   void posOf;
-  void tag;
   return { form: null, resolution: "fallback", glossNote: "?" };
 }
 
@@ -653,16 +678,6 @@ function rearrangeClause(
   return reordered;
 }
 
-function sliceOrder(wo: Language["grammar"]["wordOrder"]): Array<"S" | "V" | "O"> {
-  switch (wo) {
-    case "SOV": return ["S", "O", "V"];
-    case "SVO": return ["S", "V", "O"];
-    case "VSO": return ["V", "S", "O"];
-    case "VOS": return ["V", "O", "S"];
-    case "OVS": return ["O", "V", "S"];
-    case "OSV": return ["O", "S", "V"];
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Top-level translate
@@ -688,16 +703,9 @@ export function translateSentence(lang: Language, english: string): SentenceTran
   const articlePresence = lang.grammar.articlePresence ?? "none";
   const caseStrategy = lang.grammar.caseStrategy ?? (lang.grammar.hasCase ? "case" : "preposition");
 
-  // Index the open-class output tokens by their source-token index so
-  // we can later attach an enclitic article to the corresponding noun.
-  const openClassByIndex = new Map<number, TranslatedToken>();
-
   // Negation surfaces in the legacy fallback even when no clause
   // structure was recoverable. Without this, "the man not" → just
   // "wihro" — silently dropping the user's intended negation.
-  // Reserved for future "force-emit a copula" heuristic — currently
-  // unused, but keeps the negator-surfacing logic below readable.
-  void englishTokens;
 
   for (let i = 0; i < englishTokens.length; i++) {
     const tok = englishTokens[i]!;
@@ -810,7 +818,7 @@ export function translateSentence(lang: Language, english: string): SentenceTran
     }
 
     // ------ open-class branches ------
-    const { form, resolution, glossNote } = resolveLemma(lang, tok.lemma, tok.tag);
+    const { form, resolution, glossNote } = resolveLemma(lang, tok.lemma);
     if (!form) {
       missing.push(tok.lemma);
       targetTokens.push({
@@ -849,9 +857,7 @@ export function translateSentence(lang: Language, english: string): SentenceTran
       inflectedAs: cat,
     };
     targetTokens.push(out);
-    openClassByIndex.set(i, out);
   }
-  void openClassByIndex; // reserved for §2.1's full agreement pass
 
   // Reorder respecting word-order; closed-class extras are kept in
   // surface position around the S/V/O pivot.
@@ -905,7 +911,7 @@ function translateViaTree(
   const missing: string[] = [];
   const realised = realiseSentence(parsed, lang, {
     resolveOpen: (lemma) => {
-      const r = resolveLemma(lang, lemma, "N");
+      const r = resolveLemma(lang, lemma);
       if (!r.form) {
         missing.push(lemma);
         return { form: null, resolution: r.resolution };

@@ -3,6 +3,7 @@ import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassForm } from "./closedClass";
 import type { NP, PP, Sentence, VP } from "./syntax";
+import { sliceOrder } from "./wordOrder";
 
 /**
  * Walk a parsed Sentence and emit a sequence of target-language
@@ -509,16 +510,6 @@ function realiseVerb(
   return [{ surface: verbSurface, english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
 }
 
-function sliceOrder(wo: Language["grammar"]["wordOrder"]): Array<"S" | "V" | "O"> {
-  switch (wo) {
-    case "SOV": return ["S", "O", "V"];
-    case "SVO": return ["S", "V", "O"];
-    case "VSO": return ["V", "S", "O"];
-    case "VOS": return ["V", "O", "S"];
-    case "OVS": return ["O", "V", "S"];
-    case "OSV": return ["O", "S", "V"];
-  }
-}
 
 /**
  * Resolve every leaf form in the sentence via the deps.resolveOpen
