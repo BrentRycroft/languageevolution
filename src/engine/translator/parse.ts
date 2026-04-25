@@ -67,17 +67,37 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     const copIdx = tokens.findIndex(
       (t) => t.tag === "AUX" && (t.lemma === "be" || t.lemma === "is" || t.lemma === "are" || t.lemma === "was" || t.lemma === "were" || t.lemma === "been"),
     );
-    if (copIdx < 0) return null;
-    // Mutate in place: rewrite the AUX as a V with lemma "be" and
-    // its existing tense feature.
-    const cop = tokens[copIdx]!;
-    tokens[copIdx] = {
-      ...cop,
-      tag: "V",
-      lemma: "be",
-      features: { ...cop.features, tense: cop.features.tense ?? "present" },
-    };
-    verbIdx = copIdx;
+    if (copIdx < 0) {
+      // Possession promotion: "X has / had / have Y" with no main
+      // verb means HAVE-as-possession. The tokeniser tags these as
+      // AUX so they pass tense through to a following V; without a
+      // V, they'd otherwise drop silently and the sentence would
+      // surface as "X Y". Promote to a V with lemma "have" so the
+      // realiser can resolve it via the lexicon.
+      const haveIdx = tokens.findIndex(
+        (t) => t.tag === "AUX" && (t.lemma === "have" || t.lemma === "has" || t.lemma === "had"),
+      );
+      if (haveIdx < 0) return null;
+      const ht = tokens[haveIdx]!;
+      tokens[haveIdx] = {
+        ...ht,
+        tag: "V",
+        lemma: "have",
+        features: { ...ht.features, tense: ht.features.tense ?? (ht.surface === "had" ? "past" : "present") },
+      };
+      verbIdx = haveIdx;
+    } else {
+      // Mutate in place: rewrite the AUX as a V with lemma "be" and
+      // its existing tense feature.
+      const cop = tokens[copIdx]!;
+      tokens[copIdx] = {
+        ...cop,
+        tag: "V",
+        lemma: "be",
+        features: { ...cop.features, tense: cop.features.tense ?? "present" },
+      };
+      verbIdx = copIdx;
+    }
   }
   const verbTok = tokens[verbIdx]!;
 
