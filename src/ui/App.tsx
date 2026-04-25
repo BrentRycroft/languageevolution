@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { ControlsPanel } from "./ControlsPanel";
-import { LexiconView } from "./LexiconView";
+import { DictionaryView } from "./DictionaryView";
 import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
@@ -13,6 +13,7 @@ import { AchievementToast } from "./Achievements";
 import { UpdateBanner } from "./UpdateBanner";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
+import { StatsPanel } from "./StatsPanel";
 import { readShareFromLocation, clearShareFromLocation } from "../share/url";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
@@ -68,7 +69,7 @@ function PanelSkeleton() {
 type Tab =
   | "tree"
   | "map"
-  | "lexicon"
+  | "dictionary"
   | "timeline"
   | "grammar"
   | "phonemes"
@@ -76,12 +77,17 @@ type Tab =
   | "events"
   | "translate"
   | "compare"
+  | "stats"
   | "glossary";
 
 const TABS: { id: Tab; label: string; title: string }[] = [
   { id: "tree", label: "Tree", title: "Phylogenetic tree of languages" },
   { id: "map", label: "Map", title: "2-D map of where languages live" },
-  { id: "lexicon", label: "Lexicon", title: "Full word-by-meaning table for every language" },
+  {
+    id: "dictionary",
+    label: "Dictionary",
+    title: "Lexicon + grammar profile of the selected language",
+  },
   { id: "timeline", label: "Timeline", title: "Form changes + sound-law lifecycles over time" },
   { id: "grammar", label: "Grammar", title: "Grammar features of the selected language" },
   { id: "phonemes", label: "Phonemes", title: "Segmental + tonal inventory for the selected language" },
@@ -92,7 +98,12 @@ const TABS: { id: Tab; label: string; title: string }[] = [
     label: "Translate",
     title: "Word + sentence translation tools (AI-assisted)",
   },
-  { id: "compare", label: "Compare", title: "Side-by-side diff of two languages" },
+  {
+    id: "compare",
+    label: "Compare",
+    title: "Side-by-side comparison of two languages — lexicon, narrative, cognates",
+  },
+  { id: "stats", label: "Stats", title: "Per-language stats dashboard" },
   { id: "glossary", label: "Glossary", title: "Reference for rule families, shift taxa, register" },
 ];
 
@@ -180,7 +191,7 @@ export function App() {
           Language Evolution
         </h1>
         <span className="generation">gen {generation}</span>
-        <GlobalSearch onJumpToLexicon={() => setActiveTab("lexicon")} />
+        <GlobalSearch onJumpToLexicon={() => setActiveTab("dictionary")} />
         <div className="playback">
           <button className="primary icon-only" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
             {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
@@ -217,7 +228,7 @@ export function App() {
             }}
             className="icon-only"
             aria-label="Reset simulation"
-            title="Reset (Cmd/Ctrl+R)"
+            title="Reset — rolls a fresh seed (Cmd/Ctrl+R)"
           >
             <ResetIcon size={16} />
           </button>
@@ -261,10 +272,10 @@ export function App() {
             </Suspense>
           </div>
         )}
-        {activeTab === "lexicon" && (
+        {activeTab === "dictionary" && (
           <div className="panel panel-single">
-            <h3>Lexicon</h3>
-            <LexiconView />
+            <h3>Dictionary</h3>
+            <DictionaryView />
           </div>
         )}
         {activeTab === "timeline" && (
@@ -315,6 +326,12 @@ export function App() {
           <div className="panel panel-single">
             <h3>Compare</h3>
             <CompareView />
+          </div>
+        )}
+        {activeTab === "stats" && (
+          <div className="panel panel-single">
+            <h3>Stats</h3>
+            <StatsPanel />
           </div>
         )}
         {activeTab === "map" && (

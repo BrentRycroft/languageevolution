@@ -1,0 +1,33 @@
+import { describe, it, expect } from "vitest";
+import { defaultConfig } from "../../engine/config";
+import { useSimStore } from "../../state/store";
+
+describe("PR C — sidebar + dictionary refactor", () => {
+  it("default config: unlimitedLeaves is true (no hard cap)", () => {
+    const cfg = defaultConfig();
+    expect(cfg.tree.unlimitedLeaves).toBe(true);
+  });
+
+  it("default config: maxLeaves is the soft-cap target (≥ 8)", () => {
+    const cfg = defaultConfig();
+    expect(cfg.tree.maxLeaves).toBeGreaterThanOrEqual(8);
+  });
+
+  it("reset() rolls a fresh seed each call", () => {
+    const before = useSimStore.getState().config.seed;
+    useSimStore.getState().reset();
+    const after = useSimStore.getState().config.seed;
+    // The probability of two random seeds colliding is ~1/2^48 — safe
+    // to assert non-equality without flake.
+    expect(after).not.toBe(before);
+  });
+
+  it("reset() leaves the rest of the config (preset, modes, rates) intact", () => {
+    const beforeCfg = useSimStore.getState().config;
+    useSimStore.getState().reset();
+    const afterCfg = useSimStore.getState().config;
+    expect(afterCfg.preset).toBe(beforeCfg.preset);
+    expect(afterCfg.modes).toEqual(beforeCfg.modes);
+    expect(afterCfg.phonology.globalRate).toBe(beforeCfg.phonology.globalRate);
+  });
+});

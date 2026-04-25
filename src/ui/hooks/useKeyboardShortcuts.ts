@@ -3,22 +3,24 @@ import { useEffect } from "react";
 type Tab =
   | "tree"
   | "map"
-  | "lexicon"
+  | "dictionary"
   | "timeline"
   | "grammar"
   | "events"
   | "translate"
-  | "compare";
+  | "compare"
+  | "stats";
 
 const TAB_ORDER: Tab[] = [
   "tree",
   "map",
-  "lexicon",
+  "dictionary",
   "timeline",
   "grammar",
   "events",
   "translate",
   "compare",
+  "stats",
 ];
 
 interface Options {

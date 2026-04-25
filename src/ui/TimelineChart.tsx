@@ -183,7 +183,7 @@ export function TimelineChart() {
     mode === "meanings"
       ? selectedLangId
         ? `${meanings.length} meaning${meanings.length === 1 ? "" : "s"} in ${selectedLangId} @ ${genLabel}`
-        : "Pick a language from the tree or lexicon."
+        : "Pick a language from the tree or dictionary."
       : mode === "cognates"
         ? selectedMeaning
           ? `"${selectedMeaning}" across ${series.length} language${series.length === 1 ? "" : "s"} @ ${genLabel}`
