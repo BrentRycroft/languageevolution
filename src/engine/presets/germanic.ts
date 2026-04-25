@@ -261,6 +261,23 @@ const LEXICON: Lexicon = {
   you: ["θ", "uː"],
   we: ["w", "iː", "z"],
   they: ["θ", "a", "i"],
+  // — closed-class roots (Proto-Germanic *sa / *þat / *jainaz; *ne;
+  //   *unde; *ana; *furi; *bi). Articles are reflexes of the *sa
+  //   demonstrative — turning articlePresence on lets the engine
+  //   surface them. —
+  he: ["s", "a"],
+  she: ["s", "oː"],
+  it: ["θ", "a", "t"],
+  the: ["θ", "ə"],
+  a: ["a"],
+  and: ["u", "n", "d"],
+  or: ["e", "θ", "θ"],
+  not: ["n", "e"],
+  in: ["i", "n"],
+  on: ["a", "n", "a"],
+  to: ["t", "ɵː"],
+  for: ["f", "u", "r", "i"],
+  by: ["b", "i"],
 };
 
 const FREQ: Record<Meaning, number> = {
@@ -295,6 +312,16 @@ export function presetGermanic(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    // Germanic typology: SOV → SVO drift over time; free articles
+    // (`the`-style); preposition strategy for case marking; pre-noun
+    // adjectives.
+    seedGrammar: {
+      wordOrder: "SVO",
+      articlePresence: "free",
+      caseStrategy: "preposition",
+      adjectivePosition: "pre",
+      possessorPosition: "pre",
+    },
     preset: "germanic",
   };
 }

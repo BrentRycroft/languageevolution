@@ -457,6 +457,21 @@ const LEXICON: Lexicon = {
   hunger: ["gʷ", "e", "r"],
   thirst: ["t", "r̩", "s"],
   shame: ["s", "kʲ", "e", "m"],
+  // — closed-class fillers (PIE didn't have definite articles; uses
+  //   demonstratives `so/to(d)`. Pronouns + coordinators + a small
+  //   inventory of locative roots so the translator can render
+  //   PP-bearing input without falling back to "?". Reconstructions
+  //   are simplified — see Beekes 2011 / Fortson 2010 for citations.) —
+  he: ["s", "o"],
+  she: ["s", "eh₂"],
+  it: ["t", "o", "d"],
+  and: ["k", "ʷ", "e"],
+  or: ["w", "eː"],
+  in: ["e", "n"],
+  on: ["o", "p"],
+  to: ["d", "o"],
+  for: ["p", "r", "o"],
+  by: ["e", "p", "i"],
 };
 
 const FREQ: Record<Meaning, number> = {
@@ -497,6 +512,20 @@ export function presetPIE(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    // PIE typology: SOV; no articles (definiteness via demonstratives
+    // *so / *to); case-marking strategy with eight cases; pre-noun
+    // adjectives; pre-noun possessor (genitive). Synthesis ~2.5
+    // (highly inflecting fusional system).
+    seedGrammar: {
+      wordOrder: "SOV",
+      articlePresence: "none",
+      caseStrategy: "case",
+      adjectivePosition: "pre",
+      possessorPosition: "pre",
+      synthesisIndex: 2.5,
+      fusionIndex: 0.7,
+      hasCase: true,
+    },
     preset: "pie",
   };
 }

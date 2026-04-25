@@ -36,16 +36,22 @@ const NOUN_POOL = [
   "king", "warrior", "stranger", "village", "house",
 ] as const;
 
-const VERB_POOL = [
-  // motion
-  "go", "come", "walk", "run", "fall", "fly",
-  // perception
+// Transitive-only pool — used whenever a template includes an {O}
+// slot. Without this split the planner can pair "die" / "sleep" / "go"
+// with an object and produce "the fish die the horse"-type output.
+const TRANSITIVE_VERBS = [
   "see", "know", "hear", "think",
-  // metabolism
-  "eat", "drink", "sleep", "die",
-  // action
+  "eat", "drink",
   "give", "take", "speak", "hold", "fight", "make", "break",
 ] as const;
+const INTRANSITIVE_VERBS = [
+  "go", "come", "walk", "run", "fall", "fly",
+  "sleep", "die",
+] as const;
+// Combined pool — used by intransitive templates when transitivity
+// genuinely doesn't matter. Kept as `VERB_POOL` for backwards-compat
+// with downstream call sites.
+const VERB_POOL = [...TRANSITIVE_VERBS, ...INTRANSITIVE_VERBS] as const;
 
 const ADJECTIVE_POOL = [
   "big", "small", "new", "old", "good", "bad",
@@ -114,7 +120,11 @@ export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
     const patternIdx = rng.int(SENTENCE_PATTERNS.length);
     const pattern = SENTENCE_PATTERNS[patternIdx]!;
     const subject = pickFromPoolByIndex(NOUN_POOL, rng);
-    const verb = pickFromPoolByIndex(VERB_POOL, rng);
+    // Pick verb from the transitivity-appropriate pool so a template
+    // that wants an object never gets paired with an intransitive
+    // verb ("the fish die the horse").
+    const verbPool = pattern.needsObject ? TRANSITIVE_VERBS : VERB_POOL;
+    const verb = pickFromPoolByIndex(verbPool, rng);
     // Still consume an RNG step for object + adjective even when the
     // pattern doesn't need them, so the stream stays deterministic
     // regardless of pattern choice. The unused values just get

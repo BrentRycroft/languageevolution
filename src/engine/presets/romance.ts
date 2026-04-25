@@ -263,6 +263,20 @@ const LEXICON: Lexicon = {
   you: ["t", "u"],
   we: ["n", "o", "s"],
   they: ["i", "l", "l", "i"],
+  // — closed-class roots (Vulgar Latin reflexes) —
+  he: ["i", "l", "l", "u"],
+  she: ["i", "l", "l", "a"],
+  it: ["i", "l", "l", "u", "d"],
+  the: ["l", "u"],          // < ille
+  a: ["u", "n"],            // < unus
+  and: ["e", "t"],          // et
+  or: ["a", "u", "t"],      // aut
+  not: ["n", "o", "n"],     // non
+  in: ["i", "n"],           // in
+  on: ["s", "u", "p", "r", "a"], // supra
+  to: ["a", "d"],           // ad
+  for: ["p", "r", "o"],     // pro
+  by: ["p", "e", "r"],      // per
 };
 
 const FREQ: Record<Meaning, number> = {
@@ -301,6 +315,16 @@ export function presetRomance(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    // Romance typology: SVO; free articles (lu < ille; un < unus);
+    // preposition strategy; post-noun adjectives (Spanish/French
+    // default — "la casa grande").
+    seedGrammar: {
+      wordOrder: "SVO",
+      articlePresence: "free",
+      caseStrategy: "preposition",
+      adjectivePosition: "post",
+      possessorPosition: "post",
+    },
     preset: "romance",
   };
 }
