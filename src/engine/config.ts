@@ -25,7 +25,16 @@ export function defaultConfig(): SimulationConfig {
       semantics: true,
     },
     phonology: {
-      globalRate: 1,
+      // Empirical audit (200-gen / 5ky PIE run) found the previous
+      // rate of 1.0 fired ~36 sound-change events per ky per
+      // language. Attested rates are 1-3 *regular* sound changes per
+      // ky per lineage (Hock 1991, Lass 1997). Lowered to 0.3 so the
+      // surface count lands roughly an order of magnitude closer to
+      // attested timing. Also stops the deletion-heavy ruleset from
+      // eroding word length monotonically (the previous rate dropped
+      // mean word length 4.0 → 2.9 over 5 ky — Spanish vs PIE in 5ky
+      // moves only ~5 → ~5).
+      globalRate: 0.3,
       enabledChangeIds: enabled,
       changeWeights: weights,
     },
@@ -48,7 +57,14 @@ export function defaultConfig(): SimulationConfig {
       minGenerationsBeforeDeath: 20,
     },
     genesis: {
-      globalRate: 0.08,
+      // Empirical audit found the previous 0.08 produced ~1.8
+      // coinages per ky per lang — way below attested ~50-200 new
+      // content words per ky per lineage (Bybee 2015 turnover rates
+      // estimate). Bumped to 0.4 so a typical lang coins ~10/ky,
+      // partially counteracting the deletion / obsolescence churn
+      // and keeping word-length distributions stable rather than
+      // monotonically decaying.
+      globalRate: 0.4,
       enabledRuleIds: genesisEnabled,
       ruleWeights: genesisWeights,
     },
