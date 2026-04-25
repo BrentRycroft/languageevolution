@@ -277,6 +277,49 @@ export interface GrammarFeatures {
   tenseMarking: "none" | "past" | "future" | "both";
   hasCase: boolean;
   genderCount: 0 | 2 | 3;
+  /**
+   * Morphological-typology axes added in PR B.
+   *
+   * `synthesisIndex` — target morphemes-per-word (0..5). 1.0 = English-
+   * like analytical; 2.5 = Latin-like synthetic; 4+ = polysynthetic.
+   * Drives genesis bias (high synthesis prefers compounds + derivations
+   * over single-root coinage) and translator output (more affixes
+   * stacked on each token).
+   *
+   * `fusionIndex` — 0..1. 0 = agglutinative (one-morpheme-per-meaning,
+   * Turkish-like); 1 = fusional (portmanteau affixes, Latin-like).
+   * Drives whether stacked affixes are kept distinct or merged at the
+   * realisation step.
+   *
+   * `articlePresence` — how the language realises definite/indefinite
+   * articles. `none` = no article system (Mandarin, most Slavic);
+   * `free` = standalone words (English `the`, French `le`); `enclitic`
+   * = suffixed to the noun (Romanian `om-ul`, Bulgarian, Macedonian);
+   * `proclitic` = clitic prefix (rarer; some Bantu).
+   *
+   * `caseStrategy` — case morphology, prepositions, postpositions, or
+   * a mix. Decides how oblique arguments are marked at translation.
+   *
+   * `incorporates` — noun-incorporation flag for polysynthesis. When
+   * true, certain object-noun roots can fuse into the verb stem.
+   *
+   * `classifierSystem` — Mandarin-style numeral classifiers. When
+   * true, numerals require a classifier between numeral and noun.
+   *
+   * `prodrop` — whether the language allows subject-pronoun dropping
+   * (Spanish, Italian, Japanese). When true, the translator omits the
+   * subject when verb agreement disambiguates.
+   *
+   * All fields are optional for backward compatibility; pre-PR-B saves
+   * fall back to their declared defaults.
+   */
+  synthesisIndex?: number;
+  fusionIndex?: number;
+  articlePresence?: "none" | "free" | "enclitic" | "proclitic";
+  caseStrategy?: "case" | "preposition" | "postposition" | "mixed";
+  incorporates?: boolean;
+  classifierSystem?: boolean;
+  prodrop?: boolean;
 }
 
 export interface SimulationConfig {

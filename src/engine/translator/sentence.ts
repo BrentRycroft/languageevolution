@@ -3,6 +3,7 @@ import { isRegisteredConcept, CONCEPTS, colexWith } from "../lexicon/concepts";
 import { posOf } from "../lexicon/pos";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
+import { closedClassForm } from "./closedClass";
 
 /**
  * Rule-based English-to-target-language sentence translator.
@@ -498,12 +499,108 @@ export function translateSentence(lang: Language, english: string): SentenceTran
   const targetTokens: TranslatedToken[] = [];
   const missing: string[] = [];
 
-  for (const tok of englishTokens) {
-    if (tok.tag === "PUNCT" || tok.tag === "DET" || tok.tag === "AUX" || tok.tag === "CONJ" || tok.tag === "PREP") {
-      // Closed-class words don't get translated — they're either
-      // dropped or expressed via target-language morphology.
+  // Typology decisions resolved once per call.
+  const articlePresence = lang.grammar.articlePresence ?? "none";
+  const caseStrategy = lang.grammar.caseStrategy ?? (lang.grammar.hasCase ? "case" : "preposition");
+
+  // Index the open-class output tokens by their source-token index so
+  // we can later attach an enclitic article to the corresponding noun.
+  const openClassByIndex = new Map<number, TranslatedToken>();
+
+  for (let i = 0; i < englishTokens.length; i++) {
+    const tok = englishTokens[i]!;
+    if (tok.tag === "PUNCT") continue;
+
+    // ------ closed-class branches ------
+    if (tok.tag === "AUX") {
+      // Auxiliaries pass tense info to the verb (already handled in
+      // tokeniser features) and are generally inflected onto the verb
+      // in agglutinative / fusional languages, so we drop them.
       continue;
     }
+    if (tok.tag === "DET" && (tok.lemma === "the" || tok.lemma === "a" || tok.lemma === "an")) {
+      // Articles. Behaviour depends on articlePresence:
+      //   - none      → drop (no article system).
+      //   - free      → emit as a separate token (English-style).
+      //   - enclitic  → attach to the next noun's form (Romanian-style).
+      //   - proclitic → attach to the front of the next noun's form.
+      if (articlePresence === "none") continue;
+      const articleLemma = tok.lemma === "an" ? "a" : tok.lemma;
+      const form = closedClassForm(lang, articleLemma) ?? [];
+      if (articlePresence === "free") {
+        targetTokens.push({
+          englishLemma: tok.lemma,
+          englishTag: tok.tag,
+          targetForm: form,
+          targetSurface: form.join(""),
+          glossNote: "art",
+          resolution: "concept",
+        });
+      }
+      // For enclitic / proclitic, attach to the next noun in a second pass.
+      if (articlePresence === "enclitic" || articlePresence === "proclitic") {
+        // Find the next N or PRON token in englishTokens and remember
+        // we owe an article attachment.
+        for (let j = i + 1; j < englishTokens.length; j++) {
+          const nx = englishTokens[j]!;
+          if (nx.tag === "N" || nx.tag === "PRON") {
+            (nx as EnglishToken & { _pendingArticle?: WordForm })._pendingArticle = form;
+            break;
+          }
+          if (nx.tag === "V") break; // bail before crossing a verb
+        }
+      }
+      continue;
+    }
+    if (tok.tag === "DET") {
+      // Other determiners (this, that, my, ...): emit as a free token.
+      const form = closedClassForm(lang, tok.lemma) ?? [];
+      if (form.length > 0) {
+        targetTokens.push({
+          englishLemma: tok.lemma,
+          englishTag: tok.tag,
+          targetForm: form,
+          targetSurface: form.join(""),
+          glossNote: "det",
+          resolution: "concept",
+        });
+      }
+      continue;
+    }
+    if (tok.tag === "PREP") {
+      // Prepositions only emit in languages whose oblique-marking
+      // strategy is preposition or mixed. case-only languages express
+      // these via case morphology on the noun (handled in inflectForToken).
+      if (caseStrategy === "case") continue;
+      const form = closedClassForm(lang, tok.lemma) ?? [];
+      if (form.length > 0) {
+        targetTokens.push({
+          englishLemma: tok.lemma,
+          englishTag: tok.tag,
+          targetForm: form,
+          targetSurface: form.join(""),
+          glossNote: caseStrategy === "postposition" ? "postp" : "prep",
+          resolution: "concept",
+        });
+      }
+      continue;
+    }
+    if (tok.tag === "CONJ") {
+      const form = closedClassForm(lang, tok.lemma) ?? [];
+      if (form.length > 0) {
+        targetTokens.push({
+          englishLemma: tok.lemma,
+          englishTag: tok.tag,
+          targetForm: form,
+          targetSurface: form.join(""),
+          glossNote: "conj",
+          resolution: "concept",
+        });
+      }
+      continue;
+    }
+
+    // ------ open-class branches ------
     const { form, resolution, glossNote } = resolveLemma(lang, tok.lemma, tok.tag);
     if (!form) {
       missing.push(tok.lemma);
@@ -517,8 +614,18 @@ export function translateSentence(lang: Language, english: string): SentenceTran
       });
       continue;
     }
-    const { form: inflected, cat } = inflectForToken(form, tok, lang, tok.lemma);
-    targetTokens.push({
+    let { form: inflected, cat } = inflectForToken(form, tok, lang, tok.lemma);
+
+    // Attach a pending enclitic / proclitic article from a preceding DET.
+    const pending = (tok as EnglishToken & { _pendingArticle?: WordForm })._pendingArticle;
+    if (pending && pending.length > 0) {
+      inflected =
+        articlePresence === "proclitic"
+          ? [...pending, ...inflected]
+          : [...inflected, ...pending];
+    }
+
+    const out: TranslatedToken = {
       englishLemma: tok.lemma,
       englishTag: tok.tag,
       targetForm: inflected,
@@ -526,10 +633,26 @@ export function translateSentence(lang: Language, english: string): SentenceTran
       glossNote,
       resolution,
       inflectedAs: cat,
-    });
+    };
+    targetTokens.push(out);
+    openClassByIndex.set(i, out);
   }
+  void openClassByIndex; // reserved for §2.1's full agreement pass
 
-  const arrangedTokens = rearrangeClause(targetTokens, englishTokens.filter((t) => t.tag !== "PUNCT" && t.tag !== "DET" && t.tag !== "AUX" && t.tag !== "CONJ" && t.tag !== "PREP"), lang.grammar.wordOrder);
+  // Reorder respecting word-order; closed-class extras are kept in
+  // surface position around the S/V/O pivot.
+  const arrangedTokens = rearrangeClause(
+    targetTokens,
+    englishTokens.filter(
+      (t) =>
+        t.tag !== "PUNCT" &&
+        t.tag !== "AUX" &&
+        // DETs and PREPs may now be present in targetTokens — pass them
+        // through to rearrange so it can keep them in surface order.
+        true,
+    ),
+    lang.grammar.wordOrder,
+  );
   const arranged = arrangedTokens.map((t) => t.targetSurface);
 
   const notes = missing.length === 0
