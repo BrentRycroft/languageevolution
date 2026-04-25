@@ -812,6 +812,17 @@ button.primary:hover {
   filter: brightness(1.1);
 }
 
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-weight: var(--fw-medium);
+}
+button.secondary:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
 button.ghost {
   background: transparent;
   border-color: transparent;
@@ -848,9 +859,63 @@ input[type="checkbox"] {
   touch-action: manipulation;
 }
 
+/* Cross-platform range / slider styling. iOS Safari ships its own
+   pill-style thumb that ignores the rest of the design tokens; this
+   block normalises track + thumb across WebKit, Gecko, and the
+   default style so sliders match the rest of the panel chrome. */
 input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
   touch-action: manipulation;
-  min-height: 24px;
+  min-height: 28px;
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+}
+/* WebKit (Safari, Chrome, Edge) */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -8px; /* center on the 4px track */
+  background: var(--accent);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.08);
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+/* Firefox */
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+input[type="range"]:hover::-moz-range-thumb {
+  transform: scale(1.08);
 }
 
 .slider-row {

@@ -56,7 +56,10 @@ export function SavedRunsList() {
       </div>
       <div className="runs-list">
         {runs.length === 0 && (
-          <div style={{ color: "var(--muted)", fontSize: 11 }}>No saved runs.</div>
+          <div className="section-empty">
+            No runs saved yet.<br />
+            Press <strong>Save checkpoint</strong> to capture this one.
+          </div>
         )}
         {runs.map((r) => (
           <div key={r.id} className="run-row">
