@@ -215,6 +215,30 @@ export function ControlsPanel() {
         <WorldMapPicker />
       </Section>
 
+      <Section title="Time scale" defaultOpen={false}>
+        <Slider
+          label="Years per generation"
+          value={config.yearsPerGeneration ?? 25}
+          min={1}
+          max={100}
+          step={1}
+          onChange={(v) => {
+            const cfg = useSimStore.getState().config;
+            useSimStore.getState().updateConfig({
+              ...cfg,
+              yearsPerGeneration: Math.round(v),
+            });
+          }}
+          format={(v) => `${Math.round(v)} yr`}
+        />
+        <div className="label-line" style={{ marginTop: -2, marginBottom: 4 }}>
+          Anchor for the "gen → years" conversion in tooltips. Default
+          25 (one human generation; cf. Pagel 2007). Lower values
+          stretch the timeline; higher values compress it. Doesn't
+          change simulation behaviour — only the displayed time.
+        </div>
+      </Section>
+
       <Section title="Rates" defaultOpen={false}>
         <Slider
           label="Global rate"

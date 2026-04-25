@@ -3,6 +3,8 @@ import { useSimStore } from "../state/store";
 import { posOf } from "../engine/lexicon/pos";
 import { CONCEPTS, tierOf, TIER_LABELS } from "../engine/lexicon/concepts";
 import { formatForm } from "../engine/phonology/display";
+import { formatElapsed } from "../engine/time";
+import { YEARS_PER_GENERATION } from "../engine/constants";
 import type { Language } from "../engine/types";
 
 /**
@@ -116,11 +118,19 @@ export function DictionaryView() {
 }
 
 function DictionaryHeader({ lang, entryCount }: { lang: Language; entryCount: number }) {
+  const yearsPerGen = useSimStore(
+    (s) => s.config.yearsPerGeneration ?? YEARS_PER_GENERATION,
+  );
+  const currentGen = useSimStore((s) => s.state.generation);
+  const ageGens = currentGen - lang.birthGeneration;
   return (
     <div className="row-8 items-center">
       <h3 style={{ margin: 0 }}>{lang.name}</h3>
-      <span className="label-line">
-        {entryCount} entries · gen {lang.birthGeneration}
+      <span
+        className="label-line"
+        title={`Born at gen ${lang.birthGeneration} (${formatElapsed(lang.birthGeneration, yearsPerGen)} into the simulation). Current age: ${formatElapsed(ageGens, yearsPerGen)}.`}
+      >
+        {entryCount} entries · age {formatElapsed(ageGens, yearsPerGen)}
         {lang.extinct && <> · <span className="t-danger">extinct</span></>}
       </span>
     </div>

@@ -4,6 +4,7 @@ import { GENESIS_CATALOG } from "./genesis/catalog";
 import { DEFAULT_LEXICON } from "./lexicon/defaults";
 import { DEFAULT_FREQUENCY_HINTS } from "./lexicon/frequency";
 import { DEFAULT_MORPHOLOGY } from "./morphology/defaults";
+import { YEARS_PER_GENERATION } from "./constants";
 
 export function defaultConfig(): SimulationConfig {
   const enabled = CATALOG.filter((c) => c.enabledByDefault).map((c) => c.id);
@@ -14,6 +15,7 @@ export function defaultConfig(): SimulationConfig {
   for (const g of GENESIS_CATALOG) genesisWeights[g.id] = g.baseWeight;
   return {
     seed: "hello",
+    yearsPerGeneration: YEARS_PER_GENERATION,
     modes: {
       phonology: true,
       tree: true,

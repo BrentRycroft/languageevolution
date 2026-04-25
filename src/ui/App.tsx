@@ -14,6 +14,8 @@ import { UpdateBanner } from "./UpdateBanner";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
 import { StatsPanel } from "./StatsPanel";
+import { formatElapsed } from "../engine/time";
+import { YEARS_PER_GENERATION } from "../engine/constants";
 import { readShareFromLocation, clearShareFromLocation } from "../share/url";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ThemeToggle, ThemeEffect } from "./ThemeToggle";
@@ -116,6 +118,9 @@ export function App() {
   const stepNAsync = useSimStore((s) => s.stepNAsync);
   const reset = useSimStore((s) => s.reset);
   const generation = useSimStore((s) => s.state.generation);
+  const yearsPerGen = useSimStore(
+    (s) => s.config.yearsPerGeneration ?? YEARS_PER_GENERATION,
+  );
 
   const rafRef = useRef<number | null>(null);
   const lastRef = useRef<number>(0);
@@ -190,7 +195,12 @@ export function App() {
         >
           Language Evolution
         </h1>
-        <span className="generation">gen {generation}</span>
+        <span
+          className="generation"
+          title={`Each generation represents ${yearsPerGen} years (the demographic norm). gen ${generation} ≈ ${formatElapsed(generation, yearsPerGen)} elapsed.`}
+        >
+          gen {generation} <span className="t-muted" style={{ fontWeight: "normal", marginLeft: 4 }}>· {formatElapsed(generation, yearsPerGen)}</span>
+        </span>
         <GlobalSearch onJumpToLexicon={() => setActiveTab("dictionary")} />
         <div className="playback">
           <button className="primary icon-only" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>

@@ -1,5 +1,7 @@
 import { useSimStore } from "../state/store";
 import type { LanguageEvent } from "../engine/types";
+import { formatElapsed } from "../engine/time";
+import { YEARS_PER_GENERATION } from "../engine/constants";
 
 const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   sound_change: "var(--accent)",
@@ -27,6 +29,9 @@ export function EventsLog() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);
   const selected = selectedLangId ? state.tree[selectedLangId]?.language : undefined;
+  const yearsPerGen = useSimStore(
+    (s) => s.config.yearsPerGeneration ?? YEARS_PER_GENERATION,
+  );
 
   if (!selected) {
     return (
@@ -62,7 +67,12 @@ export function EventsLog() {
               fontSize: 11,
             }}
           >
-            <span className="t-muted">g{e.generation}</span>
+            <span
+              className="t-muted"
+              title={`Generation ${e.generation} · ${formatElapsed(e.generation, yearsPerGen)} into the simulation`}
+            >
+              g{e.generation} · {formatElapsed(e.generation, yearsPerGen)}
+            </span>
             <span style={{ color: KIND_COLOR[e.kind] }}>{KIND_LABEL[e.kind]}</span>
             <span>{e.description}</span>
           </div>
