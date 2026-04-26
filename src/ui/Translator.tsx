@@ -285,7 +285,7 @@ function SentenceOutput({
               fontFamily: "var(--font-mono)",
               minWidth: 60,
             }}
-            title={`${t.englishLemma} (${t.englishTag})${t.inflectedAs ? " · " + t.inflectedAs : ""}${t.glossNote ? " · " + t.glossNote : ""} · ${t.resolution}`}
+            title={`${t.englishLemma} (${t.englishTag})${t.glossNote ? " · " + t.glossNote : ""} · ${t.resolution}`}
           >
             <span style={{ fontSize: "var(--fs-2)", color: "var(--text)" }}>
               {t.targetForm.length > 0 ? formatForm(t.targetForm, lang, script) : t.targetSurface}

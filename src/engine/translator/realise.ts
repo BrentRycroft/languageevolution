@@ -126,15 +126,35 @@ export function realiseSentence(
     ];
   const subjectFinal = dropSubject ? [] : subject;
 
-  // Top-level S/V/O ordering. PPs and adverbs follow the predicate
-  // wherever it lands.
+  // Top-level S/V/O ordering. For V-final word orders (SOV / OSV)
+  // PPs and adverbs precede the verb so "the stranger walked at the
+  // house" reads as `stranger house walked`, not `stranger walked
+  // house`. For V-medial / V-initial orders (SVO / VSO / VOS / OVS)
+  // PPs follow the SVO block.
   const order = sliceOrder(lang.grammar.wordOrder);
+  const isVFinal = order[order.length - 1] === "V";
   const slot: Record<"S" | "V" | "O", RealisedToken[]> = {
     S: subjectFinal,
     V: verbTokens,
     O: objectTokens,
   };
   const out: RealisedToken[] = [];
+  // Wh-fronting: surface a translation of the leading wh-word at
+  // sentence start. The parser tags wh-words as PUNCT to keep them
+  // out of NP collection and stores the lemma on `leadingWh`; the
+  // closed-class table provides the per-language form so wh-questions
+  // and relative clauses don't silently drop the wh-pronoun.
+  if (s.leadingWh) {
+    const wf = closedClassForm(lang, s.leadingWh.lemma) ?? [];
+    if (wf.length > 0) {
+      out.push({
+        surface: wf.join(""),
+        english: s.leadingWh.lemma,
+        role: "DET",
+        resolution: "concept",
+      });
+    }
+  }
   // Leading discourse coordinator ("and", "but", "or") surfaces
   // first so the connective isn't silently lost.
   if (s.leadingConj) {
@@ -159,15 +179,21 @@ export function realiseSentence(
     out.push(...verbTokens);
     out.push(...subjectFinal);
     out.push(...objectTokens);
+    out.push(...predPpTokens);
   } else {
-    for (const k of order) out.push(...slot[k]);
+    for (const k of order) {
+      if (isVFinal && k === "V") {
+        out.push(...predPpTokens);
+      }
+      out.push(...slot[k]);
+    }
+    if (!isVFinal) out.push(...predPpTokens);
   }
   // Predicate complement (copula): emit after the verb so output
   // reads "X is happy" / "X is here" naturally. In zero-copula
   // languages where verbTokens is empty, this still surfaces and
   // gives the equational reading "X happy".
   out.push(...complementTokens);
-  out.push(...predPpTokens);
   out.push(...advTokens);
 
   if (isQuestion && interStrategy === "particle") {

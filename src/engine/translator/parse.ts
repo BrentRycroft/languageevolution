@@ -1,4 +1,5 @@
 import type { EnglishToken } from "./tokens";
+import { WH_LEMMAS } from "./tokens";
 import type {
   NP,
   PP,
@@ -39,6 +40,19 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   if (tokens.length > 0 && tokens[0]!.tag === "CONJ") {
     leadingConj = { lemma: tokens[0]!.lemma };
   }
+  // Leading wh-word: tagged PUNCT during tokenisation so it doesn't
+  // pollute NP detection in relative clauses. Captured here so the
+  // realiser can surface a closed-class translation at sentence
+  // start (mimics English-style wh-fronting). Covers who / whom /
+  // whose / what / which / where / when / why / how.
+  let leadingWh: { lemma: string } | undefined;
+  for (const t of tokens) {
+    if (t.tag === "PUNCT" && WH_LEMMAS.has(t.lemma)) {
+      leadingWh = { lemma: t.lemma };
+      break;
+    }
+    if (t.tag === "V") break;
+  }
   let verbIdx = tokens.findIndex((t) => t.tag === "V");
   // Copula promotion: when no main verb is found, look for an AUX
   // copula (is / are / was / were / be / been) and promote it to a
@@ -49,17 +63,37 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     const copIdx = tokens.findIndex(
       (t) => t.tag === "AUX" && (t.lemma === "be" || t.lemma === "is" || t.lemma === "are" || t.lemma === "was" || t.lemma === "were" || t.lemma === "been"),
     );
-    if (copIdx < 0) return null;
-    // Mutate in place: rewrite the AUX as a V with lemma "be" and
-    // its existing tense feature.
-    const cop = tokens[copIdx]!;
-    tokens[copIdx] = {
-      ...cop,
-      tag: "V",
-      lemma: "be",
-      features: { ...cop.features, tense: cop.features.tense ?? "present" },
-    };
-    verbIdx = copIdx;
+    if (copIdx < 0) {
+      // Possession promotion: "X has / had / have Y" with no main
+      // verb means HAVE-as-possession. The tokeniser tags these as
+      // AUX so they pass tense through to a following V; without a
+      // V, they'd otherwise drop silently and the sentence would
+      // surface as "X Y". Promote to a V with lemma "have" so the
+      // realiser can resolve it via the lexicon.
+      const haveIdx = tokens.findIndex(
+        (t) => t.tag === "AUX" && (t.lemma === "have" || t.lemma === "has" || t.lemma === "had"),
+      );
+      if (haveIdx < 0) return null;
+      const ht = tokens[haveIdx]!;
+      tokens[haveIdx] = {
+        ...ht,
+        tag: "V",
+        lemma: "have",
+        features: { ...ht.features, tense: ht.features.tense ?? (ht.surface === "had" ? "past" : "present") },
+      };
+      verbIdx = haveIdx;
+    } else {
+      // Mutate in place: rewrite the AUX as a V with lemma "be" and
+      // its existing tense feature.
+      const cop = tokens[copIdx]!;
+      tokens[copIdx] = {
+        ...cop,
+        tag: "V",
+        lemma: "be",
+        features: { ...cop.features, tense: cop.features.tense ?? "present" },
+      };
+      verbIdx = copIdx;
+    }
   }
   const verbTok = tokens[verbIdx]!;
 
@@ -138,7 +172,34 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
 
   let subject = collectNP(tokens, verbIdx, "left", consumed);
   if (!subject) {
-    if (verbIdx === 0 || (verbIdx > 0 && tokens[0]!.tag === "AUX")) {
+    // Wh-subject: when a wh-word is the only material left of the verb
+    // ("who sees the king", "what eats the meat"), let the wh-word
+    // itself stand in as a 3sg pronoun subject. Without this, the
+    // parse fails and we fall through to the legacy linear path,
+    // losing tree-driven realisation for wh-questions.
+    const whSubjectLemmas = new Set(["who", "what", "which", "whoever", "whatever"]);
+    const leftIsBareWh =
+      leadingWh &&
+      whSubjectLemmas.has(leadingWh.lemma) &&
+      tokens.slice(0, verbIdx).every(
+        (t) => t.tag === "PUNCT" || t.tag === "AUX",
+      );
+    if (leftIsBareWh) {
+      subject = {
+        kind: "NP",
+        head: {
+          lemma: leadingWh!.lemma,
+          baseForm: [],
+          number: "sg",
+          case: "nom",
+          person: "3",
+          isPronoun: true,
+          synthesized: true,
+        },
+        adjectives: [],
+        pps: [],
+      };
+    } else if (verbIdx === 0 || (verbIdx > 0 && tokens[0]!.tag === "AUX")) {
       subject = {
         kind: "NP",
         head: {
@@ -148,6 +209,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
           case: "nom",
           person: "2",
           isPronoun: true,
+          synthesized: true,
         },
         adjectives: [],
         pps: [],
@@ -185,6 +247,20 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   // object don't get re-emitted by the top-level walk.
   const pps = collectPPs(tokens, consumed);
 
+  // Passive `by`-PP routing: under passive voice, the `by N` NP is
+  // the AGENT, not a regular oblique. Mark its head case=inst (the
+  // instrumental, used in PIE / Slavic / Sanskrit for the passive
+  // agent). Languages without a verb.case.inst paradigm just render
+  // it like nominative, but at least we don't emit it as accusative
+  // (which would gloss as a direct object).
+  if (voice === "passive") {
+    for (const pp of pps) {
+      if (pp.prep.lemma === "by") {
+        pp.np.head.case = "inst";
+      }
+    }
+  }
+
   const tense: "past" | "present" | "future" =
     verbTok.features.tense ?? "present";
   const subjectPerson = subject.head.person;
@@ -209,7 +285,214 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     complement: complement.length > 0 ? complement : undefined,
   };
 
-  return { kind: "S", subject, predicate, negated, interrogative, leadingConj };
+  // Wh-words always make the sentence interrogative even if there's
+  // no question mark.
+  if (leadingWh) interrogative = true;
+  return { kind: "S", subject, predicate, negated, interrogative, leadingConj, leadingWh };
+}
+
+/**
+ * Multi-clause variant of `parseSyntax`. Splits the tagged token stream
+ * at CONJ / comma boundaries that sit between two V tokens, parses
+ * each segment independently, and stamps the joining conjunction as
+ * the next segment's `leadingConj`. Handles the common case where the
+ * user types compound or subordinate clauses ("the king sees the wolf
+ * AND the wolf runs", "the king runs BECAUSE the wolf chases him",
+ * "the king sees the wolf, the wolf runs").
+ *
+ * Subject inheritance: when a clause-2+ segment has no overt nominal
+ * (e.g. "the king eats and drinks"), the synthetic-`you` subject from
+ * single-clause parsing is replaced by the previous clause's subject
+ * so the coordinated VP reads as a shared subject ("king eats … king
+ * drinks").
+ *
+ * Falls back to a single-element array containing the original parse
+ * (or an empty array on total parse failure) so callers can treat the
+ * single- and multi-clause paths uniformly.
+ */
+export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
+  // Relative-clause extraction. Detects "the king WHO sees the wolf
+  // attacks" / "the king sees the wolf WHICH runs" — a wh-relativiser
+  // (PUNCT-tagged WH_LEMMA preceded by N/PRON) introducing an
+  // embedded clause inside an NP. We splice out the relative clause,
+  // parse the matrix without it, then parse the rel-clause separately
+  // with leadingWh set + subject inherited from the antecedent. The
+  // result is rendered linearly (matrix … rel-clause) since our
+  // realiser doesn't nest clauses inside NPs.
+  const rel = extractRelativeClause(tokens);
+  if (rel) {
+    const matrixSentences = parseSyntaxAll(rel.matrix);
+    const relSentence = parseSyntax(rel.relative);
+    if (relSentence) {
+      relSentence.leadingWh = { lemma: rel.relLemma };
+      // When the rel-clause has no overt subject ("the wolf which
+      // runs" — `which` is the subject), inherit a subject NP built
+      // from the antecedent (the noun immediately preceding the
+      // relativiser). This is the correct linguistic behaviour: the
+      // relativiser's reference is the adjacent NP, not the matrix
+      // clause's subject.
+      if (relSentence.subject.head.synthesized) {
+        const a = rel.antecedent;
+        relSentence.subject = {
+          kind: "NP",
+          head: {
+            lemma: a.lemma,
+            baseForm: [],
+            number: a.features.number === "pl" ? "pl" : "sg",
+            case: "nom",
+            person: (a.features.person ?? "3") as Person,
+            isPronoun: a.tag === "PRON",
+          },
+          adjectives: [],
+          pps: [],
+        };
+      }
+      return [...matrixSentences, relSentence];
+    }
+  }
+  const verbCount = tokens.filter((t) => t.tag === "V").length;
+  if (verbCount <= 1) {
+    const single = parseSyntax(tokens);
+    return single ? [single] : [];
+  }
+  // Locate CONJ / comma boundaries that have at least one V on each
+  // side. Boundaries at index 0 are skipped — those are leading
+  // discourse coordinators and are already handled by single-clause
+  // parseSyntax via leadingConj.
+  const boundaries: number[] = [];
+  for (let i = 1; i < tokens.length - 1; i++) {
+    const t = tokens[i]!;
+    const isConj = t.tag === "CONJ";
+    const isComma = t.tag === "PUNCT" && (t.lemma === "," || t.lemma === ";");
+    if (!isConj && !isComma) continue;
+    let vBefore = 0;
+    let vAfter = 0;
+    for (let j = 0; j < i; j++) if (tokens[j]!.tag === "V") vBefore++;
+    for (let j = i + 1; j < tokens.length; j++) if (tokens[j]!.tag === "V") vAfter++;
+    if (vBefore >= 1 && vAfter >= 1) boundaries.push(i);
+  }
+  if (boundaries.length === 0) {
+    const single = parseSyntax(tokens);
+    return single ? [single] : [];
+  }
+  // Build segments. The boundary token itself is excluded from each
+  // segment's token slice but, when it's a CONJ, recorded as the next
+  // segment's leadingConj.
+  const segments: { tokens: EnglishToken[]; leadingConj?: { lemma: string } }[] = [];
+  let prev = 0;
+  for (const b of boundaries) {
+    if (b > prev) segments.push({ tokens: tokens.slice(prev, b) });
+    const bt = tokens[b]!;
+    const lc = bt.tag === "CONJ" ? { lemma: bt.lemma } : undefined;
+    segments.push({ tokens: [], leadingConj: lc });
+    prev = b + 1;
+  }
+  if (prev < tokens.length) segments.push({ tokens: tokens.slice(prev) });
+  // Collapse [empty + leadingConj][next-tokens] pairs into a single
+  // segment so each entry has both fields populated.
+  const merged: { tokens: EnglishToken[]; leadingConj?: { lemma: string } }[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const cur = segments[i]!;
+    if (cur.tokens.length === 0 && i + 1 < segments.length) {
+      const nxt = segments[i + 1]!;
+      merged.push({ tokens: nxt.tokens, leadingConj: cur.leadingConj });
+      i++;
+    } else if (cur.tokens.length > 0) {
+      merged.push(cur);
+    }
+  }
+  const out: Sentence[] = [];
+  for (let k = 0; k < merged.length; k++) {
+    const seg = merged[k]!;
+    const s = parseSyntax(seg.tokens);
+    if (!s) continue;
+    if (seg.leadingConj && !s.leadingConj) s.leadingConj = seg.leadingConj;
+    // Subject inheritance — when a non-first clause has no overt
+    // nominal of its own, reuse the previous clause's subject so
+    // coordinated VPs read with a shared subject. Without this,
+    // single-clause parseSyntax injects a synthetic "you" subject
+    // (its imperative fallback), which surfaces as a phantom 2sg
+    // pronoun in clauses that should inherit the prior subject. The
+    // `synthesized` flag distinguishes a real "you" subject (genuine
+    // imperative) from the fabricated fallback.
+    if (k > 0 && out.length > 0 && s.subject.head.synthesized) {
+      const segHasNominal = seg.tokens.some(
+        (t) => t.tag === "N" || t.tag === "PRON",
+      );
+      if (!segHasNominal) {
+        s.subject = out[out.length - 1]!.subject;
+      }
+    }
+    out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Detect and slice out a single English relative clause introduced
+ * by a wh-relativiser (who / whom / whose / which / that). Returns
+ * null when no relative clause is found.
+ *
+ * Heuristic: the relativiser must (a) be tagged PUNCT (the tokeniser
+ * tags wh-words this way), (b) be preceded by an N/PRON antecedent,
+ * (c) be followed by a V (the rel-clause verb), and (d) have a
+ * second V somewhere after the rel-clause's content (the matrix
+ * verb). The rel-clause is the token span between the relativiser
+ * and the matrix V; the matrix is everything else.
+ */
+function extractRelativeClause(tokens: EnglishToken[]): {
+  matrix: EnglishToken[];
+  relative: EnglishToken[];
+  relLemma: string;
+  antecedent: EnglishToken;
+} | null {
+  for (let i = 1; i < tokens.length - 1; i++) {
+    const t = tokens[i]!;
+    // Wh-relativisers (who / which / whose / whom) tagged PUNCT, plus
+    // the bare relativiser `that` tagged DET. Both surface in English
+    // as "[antecedent] REL [verb] …".
+    const isWhRel = t.tag === "PUNCT" && WH_LEMMAS.has(t.lemma);
+    const isThatRel = t.tag === "DET" && t.lemma === "that";
+    if (!isWhRel && !isThatRel) continue;
+    const prev = tokens[i - 1]!;
+    if (prev.tag !== "N" && prev.tag !== "PRON") continue;
+    // Find the rel-clause V (next V after the wh).
+    let relVIdx = -1;
+    for (let j = i + 1; j < tokens.length; j++) {
+      if (tokens[j]!.tag === "V") { relVIdx = j; break; }
+    }
+    if (relVIdx < 0) continue;
+    // Find the matrix V. Two configurations:
+    //   - center-embedded: rel-clause is between antecedent and the
+    //     matrix V → matrix V comes AFTER the rel-V.
+    //   - sentence-final: rel-clause sits at the end → matrix V comes
+    //     BEFORE the wh.
+    let matrixVAfter = -1;
+    for (let j = relVIdx + 1; j < tokens.length; j++) {
+      if (tokens[j]!.tag === "V") { matrixVAfter = j; break; }
+    }
+    let matrixVBefore = -1;
+    for (let j = i - 1; j >= 0; j--) {
+      if (tokens[j]!.tag === "V") { matrixVBefore = j; break; }
+    }
+    if (matrixVAfter >= 0) {
+      return {
+        matrix: [...tokens.slice(0, i), ...tokens.slice(matrixVAfter)],
+        relative: tokens.slice(i + 1, matrixVAfter),
+        relLemma: t.lemma,
+        antecedent: prev,
+      };
+    }
+    if (matrixVBefore >= 0) {
+      return {
+        matrix: tokens.slice(0, i),
+        relative: tokens.slice(i + 1),
+        relLemma: t.lemma,
+        antecedent: prev,
+      };
+    }
+  }
+  return null;
 }
 
 function collectNP(
@@ -242,6 +525,42 @@ function collectNP(
     const t = tokens[i]!;
     if (t.tag === "N" || t.tag === "PRON") {
       headIdx = i;
+      // Subject (left-direction) walk: don't stop here — keep
+      // walking left to see if there's an EARLIER head reachable
+      // by bridging back through a PP. "The wise king of the
+      // wolves near the river sees" picks `river` first; we want
+      // `king`. The PP-bridge is conservative: only span tokens
+      // tagged PREP/DET/ADJ/NUM/N/PRON/CONJ in the bridge zone, no
+      // V crossings.
+      if (direction === "left") {
+        let j = i - 1;
+        let lastBridgedHead = i;
+        // Walk back over what looks like a continuation of the same
+        // NP. When we find another N with a PREP between it and the
+        // last bridged head, adopt it as the new head and KEEP
+        // walking — multi-PP subjects ("the king of the wolves near
+        // the river") need to skip past every PP before settling on
+        // the leftmost head.
+        while (j >= 0) {
+          const u = tokens[j]!;
+          if (u.tag === "V") break;
+          if (u.tag === "N" || u.tag === "PRON") {
+            let bridge = false;
+            for (let k = j + 1; k < lastBridgedHead; k++) {
+              if (tokens[k]!.tag === "PREP") { bridge = true; break; }
+            }
+            if (bridge) {
+              headIdx = j;
+              lastBridgedHead = j;
+            } else {
+              // No PREP between previous head and this earlier N —
+              // they'd be apposition or a different clause. Stop.
+              break;
+            }
+          }
+          j--;
+        }
+      }
       break;
     }
     if (t.tag === "V") break; // don't cross another verb

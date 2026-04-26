@@ -463,9 +463,9 @@ const LEXICON: Lexicon = {
   //   PP-bearing input without falling back to "?". Reconstructions
   //   are simplified — see Beekes 2011 / Fortson 2010 for citations.) —
   he: ["s", "o"],
-  she: ["s", "eh₂"],
+  she: ["s", "e", "h₂"],
   it: ["t", "o", "d"],
-  and: ["k", "ʷ", "e"],
+  and: ["kʷ", "e"],
   or: ["w", "eː"],
   in: ["e", "n"],
   on: ["o", "p"],
