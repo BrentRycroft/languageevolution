@@ -419,12 +419,33 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       // Auxiliaries carry tense info that the next verb inherits.
       const past = ["was", "were", "did", "had"].includes(w);
       const future = w === "will" || w === "would";
-      pendingTense = past ? "past" : future ? "future" : "present";
+      const isHave = w === "have" || w === "has" || w === "had";
+      // Special case: when `have/has/had` follows a do-auxiliary (do /
+      // does / did), the do is the tense carrier and `have` is in
+      // base form. Inherit the do's tense instead of overwriting
+      // pendingTense with `have`'s literal present-vs-past flavour.
+      // Without this, "did not have" loses past and the V-promoted
+      // `have` ends up tagged present. Walk back over intervening
+      // PUNCT / NEG tokens so "did NOT have" still hits the do-aux.
+      let prevIsDoAux = false;
+      for (let pj = tokens.length - 1; pj >= 0; pj--) {
+        const u = tokens[pj]!;
+        if (u.tag === "PUNCT") continue;
+        if (u.tag === "AUX" && (u.lemma === "do" || u.lemma === "does" || u.lemma === "did")) {
+          prevIsDoAux = true;
+        }
+        break;
+      }
+      const tense: "past" | "present" | "future" =
+        prevIsDoAux && isHave
+          ? (pendingTense ?? "present")
+          : past ? "past" : future ? "future" : "present";
+      pendingTense = tense;
       tokens.push({
         surface: w,
         lemma: COPULAS.has(w) ? "be" : w,
         tag: "AUX",
-        features: { tense: pendingTense },
+        features: { tense },
       });
       lastWasVerb = false;
       continue;
@@ -544,6 +565,33 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       tag: "PUNCT",
       features: {},
     });
+  }
+
+  // Demonstrative-pronoun pass: a DET-tagged demonstrative
+  // (this/that/these/those) followed by anything OTHER than an N or
+  // ADJ is a standalone demonstrative pronoun ("I see THAT", "I want
+  // these"), not a determiner. Retag as PRON so the parser collects
+  // it as an NP head. Without this pass, "It did not have that"
+  // silently loses the object slot.
+  const DEMONSTRATIVES = new Set(["this", "that", "these", "those"]);
+  for (let k = 0; k < tokens.length; k++) {
+    const t = tokens[k]!;
+    if (t.tag !== "DET" || !DEMONSTRATIVES.has(t.lemma)) continue;
+    const next = tokens[k + 1];
+    const isPronominal =
+      !next ||
+      (next.tag !== "N" && next.tag !== "ADJ" && next.tag !== "NUM");
+    if (!isPronominal) continue;
+    const isPlural = t.lemma === "these" || t.lemma === "those";
+    tokens[k] = {
+      ...t,
+      tag: "PRON",
+      features: {
+        ...t.features,
+        person: "3",
+        number: isPlural ? "pl" : "sg",
+      },
+    };
   }
 
   // Second pass: tag the first noun as subject and the second noun as
