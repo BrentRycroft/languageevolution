@@ -1,12 +1,9 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { isRegisteredConcept, CONCEPTS, colexWith } from "../lexicon/concepts";
 import { posOf } from "../lexicon/pos";
-import { inflect } from "../morphology/evolve";
-import type { MorphCategory } from "../morphology/types";
 import { closedClassForm } from "./closedClass";
 import { parseSyntaxAll } from "./parse";
 import { realiseSentence } from "./realise";
-import { sliceOrder } from "./wordOrder";
 
 /**
  * Rule-based English-to-target-language sentence translator.
@@ -28,6 +25,7 @@ import { sliceOrder } from "./wordOrder";
 
 export type { EnglishTag, EnglishToken } from "./tokens";
 import type { EnglishTag, EnglishToken } from "./tokens";
+import { WH_LEMMAS } from "./tokens";
 
 export interface TranslatedToken {
   englishLemma: string;
@@ -41,8 +39,6 @@ export interface TranslatedToken {
     | "colex"
     | "reverse-colex"
     | "fallback";
-  /** Stays null for closed-class tokens that don't belong in target output. */
-  inflectedAs?: MorphCategory;
 }
 
 export interface SentenceTranslation {
@@ -85,15 +81,6 @@ const CONJUNCTIONS = new Set([
   // wrong NP slot ("the king is bigger than the wolf" puts "than"
   // in as a noun).
   "than", "as",
-]);
-// Wh-words. Tagged DET when in determiner position (which-X, what-X),
-// and as discourse particles otherwise. Without these, the noun
-// fallback claims them and they steal subject / object slots in
-// relative clauses + wh-questions.
-const WH_WORDS = new Set([
-  "who", "whom", "whose",
-  "what", "which",
-  "where", "when", "why", "how",
 ]);
 const AUX_VERBS = new Set([
   "am", "is", "are", "was", "were", "be", "been",
@@ -146,7 +133,7 @@ const BARE_VERBS = new Set([
   "start", "stop", "wait", "help",
   // pursuit / interaction
   "chase", "follow", "attack", "meet", "leave", "send", "save",
-  "catch", "reach", "join", "leave", "show", "tell", "ask",
+  "catch", "reach", "join", "show", "tell",
 ]);
 // Bare adjectives the tokeniser can recognise without -er/-est suffix.
 const BARE_ADJECTIVES = new Set([
@@ -158,6 +145,43 @@ const BARE_ADJECTIVES = new Set([
   "wet", "dry", "full", "empty", "round", "straight", "sharp",
   "wise", "foolish", "brave", "kind", "cruel", "true", "false",
 ]);
+
+// Comparative / superlative bases. Only fire `-er` / `-est`
+// promotion to ADJ when the stripped stem hits this set, since "-er"
+// is also the agent-noun suffix (`mother`, `teacher`, `writer`) which
+// would otherwise mistag as ADJ and break subject detection.
+const COMPARATIVE_BASES = new Set([
+  "big", "small", "tall", "short", "fast", "slow", "new", "old",
+  "good", "bad", "long", "wide", "narrow", "deep", "shallow",
+  "hot", "cold", "high", "low", "near", "far", "young", "rich",
+  "poor", "strong", "weak", "happy", "sad", "easy", "hard",
+]);
+
+// Past-participle forms whose surface differs from both their
+// present and preterite. Used downstream to mark passive cues
+// ("the king was seen") and perfect-aspect cues ("the king has been
+// seen") that would otherwise miss because the participle doesn't
+// end in `-ed` and isn't tagged past.
+const PAST_PARTICIPLES = new Set([
+  "seen", "gone", "taken", "given", "made", "fallen", "flown",
+  "swum", "written", "broken", "spoken", "known", "heard",
+  "felt", "brought", "bought", "sold", "thought", "built",
+  "fought", "been", "done", "eaten", "drunk", "said", "had",
+  "told", "kept", "left", "lost", "met", "paid", "sent",
+  "shown", "sung", "sat", "stood", "found",
+]);
+
+// Bridge-set membership: covers BARE_NOUNS / BARE_VERBS / BARE_ADJECTIVES
+// AND the cross-engine POS catalog. The catalog gives us access to the
+// genesis-time vocabulary (water, eat, big, ...) without duplicating it
+// here; the BARE_* sets cover the -ing trap and translator-specific
+// extensions (king, ring, morning, chase, ...).
+const isBareNoun = (w: string): boolean =>
+  BARE_NOUNS.has(w) || posOf(w) === "noun";
+const isBareVerb = (w: string): boolean =>
+  BARE_VERBS.has(w) || posOf(w) === "verb";
+const isBareAdjective = (w: string): boolean =>
+  BARE_ADJECTIVES.has(w) || posOf(w) === "adjective";
 
 const PRONOUN_FEATURES: Record<string, EnglishToken["features"]> = {
   i:    { person: "1", number: "sg" },
@@ -231,12 +255,12 @@ function stripVerbSuffix(s: string): string {
     return stem;
   }
   // -es → drop. Disambiguate `chases` (lemma `chase`) from `washes`
-  // (lemma `wash`) by checking the stripped-`s` stem against
-  // BARE_VERBS first — a bare verb in the dictionary wins over the
-  // naive `-es → 0` rule.
+  // (lemma `wash`) by checking the stripped-`s` stem against the
+  // bare-verb / POS-catalog union — a known verb in the dictionary
+  // wins over the naive `-es → 0` rule.
   if (s.length >= 4 && s.endsWith("es")) {
     const dropS = s.slice(0, -1);
-    if (BARE_VERBS.has(dropS)) return dropS;
+    if (isBareVerb(dropS)) return dropS;
     return s.slice(0, -2);
   }
   // -s
@@ -352,7 +376,7 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       tokens.push({ surface: w, lemma: w, tag: "CONJ", features: {} });
       continue;
     }
-    if (WH_WORDS.has(w)) {
+    if (WH_LEMMAS.has(w)) {
       // Tag as PUNCT so the parser doesn't pull these into NP slots.
       // The lemma stays so realisation can surface a closed-class
       // form via closedClassForm if the language has one. Without
@@ -369,7 +393,7 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
     }
-    if (BARE_NOUNS.has(w)) {
+    if (isBareNoun(w)) {
       tokens.push({
         surface: w,
         lemma: w,
@@ -379,11 +403,11 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       lastWasVerb = false;
       continue;
     }
-    if (BARE_ADJECTIVES.has(w)) {
+    if (isBareAdjective(w)) {
       tokens.push({ surface: w, lemma: w, tag: "ADJ", features: {} });
       continue;
     }
-    if (BARE_VERBS.has(w)) {
+    if (isBareVerb(w)) {
       const tense: "past" | "present" | "future" | undefined =
         pendingTense ?? "present";
       tokens.push({ surface: w, lemma: w, tag: "V", features: { tense } });
@@ -425,17 +449,9 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       });
       continue;
     }
-    // Comparative / superlative adjective detection. Only fires for
-    // a small allowlist of confident comparatives — "mother" /
-    // "teacher" / "father" / "writer" are all -er but they're agent
-    // nouns, not adjectives. Mis-tagging them ADJ here breaks the
-    // subject/object detection downstream.
-    const COMPARATIVE_BASES = new Set([
-      "big", "small", "tall", "short", "fast", "slow", "new", "old",
-      "good", "bad", "long", "wide", "narrow", "deep", "shallow",
-      "hot", "cold", "high", "low", "near", "far", "young", "rich",
-      "poor", "strong", "weak", "happy", "sad", "easy", "hard",
-    ]);
+    // Comparative / superlative adjective detection — guarded by
+    // COMPARATIVE_BASES (module scope) so agent nouns ending in `-er`
+    // (mother / teacher / writer) don't mistag as ADJ.
     if (w.length >= 5 && (w.endsWith("er") || w.endsWith("est"))) {
       const stem = w.endsWith("est") ? w.slice(0, -3) : w.slice(0, -2);
       const stemY = stem.endsWith("i") ? stem.slice(0, -1) + "y" : stem;
@@ -458,19 +474,6 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       }
       // Otherwise fall through to noun/verb detection below.
     }
-    // Past-participle forms whose surface differs from both their
-    // present and preterite. Used downstream to mark passive cues
-    // ("the king was seen") and perfect-aspect cues
-    // ("the king has been seen") that would otherwise miss because
-    // the participle doesn't end in `-ed` and isn't tagged past.
-    const PAST_PARTICIPLES = new Set([
-      "seen", "gone", "taken", "given", "made", "fallen", "flown",
-      "swum", "written", "broken", "spoken", "known", "heard",
-      "felt", "brought", "bought", "sold", "thought", "built",
-      "fought", "been", "done", "eaten", "drunk", "said", "had",
-      "told", "kept", "left", "lost", "met", "paid", "sent",
-      "shown", "sung", "sat", "stood", "found",
-    ]);
     // Verb detection: ends in -ed, -ing, matches an irregular form, OR
     // is a 3sg-present `-es` / `-s` form whose stripped stem hits the
     // bare-verb list. The 3sg branch fixes coordinated VPs ("the king
@@ -479,11 +482,11 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     const looksVerb =
       IRREGULAR_VERBS[w] !== undefined ||
       (w.length >= 4 && (w.endsWith("ed") || w.endsWith("ing"))) ||
-      (w.length >= 4 && w.endsWith("es") && BARE_VERBS.has(w.slice(0, -2))) ||
+      (w.length >= 4 && w.endsWith("es") && isBareVerb(w.slice(0, -2))) ||
       (w.length >= 3 &&
         w.endsWith("s") &&
         !w.endsWith("ss") &&
-        BARE_VERBS.has(w.slice(0, -1))) ||
+        isBareVerb(w.slice(0, -1))) ||
       (lastWasVerb === false && i > 0 && raw[i - 1] === "to");
     if (looksVerb) {
       const lemma = stripVerbSuffix(w);
@@ -636,90 +639,6 @@ function resolveLemma(
 }
 
 // ---------------------------------------------------------------------------
-// 3. Inflection
-// ---------------------------------------------------------------------------
-
-function inflectForToken(
-  baseForm: WordForm,
-  token: EnglishToken,
-  lang: Language,
-  meaning: string,
-): { form: WordForm; cat?: MorphCategory } {
-  const paradigms = lang.morphology.paradigms;
-  // Verbs: tense.
-  if (token.tag === "V") {
-    if (token.features.tense === "past" && paradigms["verb.tense.past"]) {
-      return { form: inflect(baseForm, paradigms["verb.tense.past"], lang, meaning), cat: "verb.tense.past" };
-    }
-    if (token.features.tense === "future" && paradigms["verb.tense.fut"]) {
-      return { form: inflect(baseForm, paradigms["verb.tense.fut"], lang, meaning), cat: "verb.tense.fut" };
-    }
-    // Person / 3sg present.
-    if (token.features.person === "3" && token.features.number === "sg" && paradigms["verb.person.3sg"]) {
-      return { form: inflect(baseForm, paradigms["verb.person.3sg"], lang, meaning), cat: "verb.person.3sg" };
-    }
-  }
-  // Nouns: plural + accusative case.
-  if (token.tag === "N" || token.tag === "PRON") {
-    if (token.features.role === "object" && lang.grammar.hasCase && paradigms["noun.case.acc"]) {
-      const inflected = inflect(baseForm, paradigms["noun.case.acc"], lang, meaning);
-      if (token.features.number === "pl" && paradigms["noun.num.pl"]) {
-        // Stack plural on top of accusative.
-        return {
-          form: inflect(inflected, paradigms["noun.num.pl"], lang, meaning),
-          cat: "noun.case.acc",
-        };
-      }
-      return { form: inflected, cat: "noun.case.acc" };
-    }
-    if (token.features.number === "pl" && lang.grammar.pluralMarking === "affix" && paradigms["noun.num.pl"]) {
-      return { form: inflect(baseForm, paradigms["noun.num.pl"], lang, meaning), cat: "noun.num.pl" };
-    }
-  }
-  return { form: baseForm };
-}
-
-// ---------------------------------------------------------------------------
-// 4. Reorder
-// ---------------------------------------------------------------------------
-
-function rearrangeClause(
-  tokens: TranslatedToken[],
-  englishTokens: EnglishToken[],
-  wordOrder: Language["grammar"]["wordOrder"],
-): TranslatedToken[] {
-  // Find S, V, O indices by feature.
-  let sIdx = -1, vIdx = -1, oIdx = -1;
-  for (let i = 0; i < englishTokens.length; i++) {
-    const t = englishTokens[i]!;
-    if (t.tag === "V" && vIdx === -1) vIdx = i;
-    else if ((t.tag === "N" || t.tag === "PRON") && t.features.role === "subject" && sIdx === -1) sIdx = i;
-    else if ((t.tag === "N" || t.tag === "PRON") && t.features.role === "object" && oIdx === -1) oIdx = i;
-  }
-  if (sIdx < 0 || vIdx < 0) return tokens; // no clear clause structure
-  const order = sliceOrder(wordOrder);
-  const sToken = tokens[sIdx]!;
-  const vToken = tokens[vIdx]!;
-  const oToken = oIdx >= 0 ? tokens[oIdx]! : null;
-  const reordered: TranslatedToken[] = [];
-  // Keep punctuation, conjunctions, prepositions, determiners in
-  // original order (for now); only pivot the S/V/O.
-  const used = new Set([sIdx, vIdx]);
-  if (oIdx >= 0) used.add(oIdx);
-  for (let i = 0; i < tokens.length; i++) {
-    if (used.has(i)) continue;
-    reordered.push(tokens[i]!);
-  }
-  for (const slot of order) {
-    if (slot === "S") reordered.push(sToken);
-    else if (slot === "V") reordered.push(vToken);
-    else if (slot === "O" && oToken) reordered.push(oToken);
-  }
-  return reordered;
-}
-
-
-// ---------------------------------------------------------------------------
 // Top-level translate
 // ---------------------------------------------------------------------------
 
@@ -730,195 +649,137 @@ export function translateSentence(lang: Language, english: string): SentenceTran
   // the tree-driven realiser on each. Handles agreement, adjective
   // placement, possessor placement, negation, prodrop, PP order, and
   // multi-clause input ("X sees Y AND Z runs", "X runs BECAUSE Y
-  // chases X"). Falls through to the legacy linear path when
+  // chases X"). Falls through to a minimal fragment fallback when
   // parseSyntaxAll returns zero clauses (no verb at all).
   const parsedAll = parseSyntaxAll(englishTokens);
   if (parsedAll.length > 0) {
     return translateViaTree(lang, english, englishTokens, parsedAll);
   }
+  return translateFragment(lang, english, englishTokens);
+}
 
-  const targetTokens: TranslatedToken[] = [];
-  const missing: string[] = [];
-
-  // Typology decisions resolved once per call.
+/**
+ * Verb-less / parse-failure fallback. Walks the token stream, emits
+ * each meaningful token in surface order, and skips closed-class
+ * function words for languages that don't have them (case strategy =
+ * case, articlePresence = none, etc.). No S/V/O reordering — there's
+ * no clause to reorder.
+ *
+ * Used for noun-phrase inputs, interjections, and any other input
+ * the clause parser can't recover.
+ */
+function translateFragment(
+  lang: Language,
+  english: string,
+  englishTokens: EnglishToken[],
+): SentenceTranslation {
   const articlePresence = lang.grammar.articlePresence ?? "none";
   const caseStrategy = lang.grammar.caseStrategy ?? (lang.grammar.hasCase ? "case" : "preposition");
-
-  // Negation surfaces in the legacy fallback even when no clause
-  // structure was recoverable. Without this, "the man not" → just
-  // "wihro" — silently dropping the user's intended negation.
-
-  for (let i = 0; i < englishTokens.length; i++) {
-    const tok = englishTokens[i]!;
-    if (tok.tag === "PUNCT") {
-      // PUNCT in our tokeniser is overloaded: real punctuation AND
-      // negators (not/never/n't, tagged PUNCT to keep the parser
-      // from pulling them into NPs). Surface the negator inline so
-      // the legacy path still shows "not".
-      if (tok.lemma === "not" || tok.lemma === "n't" || tok.lemma === "never") {
-        const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
-        targetTokens.push({
-          englishLemma: "not",
-          englishTag: "PUNCT",
-          targetForm: negForm,
-          targetSurface: negForm.join(""),
-          glossNote: "neg",
-          resolution: "concept",
-        });
-      }
-      continue;
-    }
-
-    // ------ closed-class branches ------
-    if (tok.tag === "AUX") {
-      // Auxiliaries pass tense info to the verb (already handled in
-      // tokeniser features) and are generally inflected onto the verb
-      // in agglutinative / fusional languages, so we drop them.
-      continue;
-    }
-    if (tok.tag === "DET" && (tok.lemma === "the" || tok.lemma === "a" || tok.lemma === "an")) {
-      // Articles. Behaviour depends on articlePresence:
-      //   - none      → drop (no article system).
-      //   - free      → emit as a separate token (English-style).
-      //   - enclitic  → attach to the next noun's form (Romanian-style).
-      //   - proclitic → attach to the front of the next noun's form.
-      if (articlePresence === "none") continue;
-      const articleLemma = tok.lemma === "an" ? "a" : tok.lemma;
-      const form = closedClassForm(lang, articleLemma) ?? [];
-      if (articlePresence === "free") {
-        targetTokens.push({
-          englishLemma: tok.lemma,
-          englishTag: tok.tag,
-          targetForm: form,
-          targetSurface: form.join(""),
-          glossNote: "art",
-          resolution: "concept",
-        });
-      }
-      // For enclitic / proclitic, attach to the next noun in a second pass.
-      if (articlePresence === "enclitic" || articlePresence === "proclitic") {
-        // Find the next N or PRON token in englishTokens and remember
-        // we owe an article attachment.
-        for (let j = i + 1; j < englishTokens.length; j++) {
-          const nx = englishTokens[j]!;
-          if (nx.tag === "N" || nx.tag === "PRON") {
-            (nx as EnglishToken & { _pendingArticle?: WordForm })._pendingArticle = form;
-            break;
-          }
-          if (nx.tag === "V") break; // bail before crossing a verb
-        }
-      }
-      continue;
-    }
-    if (tok.tag === "DET") {
-      // Other determiners (this, that, my, ...): emit as a free token.
-      const form = closedClassForm(lang, tok.lemma) ?? [];
-      if (form.length > 0) {
-        targetTokens.push({
-          englishLemma: tok.lemma,
-          englishTag: tok.tag,
-          targetForm: form,
-          targetSurface: form.join(""),
-          glossNote: "det",
-          resolution: "concept",
-        });
-      }
-      continue;
-    }
-    if (tok.tag === "PREP") {
-      // Prepositions only emit in languages whose oblique-marking
-      // strategy is preposition or mixed. case-only languages express
-      // these via case morphology on the noun (handled in inflectForToken).
-      if (caseStrategy === "case") continue;
-      const form = closedClassForm(lang, tok.lemma) ?? [];
-      if (form.length > 0) {
-        targetTokens.push({
-          englishLemma: tok.lemma,
-          englishTag: tok.tag,
-          targetForm: form,
-          targetSurface: form.join(""),
-          glossNote: caseStrategy === "postposition" ? "postp" : "prep",
-          resolution: "concept",
-        });
-      }
-      continue;
-    }
-    if (tok.tag === "CONJ") {
-      const form = closedClassForm(lang, tok.lemma) ?? [];
-      if (form.length > 0) {
-        targetTokens.push({
-          englishLemma: tok.lemma,
-          englishTag: tok.tag,
-          targetForm: form,
-          targetSurface: form.join(""),
-          glossNote: "conj",
-          resolution: "concept",
-        });
-      }
-      continue;
-    }
-
-    // ------ open-class branches ------
-    const { form, resolution, glossNote } = resolveLemma(lang, tok.lemma);
-    if (!form) {
-      missing.push(tok.lemma);
-      targetTokens.push({
-        englishLemma: tok.lemma,
-        englishTag: tok.tag,
-        targetForm: [],
-        // Unresolved English lemma — surface in typographic
-        // quotation marks so the reader knows it's a passthrough,
-        // and keep the token in surface order so the rest of the
-        // sentence still scans grammatically. Was previously
-        // `[lemma]` — switched to "lemma" per user request.
-        targetSurface: `“${tok.lemma}”`,
-        glossNote: "?",
-        resolution,
-      });
-      continue;
-    }
-    let { form: inflected, cat } = inflectForToken(form, tok, lang, tok.lemma);
-
-    // Attach a pending enclitic / proclitic article from a preceding DET.
-    const pending = (tok as EnglishToken & { _pendingArticle?: WordForm })._pendingArticle;
-    if (pending && pending.length > 0) {
-      inflected =
-        articlePresence === "proclitic"
-          ? [...pending, ...inflected]
-          : [...inflected, ...pending];
-    }
-
-    const out: TranslatedToken = {
-      englishLemma: tok.lemma,
-      englishTag: tok.tag,
-      targetForm: inflected,
-      targetSurface: inflected.join(""),
+  const targetTokens: TranslatedToken[] = [];
+  const missing: string[] = [];
+  // Pending enclitic / proclitic article — attaches to the next N/PRON
+  // form instead of being emitted as a standalone token. Cleared on
+  // attachment or when a V crosses (no noun to host it).
+  let pendingArticle: WordForm | null = null;
+  let pendingAffix: "enclitic" | "proclitic" | null = null;
+  const emitClosedClass = (lemma: string, tag: EnglishTag, glossNote: string) => {
+    const form = closedClassForm(lang, lemma === "an" ? "a" : lemma) ?? [];
+    if (form.length === 0) return;
+    targetTokens.push({
+      englishLemma: lemma,
+      englishTag: tag,
+      targetForm: form,
+      targetSurface: form.join(""),
       glossNote,
-      resolution,
-      inflectedAs: cat,
-    };
-    targetTokens.push(out);
-  }
+      resolution: "concept",
+    });
+  };
 
-  // Reorder respecting word-order; closed-class extras are kept in
-  // surface position around the S/V/O pivot.
-  const arrangedTokens = rearrangeClause(
-    targetTokens,
-    englishTokens.filter(
-      (t) =>
-        t.tag !== "PUNCT" &&
-        t.tag !== "AUX" &&
-        // DETs and PREPs may now be present in targetTokens — pass them
-        // through to rearrange so it can keep them in surface order.
-        true,
-    ),
-    lang.grammar.wordOrder,
-  );
-  // Filter out undefined entries — the legacy `rearrangeClause` can
-  // produce sparse arrays when targetTokens and the filtered
-  // englishTokens get out of sync due to closed-class extras.
-  const arrangedNonNull = arrangedTokens.filter((t): t is TranslatedToken => !!t);
-  const arranged = arrangedNonNull.map((t) => t.targetSurface);
+  for (const tok of englishTokens) {
+    switch (tok.tag) {
+      case "PUNCT":
+        // Surface inline negators ("not"/"n't"/"never") even in fragment
+        // input so the user sees the negation. Drop everything else
+        // (real punctuation, wh-words, …) — there's no clause to attach
+        // them to.
+        if (tok.lemma === "not" || tok.lemma === "n't" || tok.lemma === "never") {
+          emitClosedClass("not", "PUNCT", "neg");
+        }
+        continue;
+      case "AUX":
+        // AUX tense info would normally fold into the next verb's
+        // inflection; with no verb, drop silently.
+        continue;
+      case "DET": {
+        const isArticle = tok.lemma === "the" || tok.lemma === "a" || tok.lemma === "an";
+        if (isArticle && articlePresence === "none") continue;
+        if (isArticle && (articlePresence === "enclitic" || articlePresence === "proclitic")) {
+          const af = closedClassForm(lang, tok.lemma === "an" ? "a" : tok.lemma) ?? [];
+          if (af.length > 0) {
+            pendingArticle = af;
+            pendingAffix = articlePresence;
+          }
+          continue;
+        }
+        emitClosedClass(tok.lemma, "DET", isArticle ? "art" : "det");
+        continue;
+      }
+      case "PREP":
+        if (caseStrategy === "case") continue;
+        emitClosedClass(tok.lemma, "PREP", caseStrategy === "postposition" ? "postp" : "prep");
+        continue;
+      case "CONJ":
+        emitClosedClass(tok.lemma, "CONJ", "conj");
+        continue;
+      case "NUM": {
+        const lex = lang.lexicon[tok.lemma];
+        const form = lex ?? closedClassForm(lang, tok.lemma) ?? [];
+        if (form.length > 0) {
+          targetTokens.push({
+            englishLemma: tok.lemma,
+            englishTag: "NUM",
+            targetForm: form,
+            targetSurface: form.join(""),
+            glossNote: "num",
+            resolution: lex ? "direct" : "concept",
+          });
+        }
+        continue;
+      }
+      default: {
+        // N / PRON / V / ADJ / ADV — open-class lookup chain.
+        const { form, resolution, glossNote } = resolveLemma(lang, tok.lemma);
+        if (!form) {
+          missing.push(tok.lemma);
+          targetTokens.push({
+            englishLemma: tok.lemma,
+            englishTag: tok.tag,
+            targetForm: [],
+            targetSurface: `“${tok.lemma}”`,
+            glossNote: "?",
+            resolution,
+          });
+          continue;
+        }
+        let inflected = form;
+        if (pendingArticle && (tok.tag === "N" || tok.tag === "PRON")) {
+          inflected = pendingAffix === "proclitic"
+            ? [...pendingArticle, ...inflected]
+            : [...inflected, ...pendingArticle];
+          pendingArticle = null;
+          pendingAffix = null;
+        }
+        targetTokens.push({
+          englishLemma: tok.lemma,
+          englishTag: tok.tag,
+          targetForm: inflected,
+          targetSurface: inflected.join(""),
+          glossNote,
+          resolution,
+        });
+      }
+    }
+  }
 
   const notes = missing.length === 0
     ? `Resolved every word via the dictionary.`
@@ -927,8 +788,8 @@ export function translateSentence(lang: Language, english: string): SentenceTran
   return {
     english,
     englishTokens,
-    targetTokens: arrangedNonNull,
-    arranged,
+    targetTokens,
+    arranged: targetTokens.map((t) => t.targetSurface).filter((s) => s.length > 0),
     missing,
     notes,
   };

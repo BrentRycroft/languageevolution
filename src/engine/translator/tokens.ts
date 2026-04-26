@@ -27,3 +27,16 @@ export interface EnglishToken {
     possessor?: boolean;
   };
 }
+
+/**
+ * English wh-words — `who`/`what`/`where`/`when`/`why`/`how` plus the
+ * relativisers `whom`/`whose` and the determiners `which`. Tagged
+ * PUNCT during tokenisation so the parser doesn't pull them into NP
+ * slots; the parser captures the lemma on `Sentence.leadingWh` and
+ * the realiser surfaces a closed-class form via `closedClassForm`.
+ */
+export const WH_LEMMAS: ReadonlySet<string> = new Set([
+  "who", "whom", "whose",
+  "what", "which",
+  "where", "when", "why", "how",
+]);

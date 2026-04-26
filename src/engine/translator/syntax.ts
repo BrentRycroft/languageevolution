@@ -37,6 +37,12 @@ export interface NounRef {
   isPronoun?: boolean;
   /** Stamped by the realiser's populate step. */
   resolution?: LemmaResolution;
+  /** True when the parser fabricated this noun-phrase head as a
+   *  fallback (no overt subject in the input — e.g. an imperative or
+   *  a wh-question with the wh-word as subject). Used by
+   *  parseSyntaxAll to inherit the previous clause's subject when a
+   *  later clause has no overt nominal of its own. */
+  synthesized?: boolean;
 }
 
 export type Aspect = "perfective" | "imperfective" | "progressive";

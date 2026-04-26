@@ -1,4 +1,5 @@
 import type { EnglishToken } from "./tokens";
+import { WH_LEMMAS } from "./tokens";
 import type {
   NP,
   PP,
@@ -42,13 +43,8 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   // Leading wh-word: tagged PUNCT during tokenisation so it doesn't
   // pollute NP detection in relative clauses. Captured here so the
   // realiser can surface a closed-class translation at sentence
-  // start (mimics English-style wh-fronting). The wh-words covered
-  // are who / whom / whose / what / which / where / when / why / how.
-  const WH_LEMMAS = new Set([
-    "who", "whom", "whose",
-    "what", "which",
-    "where", "when", "why", "how",
-  ]);
+  // start (mimics English-style wh-fronting). Covers who / whom /
+  // whose / what / which / where / when / why / how.
   let leadingWh: { lemma: string } | undefined;
   for (const t of tokens) {
     if (t.tag === "PUNCT" && WH_LEMMAS.has(t.lemma)) {
@@ -198,6 +194,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
           case: "nom",
           person: "3",
           isPronoun: true,
+          synthesized: true,
         },
         adjectives: [],
         pps: [],
@@ -212,6 +209,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
           case: "nom",
           person: "2",
           isPronoun: true,
+          synthesized: true,
         },
         adjectives: [],
         pps: [],
@@ -313,6 +311,45 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
  * single- and multi-clause paths uniformly.
  */
 export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
+  // Relative-clause extraction. Detects "the king WHO sees the wolf
+  // attacks" / "the king sees the wolf WHICH runs" — a wh-relativiser
+  // (PUNCT-tagged WH_LEMMA preceded by N/PRON) introducing an
+  // embedded clause inside an NP. We splice out the relative clause,
+  // parse the matrix without it, then parse the rel-clause separately
+  // with leadingWh set + subject inherited from the antecedent. The
+  // result is rendered linearly (matrix … rel-clause) since our
+  // realiser doesn't nest clauses inside NPs.
+  const rel = extractRelativeClause(tokens);
+  if (rel) {
+    const matrixSentences = parseSyntaxAll(rel.matrix);
+    const relSentence = parseSyntax(rel.relative);
+    if (relSentence) {
+      relSentence.leadingWh = { lemma: rel.relLemma };
+      // When the rel-clause has no overt subject ("the wolf which
+      // runs" — `which` is the subject), inherit a subject NP built
+      // from the antecedent (the noun immediately preceding the
+      // relativiser). This is the correct linguistic behaviour: the
+      // relativiser's reference is the adjacent NP, not the matrix
+      // clause's subject.
+      if (relSentence.subject.head.synthesized) {
+        const a = rel.antecedent;
+        relSentence.subject = {
+          kind: "NP",
+          head: {
+            lemma: a.lemma,
+            baseForm: [],
+            number: a.features.number === "pl" ? "pl" : "sg",
+            case: "nom",
+            person: (a.features.person ?? "3") as Person,
+            isPronoun: a.tag === "PRON",
+          },
+          adjectives: [],
+          pps: [],
+        };
+      }
+      return [...matrixSentences, relSentence];
+    }
+  }
   const verbCount = tokens.filter((t) => t.tag === "V").length;
   if (verbCount <= 1) {
     const single = parseSyntax(tokens);
@@ -375,18 +412,87 @@ export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
     // coordinated VPs read with a shared subject. Without this,
     // single-clause parseSyntax injects a synthetic "you" subject
     // (its imperative fallback), which surfaces as a phantom 2sg
-    // pronoun in clauses that should inherit the prior subject.
-    if (k > 0 && out.length > 0) {
+    // pronoun in clauses that should inherit the prior subject. The
+    // `synthesized` flag distinguishes a real "you" subject (genuine
+    // imperative) from the fabricated fallback.
+    if (k > 0 && out.length > 0 && s.subject.head.synthesized) {
       const segHasNominal = seg.tokens.some(
         (t) => t.tag === "N" || t.tag === "PRON",
       );
-      if (!segHasNominal && s.subject.head.lemma === "you") {
+      if (!segHasNominal) {
         s.subject = out[out.length - 1]!.subject;
       }
     }
     out.push(s);
   }
   return out;
+}
+
+/**
+ * Detect and slice out a single English relative clause introduced
+ * by a wh-relativiser (who / whom / whose / which / that). Returns
+ * null when no relative clause is found.
+ *
+ * Heuristic: the relativiser must (a) be tagged PUNCT (the tokeniser
+ * tags wh-words this way), (b) be preceded by an N/PRON antecedent,
+ * (c) be followed by a V (the rel-clause verb), and (d) have a
+ * second V somewhere after the rel-clause's content (the matrix
+ * verb). The rel-clause is the token span between the relativiser
+ * and the matrix V; the matrix is everything else.
+ */
+function extractRelativeClause(tokens: EnglishToken[]): {
+  matrix: EnglishToken[];
+  relative: EnglishToken[];
+  relLemma: string;
+  antecedent: EnglishToken;
+} | null {
+  for (let i = 1; i < tokens.length - 1; i++) {
+    const t = tokens[i]!;
+    // Wh-relativisers (who / which / whose / whom) tagged PUNCT, plus
+    // the bare relativiser `that` tagged DET. Both surface in English
+    // as "[antecedent] REL [verb] …".
+    const isWhRel = t.tag === "PUNCT" && WH_LEMMAS.has(t.lemma);
+    const isThatRel = t.tag === "DET" && t.lemma === "that";
+    if (!isWhRel && !isThatRel) continue;
+    const prev = tokens[i - 1]!;
+    if (prev.tag !== "N" && prev.tag !== "PRON") continue;
+    // Find the rel-clause V (next V after the wh).
+    let relVIdx = -1;
+    for (let j = i + 1; j < tokens.length; j++) {
+      if (tokens[j]!.tag === "V") { relVIdx = j; break; }
+    }
+    if (relVIdx < 0) continue;
+    // Find the matrix V. Two configurations:
+    //   - center-embedded: rel-clause is between antecedent and the
+    //     matrix V → matrix V comes AFTER the rel-V.
+    //   - sentence-final: rel-clause sits at the end → matrix V comes
+    //     BEFORE the wh.
+    let matrixVAfter = -1;
+    for (let j = relVIdx + 1; j < tokens.length; j++) {
+      if (tokens[j]!.tag === "V") { matrixVAfter = j; break; }
+    }
+    let matrixVBefore = -1;
+    for (let j = i - 1; j >= 0; j--) {
+      if (tokens[j]!.tag === "V") { matrixVBefore = j; break; }
+    }
+    if (matrixVAfter >= 0) {
+      return {
+        matrix: [...tokens.slice(0, i), ...tokens.slice(matrixVAfter)],
+        relative: tokens.slice(i + 1, matrixVAfter),
+        relLemma: t.lemma,
+        antecedent: prev,
+      };
+    }
+    if (matrixVBefore >= 0) {
+      return {
+        matrix: tokens.slice(0, i),
+        relative: tokens.slice(i + 1),
+        relLemma: t.lemma,
+        antecedent: prev,
+      };
+    }
+  }
+  return null;
 }
 
 function collectNP(
