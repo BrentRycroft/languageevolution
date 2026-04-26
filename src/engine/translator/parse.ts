@@ -223,6 +223,10 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
         adjectives: [],
         pps: [],
       };
+      // The wh-word is the subject — clear leadingWh so the realiser
+      // doesn't surface it a second time at sentence start. Without
+      // this, "what is it" emits `what what is it`.
+      leadingWh = undefined;
     } else if (verbIdx === 0 || (verbIdx > 0 && tokens[0]!.tag === "AUX")) {
       subject = {
         kind: "NP",

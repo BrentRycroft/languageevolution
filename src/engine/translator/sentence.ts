@@ -723,6 +723,12 @@ function translateFragment(
 ): SentenceTranslation {
   const articlePresence = lang.grammar.articlePresence ?? "none";
   const caseStrategy = lang.grammar.caseStrategy ?? (lang.grammar.hasCase ? "case" : "preposition");
+  // PREP host detection: in case-only languages, a preposition's
+  // semantics surfaces via case morphology on the host noun. If the
+  // fragment has no N/PRON to inflect, the PREP becomes orphaned and
+  // dropping it loses the only content (e.g. "for what" → empty).
+  // Track whether a host exists; if not, emit PREPs as closed-class.
+  const hasNominalHost = englishTokens.some((t) => t.tag === "N" || t.tag === "PRON");
   const targetTokens: TranslatedToken[] = [];
   const missing: string[] = [];
   // Pending enclitic / proclitic article — attaches to the next N/PRON
@@ -746,12 +752,15 @@ function translateFragment(
   for (const tok of englishTokens) {
     switch (tok.tag) {
       case "PUNCT":
-        // Surface inline negators ("not"/"n't"/"never") even in fragment
-        // input so the user sees the negation. Drop everything else
-        // (real punctuation, wh-words, …) — there's no clause to attach
-        // them to.
+        // Surface negators ("not"/"n't"/"never") and wh-words via
+        // their closed-class forms — fragment input is often a wh-
+        // question or short reply ("what?", "for what?", "not me")
+        // and silently dropping them leaves nothing. Drop only the
+        // genuine punctuation tokens.
         if (tok.lemma === "not" || tok.lemma === "n't" || tok.lemma === "never") {
           emitClosedClass("not", "PUNCT", "neg");
+        } else if (WH_LEMMAS.has(tok.lemma)) {
+          emitClosedClass(tok.lemma, "PUNCT", "wh");
         }
         continue;
       case "AUX":
@@ -773,7 +782,12 @@ function translateFragment(
         continue;
       }
       case "PREP":
-        if (caseStrategy === "case") continue;
+        // Case-only languages express prepositional semantics via case
+        // morphology on the host noun. Drop the PREP when there's a
+        // nominal in the input that can carry that case (regular
+        // path), but emit it when no nominal host exists — otherwise
+        // "for what?" would surface as an empty target.
+        if (caseStrategy === "case" && hasNominalHost) continue;
         emitClosedClass(tok.lemma, "PREP", caseStrategy === "postposition" ? "postp" : "prep");
         continue;
       case "CONJ":

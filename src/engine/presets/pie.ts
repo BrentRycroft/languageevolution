@@ -70,7 +70,7 @@ const LEXICON: Lexicon = {
   seed: ["s", "eː", "m", "n"],
   fruit: ["bʰ", "r", "o", "g"],
   grain: ["gʰ", "r", "eː", "h₁", "n"],
-  bark: ["k", "o", "r", "k"],
+  bark: ["s", "k", "e", "r"],
   oak: ["a", "j", "g"],
   birch: ["bʰ", "e", "r", "h₂", "gʲ", "o"],
   apple: ["a", "b", "l", "u"],
@@ -95,7 +95,6 @@ const LEXICON: Lexicon = {
   bee: ["bʰ", "e", "i"],
   egg: ["h₂", "oː", "w", "j", "o"],
   feather: ["p", "e", "t", "r", "o"],
-  wing: ["p", "o", "t", "n", "h₂"],
   horn: ["kʲ", "e", "r", "n"],
   tail: ["p", "u", "kʲ", "n"],
   // — body —
@@ -104,7 +103,7 @@ const LEXICON: Lexicon = {
   body: ["kʷ", "r̩", "p"],
   head: ["kʲ", "e", "r", "h₂"],
   hair: ["p", "u", "l", "h₂"],
-  face: ["p", "r", "o", "kʷ", "p"],
+  face: ["h₃", "o", "kʷ"],
   eye: ["h₃", "o", "kʷ"],
   ear: ["h₂", "o", "w", "s"],
   // PIE *neh₂s- "nose".
@@ -112,12 +111,10 @@ const LEXICON: Lexicon = {
   mouth: ["h₁", "o", "s"],
   tooth: ["h₁", "d", "o", "n", "t"],
   tongue: ["d", "n̩", "gʲʰ", "w", "e", "h₂"],
-  lip: ["l", "e", "b"],
   neck: ["gʷ", "e", "r", "i", "h₂"],
   shoulder: ["h₂", "o", "m", "s", "o"],
   arm: ["bʰ", "aː", "gʰ", "u"],
   hand: ["gʲʰ", "e", "s", "r"],
-  finger: ["d", "i", "g", "i", "t"],
   nail: ["h₃", "n", "o", "gʰ"],
   // PIE *bʰerǵʰ- "high, chest" — the Lat. pectus form was wrong.
   chest: ["bʰ", "e", "r", "gʲʰ"],
@@ -131,7 +128,6 @@ const LEXICON: Lexicon = {
   skin: ["k", "o", "r", "j", "o"],
   flesh: ["m", "eː", "m", "s", "o"],
   knee: ["gʲ", "o", "n", "u"],
-  leg: ["k", "r", "u", "s"],
   foot: ["p", "o", "d", "s"],
   // — kinship / people —
   person: ["dʰ", "gʲʰ", "m", "oː"],
@@ -151,7 +147,6 @@ const LEXICON: Lexicon = {
   king: ["h₃", "r", "eː", "gʲ", "s"],
   god: ["d", "j", "e", "w", "s"],
   guest: ["gʰ", "o", "s", "t", "i"],
-  enemy: ["h", "o", "s", "t", "i", "s"],
   // — household / artifact —
   house: ["d", "o", "m"],
   door: ["dʰ", "w", "o", "r"],
@@ -202,7 +197,7 @@ const LEXICON: Lexicon = {
   // — verbs of action —
   do: ["dʰ", "e", "h₁"],
   make: ["w", "e", "r", "gʲ"],
-  take: ["g", "h", "e", "n", "d"],
+  take: ["gʰ", "e", "n", "d"],
   give: ["d", "e", "h₃"],
   hold: ["gʰ", "e", "r"],
   carry: ["bʰ", "e", "r"],
@@ -229,7 +224,6 @@ const LEXICON: Lexicon = {
   grow: ["bʰ", "u", "h₂"],
   love: ["k", "e", "h₂"],
   fear: ["bʰ", "e", "j", "h₁"],
-  laugh: ["k", "h", "a", "k"],
   cry: ["w", "e", "i"],
   // — numbers —
   one: ["o", "j", "n", "o", "s"],
@@ -254,7 +248,7 @@ const LEXICON: Lexicon = {
   thin: ["t", "e", "n", "u"],
   heavy: ["gʷ", "r", "e", "h₂"],
   light: ["l", "e", "n", "gʷʰ"],
-  hot: ["k", "o", "l", "h₁"],
+  hot: ["gʷʰ", "e", "r"],
   cold: ["gʰ", "e", "l"],
   wet: ["w", "o", "d", "n"],
   dry: ["s", "u", "k", "s", "o"],
@@ -279,7 +273,7 @@ const LEXICON: Lexicon = {
   yellow: ["gʲʰ", "e", "l", "h₃"],
   blue: ["bʰ", "l", "eː", "w"],
   // — abstract / pronouns —
-  name: ["h₁", "n", "eː", "h₃", "m", "n̩"],
+  name: ["h₁", "n", "o", "m", "n̩"],
   word: ["w", "e", "kʷ", "o", "s"],
   truth: ["s", "o", "n", "t"],
   // direction / deixis
@@ -296,7 +290,6 @@ const LEXICON: Lexicon = {
   jaw: ["gʲ", "e", "n", "u"],
   throat: ["gʷ", "e", "r", "h₃"],
   chin: ["gʲ", "e", "n", "u"],
-  breast: ["p", "e", "n"],
   thumb: ["p", "o", "l", "e", "kʲ"],
   sinew: ["s", "n", "eː", "w"],
   // — extended kinship —
@@ -310,14 +303,12 @@ const LEXICON: Lexicon = {
   youth: ["j", "u", "h₁", "w", "e", "n"],
   elder: ["gʲ", "e", "r", "h₂"],
   // — extended animals —
-  hare: ["kʲ", "a", "s", "o"],
   otter: ["u", "d", "r", "o"],
   beaver: ["bʰ", "e", "bʰ", "r"],
   mouse: ["m", "uː", "s"],
   fox: ["w", "l̩", "p", "e", "kʲ"],
   duck: ["a", "n", "e", "t"],
   goose: ["gʲʰ", "a", "n", "s"],
-  swan: ["s", "w", "e", "r"],
   lamb: ["w", "r̩", "eː", "n"],
   calf: ["w", "e", "t", "e", "l"],
   foal: ["p", "oː", "l"],
@@ -325,12 +316,9 @@ const LEXICON: Lexicon = {
   barley: ["h₂", "e", "d", "o", "s"],
   wheat: ["p", "uː", "r"],
   vine: ["w", "e", "j", "t"],
-  berry: ["w", "i", "n", "d"],
   nut: ["k", "n", "u"],
   mead: ["m", "e", "dʰ", "u"],
   beer: ["a", "l", "u"],
-  butter: ["gʷ", "oː", "u", "s"],
-  cheese: ["t", "u", "r"],
   flour: ["m", "o", "l", "h₂"],
   dough: ["t", "a", "j", "s"],
   wine: ["w", "o", "j", "n", "o"],
@@ -342,8 +330,6 @@ const LEXICON: Lexicon = {
   loom: ["w", "e", "bʰ", "n̩"],
   spindle: ["s", "n", "eː", "h₁"],
   thread: ["p", "e", "n", "s"],
-  pot: ["k", "a", "p", "a"],
-  cup: ["k", "u", "p"],
   basket: ["k", "o", "r"],
   wagon: ["w", "e", "gʲʰ", "n", "o"],
   reins: ["r", "e", "j"],
@@ -351,18 +337,15 @@ const LEXICON: Lexicon = {
   // — metals —
   gold: ["gʲʰ", "l̩", "h₃", "t", "o"],
   silver: ["h₂", "r̩", "gʲ", "n̩", "t"],
-  bronze: ["a", "j", "e", "s"],
-  iron: ["h₁", "e", "s"],
+  metal: ["a", "j", "e", "s"],
   // — weather extended —
   frost: ["p", "r", "u", "s"],
   hail: ["gʰ", "r", "o", "h₁"],
-  dew: ["w", "e", "d", "oː"],
+  dew: ["h₂", "e", "w", "s", "r̩"],
   fog: ["m", "e", "j", "gʰ"],
   breeze: ["a", "n", "h₂", "m"],
   storm: ["w", "e", "t", "e", "r"],
   // — directions —
-  north: ["h₁", "m̩", "e", "t"],
-  south: ["s", "e", "w", "m"],
   east: ["h₂", "e", "w", "s"],
   west: ["w", "e", "s", "p", "e", "r"],
   up: ["u", "p", "e", "r"],
@@ -397,7 +380,6 @@ const LEXICON: Lexicon = {
   bind: ["d", "e", "h₁"],
   release: ["l", "e", "w", "h₁"],
   sing: ["k", "a", "n"],
-  dance: ["t", "o", "r"],
   wake: ["gʷ", "e", "r"],
   meet: ["m", "e", "j", "t"],
   leave: ["l", "e", "j", "kʷ"],
@@ -407,8 +389,6 @@ const LEXICON: Lexicon = {
   // — social / ritual —
   tribe: ["t", "e", "w", "t", "a"],
   clan: ["gʲ", "e", "n", "h₁"],
-  warrior: ["w", "e", "j", "r"],
-  priest: ["bʰ", "l", "a", "gʰ"],
   sacrifice: ["gʲʰ", "e", "w"],
   offering: ["d", "e", "h₃", "n"],
   prayer: ["gʷʰ", "e", "dʰ"],
@@ -433,7 +413,6 @@ const LEXICON: Lexicon = {
   hour: ["oː", "r"],
   now: ["n", "uː"],
   yesterday: ["dʰ", "gʰ", "j", "e", "s"],
-  tomorrow: ["kʲ", "r", "a", "s"],
   // — quantifiers —
   all: ["s", "o", "l"],
   many: ["m", "e", "gʰ"],
@@ -471,7 +450,7 @@ const LEXICON: Lexicon = {
   on: ["o", "p"],
   to: ["d", "o"],
   for: ["p", "r", "o"],
-  by: ["e", "p", "i"],
+  by: ["h₁", "e", "p", "i"],
 };
 
 const FREQ: Record<Meaning, number> = {
