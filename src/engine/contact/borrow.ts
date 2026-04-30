@@ -6,6 +6,37 @@ import { isFormLegal } from "../phonology/wordShape";
 import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
+import { clusterOf } from "../semantics/clusters";
+
+const CLUSTER_BORROW_BIAS: Record<string, number> = {
+  tools: 3.5,
+  food: 3.0,
+  clothing: 2.6,
+  abstract: 2.4,
+  time: 2.0,
+  numbers: 1.8,
+  plants: 1.4,
+  animals: 1.3,
+  environment: 1.0,
+  action: 0.8,
+  metabolism: 0.7,
+  perception: 0.6,
+  quality: 0.5,
+  motion: 0.4,
+  spatial: 0.4,
+  kinship: 0.35,
+  body: 0.25,
+  pronoun: 0.05,
+};
+
+const TIER_LOAN_BOOST: Record<string, number> = {
+  tools: 1.6,
+  abstract: 1.6,
+  food: 1.3,
+  clothing: 1.3,
+  time: 1.3,
+  numbers: 1.3,
+};
 
 export interface LoanEvent {
   donor: string;
@@ -68,7 +99,8 @@ export function tryBorrow(
   const candidates = donorMeanings.filter((m) => !recipient.lexicon[m]);
   const pool = candidates.length > 0 ? candidates : donorMeanings;
   if (pool.length === 0) return null;
-  const meaning = pool[rng.int(pool.length)]!;
+  const tierGap = (donor.culturalTier ?? 0) - (recipient.culturalTier ?? 0);
+  const meaning = pickMeaningByDomain(pool, tierGap, rng);
   const originalForm = donor.lexicon[meaning]!;
   const adapted = adaptPhonemes(originalForm, recipient, rng);
   if (adapted.length === 0) return null;
@@ -91,6 +123,27 @@ export function tryBorrow(
     adaptedForm: adapted.join(""),
     distance,
   };
+}
+
+function pickMeaningByDomain(pool: string[], tierGap: number, rng: Rng): string {
+  const weights: number[] = [];
+  let total = 0;
+  for (const m of pool) {
+    const cluster = clusterOf(m);
+    let w = cluster ? (CLUSTER_BORROW_BIAS[cluster] ?? 0.6) : 0.6;
+    if (tierGap > 0 && cluster && TIER_LOAN_BOOST[cluster]) {
+      w *= TIER_LOAN_BOOST[cluster] ** Math.min(2, tierGap);
+    }
+    weights.push(w);
+    total += w;
+  }
+  if (total <= 0) return pool[rng.int(pool.length)]!;
+  let r = rng.next() * total;
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i]!;
+    if (r <= 0) return pool[i]!;
+  }
+  return pool[pool.length - 1]!;
 }
 
 function isAncestor(tree: LanguageTree, candidateAncestorId: string, descendantId: string): boolean {

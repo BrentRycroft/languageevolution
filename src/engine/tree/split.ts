@@ -10,6 +10,7 @@ import { partitionTerritory } from "../geo/territory";
 import type { WorldMap } from "../geo/map";
 import { leafIds } from "./leafIds";
 import { CONSERVATISM_MIN, CONSERVATISM_MAX } from "../constants";
+import { applyFounderInnovation } from "./founder";
 
 export { leafIds };
 
@@ -196,6 +197,24 @@ export function splitLeaf(
   }
   for (const child of children) {
     child.lexicalCapacity = lexicalCapacity(child, generation);
+  }
+
+  const usedKinds = new Set<string>();
+  for (const child of children) {
+    const innovation = applyFounderInnovation(
+      child,
+      rng,
+      generation,
+      usedKinds.size >= 2 ? undefined : usedKinds,
+    );
+    if (innovation) {
+      usedKinds.add(innovation.kind);
+      child.events.push({
+        generation,
+        kind: innovation.kind === "phonology" ? "sound_change" : "grammar_shift",
+        description: `founder innovation — ${innovation.description}`,
+      });
+    }
   }
 
   const parentCoords = parentLang.coords ?? { x: 0, y: 0 };

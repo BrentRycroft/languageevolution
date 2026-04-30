@@ -4,6 +4,7 @@ import { maybeRecarve } from "../semantics/recarve";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { realismMultiplier } from "../phonology/rate";
+import { bumpFrequency } from "../lexicon/frequencyDynamics";
 
 export function stepSemantics(
   lang: Language,
@@ -18,6 +19,7 @@ export function stepSemantics(
       let tag = drift.kind as string;
       if (drift.takeover) tag = `${drift.kind} (takeover)`;
       else if (drift.polysemous) tag = `${drift.kind} (polysemy)`;
+      bumpFrequency(lang, drift.to, 0.06);
       pushEvent(lang, {
         generation,
         kind: "semantic_drift",
