@@ -383,7 +383,7 @@ function EventList({ events }: { events: LanguageEvent[] }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="compare-section">
-      <div className="grammar-section-label" style={{ marginBottom: 4 }}>
+      <div className="grammar-section-label mb-4">
         {title}
       </div>
       {children}
@@ -548,7 +548,7 @@ function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[]
         // an English source field, but the gloss is unique per line
         // (it includes the meaning slots). Plain `i` would re-key
         // every cell on rerender.
-        <div key={`${line.gloss}-${i}`} style={{ marginBottom: 6 }}>
+        <div key={`${line.gloss}-${i}`} className="mb-6">
           <div
             style={{
               fontFamily: "var(--font-mono)",

@@ -54,7 +54,7 @@ export function Translator() {
 
   return (
     <div style={{ fontSize: 13, maxWidth: 760 }}>
-      <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <div className="toolbar">
         {(["sentence", "word", "lang-to-lang", "cognates", "etymology"] as const).map((m) => (
           <button
             key={m}
@@ -119,7 +119,7 @@ export function Translator() {
       </div>
 
       {mode === "sentence" && (
-        <div style={{ marginTop: 8 }}>
+        <div className="mt-8">
           <textarea
             placeholder="Enter an English sentence (e.g. The dog sees the mother by the water)."
             value={text}
@@ -142,7 +142,7 @@ export function Translator() {
       )}
 
       {mode === "lang-to-lang" && (
-        <div style={{ marginTop: 8 }}>
+        <div className="mt-8">
           <input
             type="text"
             placeholder="form in source language (e.g. vaθar)"
@@ -156,7 +156,7 @@ export function Translator() {
       )}
 
       {mode === "word" && paradigmCats.length > 0 && (
-        <div style={{ marginTop: 6 }}>
+        <div className="mt-6">
           <label style={{ fontSize: 11, color: "var(--muted)", marginRight: 6 }}>
             Inflect as:
           </label>
@@ -267,13 +267,7 @@ function SentenceOutput({
       </div>
       {/* Per-token gloss row */}
       <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 12,
-          padding: "6px 0",
-          borderTop: "1px dashed var(--border)",
-        }}
+        className="token-row"
       >
         {result.targetTokens.map((t, i) => (
           // Stable key: english lemma + tag + position. A plain `i`
@@ -282,19 +276,13 @@ function SentenceOutput({
           // hover state.
           <div
             key={`${t.englishLemma}-${t.englishTag}-${i}`}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              fontFamily: "var(--font-mono)",
-              minWidth: 60,
-            }}
+            className="token-card"
             title={`${t.englishLemma} (${t.englishTag})${t.glossNote ? " · " + t.glossNote : ""} · ${t.resolution}`}
           >
-            <span style={{ fontSize: "var(--fs-2)", color: "var(--text)" }}>
+            <span className="token-form">
               {t.targetForm.length > 0 ? formatForm(t.targetForm, lang, script, t.englishLemma) : t.targetSurface}
             </span>
-            <span style={{ fontSize: 10, color: "var(--muted)" }}>
+            <span className="token-gloss">
               {t.englishLemma}
               {t.glossNote && <> · {t.glossNote}</>}
             </span>
@@ -302,11 +290,11 @@ function SentenceOutput({
         ))}
       </div>
       {result.missing.length > 0 && (
-        <div style={{ fontSize: "var(--fs-1)", color: "#ffcc66", marginTop: 4 }}>
+        <div className="footer-note warn">
           Unresolved: {result.missing.join(", ")}
         </div>
       )}
-      <div style={{ fontSize: "var(--fs-1)", color: "var(--muted)", marginTop: 4 }}>
+      <div className="footer-note">
         {result.notes}
       </div>
     </div>
