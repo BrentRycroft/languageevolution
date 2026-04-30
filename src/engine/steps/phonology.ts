@@ -1,4 +1,4 @@
-import type { Language, SimulationConfig, SimulationState, WordForm } from "../types";
+import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
 import { applyChangesToLexicon } from "../phonology/apply";
 import { driftOrthography } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
@@ -14,8 +14,10 @@ import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
 
-const AREAL_HALF_LIFE = 150;
-const AREAL_BASE_PROBABILITY = 0.25;
+const AREAL_BASE_PROBABILITY = 0.35;
+const AREAL_WAVE_SPEED = 60;
+const AREAL_WAVE_BAND = 80;
+const AREAL_MAX_AGE = 30;
 
 const PROPOSAL_CADENCE = 8;
 
@@ -199,49 +201,74 @@ export function stepPhonology(
           meta: { pairedRuleId: rule.id },
         });
       }
-      if (state) {
-        propagateArealRule(state, lang, rule, generation, rng);
+      if (state && lang.coords) {
+        if (!state.pendingArealRules) state.pendingArealRules = [];
+        state.pendingArealRules.push({
+          rule,
+          donorId: lang.id,
+          donorCoords: { ...lang.coords },
+          birthGeneration: generation,
+        });
       }
     }
   }
 }
 
-function propagateArealRule(
+export function stepArealWaves(
   state: SimulationState,
-  donor: Language,
-  rule: ReturnType<typeof proposeOneRule> & object,
   generation: number,
   rng: Rng,
 ): void {
-  const donorCoords = donor.coords;
-  if (!donorCoords) return;
+  const pending = state.pendingArealRules;
+  if (!pending || pending.length === 0) return;
   const alive = leafIds(state.tree).filter(
-    (id) => id !== donor.id && !state.tree[id]!.language.extinct,
+    (id) => !state.tree[id]!.language.extinct,
   );
-  for (const id of alive) {
-    const sister = state.tree[id]!.language;
-    const sisterCoords = sister.coords;
-    if (!sisterCoords) continue;
-    const d = geoDistance(donorCoords, sisterCoords);
-    const affinity = AREAL_HALF_LIFE / (AREAL_HALF_LIFE + d);
-    const p = AREAL_BASE_PROBABILITY * affinity;
-    if (!rng.chance(p)) continue;
-    const adopted: typeof rule = {
-      ...rule,
-      id: `${sister.id}.g${generation}.areal.${rule.templateId}`,
-      birthGeneration: generation,
-      lastFireGeneration: generation,
-    };
-    if (!hasAnyMatch(adopted, sister)) continue;
-    if (!sister.activeRules) sister.activeRules = [];
-    if (sister.activeRules.some((r) => r.templateId === rule.templateId)) continue;
-    sister.activeRules.push(adopted);
-    pushEvent(sister, {
-      generation,
-      kind: "sound_change",
-      description: `areal diffusion from ${donor.name}: ${rule.description}`,
-    });
+  const survivors: PendingArealRule[] = [];
+  for (const wave of pending) {
+    const age = generation - wave.birthGeneration;
+    if (age <= 0) {
+      survivors.push(wave);
+      continue;
+    }
+    if (age > AREAL_MAX_AGE) continue;
+    const radius = AREAL_WAVE_SPEED * age;
+    const inner = Math.max(0, radius - AREAL_WAVE_BAND);
+    const outer = radius + AREAL_WAVE_BAND;
+    let anyMatch = false;
+    for (const id of alive) {
+      if (id === wave.donorId) continue;
+      const sister = state.tree[id]!.language;
+      const sisterCoords = sister.coords;
+      if (!sisterCoords) continue;
+      const d = geoDistance(wave.donorCoords, sisterCoords);
+      if (d < inner || d > outer) {
+        if (d > outer) anyMatch = anyMatch || false;
+        else anyMatch = true;
+        continue;
+      }
+      anyMatch = true;
+      if (sister.activeRules?.some((r) => r.templateId === wave.rule.templateId)) continue;
+      if (!rng.chance(AREAL_BASE_PROBABILITY)) continue;
+      const adopted = {
+        ...wave.rule,
+        id: `${sister.id}.g${generation}.areal.${wave.rule.templateId}`,
+        birthGeneration: generation,
+        lastFireGeneration: generation,
+      };
+      if (!hasAnyMatch(adopted, sister)) continue;
+      if (!sister.activeRules) sister.activeRules = [];
+      sister.activeRules.push(adopted);
+      const donorName = state.tree[wave.donorId]?.language.name ?? wave.donorId;
+      pushEvent(sister, {
+        generation,
+        kind: "sound_change",
+        description: `areal diffusion from ${donorName}: ${wave.rule.description}`,
+      });
+    }
+    if (anyMatch) survivors.push(wave);
   }
+  state.pendingArealRules = survivors;
 }
 
 function nearestNeighborDistance(

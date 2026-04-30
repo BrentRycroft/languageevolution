@@ -1,12 +1,16 @@
-import type { Language, LanguageTree } from "../types";
+import type { Language, LanguageTree, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { leafIds } from "../tree/split";
-import { isVowel } from "../phonology/ipa";
+import { isVowel, isSyllabic } from "../phonology/ipa";
 import { isFormLegal } from "../phonology/wordShape";
+import { stripTone } from "../phonology/tone";
 import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 import { clusterOf } from "../semantics/clusters";
+
+const MAX_CONSONANT_RUN = 2;
+const PREFERRED_EPENTHETIC = ["a", "i", "u", "e", "o", "ə"];
 
 const CLUSTER_BORROW_BIAS: Record<string, number> = {
   tools: 3.5,
@@ -102,7 +106,8 @@ export function tryBorrow(
   const tierGap = (donor.culturalTier ?? 0) - (recipient.culturalTier ?? 0);
   const meaning = pickMeaningByDomain(pool, tierGap, rng);
   const originalForm = donor.lexicon[meaning]!;
-  const adapted = adaptPhonemes(originalForm, recipient, rng);
+  const substituted = adaptPhonemes(originalForm, recipient, rng);
+  const adapted = repairLoanShape(substituted, recipient);
   if (adapted.length === 0) return null;
   if (!isFormLegal(meaning, adapted)) return null;
   recipient.lexicon[meaning] = adapted;
@@ -167,4 +172,43 @@ function adaptPhonemes(form: string[], recipient: Language, rng: Rng): string[] 
     if (candidates.length === 0) return p;
     return candidates[rng.int(candidates.length)]!;
   });
+}
+
+function pickEpentheticVowel(recipient: Language): string {
+  const inv = recipient.phonemeInventory.segmental;
+  for (const v of PREFERRED_EPENTHETIC) if (inv.includes(v)) return v;
+  for (const p of inv) if (isVowel(p)) return p;
+  return "a";
+}
+
+function isNonSyllabic(p: string): boolean {
+  const base = stripTone(p);
+  return !isVowel(base) && !isSyllabic(base);
+}
+
+function repairLoanShape(form: WordForm, recipient: Language): WordForm {
+  if (form.length === 0) return form;
+  const epenthetic = pickEpentheticVowel(recipient);
+  const out: string[] = [];
+  let consRun = 0;
+  for (const p of form) {
+    if (isNonSyllabic(p)) {
+      consRun++;
+      if (consRun > MAX_CONSONANT_RUN) {
+        out.push(epenthetic);
+        consRun = 1;
+      }
+      out.push(p);
+    } else {
+      consRun = 0;
+      out.push(p);
+    }
+  }
+  let trailing = 0;
+  for (let i = out.length - 1; i >= 0 && isNonSyllabic(out[i]!); i--) trailing++;
+  if (trailing >= 2) out.push(epenthetic);
+  if (out.length > 0 && !out.some((p) => !isNonSyllabic(p))) {
+    out.push(epenthetic);
+  }
+  return out;
 }

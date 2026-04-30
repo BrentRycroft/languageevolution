@@ -2,7 +2,7 @@ import type { SimulationConfig, SimulationState } from "./types";
 import { leafIds, pickFirstSplitChildCount, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
 import { buildInitialState } from "./steps/init";
-import { stepPhonology } from "./steps/phonology";
+import { stepPhonology, stepArealWaves } from "./steps/phonology";
 import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { stepSemantics } from "./steps/semantics";
@@ -107,6 +107,7 @@ export function createSimulation(
       const stillLeaf = (state.tree[leafId]?.childrenIds.length ?? 0) === 0;
       if (config.modes.death && stillLeaf) stepDeath(state, lang, config, rng, closenessCache);
     }
+    stepArealWaves(state, nextGen, rng);
     if (config.modes.tree) {
       stepCreolization(state, config, rng, nextGen);
     }

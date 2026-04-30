@@ -39,6 +39,24 @@ function ageBoost(age: number | undefined): number {
 
 const DEFAULT_FREQUENCY = 0.5;
 
+const CATEGORY_PRIORITY: Record<SoundChange["category"], number> = {
+  vowel: 2.2,
+  lenition: 2.0,
+  voicing: 1.8,
+  palatalization: 1.6,
+  assimilation: 1.4,
+  deletion: 1.2,
+  insertion: 1.0,
+  metathesis: 0.9,
+  gemination: 0.8,
+  fortition: 0.5,
+};
+
+function priorityFor(change: SoundChange): number {
+  if (typeof change.priority === "number") return change.priority;
+  return CATEGORY_PRIORITY[change.category] ?? 1.0;
+}
+
 function frequencyFor(meaning: Meaning, hints?: Record<Meaning, number>): number {
   if (!hints) return DEFAULT_FREQUENCY;
   const v = hints[meaning];
@@ -63,7 +81,10 @@ export function applyChangesToWord(
 
   let current = word;
   const lexicalIdx = opts.lexicalStress?.[meaning];
-  for (const change of changes) {
+  const ordered = changes.slice().sort(
+    (a, b) => priorityFor(b) - priorityFor(a),
+  );
+  for (const change of ordered) {
     const weight = opts.weights[change.id] ?? change.baseWeight;
     if (weight <= 0) continue;
     if (change.stressFilter && change.stressFilter !== "any") {
