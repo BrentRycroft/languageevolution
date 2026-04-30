@@ -8,6 +8,7 @@ import { maybeSpreadTone } from "../phonology/tone_spread";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../phonology/propose";
 import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
+import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/variants";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
@@ -58,6 +59,7 @@ export function stepPhonology(
     delete lang.wordOrigin[m];
     delete lang.localNeighbors[m];
     if (lang.registerOf) delete lang.registerOf[m];
+    if (lang.variants) delete lang.variants[m];
   }
   const evolveForm = (form: WordForm): WordForm => {
     return changes.reduce((acc, change) => {
@@ -96,9 +98,23 @@ export function stepPhonology(
       mutated++;
       lang.lastChangeGeneration[m] = generation;
       bumpFrequency(lang, m, 0.04);
+      recordVariant(lang, m, before[m]!, generation, 0.55);
+      recordVariant(lang, m, lang.lexicon[m]!, generation, 0.7);
+    } else {
+      reinforceCanonical(lang, m, lang.lexicon[m]!);
     }
   }
   decayFrequencies(lang);
+  const actuations = decayAndActuate(lang, generation);
+  for (const a of actuations) {
+    lang.lastChangeGeneration[a.meaning] = generation;
+    bumpFrequency(lang, a.meaning, 0.06);
+    pushEvent(lang, {
+      generation,
+      kind: "actuation",
+      description: `actuation: "${a.meaning}" /${a.fromForm.join("")}/ → /${a.toForm.join("")}/ (minority variant prevailed)`,
+    });
+  }
   if (mutated > 0) {
     const oldInventory = new Set(lang.phonemeInventory.segmental);
     refreshInventory(lang);
