@@ -328,18 +328,28 @@ export function App() {
             <Glossary />
           </div>
         )}
-        {activeTab === "events" && (
-          <div className="panel panel-single">
-            <h3>History</h3>
-            <EventsLog />
-          </div>
-        )}
-        {activeTab === "translate" && (
-          <div className="panel panel-single">
-            <h3>Translator</h3>
-            <Translator />
-          </div>
-        )}
+        {/* Sticky-state tabs: kept mounted across tab switches so the
+            user's translator input + events-log scroll position
+            survive. We toggle visibility via `display: none` rather
+            than unmounting. Tabs with mostly derived state (Tree,
+            Map, Stats, Timeline, …) stay conditional to keep initial
+            mount cheap. */}
+        <div
+          className="panel panel-single"
+          style={{ display: activeTab === "events" ? "" : "none" }}
+          aria-hidden={activeTab !== "events"}
+        >
+          <h3>History</h3>
+          <EventsLog />
+        </div>
+        <div
+          className="panel panel-single"
+          style={{ display: activeTab === "translate" ? "" : "none" }}
+          aria-hidden={activeTab !== "translate"}
+        >
+          <h3>Translator</h3>
+          <Translator />
+        </div>
         {activeTab === "compare" && (
           <div className="panel panel-single">
             <h3>Compare</h3>
