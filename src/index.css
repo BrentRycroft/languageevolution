@@ -1355,6 +1355,90 @@ tr.grammar-diff td:last-child {
   stroke-width: 1.5;
 }
 
+/* Hover card for tree nodes — replaces the slow native SVG <title>.
+   Positioned absolutely inside the tree's relatively-positioned wrapper
+   and offset from the cursor so the card itself never receives the
+   mouseleave event. */
+.tree-node-hover {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  min-width: 180px;
+  max-width: 280px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-2);
+  font-size: var(--fs-1);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: tree-node-hover-fade 120ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tree-node-hover { animation: none; }
+}
+@keyframes tree-node-hover-fade {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tree-node-hover-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-2);
+  font-weight: var(--fw-medium, 600);
+}
+.tree-node-hover-name {
+  color: var(--accent);
+}
+.tree-node-hover-extinct {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--r-pill);
+  padding: 1px 6px;
+}
+
+.tree-node-hover-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tree-node-hover-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+.tree-node-hover-chip {
+  display: inline-flex;
+  flex-direction: column;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-1);
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+}
+.tree-node-hover-chip-meaning {
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+.tree-node-hover-chip-form {
+  font-size: var(--fs-1);
+  color: var(--text);
+}
+
 .runs-list {
   display: flex;
   flex-direction: column;

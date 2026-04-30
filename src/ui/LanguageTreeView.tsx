@@ -10,14 +10,38 @@ import { YEARS_PER_GENERATION } from "../engine/constants";
 
 type TreeMode = "phylogeny" | "stemma";
 
+/**
+ * Structured payload for the tree-node hover card. Replaces the
+ * previous one-line string passed through SVG `<title>` (slow to
+ * appear, can't be styled, no multi-line on every browser).
+ *
+ * Fields are read by `TreeNodeHover` in render order: header (name +
+ * extinct flag + age) → stat row (conservatism icon + word/borrow
+ * counts) → sample IPA chips. Building structured data lets us
+ * style each row independently and change the layout without
+ * touching the data builder.
+ */
+interface TooltipData {
+  name: string;
+  extinct: boolean;
+  ageLabel: string;
+  conservatism: number;
+  conservatismIcon: string;
+  lexCount: number;
+  borrowCount: number;
+  samples: Array<{ meaning: string; form: string }>;
+}
+
 interface NodeDatum {
   id: string;
   name: string;
   sample: string;
   isLeaf: boolean;
   extinct: boolean;
-  /** Multi-line tooltip shown via SVG <title>. */
-  tooltip: string;
+  /** Structured tooltip data — the hover card surfaces these fields
+   *  individually (name in the header, samples as IPA chips, etc.)
+   *  instead of squashing everything into an SVG <title>. */
+  tooltip: TooltipData;
   children?: NodeDatum[];
 }
 
@@ -27,28 +51,46 @@ function buildTooltip(
   generation: number,
   script: DisplayScript,
   yearsPerGen: number = YEARS_PER_GENERATION,
-): string {
+): TooltipData {
   const node = tree[id]!;
   const lang = node.language;
   const age = generation - lang.birthGeneration;
-  const tempo = lang.conservatism >= 1.3 ? "🐢" : lang.conservatism <= 0.7 ? "🐇" : "⏱";
+  const conservatismIcon = lang.conservatism >= 1.3 ? "🐢" : lang.conservatism <= 0.7 ? "🐇" : "⏱";
   const lexCount = Object.keys(lang.lexicon).length;
   const borrowCount = Object.values(lang.wordOrigin ?? {}).filter((o) =>
     o.startsWith("borrow:"),
   ).length;
-  const samples = ["water", "fire", "mother", "go", "see", "king"]
-    .map((m) => {
-      const f = lang.lexicon[m];
-      return f ? `${m}=${formatForm(f, lang, script)}` : null;
-    })
-    .filter(Boolean)
-    .slice(0, 3)
-    .join("\n  ");
+  const samples: Array<{ meaning: string; form: string }> = [];
+  for (const m of ["water", "fire", "mother", "go", "see", "king"]) {
+    const f = lang.lexicon[m];
+    if (f) samples.push({ meaning: m, form: formatForm(f, lang, script, m) });
+    if (samples.length >= 3) break;
+  }
+  return {
+    name: lang.name,
+    extinct: !!lang.extinct,
+    ageLabel: formatElapsed(age, yearsPerGen),
+    conservatism: lang.conservatism,
+    conservatismIcon,
+    lexCount,
+    borrowCount,
+    samples,
+  };
+}
+
+/**
+ * Hover-card flatten for screen readers / fallback aria-label. The
+ * card itself is the primary surface; this string keeps a useful
+ * announcement when AT can't reach the rendered card.
+ */
+function tooltipToString(t: TooltipData): string {
   return [
-    lang.name + (lang.extinct ? " (extinct)" : ""),
-    `age ${formatElapsed(age, yearsPerGen)} · ${lexCount} words · ${tempo} ${lang.conservatism.toFixed(2)}`,
-    borrowCount > 0 ? `${borrowCount} loanwords` : "",
-    samples ? "  " + samples : "",
+    t.name + (t.extinct ? " (extinct)" : ""),
+    `age ${t.ageLabel} · ${t.lexCount} words · ${t.conservatismIcon} ${t.conservatism.toFixed(2)}`,
+    t.borrowCount > 0 ? `${t.borrowCount} loanwords` : "",
+    t.samples.length > 0
+      ? "  " + t.samples.map((s) => `${s.meaning}=${s.form}`).join(", ")
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -94,6 +136,12 @@ export function LanguageTreeView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 600, h: 400 });
   const [mode, setMode] = useState<TreeMode>("phylogeny");
+  const [hovered, setHovered] = useState<{
+    id: string;
+    data: TooltipData;
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -154,6 +202,7 @@ export function LanguageTreeView() {
       {mode === "stemma" ? (
         <StemmaView />
       ) : (
+      <div style={{ position: "relative" }}>
       <svg className="tree-svg" width={size.w} height={size.h}>
         <g transform={`translate(${layout.margin},${layout.margin})`}>
           {layout.root.links().map((link) => {
@@ -190,11 +239,35 @@ export function LanguageTreeView() {
             const sampleY = d.isLeaf ? 30 : -22;
             return (
               <g key={d.id} transform={`translate(${pos.x},${pos.y})`}>
-                <title>{d.tooltip}</title>
                 <circle
                   r={d.isLeaf ? 7 : 4}
                   className={`tree-node-circle ${cls}`}
                   onClick={() => selectLanguage(d.id)}
+                  onMouseEnter={(e) => {
+                    const rect = containerRef.current?.getBoundingClientRect();
+                    setHovered({
+                      id: d.id,
+                      data: d.tooltip,
+                      x: e.clientX - (rect?.left ?? 0),
+                      y: e.clientY - (rect?.top ?? 0),
+                    });
+                  }}
+                  onMouseMove={(e) => {
+                    const rect = containerRef.current?.getBoundingClientRect();
+                    setHovered((h) =>
+                      h && h.id === d.id
+                        ? {
+                            ...h,
+                            x: e.clientX - (rect?.left ?? 0),
+                            y: e.clientY - (rect?.top ?? 0),
+                          }
+                        : h,
+                    );
+                  }}
+                  onMouseLeave={() =>
+                    setHovered((h) => (h && h.id === d.id ? null : h))
+                  }
+                  aria-label={tooltipToString(d.tooltip)}
                 />
                 {d.extinct && (
                   <g pointerEvents="none" stroke="var(--danger)" strokeWidth={2}>
@@ -225,6 +298,57 @@ export function LanguageTreeView() {
           })}
         </g>
       </svg>
+      {hovered && <TreeNodeHover x={hovered.x} y={hovered.y} data={hovered.data} />}
+      </div>
+      )}
+    </div>
+  );
+}
+
+function TreeNodeHover({
+  x,
+  y,
+  data,
+}: {
+  x: number;
+  y: number;
+  data: TooltipData;
+}) {
+  // Offset slightly down-right of the cursor so the card doesn't sit
+  // under the pointer (which would re-trigger mouseleave on every
+  // pixel of motion).
+  const left = x + 14;
+  const top = y + 14;
+  return (
+    <div
+      className="tree-node-hover"
+      style={{ left, top }}
+      role="tooltip"
+      aria-hidden="true"
+    >
+      <div className="tree-node-hover-header">
+        <span className="tree-node-hover-name">{data.name}</span>
+        {data.extinct && <span className="tree-node-hover-extinct">extinct</span>}
+      </div>
+      <div className="tree-node-hover-stats">
+        <span title="age">⏳ {data.ageLabel}</span>
+        <span title="conservatism">
+          {data.conservatismIcon} {data.conservatism.toFixed(2)}
+        </span>
+        <span title="lexicon size">📖 {data.lexCount}</span>
+        {data.borrowCount > 0 && (
+          <span title="loanwords">↪ {data.borrowCount}</span>
+        )}
+      </div>
+      {data.samples.length > 0 && (
+        <div className="tree-node-hover-samples">
+          {data.samples.map((s) => (
+            <span key={s.meaning} className="tree-node-hover-chip">
+              <span className="tree-node-hover-chip-meaning">{s.meaning}</span>
+              <span className="tree-node-hover-chip-form">{s.form}</span>
+            </span>
+          ))}
+        </div>
       )}
     </div>
   );
