@@ -6,14 +6,12 @@ import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 
 function tempoBadge(conservatism: number): { icon: string; label: string; hue: number } {
-  // 🐢 slow/conservative • ⏱ balanced • 🐇 fast/innovative
   if (conservatism >= 1.3) return { icon: "🐢", label: "conservative", hue: 200 };
   if (conservatism <= 0.7) return { icon: "🐇", label: "innovative", hue: 30 };
   return { icon: "⏱", label: "balanced", hue: 120 };
 }
 
 function tierBadge(tier: Tier): { icon: string; label: string } {
-  // 🌿 forager • 🌾 agricultural • 🛕 iron-age • 🏭 modern
   switch (tier) {
     case 0: return { icon: "🌿", label: TIER_LABELS[0] };
     case 1: return { icon: "🌾", label: TIER_LABELS[1] };

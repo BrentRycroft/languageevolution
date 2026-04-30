@@ -17,15 +17,13 @@ describe("translator polish — possessive 's", () => {
     expect(lemmas).toContain("king");
     expect(lemmas).toContain("wolf");
     expect(lemmas).toContain("dog");
-    // Subject head is wolf, not king (king is the possessor).
     const wolfIdx = lemmas.indexOf("wolf");
     const dogIdx = lemmas.indexOf("dog");
-    expect(wolfIdx).toBeLessThan(dogIdx); // wolf comes before object
+    expect(wolfIdx).toBeLessThan(dogIdx);
   });
 
   it("possessor noun gets noun.case.gen morphology when hasCase + paradigm", () => {
     const lang = pieLang();
-    // PIE has gen paradigm; verify the king surface picks it up.
     lang.morphology.paradigms["noun.case.gen"] = {
       affix: ["s"],
       position: "suffix",

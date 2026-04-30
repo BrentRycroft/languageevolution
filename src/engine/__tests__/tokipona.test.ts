@@ -33,9 +33,6 @@ describe("toki pona preset", () => {
   it("grammar is SVO with no case and no gender", () => {
     const cfg = presetTokipona();
     expect(cfg.modes).toBeDefined();
-    // Grammar features are baked into the engine defaults; a toki pona
-    // run at gen 0 still uses the default grammar. What we CAN check is
-    // that the seed lexicon is the right size.
     expect(Object.keys(cfg.seedLexicon).length).toBeGreaterThanOrEqual(70);
   });
 

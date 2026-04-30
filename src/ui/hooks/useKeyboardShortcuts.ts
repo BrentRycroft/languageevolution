@@ -33,11 +33,6 @@ interface Options {
   setActiveTab: (tab: Tab) => void;
 }
 
-/**
- * Global keyboard shortcuts for the simulator. Ignores key events when the
- * active element is a text input, textarea, or contenteditable — so typing
- * in the seed editor or translator won't trigger playback keys.
- */
 export function useKeyboardShortcuts(options: Options): void {
   const { playing, togglePlay, step, stepN, reset, setActiveTab } = options;
   const showConfirm = useSimStore((s) => s.showConfirm);
@@ -63,8 +58,6 @@ export function useKeyboardShortcuts(options: Options): void {
         stepN(50);
       } else if (e.key === "r" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        // Async confirm — the keyboard handler returns immediately;
-        // reset() runs on user confirmation.
         void (async () => {
           const ok = await showConfirm({
             title: "Reset to generation 0?",

@@ -1,18 +1,6 @@
 import type { Lexicon, Meaning, Phoneme, WordForm } from "../types";
 import { fnv1a } from "../rng";
 
-/**
- * Expanded basic vocabulary — ~500 meanings spanning body parts, kinship,
- * environment, animals, plants, actions, qualities, function words, numbers,
- * abstract concepts, crafts, tools, food, clothing, weather, social
- * relations, sensations and time. The original name BASIC_240 is kept for
- * back-compat even though the list is now ~500.
- *
- * Each preset provides hand-authored IPA for a "core" subset and uses
- * `fillMissing` for the rest, which generates phonotactically-plausible
- * forms from the preset's own inventory via a deterministic hash.
- */
-
 export const CLUSTERS = {
   body: [
     "hand", "foot", "heart", "head", "eye", "ear", "mouth", "tooth",
@@ -152,10 +140,6 @@ export const CLUSTERS = {
   ],
 } as const;
 
-/** Ordered flat list of all meanings, with duplicates removed. A meaning
- * that appears in multiple clusters (e.g. "fly" as animal + motion) is
- * kept at its first occurrence and `clusterOfBasic240` returns that cluster.
- */
 export const BASIC_240: readonly Meaning[] = (() => {
   const seen = new Set<Meaning>();
   const out: Meaning[] = [];
@@ -169,7 +153,6 @@ export const BASIC_240: readonly Meaning[] = (() => {
   return out;
 })();
 
-/** Cluster name for any Basic-240 meaning, or undefined. */
 const MEANING_TO_CLUSTER: Record<Meaning, string> = (() => {
   const out: Record<Meaning, string> = {};
   for (const [name, members] of Object.entries(CLUSTERS)) {
@@ -182,30 +165,15 @@ export function clusterOfBasic240(meaning: Meaning): string | undefined {
   return MEANING_TO_CLUSTER[meaning];
 }
 
-// ---------------------------------------------------------------------------
-// Deterministic form generator
-// ---------------------------------------------------------------------------
-
-
 export interface FormPhonology {
-  /** Consonants allowed in onset position. */
   onsets: Phoneme[];
-  /** Vowels (short). */
   vowels: Phoneme[];
-  /** Consonants allowed in coda position. Empty = strict CV. */
   codas?: Phoneme[];
-  /** Phoneme appended to every generated form ("suffix flavor"), optional. */
   flavour?: Phoneme[];
-  /** Minimum / maximum syllable count. */
   minSyllables?: number;
   maxSyllables?: number;
 }
 
-/**
- * Given a language's inventory + a meaning string, produce a deterministic
- * phonotactically-valid form. The same (phonology, meaning) input always
- * gives the same output; two different languages gave different forms.
- */
 export function generateForm(
   meaning: Meaning,
   phonology: FormPhonology,
@@ -224,7 +192,6 @@ export function generateForm(
     const c = phonology.onsets[bits() % Math.max(1, phonology.onsets.length)]!;
     const v = phonology.vowels[bits() % Math.max(1, phonology.vowels.length)]!;
     out.push(c, v);
-    // 40% coda for non-final, 20% for final if codas allowed.
     if (phonology.codas && phonology.codas.length > 0) {
       const codaOdds = i === syllables - 1 ? 0.2 : 0.4;
       if ((bits() % 100) / 100 < codaOdds) {
@@ -238,11 +205,6 @@ export function generateForm(
   return out;
 }
 
-/**
- * Build a full 240-entry lexicon by filling any missing meanings with
- * deterministic forms. Hand-authored entries in `core` are kept verbatim;
- * anything else is generated from `phonology`.
- */
 export function fillMissing(core: Lexicon, phonology: FormPhonology): Lexicon {
   const out: Lexicon = { ...core };
   for (const m of BASIC_240) {

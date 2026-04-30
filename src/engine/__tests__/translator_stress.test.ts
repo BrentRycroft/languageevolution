@@ -4,63 +4,38 @@ import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
 import type { Language } from "../types";
 
-/**
- * Translator stress test. Walks a matrix of (English sentence type
- * × language grammar feature) and asserts the translator produces a
- * non-empty surface for any input that has at least one content
- * token.
- *
- * Catches regressions where:
- *   - A grammar feature change drops tokens silently.
- *   - A specific sentence type (passive, relative clause, wh-question)
- *     fails to parse and the fragment fallback then drops most words.
- *   - Word-order permutations interact badly with PP / coordination.
- */
-
 function clone(lang: Language): Language {
   return JSON.parse(JSON.stringify(lang)) as Language;
 }
 
 const SENTENCES: Array<[string, string]> = [
-  // Basic SVO with content
   ["the king sees the wolf", "S V O"],
   ["the dogs see the wolves", "plural agreement"],
-  // Tense
   ["the king saw the wolf", "past"],
   ["the king will see the wolf", "future"],
   ["the king has seen the wolf", "perfect"],
   ["the king is seeing the wolf", "progressive"],
-  // Voice
   ["the wolf is seen by the king", "passive present"],
   ["the wolf was killed by the king", "passive past"],
-  // Mood / interrogative
   ["does the king see the wolf", "yes/no Q (do)"],
   ["who sees the wolf", "wh-Q subject"],
   ["where does the king walk", "wh-Q oblique"],
-  // Negation
   ["the king does not see the wolf", "negation"],
   ["the king is not happy", "copula negation"],
-  // Imperative
   ["see the wolf", "imperative transitive"],
   ["come here", "imperative intransitive"],
-  // Copula
   ["the king is happy", "copula + ADJ"],
   ["the king is here", "copula + locative"],
-  // Possession
   ["the king's wolf runs", "possessive 's"],
   ["the wolf of the king runs", "of-genitive"],
   ["i have a horse", "have main verb"],
-  // Coordination
   ["the king and the wolf eat", "coord subjects"],
   ["the king sees the wolf and the dog", "coord objects"],
   ["the king sees the wolf and the wolf attacks", "coord clauses"],
-  // Subordination
   ["the king runs because the wolf chases him", "subord"],
-  // Relative clauses
   ["the king who sees the wolf attacks", "subject relative"],
   ["the king sees the wolf which runs", "object relative"],
   ["the king sees the wolf that runs", "that-relative"],
-  // Modifiers
   ["the big wolf eats", "attributive ADJ"],
   ["three wolves run", "numeral + plural"],
   ["the king walks at the river", "PP modifier"],
@@ -133,8 +108,6 @@ describe("translator stress test", () => {
     );
     for (const [s, label] of verbInputs) {
       const out = translateSentence(lang, s);
-      // Tree-driven path emits at least one V-tagged token for any
-      // input that parsed as a clause (matrix or relative clause).
       const hasV = out.targetTokens.some((t) => t.englishTag === "V");
       expect(hasV, `${label}: "${s}" produced no V token`).toBe(true);
     }
@@ -142,26 +115,18 @@ describe("translator stress test", () => {
 
   it("preserves the antecedent NP in relative clauses", () => {
     const lang = clone(baseLang);
-    // "the king sees the wolf which runs" — `runs` clause's subject
-    // should be "wolf" (the antecedent), not the matrix subject.
     const out = translateSentence(lang, "the king sees the wolf which runs");
     const englishLemmas = out.targetTokens.map((t) => t.englishLemma);
-    // "wolf" should appear at least twice: once in the matrix object,
-    // once as the rel-clause subject inherited from the antecedent.
     const wolfCount = englishLemmas.filter((e) => e === "wolf").length;
     expect(wolfCount).toBeGreaterThanOrEqual(2);
   });
 
   it("preserves coord-clause subject inheritance", () => {
     const lang = clone(baseLang);
-    // "the king eats and drinks" — second clause has no overt subject;
-    // should inherit "king".
     const out = translateSentence(lang, "the king eats and drinks");
     const englishLemmas = out.targetTokens.map((t) => t.englishLemma);
     const kingCount = englishLemmas.filter((e) => e === "king").length;
     expect(kingCount).toBeGreaterThanOrEqual(2);
-    // And "you" must NOT appear (would mean the synthetic-imperative
-    // fallback fired by mistake).
     expect(englishLemmas).not.toContain("you");
   });
 
@@ -193,8 +158,6 @@ describe("translator stress test", () => {
     const lang = clone(baseLang);
     const out = translateSentence(lang, "he had fire");
     const englishLemmas = out.targetTokens.map((t) => t.englishLemma);
-    // Should emit a verb (lemma "have"), the subject ("he"), and the
-    // object ("fire") — not just "he" + "fire" with no verb.
     expect(englishLemmas).toContain("have");
   });
 

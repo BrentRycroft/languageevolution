@@ -32,7 +32,6 @@ describe("Basic-240 lexicon", () => {
     for (const m of BASIC_240) {
       if (neighborsOf(m).length > 0) withNeighbors++;
     }
-    // Not every meaning has to have a neighbour entry, but most should.
     expect(withNeighbors / BASIC_240.length).toBeGreaterThan(0.9);
   });
 
@@ -50,15 +49,11 @@ describe("Basic-240 lexicon", () => {
       ...(DEFAULT_PHONOLOGY.codas ?? []),
       ...(DEFAULT_PHONOLOGY.flavour ?? []),
     ]);
-    // Check only the machine-generated entries (core meanings may use
-    // whatever IPA the preset author wrote).
     const coreMeanings = new Set(Object.keys(
       fillMissing({}, DEFAULT_PHONOLOGY),
     ));
     for (const m of coreMeanings) {
       for (const p of DEFAULT_LEXICON[m]!) {
-        // Only enforce for non-hand-authored meanings; we test on the
-        // deterministic output of fillMissing against an empty core.
         if (!allowed.has(p)) {
           const regenerated = fillMissing({}, DEFAULT_PHONOLOGY)[m];
           for (const rp of regenerated ?? []) {

@@ -83,7 +83,6 @@ describe("analysis/stemma", () => {
     ]);
     const edges = stemmaMatrix(tree);
     expect(edges.length).toBe(6);
-    // Matrix is sorted ascending.
     for (let i = 1; i < edges.length; i++) {
       expect(edges[i]!.distance).toBeGreaterThanOrEqual(edges[i - 1]!.distance);
     }
@@ -98,8 +97,6 @@ describe("analysis/stemma", () => {
     const root = buildStemma(tree);
     expect(root).not.toBeNull();
     if (!root) return;
-    // First merge should be the twins at distance 0.
-    // Root has two children: one subtree (twins) + the loner.
     const hasTwinsSubtree = root.children.some(
       (c) =>
         c.children.length === 2 &&

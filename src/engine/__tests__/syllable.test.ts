@@ -6,13 +6,6 @@ import {
   formatStressedIpa,
 } from "../phonology/syllable";
 
-/**
- * Sonority-based syllabifier + stress assigner unit tests. The
- * syllabifier walks a phoneme array, finds nuclei (vowels and
- * syllabic resonants), and splits intervocalic consonant clusters
- * by maximum-onset principle (rising sonority + s-cluster exception).
- */
-
 describe("syllabify", () => {
   it("returns no syllables when there is no nucleus", () => {
     expect(syllabify(["t", "k"])).toEqual([]);
@@ -25,7 +18,6 @@ describe("syllabify", () => {
   });
 
   it("attaches a single intervocalic consonant to the following onset", () => {
-    // /a.ta/ — single /t/ goes to onset of second syllable
     const s = syllabify(["a", "t", "a"]);
     expect(s).toHaveLength(2);
     expect(s[0]).toEqual({ onset: [], nucleus: 0, coda: [] });
@@ -35,8 +27,8 @@ describe("syllabify", () => {
   it("splits a falling-sonority cluster across syllable boundary (apti → ap.ti)", () => {
     const s = syllabify(["a", "p", "t", "i"]);
     expect(s).toHaveLength(2);
-    expect(s[0]!.coda).toEqual([1]);  // p in coda of first syllable
-    expect(s[1]!.onset).toEqual([2]); // t in onset of second
+    expect(s[0]!.coda).toEqual([1]);
+    expect(s[1]!.onset).toEqual([2]);
   });
 
   it("keeps a rising-sonority cluster as onset (matre → ma.tre)", () => {
@@ -44,14 +36,14 @@ describe("syllabify", () => {
     expect(s).toHaveLength(2);
     expect(s[0]!.onset).toEqual([0]);
     expect(s[0]!.coda).toEqual([]);
-    expect(s[1]!.onset).toEqual([2, 3]); // tr as onset
+    expect(s[1]!.onset).toEqual([2, 3]);
   });
 
   it("honours the s+stop exception (astri → a.stri)", () => {
     const s = syllabify(["a", "s", "t", "r", "i"]);
     expect(s).toHaveLength(2);
     expect(s[0]!.coda).toEqual([]);
-    expect(s[1]!.onset).toEqual([1, 2, 3]); // str as onset
+    expect(s[1]!.onset).toEqual([1, 2, 3]);
   });
 
   it("treats syllabic resonants as nuclei (wodr̩ → wo.dr̩)", () => {
@@ -98,17 +90,17 @@ describe("assignStress", () => {
   });
 
   it("places antepenult stress on the third-from-last syllable when available", () => {
-    const sylls = syllabify(["k", "u", "n", "i", "n", "g", "a", "z"]); // ku.nin.gaz = 3 sylls
+    const sylls = syllabify(["k", "u", "n", "i", "n", "g", "a", "z"]);
     expect(assignStress(sylls, "antepenult")).toBe(0);
   });
 
   it("falls back to penult when antepenult would be out of range", () => {
-    const sylls = syllabify(["k", "a", "t"]); // single syllable
+    const sylls = syllabify(["k", "a", "t"]);
     expect(assignStress(sylls, "antepenult")).toBe(0);
   });
 
   it("honours a lexical override when valid", () => {
-    const sylls = syllabify(["d", "u", "g", "h₂", "t", "e", "r"]); // dug.h₂.ter
+    const sylls = syllabify(["d", "u", "g", "h₂", "t", "e", "r"]);
     const idx = assignStress(sylls, "lexical", 0);
     expect(idx).toBe(0);
   });
@@ -122,8 +114,6 @@ describe("assignStress", () => {
 
 describe("formatStressedIpa", () => {
   it("renders the user's example /wodr̩/ as [ˈwɔ.dr̩]", () => {
-    // Note: the syllabifier doesn't lax o → ɔ; that's narrowTranscribe's
-    // job. This test asserts the bracket + stress + dot format.
     const form = ["w", "o", "d", "r̩"];
     const { syllables, stressedIdx } = syllabifyAndStress(form, "penult");
     expect(formatStressedIpa(form, syllables, stressedIdx)).toBe("[ˈwo.dr̩]");

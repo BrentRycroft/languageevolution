@@ -1,25 +1,12 @@
-/*
- * Tiny utility-class layer for the most-repeated inline styles in the
- * UI tree. Each utility maps to one or two declarations only — anything
- * larger should grow into a named component class instead.
- *
- * Driver: a baseline survey found ~330 inline `style={{}}` instances in
- * src/ui/*.tsx, with the same 8-10 patterns dominating. Migrating those
- * patterns alone eliminates ~100 inline styles and removes a large
- * chunk of inline cognitive load.
- */
 
-/* ---- text colour shortcuts ---- */
 .t-muted { color: var(--muted); }
 .t-text  { color: var(--text); }
 .t-accent { color: var(--accent); }
 .t-danger { color: var(--danger); }
 
-/* ---- text size shortcuts (token-aligned) ---- */
 .fs-1 { font-size: var(--fs-1); }
 .fs-2 { font-size: var(--fs-2); }
 
-/* ---- alignment ---- */
 .text-right  { text-align: right; }
 .text-left   { text-align: left; }
 .text-center { text-align: center; }
@@ -33,7 +20,6 @@
 .mb-8        { margin-bottom: 8px; }
 .mb-12       { margin-bottom: 12px; }
 
-/* ---- compact flex stacks ---- */
 .row     { display: flex; }
 .row-2   { display: flex; gap: 2px; }
 .row-4   { display: flex; gap: 4px; }
@@ -51,7 +37,6 @@
 .items-end    { align-items: flex-end; }
 .flex-wrap    { flex-wrap: wrap; }
 
-/* ---- composed convenience classes for the dominant patterns ---- */
 .section-empty {
   color: var(--muted);
   font-size: var(--fs-2);
@@ -62,9 +47,6 @@
   font-size: var(--fs-1);
 }
 
-/* ---- toolbar row used at the top of Translator / Compare etc.
-   ---- gap-6 + marginBottom + wrap + center-align is the dominant
-   ---- "row of mode-pickers + script picker on the right" shape. */
 .toolbar {
   display: flex;
   gap: 6px;
@@ -73,10 +55,6 @@
   align-items: center;
 }
 
-/* ---- per-token "card" used in the Translator output and the
-   ---- Compare narrative gloss column. Always mono, always
-   ---- column-stacked, always min-width 60 so cells align even when
-   ---- the token is short. */
 .token-row {
   display: flex;
   flex-wrap: wrap;
@@ -100,8 +78,6 @@
   color: var(--muted);
 }
 
-/* ---- footer note used below translator output for "Resolved every
-   ---- word ..." and "Unresolved: …" lines. */
 .footer-note {
   font-size: var(--fs-1);
   color: var(--muted);
@@ -111,7 +87,6 @@
   color: #ffcc66;
 }
 
-/* ---- chip primitive for filter pills (lexicon / timeline / compare) ---- */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -147,7 +122,6 @@
   outline-offset: 2px;
 }
 
-/* ---- card primitive: panel-style surface used for selectable/info blocks ---- */
 .card {
   padding: var(--sp-3);
   border: 1px solid var(--border);
@@ -161,7 +135,6 @@
   background: var(--panel);
 }
 
-/* ---- skeleton loader ---- */
 .skeleton {
   background: linear-gradient(
     90deg,

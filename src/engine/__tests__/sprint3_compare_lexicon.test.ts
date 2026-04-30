@@ -4,14 +4,6 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 
-/**
- * Sprint 3 cross-feature integration tests.
- *
- *   §D — narrative skeleton library expansion + random seed.
- *   §F.2 — lexicon sort/group state has no engine effect (UI-only)
- *           but verify the helpers it consumes (`clusterOf`,
- *           `frequencyFor`) keep returning sensible values.
- */
 describe("§D — narrative skeleton expansion", () => {
   it("planSkeleton returns the requested number of skeletons", () => {
     const ten = planSkeleton("seed-x", 10);
@@ -27,8 +19,6 @@ describe("§D — narrative skeleton expansion", () => {
   it("planSkeleton uses different patterns across the run", () => {
     const seven = planSkeleton("variety", 8);
     const patterns = new Set(seven.map((s) => s.patternIdx));
-    // With 8 sentences sampled from ~12 patterns, expect at least 3
-    // distinct pattern ids most of the time.
     expect(patterns.size).toBeGreaterThanOrEqual(2);
   });
 
@@ -50,13 +40,7 @@ describe("§D — narrative skeleton expansion", () => {
     const sharedSeed = "compare-test";
     const linesA = generateNarrative(langA, sharedSeed, 5, "ipa");
     const linesB = generateNarrative(langB, sharedSeed, 5, "ipa");
-    // Both columns should produce the same number of skeletons even
-    // if the realisation drops some lines for missing vocabulary.
     expect(linesA.length + linesB.length).toBeGreaterThan(0);
-    // The gloss row encodes the meaning slots — should be identical
-    // when both languages have the meanings (the engine falls back
-    // to nearest available, but for the common verbs/nouns in the
-    // skeleton library most lines line up).
     const overlap = linesA.filter((a, i) => linesB[i]?.gloss === a.gloss).length;
     expect(overlap).toBeGreaterThan(0);
   });

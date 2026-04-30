@@ -25,7 +25,6 @@ describe("semantic embeddings", () => {
 
   it("nearestMeanings returns in-cluster choices first", () => {
     const nn = nearestMeanings("water", ["fire", "dog", "one", "stone", "tree"], 3);
-    // Environment cluster-mates should dominate.
     expect(nn).toContain("fire");
     expect(nn.slice(0, 3)).not.toContain("one");
   });
@@ -33,7 +32,6 @@ describe("semantic embeddings", () => {
   it("compounds inherit a blended vector", () => {
     const v1 = embed("foot");
     const vCompound = embed("foot-ball");
-    // Compound should be reasonably similar to its first component.
     expect(cosine(v1, vCompound)).toBeGreaterThan(0);
   });
 });

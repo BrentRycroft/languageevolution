@@ -140,19 +140,6 @@ export function SoundLawsView() {
   );
 }
 
-/**
- * Empty-state branch for the Active-sound-laws section. Splits the
- * "language has no laws" case into two messages:
- *
- *   - **Proto**: the root never gets procedural rules — by design,
- *     it's the frozen ancestor that daughters diverge from. So the
- *     usual "run the sim for a few dozen generations" copy is
- *     misleading (the user could run forever and Proto would still
- *     show 0). Surface a one-click jump to the first alive daughter.
- *   - **Daughter, no rules yet**: keep the original "run the sim"
- *     copy — this is the legitimate "you haven't stepped enough"
- *     state.
- */
 function ProtoOrEmpty({
   langId,
   state,
@@ -170,7 +157,6 @@ function ProtoOrEmpty({
       </div>
     );
   }
-  // Find the first alive daughter to suggest as a jump target.
   const aliveDaughter = Object.values(state.tree).find(
     (n) => n.parentId !== null && n.childrenIds.length === 0 && !n.language.extinct,
   );

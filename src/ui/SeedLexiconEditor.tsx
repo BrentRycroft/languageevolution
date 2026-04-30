@@ -7,18 +7,10 @@ import type { Lexicon, WordForm } from "../engine/types";
 function phonemeIsKnown(p: string): boolean {
   const stripped = stripTone(p);
   if (isVowel(stripped) || isConsonant(stripped)) return true;
-  // Tone-bearing vowel with tone mark.
   if (toneOf(p) && isVowel(stripped)) return true;
   return false;
 }
 
-/**
- * Parse a user-entered form. If the input already contains IPA-only
- * characters (θ, ð, ʃ, …) or a combining-diacritic cluster (m̩, á), it's
- * treated as authoritative and passed through grapheme-by-grapheme.
- * Plain ASCII letters run through `textToIpa` so users can type "think"
- * and have the engine receive /θ/ /i/ /n/ /k/.
- */
 function parseForm(input: string): WordForm {
   return textToIpa(input);
 }

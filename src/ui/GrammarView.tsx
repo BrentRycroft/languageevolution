@@ -91,18 +91,12 @@ function InventoryDisplay({ lang }: { lang: import("../engine/types").Language }
   );
 }
 
-/**
- * Pick a demo stem for the given POS — preferring short, single-token
- * meanings so the inflected forms read cleanly. Returns undefined if
- * the language has no lexicon entry of that POS.
- */
 function pickDemoStem(
   lang: import("../engine/types").Language,
   pos: "noun" | "verb",
 ): string | undefined {
   const candidates = Object.keys(lang.lexicon).filter((m) => !m.includes("-"));
   for (const m of candidates) if (posOf(m) === pos) return m;
-  // Fall back: include hyphenated meanings when no clean stem is available.
   for (const m of Object.keys(lang.lexicon)) if (posOf(m) === pos) return m;
   return undefined;
 }
@@ -117,8 +111,6 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
       </div>
     );
   }
-  // Split paradigms by POS gate so a noun's row never gets shown
-  // inflected through a verb's tense category (and vice versa).
   const nounCats = cats.filter((c) => c.startsWith("noun."));
   const verbCats = cats.filter((c) => c.startsWith("verb."));
   const otherCats = cats.filter(
@@ -247,10 +239,6 @@ function GrammarFeatureList({
   grammar: import("../engine/types").GrammarFeatures;
   lang: import("../engine/types").Language;
 }) {
-  // Stress row: surface the language's primary-stress rule. For
-  // `lexical` patterns (PIE-style mobile accent), append the count
-  // of per-word overrides so the user can see whether the language
-  // still tracks them or has drifted off lexical accent.
   const stress = lang.stressPattern ?? "penult";
   const lexCount = lang.lexicalStress ? Object.keys(lang.lexicalStress).length : 0;
   const stressLabel =

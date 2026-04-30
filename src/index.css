@@ -9,7 +9,6 @@
   line-height: var(--lh-body);
 }
 
-/* Tabular numerics + monospace for IPA so columns align cleanly. */
 .mono,
 input[type="text"],
 .lexicon-table,
@@ -20,13 +19,11 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-/* Universal focus ring for keyboard users. */
 :focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
-/* Accessibility: skip link positioned off-screen until focused. */
 .skip-link {
   position: absolute;
   top: 0;
@@ -48,7 +45,6 @@ code {
   outline: none;
 }
 
-/* Achievements */
 .achievements-strip {
   display: flex;
   flex-wrap: wrap;
@@ -770,7 +766,6 @@ body {
   display: none;
 }
 
-/* Button variants */
 button {
   background: var(--panel-2);
   color: var(--text);
@@ -859,10 +854,6 @@ input[type="checkbox"] {
   touch-action: manipulation;
 }
 
-/* Cross-platform range / slider styling. iOS Safari ships its own
-   pill-style thumb that ignores the rest of the design tokens; this
-   block normalises track + thumb across WebKit, Gecko, and the
-   default style so sliders match the rest of the panel chrome. */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -872,7 +863,6 @@ input[type="range"] {
   background: transparent;
   cursor: pointer;
 }
-/* WebKit (Safari, Chrome, Edge) */
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
   background: var(--panel-3);
@@ -884,7 +874,7 @@ input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 18px;
   height: 18px;
-  margin-top: -8px; /* center on the 4px track */
+  margin-top: -8px;
   background: var(--accent);
   border: 1px solid var(--border-strong);
   border-radius: 50%;
@@ -898,7 +888,6 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-/* Firefox */
 input[type="range"]::-moz-range-track {
   height: 4px;
   background: var(--panel-3);
@@ -1015,12 +1004,6 @@ input[type="range"]:hover::-moz-range-thumb {
   padding: 2px 4px;
 }
 
-/* Global confirm dialog — replaces native `window.confirm()` so the
-   alert matches the rest of the app's styling and doesn't freeze the
-   React render loop while open. Backdrop click + Escape both cancel.
-   Auto-focused confirm button lets keyboard users hit Enter to
-   accept. Honours prefers-reduced-motion via the keyframes guard
-   already declared earlier in this file. */
 .confirm-backdrop {
   position: fixed;
   inset: 0;
@@ -1049,10 +1032,6 @@ input[type="range"]:hover::-moz-range-thumb {
   font-weight: var(--fw-semi);
 }
 
-/* Tempo / tier icon columns. Without explicit min-width and a
-   slightly bigger glyph the emoji rendered nearly invisible at the
-   default 11px monospace size. Reserve enough room and bump font-size
-   so the badge is actually readable. */
 .stats-table th:nth-child(2),
 .stats-table th:nth-child(3),
 .stats-table td:nth-child(2),
@@ -1185,11 +1164,6 @@ input[type="range"]:hover::-moz-range-thumb {
 }
 
 .lexicon-table td.changed {
-  /* Softer mutation flash — was 0.8s ease-out with a hard-on
-     `--change` background; now 1.2s with a quick rise + slow fade
-     and a subtler accent-tinted bg. Reads as a warm pulse rather
-     than a jarring colour swap. Honours prefers-reduced-motion via
-     the global override at the bottom of this file. */
   animation: cell-flash 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1206,7 +1180,6 @@ input[type="range"]:hover::-moz-range-thumb {
   100% { background: transparent; color: var(--text); }
 }
 
-/* Legacy alias kept for any callers that reference @keyframes flash. */
 @keyframes flash {
   0%   { background: var(--accent-soft); color: var(--text); }
   100% { background: transparent; color: var(--text); }
@@ -1360,10 +1333,6 @@ tr.grammar-diff td:last-child {
   stroke-width: 1.5;
 }
 
-/* Hover card for tree nodes — replaces the slow native SVG <title>.
-   Positioned absolutely inside the tree's relatively-positioned wrapper
-   and offset from the cursor so the card itself never receives the
-   mouseleave event. */
 .tree-node-hover {
   position: absolute;
   z-index: 30;
@@ -1515,15 +1484,10 @@ tr.grammar-diff td:last-child {
 .tab-bar > button {
   scroll-snap-align: start;
   flex: 0 0 auto;
-  /* Ensure decent tap target on mobile. */
   min-height: 38px;
   padding: 6px 14px;
 }
 
-/* Hide the scrollbar on the tab bar itself — the row is short enough
-   that flicking is the natural interaction. Keep accessibility by
-   leaving keyboard arrow navigation (the buttons themselves are still
-   focusable). */
 .tab-bar {
   scrollbar-width: none;
 }
@@ -1537,9 +1501,6 @@ tr.grammar-diff td:last-child {
   }
 }
 
-/* Side-panel slide-in for the Reproduce-form drawer + future right
-   drawers. Respects prefers-reduced-motion via a media query so users
-   who opt out of motion get instant placement instead. */
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);
@@ -1582,7 +1543,6 @@ tr.grammar-diff td:last-child {
   display: none;
 }
 
-/* Mobile / tablet layout */
 @media (max-width: 900px) {
   .app {
     grid-template-columns: 1fr;

@@ -1,27 +1,6 @@
 import type { Meaning } from "../types";
 import type { POS } from "./pos";
 
-/**
- * Expanded concept registry — adds tier-1 (agricultural), tier-2
- * (iron-age), and tier-3 (modern) vocabulary to what BASIC_240 ships.
- *
- * Kept separate from `BASIC_240` (in `basic240.ts`) on purpose:
- *
- *   - `BASIC_240` is the **proto-seed pool** that every preset's
- *     `fillMissing` populates at gen 0. Adding a tier-3 concept like
- *     "telegraph" there would cause Proto-Indo-European to ship with
- *     a word for "telegraph" — absurd.
- *   - This module is consumed only by `concepts.ts::CONCEPTS` so it
- *     enters the dictionary at concept-registry level. The tier
- *     gate in `genesis/need.ts::lexicalNeed` then prevents
- *     low-tier languages from coining for tier-2/3 concepts until
- *     they advance.
- *
- * Each concept here ships with explicit POS + cluster + tier so we
- * don't have to thread the new vocabulary through `pos.ts`,
- * `clusters.ts`, and `TIER_OVERRIDES` separately.
- */
-
 export interface ExpandedConcept {
   id: Meaning;
   pos: POS;
@@ -29,7 +8,6 @@ export interface ExpandedConcept {
   tier: 0 | 1 | 2 | 3;
 }
 
-// Helpers so the per-tier arrays below stay readable.
 function noun(id: string, cluster: string, tier: 0 | 1 | 2 | 3): ExpandedConcept {
   return { id, pos: "noun", cluster, tier };
 }
@@ -40,14 +18,7 @@ function adj(id: string, cluster: string, tier: 0 | 1 | 2 | 3): ExpandedConcept 
   return { id, pos: "adjective", cluster, tier };
 }
 
-// ---------------------------------------------------------------------------
-// Tier 1 — agricultural / neolithic
-// ---------------------------------------------------------------------------
-
 const TIER_1: ExpandedConcept[] = [
-  // Crops + cultivars (most field crops are already in BASIC_240,
-  // these add the cultivar diversity that any agriculturally-aware
-  // language eventually develops vocabulary for)
   noun("rye", "plants", 1),
   noun("oat", "plants", 1),
   noun("millet", "plants", 1),
@@ -71,7 +42,6 @@ const TIER_1: ExpandedConcept[] = [
   noun("fence", "tools", 1),
   noun("well-water", "tools", 1),
 
-  // Animal husbandry
   noun("herd", "animals", 1),
   noun("flock", "animals", 1),
   noun("yoke-pair", "tools", 1),
@@ -81,7 +51,6 @@ const TIER_1: ExpandedConcept[] = [
   noun("milkmaid", "kinship", 1),
   noun("dairy", "tools", 1),
 
-  // Food preparation + cuisine
   noun("yoghurt", "food", 1),
   noun("curds", "food", 1),
   noun("whey", "food", 1),
@@ -109,7 +78,6 @@ const TIER_1: ExpandedConcept[] = [
   verb("grind", "action", 1),
   verb("churn", "action", 1),
 
-  // Textiles + clothing
   noun("spindle", "tools", 1),
   noun("distaff", "tools", 1),
   noun("shuttle", "tools", 1),
@@ -128,7 +96,6 @@ const TIER_1: ExpandedConcept[] = [
   verb("knit", "action", 1),
   verb("embroider", "action", 1),
 
-  // Pottery + crafts
   noun("kiln", "tools", 1),
   noun("clay-pot", "tools", 1),
   noun("jar", "tools", 1),
@@ -141,7 +108,6 @@ const TIER_1: ExpandedConcept[] = [
   verb("mould", "action", 1),
   verb("glaze", "action", 1),
 
-  // Settlement
   noun("hamlet", "abstract", 1),
   noun("road-stone", "environment", 1),
   noun("bridge", "tools", 1),
@@ -150,7 +116,6 @@ const TIER_1: ExpandedConcept[] = [
   noun("granary-house", "tools", 1),
   noun("well-shaft", "environment", 1),
 
-  // Roles + ritual
   noun("elder-council", "abstract", 1),
   noun("priestess", "kinship", 1),
   noun("shaman", "kinship", 1),
@@ -163,7 +128,6 @@ const TIER_1: ExpandedConcept[] = [
   noun("offering", "abstract", 1),
   noun("rite-passage", "abstract", 1),
 
-  // Cooking adjectives + qualities
   adj("ripe-fruit", "quality", 1),
   adj("rotten-food", "quality", 1),
   adj("salted", "quality", 1),
@@ -172,12 +136,7 @@ const TIER_1: ExpandedConcept[] = [
   adj("freshly-baked", "quality", 1),
 ];
 
-// ---------------------------------------------------------------------------
-// Tier 2 — iron-age / classical
-// ---------------------------------------------------------------------------
-
 const TIER_2: ExpandedConcept[] = [
-  // Metallurgy
   noun("smelter", "tools", 2),
   noun("forge", "tools", 2),
   noun("bellows", "tools", 2),
@@ -207,7 +166,6 @@ const TIER_2: ExpandedConcept[] = [
   verb("cast-metal", "action", 2),
   verb("polish", "action", 2),
 
-  // City-states + governance
   noun("citadel", "abstract", 2),
   noun("acropolis", "abstract", 2),
   noun("city-wall", "abstract", 2),
@@ -243,7 +201,6 @@ const TIER_2: ExpandedConcept[] = [
   noun("messenger", "kinship", 2),
   noun("ambassador", "kinship", 2),
 
-  // Law + administration
   noun("statute", "abstract", 2),
   noun("decree", "abstract", 2),
   noun("edict", "abstract", 2),
@@ -266,7 +223,6 @@ const TIER_2: ExpandedConcept[] = [
   verb("convict", "action", 2),
   verb("acquit", "action", 2),
 
-  // Writing + literacy + accounting
   noun("scribe", "kinship", 2),
   noun("scroll", "tools", 2),
   noun("tablet", "tools", 2),
@@ -287,7 +243,6 @@ const TIER_2: ExpandedConcept[] = [
   verb("seal-v", "action", 2),
   verb("count-tally", "action", 2),
 
-  // Trade + commerce
   noun("market-day", "abstract", 2),
   noun("merchant", "kinship", 2),
   noun("trader", "kinship", 2),
@@ -315,7 +270,6 @@ const TIER_2: ExpandedConcept[] = [
   verb("export-v", "action", 2),
   verb("ship-v", "action", 2),
 
-  // Trade goods
   noun("silk", "clothing", 2),
   noun("linen", "clothing", 2),
   noun("velvet", "clothing", 2),
@@ -331,7 +285,6 @@ const TIER_2: ExpandedConcept[] = [
   noun("perfume", "food", 2),
   noun("dye-purple", "clothing", 2),
 
-  // Warfare + military
   noun("army", "abstract", 2),
   noun("legion", "abstract", 2),
   noun("regiment", "abstract", 2),
@@ -366,7 +319,6 @@ const TIER_2: ExpandedConcept[] = [
   verb("surrender", "action", 2),
   verb("rebel", "action", 2),
 
-  // Religion + ritual + temples
   noun("temple-grand", "abstract", 2),
   noun("altar", "abstract", 2),
   noun("shrine", "abstract", 2),
@@ -392,7 +344,6 @@ const TIER_2: ExpandedConcept[] = [
   verb("anoint", "action", 2),
   verb("baptise", "action", 2),
 
-  // Education + scholarship
   noun("scholar", "kinship", 2),
   noun("philosopher", "kinship", 2),
   noun("astronomer", "kinship", 2),
@@ -411,7 +362,6 @@ const TIER_2: ExpandedConcept[] = [
   verb("lecture", "action", 2),
   verb("tutor", "action", 2),
 
-  // Astronomy + measurement of time
   noun("zodiac", "abstract", 2),
   noun("eclipse", "environment", 2),
   noun("planet", "environment", 2),
@@ -424,7 +374,6 @@ const TIER_2: ExpandedConcept[] = [
   noun("week-named", "time", 2),
   noun("season-marker", "time", 2),
 
-  // Civic professions + crafts
   noun("baker", "kinship", 2),
   noun("butcher", "kinship", 2),
   noun("brewer", "kinship", 2),
@@ -445,7 +394,6 @@ const TIER_2: ExpandedConcept[] = [
   noun("artisan", "kinship", 2),
   noun("apprentice", "kinship", 2),
 
-  // Built environment
   noun("palace", "abstract", 2),
   noun("mansion", "abstract", 2),
   noun("courtyard", "abstract", 2),
@@ -461,7 +409,6 @@ const TIER_2: ExpandedConcept[] = [
   noun("mosaic", "tools", 2),
   noun("fresco", "tools", 2),
 
-  // Abstract notions
   noun("freedom", "abstract", 2),
   noun("tyranny", "abstract", 2),
   noun("equality", "abstract", 2),
@@ -482,12 +429,7 @@ const TIER_2: ExpandedConcept[] = [
   adj("ignorant", "quality", 2),
 ];
 
-// ---------------------------------------------------------------------------
-// Tier 3 — modern (industrial / civic / scientific / digital)
-// ---------------------------------------------------------------------------
-
 const TIER_3: ExpandedConcept[] = [
-  // Industrial revolution + machinery
   noun("factory", "tools", 3),
   noun("workshop", "tools", 3),
   noun("foundry", "tools", 3),
@@ -520,7 +462,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("operate", "action", 3),
   verb("electrify", "action", 3),
 
-  // Transport
   noun("road-paved", "environment", 3),
   noun("highway", "environment", 3),
   noun("railway", "tools", 3),
@@ -558,7 +499,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("park-v", "action", 3),
   verb("refuel", "action", 3),
 
-  // Communication + media
   noun("telegraph", "tools", 3),
   noun("telephone", "tools", 3),
   noun("phone-mobile", "tools", 3),
@@ -606,7 +546,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("like-online", "action", 3),
   verb("subscribe", "action", 3),
 
-  // Computing + digital
   noun("computer", "tools", 3),
   noun("laptop", "tools", 3),
   noun("tablet-device", "tools", 3),
@@ -651,7 +590,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("encrypt", "action", 3),
   verb("hack", "action", 3),
 
-  // Science
   noun("atom", "abstract", 3),
   noun("molecule", "abstract", 3),
   noun("electron", "abstract", 3),
@@ -698,7 +636,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("test-experiment", "action", 3),
   verb("publish-paper", "action", 3),
 
-  // Medicine + health
   noun("doctor", "kinship", 3),
   noun("nurse", "kinship", 3),
   noun("surgeon", "kinship", 3),
@@ -737,7 +674,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("treat-medical", "action", 3),
   verb("recover-health", "action", 3),
 
-  // Politics + governance (modern)
   noun("democracy", "abstract", 3),
   noun("republic", "abstract", 3),
   noun("constitution", "abstract", 3),
@@ -777,7 +713,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("immigrate", "action", 3),
   verb("emigrate", "action", 3),
 
-  // Finance + economy
   noun("bank-modern", "abstract", 3),
   noun("currency-modern", "abstract", 3),
   noun("dollar", "abstract", 3),
@@ -826,7 +761,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("promote-job", "action", 3),
   verb("retire", "action", 3),
 
-  // Education + workplace
   noun("school-modern", "abstract", 3),
   noun("university", "abstract", 3),
   noun("college", "abstract", 3),
@@ -872,7 +806,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("design-v", "action", 3),
   verb("code-v", "action", 3),
 
-  // Domestic + appliances
   noun("refrigerator", "tools", 3),
   noun("freezer", "tools", 3),
   noun("stove-electric", "tools", 3),
@@ -894,7 +827,6 @@ const TIER_3: ExpandedConcept[] = [
   noun("flashlight", "tools", 3),
   noun("battery-modern", "tools", 3),
 
-  // Buildings + urban environment
   noun("apartment", "abstract", 3),
   noun("skyscraper", "abstract", 3),
   noun("hotel", "abstract", 3),
@@ -916,7 +848,6 @@ const TIER_3: ExpandedConcept[] = [
   noun("prison", "abstract", 3),
   noun("courthouse", "abstract", 3),
 
-  // Recreation + arts + sports
   noun("book-modern", "abstract", 3),
   noun("film-movie", "abstract", 3),
   noun("song-recorded", "abstract", 3),
@@ -952,7 +883,6 @@ const TIER_3: ExpandedConcept[] = [
   verb("paint-art", "action", 3),
   verb("compose-music", "action", 3),
 
-  // Modern abstract notions
   noun("equality-modern", "abstract", 3),
   noun("privacy", "abstract", 3),
   noun("identity", "abstract", 3),

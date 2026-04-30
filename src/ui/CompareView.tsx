@@ -17,10 +17,6 @@ import { traceEtymology } from "../engine/translator/cognates";
 
 type CompareMode = "lexicon" | "narrative" | "cognate";
 
-/**
- * Lexicostatistic similarity (Swadesh-style): cognate iff edit
- * distance ≤ 40 % of the longer form.
- */
 function lexicalSimilarity(
   a: Language,
   b: Language,
@@ -39,12 +35,6 @@ function lexicalSimilarity(
   return { pct: Math.round((cognate / shared.length) * 100), shared: shared.length, cognate };
 }
 
-/**
- * Compare tab — three sub-modes:
- *   - Lexicon (side-by-side word table + grammar diff)
- *   - Narrative (same skeleton rendered in each selected language)
- *   - Cognate (one meaning's evolution from proto to leaf)
- */
 export function CompareView() {
   const state = useSimStore((s) => s.state);
   const compareIds = useSimStore((s) => s.compareLangIds);
@@ -128,10 +118,6 @@ function modeLabel(m: CompareMode): string {
     case "cognate": return "Cognate trace";
   }
 }
-
-// ---------------------------------------------------------------------------
-// LEXICON sub-mode
-// ---------------------------------------------------------------------------
 
 function LexiconCompare({ langA, langB }: { langA: Language; langB: Language }) {
   const sim = lexicalSimilarity(langA, langB);
@@ -319,8 +305,6 @@ function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Languag
 }
 
 function GrammarRows({ lang, other }: { lang: Language; other: Language }) {
-  // Compact stress label — just the rule, no override count (the
-  // GrammarView elsewhere shows the full breakdown).
   const stressOf = (l: Language) => l.stressPattern ?? "penult";
   const rows: Array<[string, string, string]> = [
     ["order", lang.grammar.wordOrder, other.grammar.wordOrder],
@@ -391,25 +375,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// ---------------------------------------------------------------------------
-// NARRATIVE sub-mode
-// ---------------------------------------------------------------------------
-
 function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }) {
   const script = useSimStore((s) => s.displayScript);
   const generation = useSimStore((s) => s.state.generation);
   const [seed, setSeed] = useState<string>(() => randomNarrativeSeed());
   const [lineCount, setLineCount] = useState(6);
-  // §2.2: genre selector for discourse-coherent narratives.
-  // "skeleton" = legacy template generator (apple-to-apple compare on
-  //              identical English skeletons across both languages).
-  // "myth" / "legend" / "daily" / "dialogue" = discourse generator
-  //              with reference tracking + pronoun substitution +
-  //              full grammar realisation through the §2.1 tree.
-  // Default to discourse-coherent generation rather than the legacy
-  // skeleton mode — readers see proper grammar (articles, agreement,
-  // tense) right away. Skeleton stays available for the apple-to-apple
-  // compare view.
   const [genre, setGenre] = useState<"skeleton" | DiscourseGenre>("myth");
 
   const linesA = useMemo(
@@ -486,10 +456,6 @@ function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }
   );
 }
 
-/**
- * Adapter: convert §2.2 DiscourseLine[] into the legacy NarrativeLine
- * shape so NarrativePane can render either generator's output.
- */
 function discourseToNarrativeLines(
   lang: Language,
   seed: string,
@@ -497,9 +463,6 @@ function discourseToNarrativeLines(
   genre: DiscourseGenre,
   script: import("../engine/phonology/display").DisplayScript,
 ): NarrativeLine[] {
-  // Plumb the user's script preference into the discourse generator
-  // so myth / legend / daily / dialogue render in IPA / Roman / both
-  // alongside skeleton mode (which already routed through formatForm).
   const out = generateDiscourseNarrative(lang, seed, { lines, genre, script });
   return out.map((l) => ({ text: l.text, gloss: l.english }));
 }
@@ -544,10 +507,6 @@ function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[]
         {lang.name} · word order {lang.grammar.wordOrder} · {Object.keys(lang.morphology.paradigms).length} paradigms
       </div>
       {lines.map((line, i) => (
-        // Stable key: gloss + position. NarrativeLine doesn't carry
-        // an English source field, but the gloss is unique per line
-        // (it includes the meaning slots). Plain `i` would re-key
-        // every cell on rerender.
         <div key={`${line.gloss}-${i}`} className="mb-6">
           <div
             style={{
@@ -572,10 +531,6 @@ function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[]
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// COGNATE TRACE sub-mode
-// ---------------------------------------------------------------------------
 
 function CognateTrace({
   tree,

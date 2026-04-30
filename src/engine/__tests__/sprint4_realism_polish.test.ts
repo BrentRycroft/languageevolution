@@ -35,7 +35,6 @@ function bareLang(id: string, overrides: Partial<Language> = {}): Language {
 
 describe("§H.6 — substrate simplification phase", () => {
   it("triggers an accelerated-simplification phase after enough loans pile up", () => {
-    // Run a full sim with high borrow rate so loans accumulate fast.
     const sim = createSimulation({
       ...defaultConfig(),
       seed: "substrate-trigger",
@@ -63,7 +62,6 @@ describe("§H.6 — substrate simplification phase", () => {
     const state: SimulationState = { generation: 200, rootId: lang.id, rngState: 0, tree };
     const rng = makeRng("trim");
     stepContact(state, lang, defaultConfig(), rng, 200);
-    // All four entries are > 50 gens stale at gen 200.
     expect(lang.recentLoanGens).toEqual([]);
   });
 });
@@ -112,8 +110,6 @@ describe("§H.7 — discourse-particle grammaticalisation pathways", () => {
 
 describe("§H.2 — per-tier genesis bias", () => {
   it("default sim with tier 0 still coins via reduplication / ideophone occasionally", () => {
-    // The bias multiplies in alongside the existing weights; we just
-    // check that the sim doesn't stall on tier-biased mechanisms.
     const sim = createSimulation({ ...defaultConfig(), seed: "tier-bias" });
     for (let i = 0; i < 100; i++) sim.step();
     const state = sim.getState();
@@ -130,7 +126,7 @@ describe("§H.2 — per-tier genesis bias", () => {
 describe("§H.4 — inventoryProvenance bookkeeping", () => {
   it("init seeds every phoneme as native", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "provenance" });
-    sim.step(); // boot + first split
+    sim.step();
     const state = sim.getState();
     const proto = state.tree["L-0"]!.language;
     for (const p of proto.phonemeInventory.segmental) {

@@ -17,8 +17,6 @@ describe("PR C — sidebar + dictionary refactor", () => {
     const before = useSimStore.getState().config.seed;
     useSimStore.getState().reset();
     const after = useSimStore.getState().config.seed;
-    // The probability of two random seeds colliding is ~1/2^48 — safe
-    // to assert non-equality without flake.
     expect(after).not.toBe(before);
   });
 

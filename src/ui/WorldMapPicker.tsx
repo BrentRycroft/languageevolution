@@ -9,16 +9,6 @@ import {
 } from "../engine/geo/map";
 import { makeRng } from "../engine/rng";
 
-/**
- * Map-mode + origin-cell picker. Lives in the ControlsPanel above
- * the playback section so the user picks the map shape and starting
- * region before they hit play.
- *
- * Changing either mode or origin resets the simulation — the world
- * map is baked into the initial state, so a fresh sim is the only
- * sane way to switch. The reset happens via `updateConfig` which
- * already calls `initFromConfig` to rebuild.
- */
 export function WorldMapPicker() {
   const config = useSimStore((s) => s.config);
   const updateConfig = useSimStore((s) => s.updateConfig);

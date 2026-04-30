@@ -1,15 +1,6 @@
 import { useEffect } from "react";
 import { useSimStore } from "../state/store";
 
-/**
- * Surface persistence-layer warnings as a toast — quota-exceeded,
- * future-version snapshot rejection, corrupt save, migration failure.
- * Mirrors `AchievementToast`'s shape so the same CSS picks it up.
- *
- * Auto-dismisses after 8 s (longer than the achievement toast since
- * users might be away from the screen when an autosave fails). Click
- * to dismiss sooner.
- */
 export function PersistenceToast() {
   const notice = useSimStore((s) => s.persistenceNotice);
   const dismiss = useSimStore((s) => s.dismissPersistenceNotice);

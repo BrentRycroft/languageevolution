@@ -2,27 +2,7 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
-/**
- * Hand-authored Proto-Indo-European seed lexicon. Forms are simplified
- * reconstructions drawn from the standard literature (Pokorny / LIV /
- * Mallory–Adams), transcribed in IPA rather than the traditional
- * Indo-Europeanist notation. Mappings used:
- *
- *   - Palatovelars  ḱ ǵ ǵʰ        → kʲ gʲ gʲʰ      (palatalised velars)
- *   - Labiovelars   kʷ gʷ gʷʰ     → kʷ gʷ gʷʰ      (unchanged — already IPA)
- *   - Aspirates     bʰ dʰ gʰ      → bʰ dʰ gʰ       (unchanged — already IPA)
- *   - Laryngeals    h₁ h₂ h₃      → h₁ h₂ h₃       (kept as convention —
- *     there is no standard IPA letter for the reconstructed laryngeals,
- *     so we leave them opaque; `PHONE_FEATURES` has dedicated entries).
- *   - Syllabic resonants m̥ n̥ l̥ r̥ → m̩ n̩ l̩ r̩      (IPA U+0329, not U+0325)
- *   - Long vowels    ā ē ī ō ū    → aː eː iː oː uː (IPA length mark)
- *   - Acute stress  á é í ó ú     → dropped; the engine doesn't yet
- *     track per-segment stress as a feature, so retaining the accent
- *     just clutters the lexicon. Will return if a stress pass lands.
- *   - Diphthongs `ew`, `ow`, etc. → split into two phonemes.
- */
 const LEXICON: Lexicon = {
-  // — natural world / weather —
   water: ["w", "o", "d", "r̩"],
   fire: ["p", "e", "h₂", "w", "r̩"],
   stone: ["a", "kʲ", "m", "o", "n"],
@@ -48,7 +28,6 @@ const LEXICON: Lexicon = {
   field: ["h₂", "e", "gʲ", "r", "o"],
   road: ["p", "o", "n", "t", "i"],
   path: ["s", "t", "i", "gʰ"],
-  // — sky cycle / time —
   day: ["d", "j", "e", "w"],
   night: ["n", "o", "kʷ", "t", "s"],
   morning: ["h₂", "e", "w", "s", "o", "s"],
@@ -57,10 +36,7 @@ const LEXICON: Lexicon = {
   season: ["s", "e", "m", "h₂"],
   winter: ["gʲʰ", "e", "i", "m"],
   summer: ["s", "a", "m", "h₂"],
-  // PIE *déh₂-mn̩ "time, turn" (cf. Greek δῆμος, Lat. tempus is actually
-  // from *tempos, so avoid it as the PIE source and use *deh₂-).
   time: ["d", "e", "h₂", "m", "n̩"],
-  // — flora / fauna —
   tree: ["d", "o", "r", "u"],
   wood: ["d", "o", "r", "u"],
   leaf: ["bʰ", "o", "l", "j", "o"],
@@ -74,7 +50,6 @@ const LEXICON: Lexicon = {
   oak: ["a", "j", "g"],
   birch: ["bʰ", "e", "r", "h₂", "gʲ", "o"],
   apple: ["a", "b", "l", "u"],
-  // — animals —
   dog: ["kʲ", "w", "o", "n"],
   wolf: ["w", "l̩", "kʷ", "o"],
   horse: ["h₁", "e", "kʲ", "w", "o", "s"],
@@ -88,7 +63,6 @@ const LEXICON: Lexicon = {
   fish: ["p", "i", "s", "kʲ"],
   bird: ["h₂", "e", "w", "i"],
   eagle: ["h₃", "o", "r", "n̩"],
-  // PIE *h₁ógʷʰis "snake".
   snake: ["h₁", "o", "gʷʰ", "i", "s"],
   worm: ["w", "r̩", "m", "i"],
   louse: ["l", "u", "s"],
@@ -97,16 +71,12 @@ const LEXICON: Lexicon = {
   feather: ["p", "e", "t", "r", "o"],
   horn: ["kʲ", "e", "r", "n"],
   tail: ["p", "u", "kʲ", "n"],
-  // — body —
-  // PIE *kʷr̩p- "body" (source of Lat. corpus, Skt. kr̩p-). The Latin
-  // nominative "korpus" was a bad seed — use the bare root.
   body: ["kʷ", "r̩", "p"],
   head: ["kʲ", "e", "r", "h₂"],
   hair: ["p", "u", "l", "h₂"],
   face: ["h₃", "o", "kʷ"],
   eye: ["h₃", "o", "kʷ"],
   ear: ["h₂", "o", "w", "s"],
-  // PIE *neh₂s- "nose".
   nose: ["n", "e", "h₂", "s"],
   mouth: ["h₁", "o", "s"],
   tooth: ["h₁", "d", "o", "n", "t"],
@@ -116,7 +86,6 @@ const LEXICON: Lexicon = {
   arm: ["bʰ", "aː", "gʰ", "u"],
   hand: ["gʲʰ", "e", "s", "r"],
   nail: ["h₃", "n", "o", "gʰ"],
-  // PIE *bʰerǵʰ- "high, chest" — the Lat. pectus form was wrong.
   chest: ["bʰ", "e", "r", "gʲʰ"],
   back: ["t", "e", "r", "g", "o"],
   belly: ["gʲʰ", "o", "l", "k", "o"],
@@ -129,11 +98,9 @@ const LEXICON: Lexicon = {
   flesh: ["m", "eː", "m", "s", "o"],
   knee: ["gʲ", "o", "n", "u"],
   foot: ["p", "o", "d", "s"],
-  // — kinship / people —
   person: ["dʰ", "gʲʰ", "m", "oː"],
   man: ["w", "i", "h₁", "r", "o"],
   woman: ["gʷ", "e", "n", "h₂"],
-  // PIE *putlós "young one, child".
   child: ["p", "u", "t", "l", "o", "s"],
   baby: ["s", "u", "n", "u"],
   mother: ["m", "e", "h₂", "t", "eː", "r"],
@@ -147,37 +114,27 @@ const LEXICON: Lexicon = {
   king: ["h₃", "r", "eː", "gʲ", "s"],
   god: ["d", "j", "e", "w", "s"],
   guest: ["gʰ", "o", "s", "t", "i"],
-  // — household / artifact —
   house: ["d", "o", "m"],
   door: ["dʰ", "w", "o", "r"],
-  // PIE distinguished *peh₂wr̩ "fire (natural force)" from *h₁n̥gʷnis
-  // "fire (ritual / domestic)" — Latin `ignis` etc. Kept as a separate
-  // gloss for the simulator since the two roots fed different
-  // descendant lineages.
   fire_ritual: ["h₁", "n̩", "gʷ", "n", "i"],
   hearth: ["h₂", "e", "h₁", "s"],
   yoke: ["j", "u", "g", "o", "m"],
   wheel: ["kʷ", "e", "kʷ", "l", "o"],
   axle: ["a", "kʲ", "s", "i"],
   boat: ["n", "e", "h₂", "u"],
-  // PIE *(s)ker- "cut" → knife.
   knife: ["s", "k", "e", "r"],
   axe: ["s", "e", "k", "u", "r", "i"],
   spear: ["gʰ", "a", "i", "s", "o"],
-  // PIE *h₂erkʷ-o- "bow" (source of Lat. arcus).
   bow: ["h₂", "e", "r", "kʷ", "o"],
   arrow: ["i", "s", "u"],
   rope: ["w", "e", "j", "o"],
   cloth: ["w", "e", "s"],
   wool: ["w", "l̩", "h₂", "n", "h₂"],
-  // — food / drink —
-  // PIE *bʰrew- "to ferment, bake" — the root behind English "bread".
   bread: ["bʰ", "r", "e", "w"],
   meat: ["m", "eː", "m", "s", "o"],
   milk: ["gʷ", "l", "a", "k", "t"],
   honey: ["m", "e", "l", "i", "t"],
   salt: ["s", "a", "h₂", "l"],
-  // — verbs of motion / state —
   be: ["h₁", "e", "s"],
   go: ["gʷ", "e", "m"],
   come: ["gʷ", "e", "m"],
@@ -189,7 +146,6 @@ const LEXICON: Lexicon = {
   fall: ["p", "e", "d"],
   fly: ["p", "e", "t", "h₂"],
   swim: ["s", "n", "e", "h₂"],
-  // — verbs of perception / cognition —
   see: ["w", "e", "i", "d"],
   hear: ["kʲ", "l", "e", "w"],
   know: ["gʲ", "n", "eː", "h₃"],
@@ -198,7 +154,6 @@ const LEXICON: Lexicon = {
   say: ["s", "e", "kʷ"],
   call: ["k", "e", "l", "h₁"],
   ask: ["p", "r", "e", "kʲ"],
-  // — verbs of action —
   do: ["dʰ", "e", "h₁"],
   make: ["w", "e", "r", "gʲ"],
   take: ["gʰ", "e", "n", "d"],
@@ -217,7 +172,6 @@ const LEXICON: Lexicon = {
   weave: ["w", "e", "bʰ"],
   plant: ["s", "e", "h₁"],
   sow: ["s", "e", "h₁"],
-  // — verbs of life —
   eat: ["h₁", "e", "d"],
   drink: ["p", "i", "h₃"],
   sleep: ["s", "w", "e", "p"],
@@ -229,7 +183,6 @@ const LEXICON: Lexicon = {
   love: ["k", "e", "h₂"],
   fear: ["bʰ", "e", "j", "h₁"],
   cry: ["w", "e", "i"],
-  // — numbers —
   one: ["o", "j", "n", "o", "s"],
   two: ["d", "w", "o", "h₁"],
   three: ["t", "r", "e", "j", "e", "s"],
@@ -241,7 +194,6 @@ const LEXICON: Lexicon = {
   nine: ["h₁", "n", "e", "w", "n̩"],
   ten: ["d", "e", "kʲ", "m̩"],
   hundred: ["kʲ", "m̩", "t", "o", "m"],
-  // — qualities —
   big: ["m", "e", "gʲ", "h₂"],
   small: ["p", "e", "h₂", "u"],
   long: ["d", "l̩", "h₁", "gʰ"],
@@ -269,34 +221,28 @@ const LEXICON: Lexicon = {
   weak: ["w", "e", "j", "k"],
   fast: ["k", "l", "e", "u"],
   slow: ["s", "l", "e", "h₃"],
-  // — colour —
   red: ["h₁", "r", "e", "w", "dʰ"],
   black: ["k", "r̩", "s", "n", "o"],
   white: ["h₂", "e", "l", "bʰ", "o"],
   green: ["gʲʰ", "r", "o", "h₁"],
   yellow: ["gʲʰ", "e", "l", "h₃"],
   blue: ["bʰ", "l", "eː", "w"],
-  // — abstract / pronouns —
   name: ["h₁", "n", "o", "m", "n̩"],
   word: ["w", "e", "kʷ", "o", "s"],
   truth: ["s", "o", "n", "t"],
-  // direction / deixis
   this: ["s", "o"],
   that: ["t", "o", "d"],
   here: ["kʲ", "i"],
   there: ["t", "o"],
-  // pronouns
   i: ["h₁", "e", "gʲ", "h₂"],
   you: ["t", "u"],
   we: ["w", "e", "j"],
   they: ["t", "o", "j"],
-  // — extended body —
   jaw: ["gʲ", "e", "n", "u"],
   throat: ["gʷ", "e", "r", "h₃"],
   chin: ["gʲ", "e", "n", "u"],
   thumb: ["p", "o", "l", "e", "kʲ"],
   sinew: ["s", "n", "eː", "w"],
-  // — extended kinship —
   grandfather: ["h₂", "e", "w", "o"],
   grandmother: ["a", "n", "h₁"],
   uncle: ["h₂", "e", "w", "n̩", "t", "r"],
@@ -306,7 +252,6 @@ const LEXICON: Lexicon = {
   orphan: ["h₃", "o", "r", "bʰ", "o"],
   youth: ["j", "u", "h₁", "w", "e", "n"],
   elder: ["gʲ", "e", "r", "h₂"],
-  // — extended animals —
   otter: ["u", "d", "r", "o"],
   beaver: ["bʰ", "e", "bʰ", "r"],
   mouse: ["m", "uː", "s"],
@@ -316,7 +261,6 @@ const LEXICON: Lexicon = {
   lamb: ["w", "r̩", "eː", "n"],
   calf: ["w", "e", "t", "e", "l"],
   foal: ["p", "oː", "l"],
-  // — plant / food extended —
   barley: ["h₂", "e", "d", "o", "s"],
   wheat: ["p", "uː", "r"],
   vine: ["w", "e", "j", "t"],
@@ -326,7 +270,6 @@ const LEXICON: Lexicon = {
   flour: ["m", "o", "l", "h₂"],
   dough: ["t", "a", "j", "s"],
   wine: ["w", "o", "j", "n", "o"],
-  // — tools / technology —
   plow: ["h₂", "e", "r", "h₃"],
   mill: ["m", "e", "l", "h₂"],
   hoe: ["p", "e", "kʲ"],
@@ -338,24 +281,20 @@ const LEXICON: Lexicon = {
   wagon: ["w", "e", "gʲʰ", "n", "o"],
   reins: ["r", "e", "j"],
   hammer: ["a", "kʲ", "m", "oː"],
-  // — metals —
   gold: ["gʲʰ", "l̩", "h₃", "t", "o"],
   silver: ["h₂", "r̩", "gʲ", "n̩", "t"],
   metal: ["a", "j", "e", "s"],
-  // — weather extended —
   frost: ["p", "r", "u", "s"],
   hail: ["gʰ", "r", "o", "h₁"],
   dew: ["h₂", "e", "w", "s", "r̩"],
   fog: ["m", "e", "j", "gʰ"],
   breeze: ["h₂", "e", "n", "h₁", "m"],
-  // — directions —
   east: ["h₂", "e", "w", "s"],
   west: ["w", "e", "s", "p", "e", "r"],
   up: ["u", "p", "e", "r"],
   down: ["n̩", "dʰ", "o"],
   outside: ["h₁", "e", "gʲʰ"],
   inside: ["h₁", "e", "n"],
-  // — extended qualities —
   soft: ["m", "e", "l", "d"],
   hard: ["k", "a", "r"],
   stiff: ["s", "t", "e", "r"],
@@ -365,7 +304,6 @@ const LEXICON: Lexicon = {
   dirty: ["p", "uː"],
   holy: ["s", "a", "kʲ"],
   sacred: ["kʲ", "w", "e", "n", "t"],
-  // — extended verbs —
   sell: ["p", "e", "r"],
   buy: ["kʷ", "r", "e", "j", "h₂"],
   tell: ["s", "e", "kʷ"],
@@ -389,7 +327,6 @@ const LEXICON: Lexicon = {
   stay: ["s", "t", "e", "w", "h₂"],
   wait: ["s", "p", "e", "kʲ"],
   hope: ["s", "p", "e", "h₁"],
-  // — social / ritual —
   tribe: ["t", "e", "w", "t", "a"],
   clan: ["gʲ", "e", "n", "h₁"],
   sacrifice: ["gʲʰ", "e", "w"],
@@ -399,7 +336,6 @@ const LEXICON: Lexicon = {
   feast: ["d", "e", "h₂", "j", "t"],
   gift: ["d", "o", "h₃", "n"],
   host: ["d", "o", "m"],
-  // — abstract —
   mind: ["m", "e", "n"],
   soul: ["a", "n", "h₁"],
   ghost: ["gʰ", "e", "j", "s"],
@@ -408,7 +344,6 @@ const LEXICON: Lexicon = {
   dark: ["t", "e", "m"],
   life: ["gʷ", "j", "e", "h₃"],
   death: ["m", "r̩"],
-  // — time extended —
   spring: ["w", "e", "s", "r̩"],
   autumn: ["e", "s", "e", "n"],
   dawn: ["h₂", "e", "w", "s", "oː", "s"],
@@ -416,7 +351,6 @@ const LEXICON: Lexicon = {
   hour: ["oː", "r"],
   now: ["n", "uː"],
   yesterday: ["dʰ", "gʰ", "j", "e", "s"],
-  // — quantifiers —
   all: ["s", "o", "l"],
   many: ["m", "e", "gʲ", "h₂"],
   some: ["s", "e", "m"],
@@ -424,7 +358,6 @@ const LEXICON: Lexicon = {
   half: ["s", "eː", "m", "i"],
   twice: ["d", "w", "i", "s"],
   thrice: ["t", "r", "i", "s"],
-  // — interrogatives / function —
   who: ["kʷ", "i", "s"],
   what: ["kʷ", "i", "d"],
   where: ["kʷ", "u"],
@@ -432,17 +365,11 @@ const LEXICON: Lexicon = {
   why: ["kʷ", "e", "h₁"],
   not: ["n", "e"],
   yes: ["j", "a"],
-  // — sensation / feeling —
   pain: ["p", "e", "h₁"],
   joy: ["gʲ", "e", "h₂", "w"],
   hunger: ["gʷ", "e", "r"],
   thirst: ["t", "r̩", "s"],
   shame: ["s", "kʲ", "e", "m"],
-  // — closed-class fillers (PIE didn't have definite articles; uses
-  //   demonstratives `so/to(d)`. Pronouns + coordinators + a small
-  //   inventory of locative roots so the translator can render
-  //   PP-bearing input without falling back to "?". Reconstructions
-  //   are simplified — see Beekes 2011 / Fortson 2010 for citations.) —
   he: ["s", "o"],
   she: ["s", "e", "h₂"],
   it: ["t", "o", "d"],
@@ -466,50 +393,20 @@ const FREQ: Record<Meaning, number> = {
   good: 0.92, bad: 0.9, new: 0.85, old: 0.85,
 };
 
-/**
- * Hand-authored mobile-accent map. Each entry is the *vowel-position*
- * index (0-based, into the form's vowel sequence) that carries
- * primary stress. Only entries whose accent diverges from the
- * `lexical → penult` fallback are listed — most 1-vowel and many
- * 2-vowel forms naturally land on the right position via penult, so
- * including them here would be redundant noise.
- *
- * Sources: Mallory & Adams 2006, Beekes 2011, Sihler 1995, Fortson
- * 2010. Two broad classes:
- *
- *   - **Oxytones** (final-stress 2-syllable nouns): kinship -tḗr /
- *     -tor agent suffix, the *-tlós class, several adjectives ending
- *     in *-ús (PIE u-stems), and the high-numeral oxytones.
- *   - **3-syllable initial-stress words**: penult fallback would land
- *     on the middle vowel, but the inherited acrostatic accent is
- *     on the first.
- *
- * Daughter languages inherit this via `splitLeaf` (see
- * `tree/split.ts:lexicalStress`). Once a daughter drifts off the
- * `lexical` stress rule (typically to `initial` for Germanic-style
- * descendants or `penult` for Romance-style), the override map
- * becomes inert but stays around as a fossil etymology.
- */
 const LEXICAL_STRESS: Record<Meaning, number> = {
-  // -tḗr agent oxytones
-  mother: 1,    // *meh₂tḗr
-  daughter: 1,  // *dʰugh₂tḗr
-  // *-tlós child / agent-product oxytone
-  child: 1,     // *putlós
-  // numeral oxytones
-  seven: 1,     // *septḿ̥
-  eight: 1,     // *h₃oḱtṓ
-  hundred: 1,   // *ḱm̥tóm
-  // u-stem adjective oxytones
-  short: 1,     // *mr̥gʲʰús
-  wide: 1,      // *pl̥th₂ús
-  // o-stem instrumental nouns with terminal accent
-  yoke: 1,      // *jugóm
-  wheel: 1,     // *kʷekʷlóm
-  // 3-syllable acrostatics (penult-fallback would mis-place to vowel 1)
-  evening: 0,   // *wésperos
-  four: 0,      // *kʷétwores
-  wife: 0,      // *déms-potniH (lady-of-house compound, acrostatic)
+  mother: 1,
+  daughter: 1,
+  child: 1,
+  seven: 1,
+  eight: 1,
+  hundred: 1,
+  short: 1,
+  wide: 1,
+  yoke: 1,
+  wheel: 1,
+  evening: 0,
+  four: 0,
+  wife: 0,
 };
 
 const MORPHOLOGY: Morphology = {
@@ -539,15 +436,6 @@ export function presetPIE(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
-    // PIE typology: SOV; no articles (definiteness via demonstratives
-    // *so / *to); case-marking strategy with eight cases; pre-noun
-    // adjectives; pre-noun possessor (genitive). Synthesis ~2.5
-    // (highly inflecting fusional system).
-    // PIE had a mobile, lexically-determined word accent — different
-    // roots / paradigm slots stressed different syllables. Daughter
-    // languages later froze the system into fixed positions
-    // (Germanic → initial, Greek → recessive trisyllabic, Latin →
-    // penult, Sanskrit kept mobile longer).
     seedStressPattern: "lexical",
     seedLexicalStress: LEXICAL_STRESS,
     seedGrammar: {

@@ -6,24 +6,6 @@ import { isVowel } from "../phonology/ipa";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 
-/**
- * Areal phoneme convergence: alive sisters in close geographic
- * contact gradually share each other's distinctive phonemes,
- * mirroring real Sprachbund effects (the Caucasus's pharyngealised
- * consonants spreading across unrelated families, the Balkan
- * schwa, retroflex consonants throughout the Indian subcontinent).
- *
- * Mechanism: with low per-gen probability, pick a close-contact
- * sister and find a phoneme it has but we don't. If our lexicon
- * already contains a similar phoneme (same vowel/consonant class),
- * we're a candidate for borrowing it. Substitute the new phoneme
- * into a few words where the contextually-similar phoneme appears.
- * Over many generations the new phoneme becomes a regular
- * inventory member.
- *
- * Distance gating: same as `tryBorrow` — affinity = half / (half + d).
- */
-
 const AREAL_HALF_LIFE = 200;
 
 export interface ArealPhonemeEvent {
@@ -52,11 +34,6 @@ export function maybeArealPhonemeShare(
     .map((id) => tree[id]!.language);
   if (sisters.length === 0) return null;
 
-  // Pick a donor weighted by contact affinity. When territories are
-  // available, use the cell-edge share metric; otherwise fall back
-  // to nearest-by-distance for back-compat. The strongest contact
-  // signal wins — sisters with a long shared border drive most of
-  // the areal phoneme spread, mirroring real Sprachbund effects.
   let donor: Language | null = null;
   let bestAffinity = 0;
   for (const s of sisters) {
@@ -74,19 +51,13 @@ export function maybeArealPhonemeShare(
   }
   if (!donor) return null;
 
-  // Affinity-gated firing rate.
   if (!rng.chance(baseProbability * bestAffinity)) return null;
 
-  // Phonemes the donor has that we don't.
   const ours = new Set(recipient.phonemeInventory.segmental);
   const novel = donor.phonemeInventory.segmental.filter((p) => !ours.has(p));
   if (novel.length === 0) return null;
   const target = novel[rng.int(novel.length)]!;
 
-  // Find one of our phonemes of the same class to replace. We pick a
-  // few words where it appears and substitute. If our inventory
-  // doesn't have a matching-class candidate, skip — phonemes don't
-  // teleport across the vowel/consonant boundary.
   const targetIsVowel = isVowel(target);
   const candidates = recipient.phonemeInventory.segmental.filter(
     (p) => isVowel(p) === targetIsVowel,
@@ -95,14 +66,12 @@ export function maybeArealPhonemeShare(
   const replaced = candidates[rng.int(candidates.length)]!;
   if (replaced === target) return null;
 
-  // Apply: substitute `replaced` → `target` in 1-3 random words.
   const meanings = Object.keys(recipient.lexicon).filter((m) =>
     recipient.lexicon[m]!.includes(replaced),
   );
   if (meanings.length === 0) return null;
   const affected: string[] = [];
   const howMany = Math.min(meanings.length, 1 + rng.int(3));
-  // Sample without replacement.
   const used = new Set<number>();
   while (affected.length < howMany && used.size < meanings.length) {
     const idx = rng.int(meanings.length);
@@ -110,7 +79,6 @@ export function maybeArealPhonemeShare(
     used.add(idx);
     const m = meanings[idx]!;
     const form = recipient.lexicon[m]!;
-    // Replace the first occurrence of `replaced`.
     const newForm = form.slice();
     for (let i = 0; i < newForm.length; i++) {
       if (newForm[i] === replaced) {
@@ -123,12 +91,9 @@ export function maybeArealPhonemeShare(
   }
   if (affected.length === 0) return null;
 
-  // Add the new phoneme to the inventory.
   recipient.phonemeInventory.segmental = Array.from(
     new Set([...recipient.phonemeInventory.segmental, target]),
   ).sort();
-  // Record provenance — the Phonemes tab will surface a 🤝 badge
-  // pointing back at the donor language.
   if (!recipient.inventoryProvenance) recipient.inventoryProvenance = {};
   recipient.inventoryProvenance[target] = {
     source: "areal",

@@ -1,5 +1,3 @@
-// Test environment setup for vitest + jsdom.
-// ResizeObserver is used by LanguageTreeView but not provided by jsdom.
 class MockResizeObserver {
   observe() {}
   unobserve() {}
@@ -7,8 +5,6 @@ class MockResizeObserver {
 }
 (globalThis as unknown as { ResizeObserver: typeof MockResizeObserver }).ResizeObserver = MockResizeObserver;
 
-// Recharts uses getBoundingClientRect; jsdom returns zeroes which crashes
-// layout. Patch to return reasonable defaults.
 if (typeof window !== "undefined") {
   const originalGBCR = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function (): DOMRect {

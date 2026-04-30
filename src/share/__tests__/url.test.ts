@@ -37,7 +37,6 @@ describe("share/url", () => {
   it("rejects malformed inputs gracefully", () => {
     expect(decodeShare("")).toBeNull();
     expect(decodeShare("not base64 ~!")).toBeNull();
-    // Valid base64 but not a SharePayload.
     expect(decodeShare(btoa("null"))).toBeNull();
     expect(decodeShare(btoa('{"not":"share"}'))).toBeNull();
   });

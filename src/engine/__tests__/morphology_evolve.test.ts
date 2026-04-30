@@ -47,7 +47,6 @@ describe("morphology evolution", () => {
       return rule.apply(form, rng);
     });
     const affix = lang.morphology.paradigms["verb.tense.past"]!.affix;
-    // p should have been lenited to f in the affix.
     expect(affix[0]).toBe("f");
   });
 
@@ -56,10 +55,8 @@ describe("morphology evolution", () => {
     const rng = makeRng("gram");
     const shift = maybeGrammaticalize(lang, rng, 1);
     expect(shift).not.toBeNull();
-    // One of the two seed words should now be gone from the lexicon.
     const remaining = Object.keys(lang.lexicon).length;
     expect(remaining).toBeLessThan(2);
-    // A new paradigm should have been added.
     const categories = Object.keys(lang.morphology.paradigms);
     expect(categories.length).toBeGreaterThan(1);
   });

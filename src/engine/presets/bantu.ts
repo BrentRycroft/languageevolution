@@ -2,12 +2,7 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
-// Hand-authored Proto-Bantu seed (highly simplified). Forms approximate
-// Guthrie / Bastin reconstructions: CV syllables, vowel-initial noun-class
-// stems, two-tone melody (˥ high, ˩ low), prenasalized stops as single
-// segments, palatal series (ɲ, j) preserved.
 const LEXICON: Lexicon = {
-  // — natural world / weather —
   water: ["m", "a", "ɲ", "i"],
   fire: ["m", "u", "l", "i", "l", "o"],
   stone: ["b", "u", "e˩"],
@@ -21,26 +16,18 @@ const LEXICON: Lexicon = {
   wind: ["m", "u", "p", "e", "p", "o"],
   thunder: ["i", "k", "u˥", "p", "u", "g", "u"],
   river: ["m", "u", "k", "o"],
-  // Proto-Bantu had no securely-reconstructed "sea" lexeme (the
-  // *bahari Swahili form is an Arabic loan). Use the lake-extension
-  // *jɪ̀dà — many descendants conflate sea / lake.
   sea: ["i", "j", "i", "d", "a"],
   lake: ["i", "z", "i", "w", "a"],
   mountain: ["m", "u", "l", "i", "m", "a"],
   hill: ["i", "k", "i", "l", "i", "m", "a"],
   forest: ["m", "u", "t", "i", "t", "u"],
-  // PB *gʊ̀ndá "field, garden" (Swahili `shamba` is an Arabic loan).
   field: ["m", "u", "g", "u˩", "n", "d", "a"],
   road: ["m", "u", "n", "j", "i", "l", "a"],
-  // — sky cycle / time —
   day: ["i", "s", "i", "k", "u"],
   night: ["b", "u", "s", "i", "k", "u"],
-  // Swahili `asubuhi` (morning) is Arabic أول صبح — not PB; dropped.
   evening: ["i", "j", "i", "o"],
   year: ["m", "w", "a˩", "k", "a"],
   season: ["i", "k", "i", "p", "i", "n", "d", "i"],
-  // Swahili `muda` (time) is Arabic مدّة — not PB; dropped.
-  // — flora / fauna —
   tree: ["m", "u˥", "t", "i"],
   wood: ["m", "u", "t", "i"],
   leaf: ["i", "j", "a˩", "n", "i"],
@@ -51,10 +38,6 @@ const LEXICON: Lexicon = {
   fruit: ["i", "t", "u", "n", "d", "a"],
   grain: ["i", "p", "u", "n", "d", "a"],
   bark: ["i", "g", "a", "n", "d", "a"],
-  // No Proto-Bantu word for `oak` or `apple` (post-PB Portuguese
-  // loans) and `wolf` / `horse` (areal loans / no PB referent).
-  // `dog` *bʊ́á attested.
-  // — animals —
   dog: ["m", "b", "u", "a˩"],
   cow: ["ɲ", "o", "m", "b", "e"],
   bull: ["i", "n", "d", "u", "m", "e"],
@@ -75,7 +58,6 @@ const LEXICON: Lexicon = {
   wing: ["i", "p", "i", "a˩"],
   horn: ["m", "u", "p", "u", "p", "u"],
   tail: ["m", "u", "k", "i", "l", "a"],
-  // — body —
   body: ["m", "u", "i", "l", "i"],
   head: ["m", "u˥", "t", "w", "e"],
   hair: ["l", "u", "s", "o˩", "k", "o"],
@@ -105,11 +87,7 @@ const LEXICON: Lexicon = {
   flesh: ["ɲ", "a˩", "m", "a"],
   knee: ["i", "g", "o", "t", "i"],
   leg: ["m", "u", "a˩", "g", "u", "l", "u"],
-  // PB *gùdù "foot" (Swahili mguu); previously duplicated `bone`'s
-  // form `ikupa`. Now distinct, sharing a root with `leg` (which
-  // many Bantu languages also conflate — but at least bone ≠ foot).
   foot: ["m", "u", "g", "u", "l", "u"],
-  // — kinship / people —
   person: ["m", "u˥", "t", "u"],
   man: ["m", "u˥", "a˩", "n", "a", "u", "m", "e"],
   woman: ["m", "u˥", "a˩", "n", "a", "m", "k", "e"],
@@ -120,25 +98,18 @@ const LEXICON: Lexicon = {
   son: ["m", "w", "a˩", "n", "a"],
   daughter: ["m", "w", "a˩", "n", "a", "m", "k", "e"],
   brother: ["k", "a˩", "k", "a"],
-  // *dada "sister" is Swahili nursery; PB *kádí. Reuse the brother
-  // root with the káìká reduplication pattern.
   sister: ["k", "a˩", "i", "k", "a"],
   husband: ["m", "u˥", "m", "e"],
   wife: ["m", "k", "e"],
-  // PB *kʊ́mʊ́ "chief, ruler" (Swahili `mfalme` is an Arabic loan).
   king: ["m", "u˥", "k", "u", "m", "u"],
   god: ["m", "u˥", "ⁿg", "u"],
   guest: ["m", "u", "g", "e", "n", "i"],
-  // Drop `enemy` — Swahili `adui` is Arabic; PB lacked a single
-  // dedicated lexeme.
-  // — household / artifact —
   house: ["ɲ", "u˥", "m", "b", "a"],
   door: ["m", "l", "a˩", "ⁿg", "o"],
   hearth: ["i", "j", "i", "k", "o"],
   yoke: ["m", "u", "g", "a", "a˩"],
   wheel: ["m", "u", "p", "i", "g", "i", "l", "i"],
   boat: ["m", "u", "a˩", "t", "u"],
-  // Swahili `meli` is an English loan (← "mail-boat"); drop.
   knife: ["i", "k", "i", "s", "u"],
   axe: ["i", "ʃ", "o˩", "k", "a"],
   spear: ["i", "f", "u˥", "m", "o"],
@@ -146,15 +117,10 @@ const LEXICON: Lexicon = {
   arrow: ["m", "u", "p", "i", "g", "a"],
   rope: ["k", "a˩", "m", "b", "a˩"],
   cloth: ["m", "p", "a˩"],
-  // — food / drink —
-  // Swahili `mkate` is an Arabic loan; PB had no securely-reconstructed
-  // bread word (cassava / millet / sorghum varied per region). Drop.
   meat: ["ɲ", "a˩", "m", "a"],
   milk: ["m", "a˩", "z", "i", "w", "a"],
-  // PB *jʊ̀kɪ̀ "honey" (Swahili `asali` is Arabic عسل).
   honey: ["b", "u˩", "j", "u", "k", "i"],
   salt: ["m", "u", "ɲ", "u"],
-  // — verbs of motion / state —
   be: ["k", "u", "a˩"],
   go: ["e", "n", "d", "a"],
   come: ["j", "a"],
@@ -166,7 +132,6 @@ const LEXICON: Lexicon = {
   fall: ["a", "ⁿg", "u", "k", "a"],
   fly: ["p", "a˩", "a˩"],
   swim: ["o", "g", "e", "l", "e", "a"],
-  // — verbs of perception / cognition —
   see: ["o", "n", "a"],
   hear: ["s", "i", "k", "i", "a"],
   know: ["j", "u", "a"],
@@ -175,7 +140,6 @@ const LEXICON: Lexicon = {
   say: ["a", "m", "b", "a"],
   call: ["i", "t", "a"],
   ask: ["u", "l", "i", "z", "a"],
-  // — verbs of action —
   do: ["t", "e", "n", "d", "a"],
   make: ["t", "e", "n", "g", "e", "n", "e", "z", "a"],
   take: ["t", "w", "a˩", "a˩"],
@@ -193,7 +157,6 @@ const LEXICON: Lexicon = {
   wash: ["o", "g", "a˩"],
   weave: ["s", "u", "k", "a"],
   plant: ["p", "a˩", "n", "d", "a"],
-  // — verbs of life —
   eat: ["l", "i", "a"],
   drink: ["ɲ", "w", "a"],
   sleep: ["l", "a˩", "l", "a"],
@@ -206,7 +169,6 @@ const LEXICON: Lexicon = {
   fear: ["o", "p", "a"],
   laugh: ["ʃ", "e", "k", "a"],
   cry: ["l", "i", "a"],
-  // — numbers —
   one: ["m", "o˩", "j", "a"],
   two: ["b", "i", "l", "i"],
   three: ["t", "a˩", "t", "u"],
@@ -218,7 +180,6 @@ const LEXICON: Lexicon = {
   nine: ["k", "e", "n", "d", "a"],
   ten: ["k", "u˥", "m", "i"],
   hundred: ["m", "i", "a"],
-  // — qualities —
   big: ["k", "u", "l", "u"],
   small: ["d", "o˩", "k", "o"],
   long: ["l", "i˥", "l", "i"],
@@ -230,7 +191,6 @@ const LEXICON: Lexicon = {
   heavy: ["z", "i˥", "t", "o"],
   light: ["e", "p", "e", "s", "i"],
   hot: ["m", "o", "t", "o"],
-  // PB *pɔ́lɔ̀ "cold, cool" (Swahili `baridi` is Arabic بارد).
   cold: ["i", "p", "o˥", "l", "o"],
   wet: ["l", "o˩", "a˩"],
   dry: ["k", "a˩", "v", "u"],
@@ -247,14 +207,12 @@ const LEXICON: Lexicon = {
   weak: ["o", "g", "o˩", "a˩"],
   fast: ["k", "a˩", "s", "i"],
   slow: ["p", "o˩", "l", "e"],
-  // — colour —
   red: ["e", "k", "u˥", "n", "d", "u"],
   black: ["e", "u", "s", "i"],
   white: ["e", "j", "e", "u", "p", "e"],
   green: ["e", "j", "a˩", "n", "i"],
   yellow: ["e", "a˩", "n", "ⁿg", "i"],
   blue: ["e", "b", "u", "l", "u˥"],
-  // — abstract / pronouns —
   name: ["i", "j", "i˥", "n", "a"],
   word: ["n", "e", "n", "o"],
   truth: ["k", "w", "e", "l", "i"],
@@ -266,9 +224,6 @@ const LEXICON: Lexicon = {
   you: ["w", "e", "w", "e"],
   we: ["s", "i", "s", "i"],
   they: ["w", "a˩"],
-  // — closed-class roots (Swahili-flavoured Proto-Bantu shapes;
-  //   articles handled morphologically by the noun-class prefix
-  //   system, so we leave articlePresence at "none"). —
   he: ["y", "e", "e"],
   she: ["y", "e", "e"],
   it: ["i˩", "n", "i"],
@@ -294,7 +249,6 @@ const FREQ: Record<Meaning, number> = {
 
 const MORPHOLOGY: Morphology = {
   paradigms: {
-    // Bantu-style noun-class prefixes + concord markers.
     "noun.class.1": { affix: ["m", "u"], position: "prefix", category: "noun.class.1" },
     "noun.class.2": { affix: ["b", "a"], position: "prefix", category: "noun.class.2" },
     "noun.class.3": { affix: ["m", "u"], position: "prefix", category: "noun.class.3" },
@@ -322,12 +276,6 @@ export function presetBantu(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
-    // Bantu typology: SVO; no articles (definiteness via noun-class
-    // prefixes); preposition strategy; pre-noun adjectives in Swahili
-    // ("kitabu kikubwa" — but we keep adj=pre as a coarse default);
-    // post-noun possessor ("kitabu cha mtoto").
-    // Most Bantu languages have penultimate-syllable stress (with
-    // length / tone interactions). Penult is the right approximation.
     seedStressPattern: "penult",
     seedGrammar: {
       wordOrder: "SVO",
@@ -337,6 +285,5 @@ export function presetBantu(): SimulationConfig {
       possessorPosition: "post",
     },
     preset: "bantu",
-    // Bantu starts with tones already active via tone-bearing vowels in the lexicon.
   };
 }

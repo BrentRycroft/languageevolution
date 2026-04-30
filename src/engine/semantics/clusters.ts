@@ -3,20 +3,6 @@ import { neighborsOf } from "./neighbors";
 import { CLUSTERS as BASIC_CLUSTERS } from "../lexicon/basic240";
 import { CONCEPTS, CONCEPT_IDS } from "../lexicon/concepts";
 
-/**
- * Meanings grouped into loose semantic clusters. Drift, loanwords, and
- * compounding prefer targets within the same cluster — so "water" is much
- * more likely to shift to "river" than to "heart". Non-seed / derived words
- * fall back to the static-neighbor table.
- *
- * Seeded from the Basic-240 inventory and extended with the expanded
- * concept registry so tier-1/2/3 vocabulary participates in cluster
- * gravity (drift, compounding, lexical-need scoring).
- */
-// Eager-built combined cluster → members map. Seeded from BASIC_240's
-// hand-curated clusters and extended with every registered expansion
-// concept's cluster, so tier-1/2/3 vocabulary ("democracy", "vaccine",
-// "internet") participates in cluster gravity.
 function buildClusters(): Readonly<Record<string, readonly Meaning[]>> {
   const out: Record<string, Meaning[]> = {};
   const seen: Record<string, Set<Meaning>> = {};
@@ -58,12 +44,6 @@ export function clusterOf(meaning: Meaning): string | undefined {
   return MEANING_TO_CLUSTER[meaning];
 }
 
-/**
- * Return meanings likely to be "close" to `meaning`, favouring the same
- * semantic cluster when possible. Combines the static neighbor table with
- * cluster-mates so derived words inherit cluster gravity through their
- * constituents.
- */
 export function relatedMeanings(meaning: Meaning): Meaning[] {
   const out = new Set<Meaning>();
   const cluster = clusterOf(meaning);

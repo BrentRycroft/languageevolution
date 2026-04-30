@@ -1,11 +1,5 @@
 import { useSimStore } from "../state/store";
 
-/**
- * Two-row strip of recent per-generation activity.
- *   Top: total form mutations (background hue = blue).
- *   Bottom: procedurally-invented sound laws (red pulses).
- * Placed above the Tree view so users can read the rhythm at a glance.
- */
 export function ActivityHeatmap() {
   const history = useSimStore((s) => s.activityHistory);
   if (history.length === 0) return null;

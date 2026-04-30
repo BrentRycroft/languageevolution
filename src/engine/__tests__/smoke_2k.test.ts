@@ -8,20 +8,6 @@ import { presetBantu } from "../presets/bantu";
 import { presetTokipona } from "../presets/tokipona";
 import { leafIds } from "../tree/split";
 
-/**
- * 2000-generation smoke test across every preset. Acts as a scripted
- * "use the app" harness: drives the engine with default config for 2000
- * steps per preset, collects metrics, and asserts invariants that would
- * otherwise only surface in a long interactive session.
- *
- * This test is intentionally slow (~60-120 s). Gated behind the
- * SMOKE_2K env var so `npm test` stays fast; run with
- *   SMOKE_2K=1 npm test -- --run src/engine/__tests__/smoke_2k
- * when you want the belt-and-braces long-run check.
- */
-
-// Gate via env var without pulling in @types/node. Vitest exposes process
-// at runtime, but we reach it through globalThis so TypeScript is happy.
 const SMOKE_ENABLED = !!(
   (globalThis as { process?: { env?: Record<string, string | undefined> } })
     .process?.env?.SMOKE_2K
@@ -86,8 +72,6 @@ function runAndCollect(
       void m;
     }
 
-    // Orphan registerOf / wordOrigin (keys referencing meanings that no
-    // longer live in the lexicon).
     if (lang.registerOf) {
       for (const key of Object.keys(lang.registerOf)) {
         if (!lang.lexicon[key]) danglingRegisters++;
@@ -126,8 +110,6 @@ function runAndCollect(
 }
 
 function reportMetrics(m: SmokeMetrics): void {
-  // Print a table row for each preset via console.log — visible when the
-  // test suite runs with --reporter verbose.
   const row = [
     m.name.padEnd(10),
     `alive=${m.aliveLeaves}/${m.totalLeaves}`,
@@ -163,16 +145,11 @@ describeSmoke("2000-generation smoke test (SMOKE_2K=1 to run)", () => {
       const m = runAndCollect(name, build, GENS);
       reportMetrics(m);
 
-      // Invariants that hold regardless of preset / seed.
       expect(m.emptyFormCount, `${name}: empty forms`).toBe(0);
       expect(m.danglingRegisters, `${name}: dangling registerOf`).toBe(0);
       expect(m.danglingOrigins, `${name}: dangling wordOrigin`).toBe(0);
-      // A run of 2000 gens should hold at least one living leaf.
       expect(m.aliveLeaves, `${name}: no extinction wipeout`).toBeGreaterThan(0);
-      // Should produce a healthy amount of procedural activity.
       expect(m.ruleEvents, `${name}: sound-change events`).toBeGreaterThan(0);
-      // Coinages fire whenever the need vector pulls — expect some
-      // except on toki pona which starts nearly full.
       if (name !== "tokipona") {
         expect(m.coinageEvents, `${name}: coinage events`).toBeGreaterThan(0);
       }

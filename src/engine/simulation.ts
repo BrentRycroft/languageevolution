@@ -39,21 +39,7 @@ export function createSimulation(
     const rng = makeRng(state.rngState);
     const nextGen = state.generation + 1;
 
-    // Proto preservation: on the very first step (gen 0 → gen 1),
-    // automatically split the root into two daughters. The proto itself
-    // becomes a non-leaf node — its lexicon is frozen at the seed state
-    // and never receives further evolution — so it stays preserved as a
-    // reference. Subsequent generations evolve the two daughters.
-    // We do this regardless of minGenerationsBetweenSplits / maxLeaves
-    // because it's the canonical "start" of the tree, not an ordinary
-    // speciation. When tree mode is off we skip this so a single-language
-    // run stays single.
     if (state.generation === 0 && config.modes.tree) {
-      // Bootstrap split draws from a wider distribution than later
-      // speciations — 2–4 daughters is normal, 5–7 rare, 8 exceedingly
-      // rare. Proto-communities historically fragment into more than
-      // two lineages at the first dispersal (Proto-Bantu → 3-4,
-      // Proto-Austronesian → many more). See `pickFirstSplitChildCount`.
       const childCount = pickFirstSplitChildCount(rng);
       splitLeaf(state.tree, state.rootId, nextGen, rng, {
         childCount,
@@ -62,9 +48,6 @@ export function createSimulation(
     }
 
     const leaves = leafIds(state.tree);
-    // Precompute closeness for every alive leaf once per generation.
-    // Without this, `stepDeath` rediscovered the entire N×N closeness
-    // matrix for every leaf (O(N³) per gen). Now it's O(N²) total.
     const aliveAtStart = leaves.filter((id) => !state.tree[id]!.language.extinct);
     const closenessCache = config.modes.death
       ? precomputeClosenessVector(state, aliveAtStart)
@@ -72,16 +55,6 @@ export function createSimulation(
     for (const leafId of leaves) {
       const lang = state.tree[leafId]!.language;
       if (lang.extinct) continue;
-      // Population dynamics: Malthusian logistic growth toward the
-      // tier-determined carrying capacity, plus multiplicative noise.
-      //   dlog(N)/dt ≈ r·(1 - N/K) + ε
-      // r = 0.012 / gen — calibrated so that a freshly-split daughter
-      // can recover toward its tier cap inside ~600 generations
-      // (slower and splits dilute populations to the floor faster
-      // than they regrow, which kept tier advancement starved).
-      // K = populationCap(tier). The tier-determined cap creates a
-      // feedback loop: tier 0 → ~6k, advance to tier 1 → cap jumps
-      // to 100k → population grows → triggers further tier advances.
       if (lang.speakers !== undefined) {
         const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
         const cap = populationCap(tier);
@@ -90,17 +63,8 @@ export function createSimulation(
         const drift = Math.exp(malthusian + noise);
         lang.speakers = Math.max(50, Math.round(lang.speakers * drift));
       }
-      // Territory dynamics. Replaces the old free-floating coord
-      // drift with a Voronoi-cell-based spread on the world map.
-      // Languages with more speakers expand faster; contested cells
-      // require population dominance to take. `lang.coords` is kept
-      // updated in lockstep (centroid of the current territory) so
-      // the existing distance-based areal mechanics still work.
       const worldMap = getWorldMap(config.mapMode ?? "random", config.seed);
       tickTerritory(lang, state.tree, worldMap, rng);
-      // Cultural-tier advancement. Checked every 20 generations to
-      // keep the cost negligible — age pressure accumulates slowly
-      // so there's no benefit to firing this every gen.
       if (nextGen % 20 === 0) {
         const priorTier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
         const nextTier = computeTierCandidate(lang, state.tree, nextGen, rng);
@@ -111,10 +75,6 @@ export function createSimulation(
             kind: "grammar_shift",
             description: `cultural tier: ${TIER_LABELS[priorTier]} → ${TIER_LABELS[nextTier]}`,
           });
-          // Foraging → agricultural transition: kinship terms
-          // collapse as households centralise (the
-          // ethnographic shift from band-classifictory to
-          // descriptive kinship). Only fires on the 0 → 1 step.
           if (priorTier === 0 && nextTier >= 1) {
             const merges = applyKinshipSimplification(lang, rng, 2);
             for (const m of merges) {
@@ -126,20 +86,10 @@ export function createSimulation(
             }
           }
         }
-        // Refresh the capacity target every 20 gens too so it tracks
-        // the slowly-advancing tier + growing age + drifting speakers.
         lang.lexicalCapacity = lexicalCapacity(lang, nextGen);
       }
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
-      // Obsolescence runs BEFORE genesis so freshly-coined words are never
-      // retired in the same step they were born in.
       stepObsolescence(lang, config, rng, nextGen);
-      // Copula erosion + genesis: rare per-gen chance the language
-      // drops its `be` lexeme (PIE *h₁es- → Russian Ø) OR
-      // grammaticalises a new copula from a demonstrative / pronoun
-      // / posture verb / locative verb (Mandarin 是, Hebrew הוא,
-      // Spanish estar). Together these let any branch evolve toward
-      // either typology over time.
       stepCopulaErosion(lang, config, rng, nextGen);
       stepCopulaGenesis(lang, config, rng, nextGen);
       stepTaboo(lang, config, rng, nextGen);
@@ -154,17 +104,9 @@ export function createSimulation(
       if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
       stepContact(state, lang, config, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
-      // Skip death-check on a node that just split — `stepTreeSplit`
-      // turned the leaf into an internal node + partitioned its
-      // territory to daughters. Running `stepDeath` here would
-      // operate on already-released territory (double-free) or mark
-      // the freshly-internal parent as `extinct` while its newborn
-      // daughters are still live.
       const stillLeaf = (state.tree[leafId]?.childrenIds.length ?? 0) === 0;
       if (config.modes.death && stillLeaf) stepDeath(state, lang, config, rng, closenessCache);
     }
-    // Cross-language event: creolization. Runs once per gen across
-    // the whole tree, not per-language. Very rare — usually a no-op.
     if (config.modes.tree) {
       stepCreolization(state, config, rng, nextGen);
     }
@@ -183,13 +125,6 @@ export function createSimulation(
       state = buildInitialState(config);
     },
     restoreState: (snapshot) => {
-      // Deep-clone the tree so the simulation owns its mutable copy.
-      // Prefer `structuredClone` (handles Maps, Sets, typed arrays,
-      // Dates and cycles correctly) and fall back to the older
-      // JSON-roundtrip on environments without it (Safari < 15.4,
-      // some test runners). The fallback is the previous default —
-      // the only reason to migrate is correctness for richer data
-      // shapes added in later schemas.
       const cloneTree =
         typeof structuredClone === "function"
           ? structuredClone(snapshot.tree)

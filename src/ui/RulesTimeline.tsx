@@ -15,11 +15,6 @@ const FAMILY_COLORS: Record<string, string> = {
   tone: "#ffd27a",
 };
 
-/**
- * Gantt-style rule-lifecycle view. Each row is one rule (active or retired)
- * for the selected language, with a horizontal band spanning its active
- * lifetime. Band opacity scales with the rule's current strength.
- */
 export function RulesTimeline({
   langId,
   maxGen,
@@ -37,7 +32,6 @@ export function RulesTimeline({
     const all: Array<{ rule: GeneratedRule; status: "active" | "retired" }> = [];
     for (const r of active) all.push({ rule: r, status: "active" });
     for (const r of retired) all.push({ rule: r, status: "retired" });
-    // Sort by birth generation ascending so the reader can scan downward in time.
     all.sort((a, b) => a.rule.birthGeneration - b.rule.birthGeneration);
     return all;
   }, [node]);
@@ -72,23 +66,15 @@ export function RulesTimeline({
         </thead>
         <tbody>
           {rows
-            // Hide rules that hadn't been born yet at the scrub point —
-            // previously they'd render at a negative `left` %, pushing
-            // the bar off-screen and confusing the reader. Retired
-            // rules whose death was also after the scrub point keep
-            // showing; their bar is clamped below.
             .filter(({ rule }) => rule.birthGeneration <= maxGen)
             .map(({ rule, status }) => {
             const birth = Math.max(0, rule.birthGeneration);
             const rawDeath =
               status === "retired" ? rule.deathGeneration ?? maxGen : maxGen;
-            // Clamp death at the scrub point so lifetimes don't spill
-            // past the visible window.
             const death = Math.min(rawDeath, maxGen);
             const left = (birth / span) * 100;
             const width = Math.max(0.5, ((death - birth) / span) * 100);
             const color = FAMILY_COLORS[rule.family] ?? "#888";
-            // Active rules use their live strength; retired rules fade.
             const opacity = status === "active" ? Math.max(0.2, rule.strength) : 0.35;
             const shortId = rule.id.split(".").slice(2).join(".") || rule.id;
             return (

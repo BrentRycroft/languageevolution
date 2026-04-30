@@ -26,7 +26,6 @@ describe("chain shift pairing", () => {
   it("returns null when the target vowel is NOT already in the inventory", () => {
     const sim = createSimulation(defaultConfig());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
-    // Trim the inventory so `a` is present but `e` is NOT.
     lang.phonemeInventory.segmental = ["a", "i", "o", "u", "p", "t", "k"];
     const seed: GeneratedRule = {
       id: "y",
@@ -46,7 +45,6 @@ describe("chain shift pairing", () => {
   it("pairs a push rule when the target vowel already exists", () => {
     const sim = createSimulation(defaultConfig());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
-    // Inventory with both the source /a/ and the collision target /e/.
     lang.phonemeInventory.segmental = ["a", "e", "i", "o", "u", "p", "t", "k"];
     const seed: GeneratedRule = {
       id: "z",
@@ -63,10 +61,8 @@ describe("chain shift pairing", () => {
     const push = proposePushChain(lang, seed, 5);
     expect(push).not.toBeNull();
     if (!push) return;
-    // Push must move /e/ further (toward /i/).
     expect(push.outputMap.e).toBeDefined();
     expect(push.outputMap.e).not.toBe("e");
-    // Linked id.
     expect(push.id).toBe("z.push");
     expect(push.birthGeneration).toBe(5);
   });

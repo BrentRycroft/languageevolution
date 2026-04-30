@@ -5,15 +5,8 @@ import { applyChangesToLexicon } from "../phonology/apply";
 import type { SoundChange } from "../types";
 import { makeRng } from "../rng";
 
-/**
- * Regression tests for the "water → r" collapse. Before the fix,
- * cascading deletion rules would whittle short, low-frequency words
- * down to one or zero phonemes.
- */
 describe("minimum-word-length constraint", () => {
   it("never reduces a word to zero phonemes", () => {
-    // A deletion rule firing on every segment still has to leave at
-    // least one phoneme surviving.
     const rule: GeneratedRule = {
       id: "r.total",
       family: "deletion",
@@ -33,10 +26,6 @@ describe("minimum-word-length constraint", () => {
   });
 
   it("permits reduction to a single vowel", () => {
-    // Rule deleting every consonant — /kata/ → /aa/ would collapse further
-    // but the minimum-word guard only blocks lone consonants, not lone
-    // vowels. So /kata/ can legally become /aa/ or even /a/ via another
-    // pass.
     const rule: GeneratedRule = {
       id: "r.cons_kill",
       family: "deletion",
@@ -52,7 +41,6 @@ describe("minimum-word-length constraint", () => {
     const word = ["k", "a", "t", "a"];
     const rng = makeRng("cons-kill");
     const next = applyGeneratedRule(rule, word, rng);
-    // All consonants deletable; result is at least one vowel.
     expect(next.length).toBeGreaterThanOrEqual(1);
     expect(next.every((p) => "aeiou".includes(p))).toBe(true);
   });
@@ -73,17 +61,12 @@ describe("minimum-word-length constraint", () => {
     const word = ["b", "e", "e", "r"];
     const rng = makeRng("beer-kill");
     const next = applyGeneratedRule(rule, word, rng);
-    // Whatever deletion order was rolled, we must never end up with a
-    // single lone consonant like ["r"].
     const isLoneConsonant =
       next.length === 1 && !"aeiou".includes(next[0]!);
     expect(isLoneConsonant).toBe(false);
   });
 
   it("holds content words to a two-segment floor, but allows pronouns to shrink to a single vowel", () => {
-    // Both "water" (content) and "i" (pronoun) get hit by a rule that
-    // deletes every consonant AND every vowel — effectively total annihilation.
-    // The content word must keep ≥ 2 segments; the pronoun may shrink to 1.
     const total: SoundChange = {
       id: "total-delete",
       label: "delete everything",
@@ -106,10 +89,6 @@ describe("minimum-word-length constraint", () => {
   });
 
   it("syllabicity guard reverts a word whose last vowel was stripped", () => {
-    // A rule that deletes every vowel but leaves consonants. Without
-    // the syllabicity guard, "water" would become "wtr" — pronouncable
-    // by no one. The post-pass check reverts the meaning to its prior
-    // form when the new form has no syllabic nucleus.
     const vowelless: SoundChange = {
       id: "kill-vowels",
       label: "delete vowels",
@@ -128,16 +107,12 @@ describe("minimum-word-length constraint", () => {
       weights: { "kill-vowels": 1 },
       frequencyHints: { water: 0.9 },
     });
-    // "water" must still have at least one vowel — the post-pass
-    // syllabicity check reverted the change.
     const form = next.water!;
     const hasVowel = form.some((p) => "aeiou".includes(p));
     expect(hasVowel).toBe(true);
   });
 
   it("syllabicity guard accepts a word whose nucleus is a syllabic resonant", () => {
-    // /r̩/-only word ("str̩č"-style). No vowel, but the syllabic variant
-    // of /r/ counts as a nucleus, so the word is legal.
     const noop: SoundChange = {
       id: "noop",
       label: "no-op",
@@ -156,12 +131,10 @@ describe("minimum-word-length constraint", () => {
       frequencyHints: { r_word: 0.5 },
     });
     expect(next.r_word).toBeDefined();
-    // Preserved because the form already has /r̩/ as a nucleus.
     expect(next.r_word!.join("")).toBe("str̩k");
   });
 
   it("reverts the lower-frequency member when two meanings collide", () => {
-    // Deletion rule that strips every segment that isn't /r/.
     const change: SoundChange = {
       id: "strip-to-r",
       label: "keep only /r/",
@@ -185,8 +158,6 @@ describe("minimum-word-length constraint", () => {
       weights: { "strip-to-r": 1 },
       frequencyHints: { water: 0.95, beer: 0.3 },
     });
-    // One of them keeps its historical form since they would otherwise
-    // collide. The higher-frequency "water" wins.
     const forms = [next.water!.join(""), next.beer!.join("")];
     expect(forms[0]).not.toBe(forms[1]);
   });

@@ -28,7 +28,6 @@ describe("compensatory lengthening rule", () => {
   });
 
   it("refuses to fire when the penult is not a vowel", () => {
-    // VCC# — /strk/ — last two are both consonants, no vowel to lengthen.
     expect(rule.probabilityFor(["s", "t", "r", "k"])).toBe(0);
   });
 });

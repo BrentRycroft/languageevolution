@@ -2,13 +2,6 @@ import type { WordForm } from "../types";
 import { isVowel, isSyllabic } from "./ipa";
 import { stripTone } from "./tone";
 
-/**
- * Locate indices of nucleus phonemes in a form. A nucleus is either
- * a vowel or a syllabic resonant (`r̩`, `m̩`, `l̩`, `n̩` and friends —
- * see `phonology/ipa.ts::SYLLABIC_RESONANTS`). Excluding the
- * resonants would break stress alignment for forms like PIE *septḿ̥
- * "seven" where the stressed syllable's nucleus is a syllabic m̩.
- */
 export function vowelIndices(form: WordForm): number[] {
   const idxs: number[] = [];
   for (let i = 0; i < form.length; i++) {
@@ -25,19 +18,6 @@ export type StressPattern =
   | "antepenult"
   | "lexical";
 
-/**
- * Given a form and a stress pattern, return the index of the vowel that
- * carries primary stress. Returns -1 if the form has no vowels.
- *
- *   `initial`     — first vowel
- *   `penult`      — second-to-last vowel (default; back-compat)
- *   `final`       — last vowel
- *   `antepenult`  — third-from-last (Macedonian, some Romance reflexes)
- *   `lexical`     — caller supplies an explicit `lexicalIdx` (the
- *                   stressed *vowel* index in the form). Falls back to
- *                   penult when no override is supplied. Models PIE
- *                   mobile accent.
- */
 export function stressIndex(
   form: WordForm,
   pattern: StressPattern = "penult",
@@ -54,8 +34,6 @@ export function stressIndex(
     case "antepenult":
       return vs[Math.max(0, vs.length - 3)]!;
     case "lexical":
-      // `lexicalIdx` is the *vowel-position index* (0-based) within
-      // the form's vowel sequence. Validate; fall back to penult.
       if (lexicalIdx !== undefined && lexicalIdx >= 0 && lexicalIdx < vs.length) {
         return vs[lexicalIdx]!;
       }
@@ -66,21 +44,10 @@ export function stressIndex(
   }
 }
 
-/**
- * Legacy penultimate-only alias — kept for callers that don't yet thread
- * a language's stress pattern through. New code should prefer
- * `stressIndex(form, pattern)`.
- */
 export function penultimateStressIndex(form: WordForm): number {
   return stressIndex(form, "penult");
 }
 
-/**
- * Classify a vowel index by stress:
- *   "stressed"   — carries primary stress (resists sound change)
- *   "pretonic"   — one before stressed, mildly protected
- *   "unstressed" — everything else (prime target for reduction)
- */
 export function stressClass(
   form: WordForm,
   vowelIdx: number,
@@ -93,12 +60,6 @@ export function stressClass(
   return "unstressed";
 }
 
-/**
- * Return the indices of every vowel matching the given stress class.
- * Convenience for rule authors: avoids reimplementing the
- * vowel-loop + stressClass-check on every rule. Pretonic class
- * matches both immediate and second-pretonic positions.
- */
 export function stressedPositions(
   form: WordForm,
   filter: "stressed" | "unstressed" | "pretonic",
@@ -114,12 +75,6 @@ export function stressedPositions(
   return out;
 }
 
-/**
- * Probability that a sound change at position `i` actually applies to this
- * phoneme, based on stress. Multiplies into the base per-site probability
- * already computed by the change rule. Only applies to vowels; consonants
- * default to 1.0.
- */
 export function stressSensitivity(
   form: WordForm,
   i: number,
@@ -133,11 +88,6 @@ export function stressSensitivity(
   return 1.25;
 }
 
-/**
- * Unstressed-vowel reduction rule. Probability grows with the number of
- * unstressed vowels; outcome shortens the word by converting the target to
- * schwa. Compatible with the SoundChange contract used elsewhere.
- */
 import type { SoundChange } from "../types";
 
 export const UNSTRESSED_REDUCTION: SoundChange = {
@@ -146,9 +96,6 @@ export const UNSTRESSED_REDUCTION: SoundChange = {
   category: "vowel",
   description:
     "Unstressed vowels reduce toward schwa. Stressed vowels resist; pretonic slightly protected.",
-  // Declarative stress filter — `apply.ts` short-circuits the rule
-  // when no unstressed vowel exists, so the inner `probabilityFor`
-  // / `apply` callbacks only ever see candidate sites.
   stressFilter: "unstressed",
   probabilityFor: (word) => {
     let n = 0;
@@ -171,7 +118,6 @@ export const UNSTRESSED_REDUCTION: SoundChange = {
     if (sites.length === 0) return word;
     const idx = sites[rng.int(sites.length)]!;
     const out = word.slice();
-    // Keep tone if present.
     const tone = word[idx]!.length > stripTone(word[idx]!).length ? word[idx]!.slice(stripTone(word[idx]!).length) : "";
     out[idx] = "ə" + tone;
     return out;

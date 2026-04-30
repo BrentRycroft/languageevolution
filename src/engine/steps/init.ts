@@ -21,16 +21,10 @@ import {
   territoryCentroid,
 } from "../geo/map";
 
-/** Capacity at language birth. Age=0 so this is tier + speaker driven. */
 function initialLexicalCapacity(lang: Language): number {
   return computeCapacity(lang, lang.birthGeneration);
 }
 
-/**
- * Assign a register ("high" / "low") to ~15% of seed meanings so the
- * language begins life with a small stylistic stratification. Deterministic
- * via the supplied RNG.
- */
 function seedRegister(
   lex: import("../types").Lexicon,
   rng: import("../rng").Rng,
@@ -73,34 +67,19 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     retiredRules: [],
     ruleBias: { ...DEFAULT_RULE_BIAS },
     registerOf: seedRegister(seedLex, rng),
-    // Proto sits at the map origin; daughters get coords at split time.
     coords: { x: 0, y: 0 },
     orthography: {},
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},
-    // Proto-languages default to penultimate stress — typologically
-    // the commonest pattern worldwide. Presets may override via
-    // `config.seedStressPattern` (e.g. PIE → `lexical` mobile accent,
-    // Proto-Germanic → `initial` post-stress-shift).
     stressPattern: config.seedStressPattern ?? "penult",
     lexicalStress: config.seedLexicalStress
       ? { ...config.seedLexicalStress }
       : undefined,
-    // Cultural tier starts at 0 (foraging). Advances slowly via
-    // `lexicon/tier.ts::computeTierCandidate`. Lexical capacity is
-    // tier + age + population driven; initialised below once the
-    // Language object exists.
     culturalTier: 0,
   };
-  // Seed derivational suffixes after the rest of the Language is
-  // assembled so we can read the phoneme inventory off it.
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
-  // Phoneme provenance: every seed phoneme is "native" by definition.
   seedNativeProvenance(rootLang);
-  // World-map territory: pick the seed cell from the user-chosen
-  // origin (when the picker was used) or fall back to the preset's
-  // suggestion (Earth) / a random viable land cell (random).
   const mapMode = config.mapMode ?? "random";
   const worldMap = getWorldMap(mapMode, config.seed);
   let originId: number | null =

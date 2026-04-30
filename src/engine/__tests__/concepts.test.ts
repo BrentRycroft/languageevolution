@@ -47,7 +47,6 @@ function testLang(overrides: Partial<Language> = {}): Language {
 
 describe("concept dictionary", () => {
   it("populates one Concept per BASIC_240 meaning", () => {
-    // Every key in BASIC_240 should have a matching Concept entry.
     expect(CONCEPT_IDS.length).toBeGreaterThan(500);
     for (const id of CONCEPT_IDS) {
       const c = conceptFor(id);
@@ -67,7 +66,6 @@ describe("concept dictionary", () => {
   });
 
   it("exposes cross-linguistic colexification hints", () => {
-    // Typologically-common pairs should be linked.
     expect(colexWith("arm")).toContain("hand");
     expect(colexWith("hand")).toContain("arm");
     expect(colexWith("moon")).toContain("month");
@@ -104,7 +102,6 @@ describe("lexical capacity + tier advancement", () => {
     };
     const rng = makeRng("pop-seed");
     const candidate = computeTierCandidate(lang, tree, 0, rng);
-    // 500k speakers → tier 2 floor via POP_TIER_FLOORS.
     expect(candidate).toBeGreaterThanOrEqual(2);
   });
 
@@ -130,21 +127,17 @@ describe("re-carving", () => {
     expect(ev).not.toBeNull();
     if (!ev) return;
     if (ev.kind === "merge") {
-      // "hand" is the higher-frequency slot so it absorbs "arm".
       expect(ev.winner).toBe("hand");
       expect(ev.loser).toBe("arm");
       expect(lang.lexicon["hand"]).toBeDefined();
       expect(lang.lexicon["arm"]).toBeUndefined();
       expect(lang.colexifiedAs?.["hand"]).toContain("arm");
     } else {
-      // Split path also valid if pairs allow — just verify state.
       expect(["arm", "hand"]).toContain(ev.source);
     }
   });
 
   it("splits a slot into a colex target the language lacks", () => {
-    // Only one of the pair exists in the lexicon, so merge is impossible —
-    // the event must take the split path or return null.
     const lang = testLang({
       lexicon: { tongue: ["t", "o", "n"] },
       wordFrequencyHints: { tongue: 0.8 },

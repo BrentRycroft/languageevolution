@@ -1,14 +1,4 @@
-/**
- * Hand-curated semantic-neighbor table. Each meaning maps to a small set of
- * plausible shifts; when a meaning drifts, the current form is reassigned to
- * a neighbor meaning and the original slot is freed.
- *
- * Zero runtime dependencies, baked into the bundle, deterministic under the
- * seeded RNG. A richer LLM-backed variant can shadow this table via
- * NeighborOverride.
- */
 export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
-  // --- body ----------------------------------------------------------------
   hand: ["arm", "finger", "palm"],
   foot: ["leg", "toe", "step"],
   heart: ["chest", "courage", "love"],
@@ -40,7 +30,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   breast: ["chest", "milk", "mother"],
   throat: ["neck", "swallow", "voice"],
 
-  // --- kinship -------------------------------------------------------------
   mother: ["woman", "parent", "aunt"],
   father: ["man", "parent", "uncle"],
   son: ["child", "boy", "heir"],
@@ -57,7 +46,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   friend: ["companion", "kin", "love"],
   cousin: ["kin", "friend", "brother"],
 
-  // --- environment ---------------------------------------------------------
   water: ["river", "drink", "rain"],
   fire: ["flame", "burn", "hot"],
   stone: ["rock", "hard", "mountain"],
@@ -104,7 +92,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   field: ["grass", "open", "land"],
   path: ["road", "walk", "line"],
 
-  // --- animals -------------------------------------------------------------
   dog: ["pet", "wolf", "hunt"],
   wolf: ["dog", "wild", "pack"],
   horse: ["ride", "beast", "pony"],
@@ -141,7 +128,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   whale: ["big", "sea", "fish"],
   shark: ["sea", "hunt", "teeth"],
 
-  // --- plants --------------------------------------------------------------
   flower: ["plant", "colour", "sweet"],
   seed: ["plant", "small", "begin"],
   berry: ["fruit", "small", "sweet"],
@@ -158,7 +144,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   fruit: ["tree", "sweet", "food"],
   nut: ["seed", "hard", "tree"],
 
-  // --- motion + perception + metabolism -----------------------------------
   go: ["leave", "walk", "travel"],
   come: ["arrive", "approach", "go"],
   walk: ["go", "step", "travel"],
@@ -177,7 +162,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   die: ["death", "end", "old"],
   breathe: ["air", "live", "lung"],
 
-  // --- actions -------------------------------------------------------------
   sit: ["rest", "stand", "chair"],
   stand: ["rise", "be", "tall"],
   lie: ["rest", "sleep", "ground"],
@@ -208,7 +192,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   hold: ["grip", "keep", "carry"],
   work: ["make", "labour", "tire"],
 
-  // --- qualities -----------------------------------------------------------
   big: ["great", "large", "old"],
   small: ["little", "young", "few"],
   new: ["young", "fresh", "start"],
@@ -234,7 +217,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   slow: ["old", "turtle", "heavy"],
   deep: ["well", "sea", "far"],
 
-  // --- pronouns + function ------------------------------------------------
   i: ["me", "self", "one"],
   you: ["other", "friend", "self"],
   they: ["them", "other", "many"],
@@ -251,7 +233,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   why: ["reason", "because", "how"],
   how: ["way", "manner", "why"],
 
-  // --- numbers -------------------------------------------------------------
   one: ["alone", "first", "two"],
   two: ["pair", "couple", "three"],
   three: ["few", "two", "four"],
@@ -268,7 +249,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   few: ["little", "some", "many"],
   half: ["part", "piece", "two"],
 
-  // --- abstract ------------------------------------------------------------
   name: ["word", "call", "person"],
   word: ["name", "speak", "story"],
   song: ["sing", "music", "voice"],
@@ -299,7 +279,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   honour: ["king", "good", "glory"],
   meaning: ["word", "know", "truth"],
 
-  // --- body (extended) ----------------------------------------------------
   forehead: ["head", "face", "brow"],
   lip: ["mouth", "kiss", "edge"],
   jaw: ["mouth", "bone", "chin"],
@@ -331,7 +310,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   womb: ["belly", "birth", "mother"],
   face: ["head", "eye", "front"],
 
-  // --- kinship (extended) -------------------------------------------------
   grandfather: ["father", "old", "elder"],
   grandmother: ["mother", "old", "elder"],
   grandson: ["son", "child", "young"],
@@ -349,7 +327,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   neighbor: ["friend", "near", "home"],
   stranger: ["other", "far", "new"],
 
-  // --- environment (extended) ---------------------------------------------
   frost: ["cold", "ice", "morning"],
   dew: ["water", "morning", "grass"],
   fog: ["cloud", "mist", "grey"],
@@ -385,7 +362,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   tin: ["metal", "soft", "cup"],
   ember: ["fire", "red", "end"],
 
-  // --- animals (extended) -------------------------------------------------
   elk: ["deer", "big", "horn"],
   stag: ["deer", "horn", "male"],
   lamb: ["sheep", "young", "soft"],
@@ -419,7 +395,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   squirrel: ["small", "tree", "quick"],
   badger: ["forest", "stripe", "night"],
 
-  // --- plants (extended) --------------------------------------------------
   wheat: ["grain", "field", "bread"],
   barley: ["grain", "field", "beer"],
   rice: ["grain", "water", "field"],
@@ -450,7 +425,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   hay: ["grass", "dry", "food"],
   bamboo: ["plant", "tall", "hollow"],
 
-  // --- food ---------------------------------------------------------------
   bread: ["grain", "food", "break"],
   meat: ["flesh", "food", "cook"],
   milk: ["cow", "white", "drink"],
@@ -471,7 +445,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   flour: ["grain", "fine", "bread"],
   dough: ["bread", "soft", "make"],
 
-  // --- clothing -----------------------------------------------------------
   cloth: ["thread", "wear", "soft"],
   shirt: ["cloth", "body", "wear"],
   belt: ["tie", "waist", "leather"],
@@ -485,7 +458,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   bracelet: ["wrist", "gold", "wear"],
   sandal: ["foot", "leather", "summer"],
 
-  // --- tools --------------------------------------------------------------
   knife: ["cut", "sharp", "blade"],
   axe: ["cut", "wood", "blade"],
   spear: ["long", "sharp", "fight"],
@@ -520,7 +492,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   lamp: ["light", "oil", "night"],
   torch: ["fire", "wood", "light"],
 
-  // --- motion (extended) --------------------------------------------------
   jump: ["leap", "fast", "up"],
   crawl: ["slow", "low", "baby"],
   flow: ["water", "move", "smooth"],
@@ -537,7 +508,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   sail: ["boat", "wind", "sea"],
   ride: ["horse", "go", "saddle"],
 
-  // --- perception (extended) ----------------------------------------------
   smell: ["nose", "scent", "sharp"],
   taste: ["tongue", "food", "sweet"],
   touch: ["hand", "feel", "soft"],
@@ -549,7 +519,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   doubt: ["unsure", "fear", "mind"],
   notice: ["see", "mind", "quick"],
 
-  // --- metabolism (extended) ----------------------------------------------
   bite: ["tooth", "mouth", "sharp"],
   chew: ["mouth", "tooth", "slow"],
   swallow: ["throat", "eat", "down"],
@@ -562,7 +531,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   heal: ["medicine", "good", "time"],
   rot: ["old", "death", "bad"],
 
-  // --- action (extended) --------------------------------------------------
   steal: ["take", "secret", "bad"],
   rob: ["steal", "strong", "fear"],
   hide: ["secret", "dark", "safe"],
@@ -603,7 +571,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   choose: ["pick", "mind", "want"],
   test: ["try", "check", "hard"],
 
-  // --- quality (extended) -------------------------------------------------
   shallow: ["thin", "low", "near"],
   thick: ["wide", "heavy", "big"],
   thin: ["narrow", "light", "small"],
@@ -646,7 +613,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   holy: ["god", "pure", "spirit"],
   cursed: ["bad", "dark", "doom"],
 
-  // --- pronoun (extended) ------------------------------------------------
   "you-plural": ["you", "many", "all"],
   it: ["that", "thing", "this"],
   someone: ["who", "person", "anyone"],
@@ -661,7 +627,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   same: ["equal", "one", "match"],
   both: ["two", "together", "pair"],
 
-  // --- numbers (extended) ------------------------------------------------
   eleven: ["ten", "one", "many"],
   twelve: ["ten", "two", "many"],
   twenty: ["ten", "many", "full"],
@@ -674,7 +639,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   whole: ["all", "full", "one"],
   quarter: ["part", "four", "small"],
 
-  // --- spatial ------------------------------------------------------------
   left: ["side", "hand", "other"],
   right: ["side", "hand", "true"],
   above: ["up", "sky", "over"],
@@ -703,7 +667,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   end: ["last", "finish", "death"],
   beginning: ["first", "start", "birth"],
 
-  // --- time ---------------------------------------------------------------
   today: ["day", "now", "present"],
   yesterday: ["past", "day", "before"],
   tomorrow: ["future", "day", "after"],
@@ -729,7 +692,6 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   late: ["slow", "after", "past"],
   early: ["soon", "first", "dawn"],
 
-  // --- abstract (extended) ------------------------------------------------
   soul: ["spirit", "inside", "eternal"],
   mind: ["think", "know", "head"],
   "heart-soul": ["love", "inside", "spirit"],

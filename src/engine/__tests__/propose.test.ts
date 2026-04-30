@@ -58,7 +58,6 @@ describe("phonology/propose", () => {
     const rule = proposeOneRule(lang, rng, 0);
     if (!rule) return;
     lang.activeRules = [{ ...rule, strength: 0.06, lastFireGeneration: 0 }];
-    // Empty the lexicon so the rule has no matches -> strength decays fast.
     lang.lexicon = {};
     const { retired } = ageAndRetire(lang, 10);
     expect(retired.length).toBe(1);
@@ -78,7 +77,6 @@ describe("phonology/propose", () => {
 
   it("proposeOneRule softly attenuates when activeRules is saturated", () => {
     const lang = sampleLang();
-    // Fill the active-rules buffer well past the soft-cap centre.
     lang.activeRules = Array.from({ length: 30 }, (_v, i) => ({
       id: `x.${i}`,
       family: "lenition",
@@ -91,9 +89,6 @@ describe("phonology/propose", () => {
       context: {},
       outputMap: {},
     }));
-    // Soft cap: at 30 active rules the gate fires with
-    // probability ≈ 1/(1+e^((30-8)/1.5)) ≈ 8e-7. Sampling 1000 times
-    // should yield essentially no successes.
     let hits = 0;
     for (let i = 0; i < 1000; i++) {
       const rule = proposeOneRule(lang, makeRng("sat-" + i), 1);

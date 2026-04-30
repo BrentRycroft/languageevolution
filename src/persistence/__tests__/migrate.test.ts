@@ -61,6 +61,6 @@ describe("migrateSavedRun", () => {
     expect(migrateSavedRun(null)).toBeNull();
     expect(migrateSavedRun(42)).toBeNull();
     expect(migrateSavedRun({ version: 99, config: {} })).toBeNull();
-    expect(migrateSavedRun({ version: 1 /* no config */ })).toBeNull();
+    expect(migrateSavedRun({ version: 1 })).toBeNull();
   });
 });

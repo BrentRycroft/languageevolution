@@ -58,7 +58,7 @@ describe("realism round 3", () => {
 
   describe("stressIndex", () => {
     it("respects pattern choice", () => {
-      const form = ["k", "a", "l", "i", "t", "a"]; // 3 vowels at 1,3,5
+      const form = ["k", "a", "l", "i", "t", "a"];
       expect(stressIndex(form, "initial")).toBe(1);
       expect(stressIndex(form, "penult")).toBe(3);
       expect(stressIndex(form, "final")).toBe(5);
@@ -73,7 +73,6 @@ describe("realism round 3", () => {
     it("places stress according to the language's pattern", () => {
       const lang = minimalLanguage({ stressPattern: "final" });
       const out = narrowTranscribe(["k", "a", "l", "i", "t", "a"], lang);
-      // 3 syllables: ka.li.ta — final stress on last syllable.
       expect(out.split(".").findIndex((s) => s.startsWith("ˈ"))).toBe(2);
     });
     it("defaults to penultimate when the field is absent", () => {
@@ -90,20 +89,16 @@ describe("realism round 3", () => {
         position: "suffix",
         category: "verb.tense.past",
       };
-      // "go" and "walk" are both real verbs in pos.ts.
       const lang = minimalLanguage({
         lexicon: { go: ["g", "o"], walk: ["w", "a", "l", "k"] },
         wordFrequencyHints: { go: 0.9, walk: 0.4 },
         morphology: { paradigms: { "verb.tense.past": paradigm } },
       });
-      // Probability 1 forces the event to fire; the only high-freq
-      // verb is "go" so the donor has to be "walk".
       const rng = makeRng("seed-sup");
       const fired = maybeSuppletion(lang, rng, 1);
       expect(fired).not.toBeNull();
       expect(fired!.meaning).toBe("go");
       expect(fired!.donorMeaning).toBe("walk");
-      // Now inflect should return the suppletive form, not go+ed.
       const inflected = inflect(lang.lexicon["go"]!, paradigm, lang, "go");
       expect(inflected).toEqual(["w", "a", "l", "k"]);
     });
@@ -119,7 +114,6 @@ describe("realism round 3", () => {
       for (const s of suffixes) {
         expect(s.affix.length).toBeGreaterThan(0);
         for (const p of s.affix) {
-          // Every phoneme must come from the inventory (or be the fallback ə).
           expect([...lang.phonemeInventory.segmental, "ə"]).toContain(p);
         }
       }

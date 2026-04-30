@@ -1,9 +1,5 @@
 import type { Rng } from "../rng";
 
-/**
- * Pick one item from `items` weighted by `getWeight`. Returns `null` when all
- * weights are zero or the list is empty. Deterministic under the passed RNG.
- */
 export function weightedSample<T>(
   items: readonly T[],
   getWeight: (item: T) => number,

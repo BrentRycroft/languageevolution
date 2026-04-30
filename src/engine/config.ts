@@ -25,31 +25,12 @@ export function defaultConfig(): SimulationConfig {
       semantics: true,
     },
     phonology: {
-      // Empirical audit (200-gen / 5ky PIE run) found the previous
-      // rate of 1.0 fired ~36 sound-change events per ky per
-      // language. Attested rates are 1-3 *regular* sound changes per
-      // ky per lineage (Hock 1991, Lass 1997). Lowered to 0.3 so the
-      // surface count lands roughly an order of magnitude closer to
-      // attested timing. Also stops the deletion-heavy ruleset from
-      // eroding word length monotonically (the previous rate dropped
-      // mean word length 4.0 → 2.9 over 5 ky — Spanish vs PIE in 5ky
-      // moves only ~5 → ~5).
       globalRate: 0.3,
       enabledChangeIds: enabled,
       changeWeights: weights,
     },
     tree: {
-      // Lowered from 0.05 → 0.015 now that each split can produce up
-      // to 9 daughters rather than strictly two. With an unchanged
-      // rate the tree was fanning out far faster than real language
-      // families; at 0.015 an average leaf splits every ~60 gens,
-      // which matches the pacing of attested proto-language
-      // subgroupings.
       splitProbabilityPerGeneration: 0.015,
-      // Soft-cap target only — death pressure rises near `maxLeaves`,
-      // never blocks. Default `unlimitedLeaves: true` removes the
-      // hard cap entirely so the tree can grow as long as the
-      // simulation runs.
       maxLeaves: 12,
       unlimitedLeaves: true,
       minGenerationsBetweenSplits: 12,
@@ -57,13 +38,6 @@ export function defaultConfig(): SimulationConfig {
       minGenerationsBeforeDeath: 20,
     },
     genesis: {
-      // Empirical audit found the previous 0.08 produced ~1.8
-      // coinages per ky per lang — way below attested ~50-200 new
-      // content words per ky per lineage (Bybee 2015 turnover rates
-      // estimate). Bumped to 0.4 so a typical lang coins ~10/ky,
-      // partially counteracting the deletion / obsolescence churn
-      // and keeping word-length distributions stable rather than
-      // monotonically decaying.
       globalRate: 0.4,
       enabledRuleIds: genesisEnabled,
       ruleWeights: genesisWeights,
@@ -78,15 +52,7 @@ export function defaultConfig(): SimulationConfig {
     obsolescence: {
       probabilityPerPairPerGeneration: 0.04,
       maxDistanceForRivalry: 1,
-      // ~0.5% per gen — at 25 yr/gen that's an expected copula
-      // loss in ~5000 years on average, in the right ballpark for
-      // attested Slavic copula erosion (Old Church Slavonic kept
-      // present-tense `jestь` to ~9th century, modern Russian
-      // dropped it in equational sentences by ~16th century).
       copulaLossProbability: 0.005,
-      // Genesis is rarer than loss but still attested: Mandarin 是
-      // ← Old Chinese demonstrative, Hebrew הוא ← pronoun, Spanish
-      // estar ← Latin stare. Half the loss rate by default.
       copulaGenesisProbability: 0.0025,
     },
     morphology: {

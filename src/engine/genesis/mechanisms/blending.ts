@@ -1,13 +1,6 @@
 import type { CoinageMechanism } from "./types";
 import { relatedMeanings } from "../../semantics/clusters";
 
-/**
- * Blending / portmanteau: merge two forms at a shared overlapping
- * phoneme ("smoke + fog → smog" — shares /o/). Requires the two
- * source forms to share at least one phoneme near their boundary.
- *
- * Register: "low" — blends are chatty / commercial.
- */
 export const MECHANISM_BLENDING: CoinageMechanism = {
   id: "mechanism.blending",
   label: "A + B → blend",
@@ -17,7 +10,6 @@ export const MECHANISM_BLENDING: CoinageMechanism = {
   tryCoin: (lang, target, _tree, rng) => {
     const meanings = Object.keys(lang.lexicon);
     if (meanings.length < 2) return null;
-    // Pick two related bases (blending is semantically motivated).
     const related = relatedMeanings(target).filter((m) => lang.lexicon[m]);
     if (related.length < 2) return null;
     const a = related[rng.int(related.length)]!;
@@ -26,7 +18,6 @@ export const MECHANISM_BLENDING: CoinageMechanism = {
     const b = remaining[rng.int(remaining.length)]!;
     const fa = lang.lexicon[a]!;
     const fb = lang.lexicon[b]!;
-    // Find the largest overlap where fa's tail matches fb's head.
     let overlap = 0;
     const maxOverlap = Math.min(fa.length, fb.length);
     for (let k = maxOverlap; k >= 1; k--) {
@@ -38,7 +29,6 @@ export const MECHANISM_BLENDING: CoinageMechanism = {
       }
     }
     if (overlap === 0) {
-      // No overlap — look for ANY shared phoneme near the boundary.
       const lastA = fa[fa.length - 1];
       const firstB = fb[0];
       if (!lastA || !firstB || lastA !== firstB) return null;

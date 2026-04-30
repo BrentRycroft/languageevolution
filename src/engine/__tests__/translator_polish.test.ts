@@ -35,8 +35,6 @@ describe("translator polish — predicate adjectives", () => {
 
   it("predicate adjective inherits noun-number agreement when subject is plural", () => {
     const lang = pieLang();
-    // Hand-craft an adj.num.pl paradigm so the subject-plural cue
-    // is observable.
     lang.morphology.paradigms["adj.num.pl"] = {
       affix: ["s"],
       position: "suffix",
@@ -72,8 +70,6 @@ describe("translator polish — object pronouns alias to subject lemmas", () => 
     const lang = pieLang();
     const out = translateSentence(lang, "she sees him");
     const lemmas = out.targetTokens.map((t) => t.englishLemma);
-    // Tokenizer rewrites him → he, so the gloss row reports "he"
-    // rather than the raw "him".
     expect(lemmas).toContain("he");
     expect(lemmas).toContain("she");
   });
@@ -123,7 +119,6 @@ describe("translator polish — irregular plurals", () => {
     const out = translateSentence(lang, "the king sees the wolves");
     const wolf = out.targetTokens.find((t) => t.englishLemma === "wolf");
     expect(wolf).toBeDefined();
-    // Should not surface as missing.
     expect(out.missing).not.toContain("wolve");
     expect(out.missing).not.toContain("wolves");
   });

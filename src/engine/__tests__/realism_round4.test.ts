@@ -67,8 +67,6 @@ describe("realism round 4 — population-feedback mechanics", () => {
 
   describe("driftGrammar with simplification bias", () => {
     it("biases toward case loss when simplification > 1 and case present", () => {
-      // Run many trials with high simplification — case should be
-      // lost more often than gained.
       let lost = 0, gained = 0;
       for (let i = 0; i < 50; i++) {
         const g: GrammarFeatures = {
@@ -82,9 +80,6 @@ describe("realism round 4 — population-feedback mechanics", () => {
           if (s.feature === "hasCase" && s.from === false && s.to === true) gained++;
         }
       }
-      // Trudgill: large language → loss dominant. Allow 0 gains
-      // strictly (we start from hasCase=true so any gains require
-      // a re-flip).
       expect(lost).toBeGreaterThan(0);
     });
   });
@@ -97,7 +92,6 @@ describe("realism round 4 — population-feedback mechanics", () => {
         category: "verb.tense.past",
       };
       const lang = testLang({
-        // Mix of vowel-final and consonant-final stems in the lexicon.
         lexicon: {
           go: ["g", "o"], walk: ["w", "a", "l", "k"],
           run: ["r", "u", "n"], eat: ["e", "a", "t"],
@@ -121,9 +115,7 @@ describe("realism round 4 — population-feedback mechanics", () => {
         category: "verb.tense.past",
         variants: [{ when: "vowel-final", affix: ["e", "n"] }],
       };
-      // Vowel-final stem gets the variant.
       expect(inflect(["g", "o"], paradigm)).toEqual(["g", "o", "e", "n"]);
-      // Consonant-final stem gets the default.
       expect(inflect(["r", "u", "n"], paradigm)).toEqual(["r", "u", "n", "a", "n"]);
     });
   });
@@ -165,7 +157,6 @@ describe("realism round 4 — population-feedback mechanics", () => {
       });
       const rng = makeRng("kinship-urb");
       const merges = applyKinshipSimplification(lang, rng, 2);
-      // We expect ≤ 2 merges; at least one should fire given the seed.
       expect(merges.length).toBeGreaterThanOrEqual(1);
       expect(merges.length).toBeLessThanOrEqual(2);
       for (const m of merges) {
@@ -184,8 +175,7 @@ describe("realism round 4 — population-feedback mechanics", () => {
       });
       const donor = testLang({
         id: "L-d",
-        coords: { x: 50, y: 0 }, // very close
-        // Donor has /ʔ/ which recipient lacks.
+        coords: { x: 50, y: 0 },
         phonemeInventory: { segmental: ["ʔ", "w", "a", "t", "e", "r"], tones: [], usesTones: false },
       });
       const tree: LanguageTree = {
@@ -194,9 +184,6 @@ describe("realism round 4 — population-feedback mechanics", () => {
       };
       const rng = makeRng("areal-1");
       const ev = maybeArealPhonemeShare(recipient, tree, rng, 1);
-      // Match-class swap: /ʔ/ is a consonant, replaced one of our
-      // consonants. Effect may be null if all candidate consonants
-      // didn't appear in any word — re-roll if so.
       if (ev) {
         expect(ev.phoneme).toBe("ʔ");
         expect(recipient.phonemeInventory.segmental).toContain("ʔ");

@@ -17,7 +17,6 @@ function safeSet(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // quota or unavailable; silently skip
   }
 }
 
@@ -25,7 +24,6 @@ function safeRemove(key: string): void {
   try {
     localStorage.removeItem(key);
   } catch {
-    // ignore
   }
 }
 
@@ -47,7 +45,6 @@ export function listRuns(): SavedRun[] {
       const migrated = migrateSavedRun(parsed);
       if (migrated) runs.push(migrated);
     } catch {
-      // skip corrupt
     }
   }
   return runs.sort((a, b) => b.createdAt - a.createdAt);
@@ -59,8 +56,6 @@ export function saveRun(
   generationsRun: number,
   stateSnapshot?: SimulationState,
 ): SavedRun {
-  // Deterministic-ish ID: timestamp + hash of label/seed/generation. Avoids
-  // a dependency on Math.random() for non-deterministic build environments.
   const now = Date.now();
   const hash = fnv1a(`${label}|${config.seed}|${generationsRun}|${now}`);
   const id = `run-${now.toString(36)}-${hash.toString(36).padStart(7, "0").slice(0, 7)}`;

@@ -3,8 +3,6 @@ import { classifyShift } from "../semantics/drift";
 
 describe("classifyShift (review fix)", () => {
   it("same-cluster high-similarity pairs → metonymy", () => {
-    // hand and foot are both in the body cluster, and their embeddings
-    // cluster tightly.
     expect(classifyShift("hand", "foot")).toBe("metonymy");
   });
 
@@ -13,9 +11,7 @@ describe("classifyShift (review fix)", () => {
   });
 
   it("complexity jump → broadening / narrowing", () => {
-    // water (complexity 2) → meaning (complexity 5) — broadening.
     expect(classifyShift("water", "meaning")).toBe("broadening");
-    // meaning → water — narrowing.
     expect(classifyShift("meaning", "water")).toBe("narrowing");
   });
 

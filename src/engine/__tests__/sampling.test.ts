@@ -22,7 +22,6 @@ describe("weightedSample", () => {
       );
       if (pick) counts[pick]++;
     }
-    // "a" should dominate roughly 10:1:1 — expect > 60% of picks.
     expect(counts.a).toBeGreaterThan(1800);
     expect(counts.b).toBeGreaterThan(100);
     expect(counts.c).toBeGreaterThan(100);

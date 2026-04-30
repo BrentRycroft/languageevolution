@@ -34,8 +34,6 @@ import {
   ResetIcon,
 } from "./icons";
 
-// Lazy-split the two chart/tree views so d3-hierarchy + recharts stay out of
-// the initial bundle until their tab is opened.
 const LanguageTreeView = lazy(() =>
   import("./LanguageTreeView").then((m) => ({ default: m.LanguageTreeView })),
 );
@@ -44,10 +42,6 @@ const TimelineChart = lazy(() =>
 );
 
 function PanelSkeleton() {
-  // Three stacked shimmer bars instead of a spinner — reads as
-  // "content loading here" rather than a generic indeterminate
-  // spinner. Honours prefers-reduced-motion (the .skeleton animation
-  // disables itself there).
   return (
     <div
       className="col-8"
@@ -126,9 +120,6 @@ export function App() {
   const [activeTab, setActiveTab] = useState<Tab>("tree");
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  // Deep-link loader: if the URL has a ?s=... share payload, decode it and
-  // restore the run once. Cleared from the URL so later copies share the
-  // user's live state instead.
   useEffect(() => {
     const payload = readShareFromLocation();
     if (!payload) return;
@@ -152,12 +143,6 @@ export function App() {
       return;
     }
     const intervalMs = 1000 / speed;
-    // Cap how many generations we'll fast-forward in a single frame.
-    // Without this, backgrounding the tab stalls RAF; on resume the
-    // accumulated `ts - lastRef.current` is huge and we'd run
-    // hundreds of `step()` calls in one frame, hanging the main
-    // thread. Five steps per frame keeps the perceived rate close
-    // to `speed` while protecting against the burst.
     const MAX_STEPS_PER_FRAME = 5;
     const loop = (ts: number) => {
       if (!lastRef.current) lastRef.current = ts;
@@ -167,8 +152,6 @@ export function App() {
         lastRef.current += intervalMs;
         iters++;
       }
-      // If we hit the cap, drop the remaining lag — refusing to
-      // catch up keeps the loop bounded after a long tab-background.
       if (iters >= MAX_STEPS_PER_FRAME) lastRef.current = ts;
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -260,10 +243,6 @@ export function App() {
 
       <nav className="tab-bar" role="tablist">
         {TABS.map((t) => (
-          // a11y: each tab carries an `id` so its corresponding
-          // tabpanel can reference it via `aria-labelledby`. The
-          // `aria-controls` link is the inverse direction — assistive
-          // tech traverses tab → panel via this attribute.
           <button
             key={t.id}
             id={`tab-${t.id}`}
@@ -339,12 +318,7 @@ export function App() {
             <Glossary />
           </div>
         )}
-        {/* Sticky-state tabs: kept mounted across tab switches so the
-            user's translator input + events-log scroll position
-            survive. We toggle visibility via `display: none` rather
-            than unmounting. Tabs with mostly derived state (Tree,
-            Map, Stats, Timeline, …) stay conditional to keep initial
-            mount cheap. */}
+        {}
         <div
           className="panel panel-single"
           role="tabpanel"

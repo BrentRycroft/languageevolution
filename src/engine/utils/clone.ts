@@ -30,11 +30,6 @@ export function cloneMorphology(morph: Morphology | undefined): Morphology {
       affix: p.affix.slice(),
       position: p.position,
       category: p.category,
-      // Conjugation/declension class variants and grammaticalisation
-      // source — both optional, both must survive a clone or sister
-      // languages would lose their class structure / etymology trail
-      // every time `cloneLanguage` runs (snapshot boundary, share,
-      // post-bias mutation).
       variants: p.variants
         ? p.variants.map((v) => ({ when: v.when, affix: v.affix.slice() }))
         : undefined,
@@ -44,11 +39,6 @@ export function cloneMorphology(morph: Morphology | undefined): Morphology {
   return { paradigms };
 }
 
-/**
- * Deep-clone a Language so that mutations to the copy can't reach the
- * original. Used at snapshot boundaries (share/export) and by state
- * actions that mutate outside a step cycle (e.g. applyRuleBiasToLanguage).
- */
 export function cloneLanguage(lang: Language): Language {
   return {
     ...lang,
@@ -81,11 +71,6 @@ export function cloneLanguage(lang: Language): Language {
     orthography: { ...lang.orthography },
     otRanking: lang.otRanking.slice(),
     lastChangeGeneration: { ...lang.lastChangeGeneration },
-    // New optional containers must be deep-cloned (the spread above
-    // only copies their reference). Without this, mutations to a
-    // cloned language would leak back into the original — caught by
-    // the integration tests when a snapshot's `colexifiedAs` got
-    // appended to and the original tree saw the new entries too.
     colexifiedAs: lang.colexifiedAs
       ? Object.fromEntries(
           Object.entries(lang.colexifiedAs).map(([k, v]) => [k, v.slice()]),
@@ -110,21 +95,14 @@ export function cloneLanguage(lang: Language): Language {
           ]),
         )
       : undefined,
-    // Territory: deep-clone the cells array so a snapshot can mutate
-    // it without leaking back to the live tree.
     territory: lang.territory
       ? { cells: lang.territory.cells.slice() }
       : undefined,
-    // Phoneme-provenance map: shallow per-entry copy is enough since
-    // the inner objects are flat.
     inventoryProvenance: lang.inventoryProvenance
       ? Object.fromEntries(
           Object.entries(lang.inventoryProvenance).map(([k, v]) => [k, { ...v }]),
         )
       : undefined,
-    // Substrate-acceleration timer is a primitive; spread above already
-    // copied it. recentLoanGens needs a slice so the snapshot's array
-    // is independent of the live language's running window.
     recentLoanGens: lang.recentLoanGens ? lang.recentLoanGens.slice() : undefined,
   };
 }

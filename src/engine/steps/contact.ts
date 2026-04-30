@@ -5,23 +5,12 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { getWorldMap } from "../geo/map";
 
-/** Per-gen probability of an areal phoneme-sharing event. Real
- *  Sprachbund phonological convergence happens over millennia, so
- *  the rate per generation is low — multiplied further by
- *  distance affinity inside `maybeArealPhonemeShare`. */
 const AREAL_PHONEME_PROBABILITY = 0.005;
 
-/** Loan-rate window: the substrate-simplification trigger looks at
- *  loans received in the last LOAN_HISTORY_WINDOW generations. */
 const LOAN_HISTORY_WINDOW = 50;
 
-/** Loans-per-window threshold above which substrate simplification
- *  fires. 3 loans in a 50-gen window ≈ 0.06 per gen — historically
- *  the rate that drove e.g. Old English's case-system collapse
- *  under Old Norse contact. */
 const SUBSTRATE_LOAN_THRESHOLD = 3;
 
-/** How many generations the accelerated-simplification phase lasts. */
 const SUBSTRATE_PHASE_LENGTH = 50;
 
 export function stepContact(
@@ -31,13 +20,11 @@ export function stepContact(
   rng: Rng,
   generation: number,
 ): void {
-  // Trim the loan-event window so old entries don't pile up.
   if (lang.recentLoanGens && lang.recentLoanGens.length > 0) {
     lang.recentLoanGens = lang.recentLoanGens.filter(
       (g) => generation - g <= LOAN_HISTORY_WINDOW,
     );
   }
-  // Decrement the substrate-acceleration timer.
   if (lang.substrateAccelerationRemaining && lang.substrateAccelerationRemaining > 0) {
     lang.substrateAccelerationRemaining -= 1;
   }
@@ -64,9 +51,6 @@ export function stepContact(
         meaning: loan.meaning,
       },
     });
-    // Substrate-simplification trigger: when loans pile up faster
-    // than the threshold, kick off an accelerated-merger phase.
-    // Only fires when not already in a phase (no nesting).
     const currentLoanRate = (lang.recentLoanGens?.length ?? 0);
     if (
       currentLoanRate >= SUBSTRATE_LOAN_THRESHOLD &&

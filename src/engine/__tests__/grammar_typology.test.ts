@@ -66,8 +66,6 @@ describe("§1.4 — article placement per articlePresence", () => {
     const lang = sim.getState().tree["L-0"]!.language;
     lang.grammar.articlePresence = mode;
     lang.grammar.caseStrategy = "preposition";
-    // Ensure the dictionary has a noun for "water" so the translator
-    // has a concrete target to attach an article to.
     if (!lang.lexicon["water"]) lang.lexicon["water"] = ["w", "a", "t"];
     return lang;
   }
@@ -75,8 +73,6 @@ describe("§1.4 — article placement per articlePresence", () => {
   it("none: drops articles entirely", () => {
     const lang = langWithArticleMode("art-none", "none");
     const out = translateSentence(lang, "The water");
-    // The translator may reorder; just check that no token corresponds
-    // to an article emit.
     expect(out.targetTokens.find((t) => t.glossNote === "art")).toBeUndefined();
   });
 
@@ -89,12 +85,9 @@ describe("§1.4 — article placement per articlePresence", () => {
   it("enclitic: attaches the article to the noun's form", () => {
     const lang = langWithArticleMode("art-encl", "enclitic");
     const out = translateSentence(lang, "The water");
-    // The noun token's surface should be longer than the bare lexicon
-    // form (3 phonemes, "wat").
     const nounTok = out.targetTokens.find((t) => t.englishLemma === "water");
     expect(nounTok).toBeDefined();
     expect(nounTok!.targetForm.length).toBeGreaterThan(3);
-    // No standalone article token.
     expect(out.targetTokens.find((t) => t.glossNote === "art")).toBeUndefined();
   });
 
@@ -151,14 +144,9 @@ describe("§1.6 — closed-class lookup determinism", () => {
   });
 
   it("two languages with different ids produce different closed-class forms", () => {
-    // Spin up a sim and a daughter so we have two languages that share
-    // a lineage but carry different ids — different `L-0` vs `L-0-0`
-    // in the hash gives us divergent closed-class tables.
     const sim = createSimulation({ ...defaultConfig(), seed: "cc-divergence" });
     sim.step();
     const proto = sim.getState().tree["L-0"]!.language;
-    // Manufacture a sister-like Language: same content, different id +
-    // different phoneme inventory (extend it artificially).
     const sister: Language = {
       ...proto,
       id: "L-0-X",

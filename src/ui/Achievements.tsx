@@ -2,11 +2,6 @@ import { useEffect } from "react";
 import { useSimStore } from "../state/store";
 import { ACHIEVEMENTS, ACHIEVEMENTS_BY_ID } from "../engine/achievements/catalog";
 
-/**
- * Permanent trophy strip — one badge per catalog achievement. Unlocked
- * badges glow; locked ones stay muted with their descriptions visible
- * on hover so the user can see what's still to come.
- */
 export function AchievementsStrip() {
   const unlocked = useSimStore((s) => s.unlockedAchievements);
   const set = new Set(unlocked);
@@ -30,10 +25,6 @@ export function AchievementsStrip() {
   );
 }
 
-/**
- * Short toast that appears over the main content when a new achievement
- * fires. Auto-dismisses after ~4 s; click to dismiss sooner.
- */
 export function AchievementToast() {
   const last = useSimStore((s) => s.lastAchievement);
   const dismiss = useSimStore((s) => s.dismissAchievementToast);

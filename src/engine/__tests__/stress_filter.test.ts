@@ -3,18 +3,6 @@ import type { SoundChange, WordForm } from "../types";
 import { applyChangesToWord } from "../phonology/apply";
 import { makeRng } from "../rng";
 
-/**
- * Stress-filter integration tests. Rules with `stressFilter: "unstressed"`
- * should only fire on words that contain an unstressed vowel; words
- * with no unstressed positions (e.g. monosyllables) should pass through
- * untouched even if the rule's `probabilityFor` would otherwise return
- * a positive value.
- *
- * The filter check lives in `apply.ts` and short-circuits before the
- * rule's `probabilityFor` callback — confirmed here by spying on the
- * call counts.
- */
-
 function makeProbeRule(
   id: string,
   filter: SoundChange["stressFilter"],
@@ -34,7 +22,7 @@ function makeProbeRule(
     },
     apply: (w) => {
       applyCalls.push(w.length);
-      return w; // no-op so we can detect that it was attempted
+      return w;
     },
     enabledByDefault: true,
     baseWeight: 1,
@@ -45,7 +33,7 @@ function makeProbeRule(
 describe("stress-filter short-circuit in apply.ts", () => {
   it("skips an `unstressed` rule on a monosyllable (no unstressed vowel)", () => {
     const { rule, probCalls } = makeProbeRule("test.unstressed", "unstressed");
-    const word: WordForm = ["k", "a", "t"]; // single stressed vowel
+    const word: WordForm = ["k", "a", "t"];
     applyChangesToWord(word, [rule], makeRng("seed-1"), {
       globalRate: 1,
       weights: {},
@@ -56,7 +44,7 @@ describe("stress-filter short-circuit in apply.ts", () => {
 
   it("invokes an `unstressed` rule on a polysyllable", () => {
     const { rule, probCalls } = makeProbeRule("test.unstressed", "unstressed");
-    const word: WordForm = ["k", "a", "t", "u", "l"]; // two vowels: a, u — penult = a stressed, u unstressed
+    const word: WordForm = ["k", "a", "t", "u", "l"];
     applyChangesToWord(word, [rule], makeRng("seed-1"), {
       globalRate: 1,
       weights: {},
@@ -99,8 +87,6 @@ describe("stress-filter short-circuit in apply.ts", () => {
   });
 
   it("respects `lexicalStress` overrides — rule fires when override re-locates stress", () => {
-    // /a.u.i/ — three vowels. With `lexical` + override picking vowel 0,
-    // the unstressed positions are vowel 1 (u) and vowel 2 (i).
     const { rule, probCalls } = makeProbeRule("test.unstressed", "unstressed");
     const word: WordForm = ["a", "p", "u", "t", "i"];
     applyChangesToWord(word, [rule], makeRng("seed-1"), {
@@ -113,8 +99,6 @@ describe("stress-filter short-circuit in apply.ts", () => {
   });
 
   it("skips when the lexical override leaves no candidate positions", () => {
-    // /a/ — a single-vowel word; under any stress pattern, the only
-    // vowel is stressed → unstressed filter has no matches.
     const { rule, probCalls } = makeProbeRule("test.unstressed", "unstressed");
     const word: WordForm = ["a"];
     applyChangesToWord(word, [rule], makeRng("seed-1"), {

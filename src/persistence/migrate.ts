@@ -1,20 +1,8 @@
 import type { SavedRun, SimulationConfig } from "../engine/types";
 import { defaultConfig } from "../engine/config";
 
-/** Latest schema version this migrator knows how to read. Update
- *  whenever a backwards-incompatible field is added or its semantics
- *  change. Forward-version snapshots (saved by a newer build than the
- *  one running) are deliberately rejected — a downgrade can't safely
- *  guess what new fields mean. The `loadAutosave` / `loadRun` paths
- *  surface this rejection as a `future-version` notice. */
 export const LATEST_SAVE_VERSION = 5;
 
-/**
- * Migrate a saved run from any older schema to the latest. Returns
- * null if the data is unrecognizable or its version is newer than
- * `LATEST_SAVE_VERSION`. Callers can distinguish the two via their
- * own checks — this function deliberately collapses both into null.
- */
 export function migrateSavedRun(raw: unknown): SavedRun | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
@@ -92,10 +80,6 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
     config: mergedConfig,
     generationsRun:
       typeof obj.generationsRun === "number" ? obj.generationsRun : 0,
-    // Preserve the snapshot across migrations. Earlier versions didn't
-    // carry it so it stays optional, but when present (v3+ user runs,
-    // autosave) the consumer needs it or they'll silently re-play the
-    // simulation from scratch.
     stateSnapshot:
       obj.stateSnapshot && typeof obj.stateSnapshot === "object"
         ? (obj.stateSnapshot as import("../engine/types").SimulationState)

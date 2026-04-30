@@ -14,7 +14,6 @@ function freshLang(seed: string) {
   const sim = createSimulation({ ...defaultConfig(), seed });
   sim.step();
   const lang = sim.getState().tree["L-0"]!.language;
-  // Backfill enough vocabulary so every narrative line resolves.
   const fills: Record<string, string[]> = {
     mother: ["m", "a"], father: ["p", "a"], king: ["k", "i", "n"],
     dog: ["k", "u"], wolf: ["w", "u", "l"], horse: ["x", "o", "r"],
@@ -78,9 +77,7 @@ describe("§2.2 — discourse context tracks mentions and topic", () => {
     const ctx = makeDiscourse("myth");
     mention(ctx, "king");
     endTurn(ctx);
-    // King is the topic and was mentioned 1 turn back.
     expect(shouldPronominalise(ctx, "king")).toBe(true);
-    // Wolf was never introduced.
     expect(shouldPronominalise(ctx, "wolf")).toBe(false);
   });
 });
@@ -105,8 +102,6 @@ describe("§2.2 — generateDiscourseNarrative produces coherent multi-line outp
   it("first line introduces a subject; later lines reuse a topic via pronoun", () => {
     const lang = freshLang("disc-topic");
     const out = generateDiscourseNarrative(lang, "story-2", { lines: 8, genre: "legend" });
-    // At least one line should have used a topic-continuing pattern
-    // (where the english starts with a pronoun he/she/it/they).
     const continuing = out.filter((l) => /^(he|she|it|they)\b/i.test(l.english));
     expect(continuing.length).toBeGreaterThan(0);
   });
@@ -116,8 +111,6 @@ describe("§2.2 — generateDiscourseNarrative produces coherent multi-line outp
     const b = freshLang("disc-cmpB");
     const oa = generateDiscourseNarrative(a, "story-shared", { lines: 5, genre: "daily" });
     const ob = generateDiscourseNarrative(b, "story-shared", { lines: 5, genre: "daily" });
-    // The English skeleton (input to translateSentence) is identical
-    // because the discourse RNG is keyed on seed+genre, not language.
     expect(oa.map((l) => l.english)).toEqual(ob.map((l) => l.english));
   });
 
@@ -125,23 +118,17 @@ describe("§2.2 — generateDiscourseNarrative produces coherent multi-line outp
     const lang = freshLang("disc-genres");
     const myth = generateDiscourseNarrative(lang, "x", { lines: 5, genre: "myth" });
     const dialog = generateDiscourseNarrative(lang, "x", { lines: 5, genre: "dialogue" });
-    // The genre is salted into the discourse RNG so the two
-    // narratives diverge structurally.
     expect(myth.map((l) => l.english)).not.toEqual(dialog.map((l) => l.english));
   });
 
   it("myth narratives use past-tense verb forms on most lines", () => {
     const lang = freshLang("disc-tense");
-    // Manufacture a past-tense paradigm so the morph diff between
-    // past and present is visible in the surface output.
     lang.morphology.paradigms["verb.tense.past"] = {
       affix: ["e", "d"],
       position: "suffix",
       category: "verb.tense.past",
     };
     const myth = generateDiscourseNarrative(lang, "tense-x", { lines: 8, genre: "myth" });
-    // The English skeleton should contain past-tense markers
-    // (irregular forms or -ed suffix) on most lines.
     const pastLines = myth.filter((l) =>
       /\b(went|came|saw|knew|ate|drank|gave|took|spoke|held|fought|made|broke|fell|slept|died|ran|flew)\b/.test(l.english)
       || /\bwalked\b/.test(l.english),
@@ -152,9 +139,6 @@ describe("§2.2 — generateDiscourseNarrative produces coherent multi-line outp
   it("daily narratives default to present tense", () => {
     const lang = freshLang("disc-present");
     const daily = generateDiscourseNarrative(lang, "tense-y", { lines: 8, genre: "daily" });
-    // Most lines should NOT contain past-tense markers — the genre
-    // includes one future-tense template for variety, and the rest
-    // are present.
     const pastLines = daily.filter((l) =>
       /\b(went|came|saw|knew|ate|drank|gave|took|spoke|held|fought|made|broke|fell|slept|died|ran|flew)\b/.test(l.english),
     );
@@ -168,12 +152,9 @@ describe("§2.2 — generateDiscourseNarrative produces coherent multi-line outp
       position: "suffix",
       category: "verb.tense.past",
     };
-    // Force the wider lexicon to share a known stem.
     lang.lexicon["see"] = ["w", "i"];
     const presentOut = generateDiscourseNarrative(lang, "tx-pres", { lines: 1, genre: "daily" });
     const pastOut = generateDiscourseNarrative(lang, "tx-past", { lines: 1, genre: "myth" });
-    // The two should produce different surface texts (past vs present
-    // shape applied to potentially different verbs / S / O slots).
     expect(presentOut[0]!.text).not.toBe(pastOut[0]!.text);
   });
 });

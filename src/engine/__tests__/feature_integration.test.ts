@@ -38,12 +38,6 @@ function testLang(overrides: Partial<Language> = {}): Language {
   };
 }
 
-/**
- * Cross-feature integration: every recently-added mechanic must work
- * with every other recently-added mechanic. These tests catch the
- * "feature A and feature B are each fine in isolation but neither
- * knows the other exists" failure mode.
- */
 describe("cross-feature integration", () => {
   describe("stress pattern × unstressed reduction", () => {
     it("changesForLang specialises UNSTRESSED_REDUCTION to the language's pattern", () => {
@@ -54,23 +48,16 @@ describe("cross-feature integration", () => {
       const changes = changesForLang(lang);
       const reduction = changes.find((c) => c.id === "stress.unstressed_reduction");
       expect(reduction).toBeDefined();
-      // With an "initial" pattern, vowel index 0 is stressed and the
-      // last vowel index is unstressed. Run a probe word of 3 syllables.
-      const probe = ["k", "a", "l", "e", "t", "i"]; // 3 vowels: 1,3,5
+      const probe = ["k", "a", "l", "e", "t", "i"];
       const rng = makeRng("stress-probe");
-      // Force apply repeatedly. With initial stress, the unstressed
-      // sites are vowels at indices 3 and 5 (`e`, `i`); never 1 (`a`).
-      // We don't assert exact output (rng-dependent) but verify the
-      // first vowel is never the reduction target.
       let after = probe.slice();
       let reduced = false;
       for (let attempt = 0; attempt < 50; attempt++) {
         const next = reduction!.apply(after, rng);
         if (next !== after) {
-          // Find which index changed.
           for (let i = 0; i < next.length; i++) {
             if (next[i] !== after[i]) {
-              expect(i).not.toBe(1); // vowel idx 1 is initial-stressed
+              expect(i).not.toBe(1);
               reduced = true;
             }
           }
@@ -87,7 +74,6 @@ describe("cross-feature integration", () => {
       });
       const changes = changesForLang(lang);
       const reduction = changes.find((c) => c.id === "stress.unstressed_reduction");
-      // Should be the same object as the catalog version (no specialisation).
       expect(reduction).toBe(CATALOG_BY_ID["stress.unstressed_reduction"]);
     });
   });
@@ -103,7 +89,6 @@ describe("cross-feature integration", () => {
       const lang = testLang({
         morphology: { paradigms: { "verb.tense.past": paradigm } },
       });
-      // Force-mutate every phoneme by replacing `a` with `e`.
       applyPhonologyToAffixes(lang.morphology, (form) => form.map((p) => (p === "a" ? "e" : p)));
       const after = lang.morphology.paradigms["verb.tense.past"]!;
       expect(after.affix).toEqual(["e", "n"]);
@@ -112,7 +97,6 @@ describe("cross-feature integration", () => {
     });
 
     it("inflect picks the right variant after the language has split classes", () => {
-      // Build a lang with a base paradigm + run maybeSplitParadigm.
       const paradigm: Paradigm = {
         affix: ["a", "n"], position: "suffix", category: "verb.tense.past",
       };
@@ -126,12 +110,8 @@ describe("cross-feature integration", () => {
       const result = maybeSplitParadigm(lang, rng, 1);
       expect(result).not.toBeNull();
       if (!result) return;
-      // Now `inflect` should pick the variant for stems that match.
       const goInflected = inflect(["g", "o"], lang.morphology.paradigms["verb.tense.past"], lang, "go");
       const runInflected = inflect(["r", "u", "n"], lang.morphology.paradigms["verb.tense.past"], lang, "run");
-      // The two stems end in different shapes, so they should NOT
-      // produce the same affix. (Exact affixes depend on rng, so we
-      // just compare structural difference.)
       expect(goInflected.slice(2).join("")).not.toBe(runInflected.slice(3).join(""));
     });
   });
@@ -145,22 +125,17 @@ describe("cross-feature integration", () => {
         lexicon: { go: ["g", "o"], walk: ["w", "a", "l", "k"] },
         wordFrequencyHints: { go: 0.9, walk: 0.4 },
         morphology: { paradigms: { "verb.tense.past": paradigm } },
-        // Enable the simplest sound change so we can observe drift.
         enabledChangeIds: ["lenition.p_to_f"],
       });
-      // Plant a suppletive entry directly so we don't depend on
-      // maybeSuppletion's randomness for the setup.
       lang.suppletion = {
-        go: { "verb.tense.past": ["w", "p", "n", "t"] }, // contains a `p` we can lenite
+        go: { "verb.tense.past": ["w", "p", "n", "t"] },
       };
-      // Step phonology many times — the `p` should eventually flip to `f`.
       const config = defaultConfig();
       const state: SimulationState = {
         generation: 0, rootId: lang.id, rngState: 0,
         tree: { [lang.id]: { language: lang, parentId: null, childrenIds: [] } },
       };
       const rng = makeRng("supp-evol");
-      // Crank weight up so the change actually fires often.
       lang.changeWeights = { "lenition.p_to_f": 5 };
       let mutated = false;
       for (let i = 0; i < 200 && !mutated; i++) {
@@ -210,28 +185,21 @@ describe("cross-feature integration", () => {
         suppletion: { go: { "verb.tense.past": ["w", "e", "n", "t"] } },
       });
       const result = inflect(["g", "o"], paradigm, lang, "go");
-      // Suppletive form wins despite the vowel-final variant matching.
       expect(result).toEqual(["w", "e", "n", "t"]);
     });
   });
 
   describe("genesis × derivational suffixes", () => {
     it("stays stable when a language has no suffixes (falls back to catalog)", () => {
-      // Just confirms the genesis.derivation rule doesn't crash on
-      // an empty derivationalSuffixes list — the global fallback
-      // kicks in. We probe the rule directly.
       const lang = testLang({
         lexicon: { water: ["w", "a", "t", "e", "r"] },
         derivationalSuffixes: [],
       });
       const rule = GENESIS_BY_ID["genesis.derivation"]!;
       const rng = makeRng("genesis-empty-suffixes");
-      // Try multiple times because rng can hit a phonotactically
-      // illegal coinage and bail. We only need it to not throw.
       for (let i = 0; i < 10; i++) {
         rule.tryCoin(lang, rng);
       }
-      // No exception → pass.
       expect(true).toBe(true);
     });
   });

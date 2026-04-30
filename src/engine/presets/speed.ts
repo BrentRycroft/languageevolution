@@ -1,13 +1,5 @@
 import type { SimulationConfig } from "../types";
 
-/**
- * Evolution-speed presets: scaled versions of the default rates. These act
- * as "tempo" profiles that can be applied on top of any content preset
- * (PIE, Germanic, Bantu, default). The multipliers are calibrated against
- * aggregated typological observations: real sound change can vary from
- * ~1 shift per millennium (conservative) to major overhauls within a
- * single generation under intense contact (extreme).
- */
 export interface EvolutionSpeedProfile {
   id: string;
   label: string;

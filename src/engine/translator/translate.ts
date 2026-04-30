@@ -29,7 +29,6 @@ export function translate(
     };
   }
 
-  // 1. exact meaning match
   const exact = lang.lexicon[key];
   if (exact) {
     const inflected =
@@ -44,8 +43,6 @@ export function translate(
     };
   }
 
-  // 2. semantic neighbor — either direction.
-  //    Forward: neighbors listed for the English word itself.
   for (const n of neighborsOf(key)) {
     const f = lang.lexicon[n];
     if (f) {
@@ -57,7 +54,6 @@ export function translate(
       };
     }
   }
-  //    Reverse: find a lexicon meaning that considers `key` a neighbor.
   for (const m of Object.keys(lang.lexicon)) {
     if (neighborsOf(m).includes(key)) {
       return {
@@ -69,7 +65,6 @@ export function translate(
     }
   }
 
-  // 3. existing compound: look for a known compound containing this key
   for (const m of Object.keys(lang.lexicon)) {
     if (m.includes("-")) {
       const parts = m.split("-");
@@ -92,15 +87,6 @@ export function translate(
   };
 }
 
-/**
- * Optional LLM-assisted translator. Lazy-imports WebLLM the same way the
- * semantic-drift module does; only called when the user clicks "Try AI".
- */
-/**
- * Translate a form from one living language into another by tracing each
- * known meaning. Returns a best-effort form using the target language's
- * existing lexicon, or missing if no matching meaning can be found.
- */
 export function translateBetween(
   source: Language,
   target: Language,
@@ -124,9 +110,3 @@ export function translateBetween(
   return translate(target, matchedMeaning);
 }
 
-// LLM-backed translation helpers were removed in Sprint 1 — Sprint 2's
-// rule-based translator (§B in the overhaul roadmap) replaces this
-// surface with a deterministic engine that uses POS-tagging + the
-// concept dictionary + paradigm-based inflection. Until that lands,
-// the Translator UI uses only the deterministic `translate` and
-// `translateBetween` paths above.

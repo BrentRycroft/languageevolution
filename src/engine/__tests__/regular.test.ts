@@ -36,7 +36,6 @@ describe("regular (Neogrammarian) sound change", () => {
     const rng = makeRng("regular");
     const rule = CATALOG_BY_ID["lenition.p_to_f"]!;
     applyOneRegularChange(lang, [rule], rng);
-    // Every p should now be f in every word.
     for (const m of Object.keys(lang.lexicon)) {
       for (const p of lang.lexicon[m]!) {
         expect(p).not.toBe("p");

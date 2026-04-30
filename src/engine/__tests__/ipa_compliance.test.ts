@@ -4,22 +4,10 @@ import { CATALOG } from "../phonology/catalog";
 import { PRESETS } from "../presets";
 import { makeRng } from "../rng";
 
-/**
- * Guard rails for IPA compliance. The engine is designed to run on
- * IPA phonemes throughout; this suite catches regressions where
- * ASCII stand-ins leak into the canonical sets, the catalog, or the
- * preset seed lexicons.
- *
- * The canonical phoneme vocabulary is whatever `VOWELS ∪ CONSONANTS`
- * accepts, plus suprasegmental-suffixed variants (length `ː`, tone
- * marks, acute/grave/macron on vowels). Anything else is a leak.
- */
-
 const TONE_MARKS = ["˥˩", "˧˥", "˥", "˧", "˩"];
 function isCanonical(p: string): boolean {
   if (p.length === 0) return false;
   if (VOWELS.has(p) || CONSONANTS.has(p)) return true;
-  // Strip tone suffix + length mark and retry.
   let base = p;
   for (const t of TONE_MARKS) if (base.endsWith(t)) base = base.slice(0, -t.length);
   if (base.endsWith("ː")) base = base.slice(0, -1);
@@ -29,8 +17,6 @@ function isCanonical(p: string): boolean {
 describe("IPA compliance", () => {
   describe("canonical vowel set", () => {
     it("includes the umlaut/harmony output vowels", () => {
-      // Previously `æ ʏ ɑ` were produced by catalog rules but missing
-      // from VOWELS, which broke `isVowel`. Regression guard.
       expect(isVowel("æ")).toBe(true);
       expect(isVowel("ʏ")).toBe(true);
       expect(isVowel("ɑ")).toBe(true);
@@ -50,8 +36,6 @@ describe("IPA compliance", () => {
 
   describe("canonical consonant set", () => {
     it("uses IPA superscript-j for palatalised stops, not ASCII digraphs", () => {
-      // Regression: `kj gj tj dj` should NOT be in the canonical
-      // set; they were ASCII stand-ins duplicating `kʲ gʲ tʲ dʲ`.
       expect(isConsonant("kʲ")).toBe(true);
       expect(isConsonant("gʲ")).toBe(true);
       expect(isConsonant("tʲ")).toBe(true);
@@ -62,7 +46,6 @@ describe("IPA compliance", () => {
       expect(isConsonant("dj")).toBe(false);
     });
     it("preserves ASCII input via asciiToIpa", () => {
-      // User-typed `kj` should still round-trip to `kʲ`.
       expect(asciiToIpa("kj")).toBe("kʲ");
       expect(asciiToIpa("gj")).toBe("gʲ");
       expect(asciiToIpa("tj")).toBe("tʲ");
@@ -115,18 +98,11 @@ describe("IPA compliance", () => {
   describe("sound-change catalog", () => {
     it("has well-formed rule ids", () => {
       for (const rule of CATALOG) {
-        // family.id — allow upper/lower alphanumerics and underscores
-        // in the suffix (e.g. `lenition.k_to_h_before_V`).
         expect(rule.id).toMatch(/^[a-z_]+\.[A-Za-z0-9_]+$/);
         expect(rule.category).toBeDefined();
       }
     });
     it("every rule output (where observable via apply on a probe) stays canonical", () => {
-      // Probe each rule with a handful of seed inputs and assert that
-      // any phoneme in the output is canonical. Not all rules can be
-      // probed through their apply() without specific contexts; we
-      // only check that the output phonemes don't drop off the IPA
-      // vocabulary (i.e. no rule produces a literal "kj" or similar).
       const probes = [
         ["p", "a", "t", "i"],
         ["k", "ɛ", "m", "u"],
@@ -144,8 +120,6 @@ describe("IPA compliance", () => {
               if (!isCanonical(p)) leaks.add(`${rule.id}: ${JSON.stringify(p)}`);
             }
           } catch {
-            // Rules may throw on ill-formed input; ignore — we're
-            // probing opportunistically.
           }
         }
       }

@@ -20,7 +20,7 @@ describe("ideophones / expressive phonology", () => {
 
   it("expressive words have low sound-change sensitivity (resist regular change)", () => {
     expect(soundChangeSensitivity("sharp")).toBeLessThan(0.5);
-    expect(soundChangeSensitivity("water")).toBe(1.0); // ordinary content word
+    expect(soundChangeSensitivity("water")).toBe(1.0);
   });
 
   it("reduplicated -intens forms are also expressive", () => {
@@ -57,25 +57,18 @@ describe("creolization event", () => {
     sim.step();
     const stateBefore = sim.getState();
     const beforeKeys = Object.keys(stateBefore.tree).length;
-    // Pull the actual state object and apply the step directly.
     stepCreolization(stateBefore, sim.getConfig(), makeRng("creo-noop"), 1);
     expect(Object.keys(stateBefore.tree).length).toBe(beforeKeys);
   });
 
   it("structural shift: drops case + sets analytical profile when fired", () => {
     const sim = createSimulation(presetPIE());
-    // Step a few times so the tree has multiple alive leaves.
     for (let i = 0; i < 30; i++) sim.step();
     const state = sim.getState();
-    // Hand-craft two leaves with adjacent territories.
     const aliveIds = Object.keys(state.tree).filter(
       (id) => state.tree[id]!.childrenIds.length === 0 && !state.tree[id]!.language.extinct,
     );
-    if (aliveIds.length < 2) return; // skip when sim didn't split yet
-    // Force-call the step at p=1 by patching the config then iterating
-    // until it fires. The PER_GEN_PROBABILITY is hardcoded so we
-    // simply re-roll until we get a hit; bound the attempts so the
-    // test never hangs.
+    if (aliveIds.length < 2) return;
     let fired = false;
     for (let t = 0; t < 5000 && !fired; t++) {
       const before = aliveIds.map((id) => ({
@@ -87,7 +80,6 @@ describe("creolization event", () => {
         const after = Object.keys(state.tree[b.id]!.language.morphology.paradigms).length;
         if (after < b.paradigms) {
           fired = true;
-          // The recipient should now be analytical.
           const lang = state.tree[b.id]!.language;
           expect(lang.grammar.hasCase).toBe(false);
           expect(lang.grammar.synthesisIndex).toBe(1.0);
@@ -95,8 +87,6 @@ describe("creolization event", () => {
         }
       }
     }
-    // Test isn't strictly required to fire if the territories don't
-    // overlap enough — assert gracefully that it didn't crash.
     expect(true).toBe(true);
   });
 });

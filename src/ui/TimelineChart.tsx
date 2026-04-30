@@ -70,8 +70,6 @@ export function TimelineChart() {
         };
       });
     }
-    // Cognates mode. No silent "water" fallback — caller shows an
-    // inline picker if selectedMeaning is nullish.
     if (!selectedMeaning) return [];
     const meaning = selectedMeaning;
     const seed = seedForms[meaning];
@@ -120,9 +118,6 @@ export function TimelineChart() {
     );
   }, [series, scrubGen]);
 
-  // Oldest-retained generation across all visible series — lets us warn
-  // the user when the 500-entry-per-meaning history ring buffer has
-  // rolled over and the earliest recorded form is no longer gen 0.
   const oldestRetainedGen = useMemo(() => {
     let min = Infinity;
     for (const s of series) {
@@ -131,9 +126,6 @@ export function TimelineChart() {
     return Number.isFinite(min) ? min : 0;
   }, [series]);
 
-  // Compute Y-domain from the CLIPPED chart data (not the full history)
-  // so scrubbing back doesn't leave the axis scaled for a future
-  // divergence that hasn't happened yet at the scrub point.
   const yMax = useMemo(() => {
     let max = 0;
     for (const row of chartData) {
@@ -142,14 +134,9 @@ export function TimelineChart() {
         if (typeof v === "number" && v > max) max = v;
       }
     }
-    // Pad by ~15% and round up to an integer so the top tick reads cleanly.
     return Math.max(1, Math.ceil(max * 1.15));
   }, [chartData]);
 
-  // Collect event markers within the scrub window for the vertical-guide
-  // overlay. Shows rule births/retirements + taboo events on the selected
-  // language (meanings/rules modes) or across all displayed languages
-  // (cognates mode).
   const eventMarkers = useMemo(() => {
     if (chartData.length === 0) return [] as Array<{ generation: number; kind: string; description: string }>;
     const gens: Array<{ generation: number; kind: string; description: string }> = [];
@@ -174,7 +161,6 @@ export function TimelineChart() {
     if (mode === "cognates") {
       for (const s of series) visit(s.key);
     }
-    // Keep at most 40 markers to avoid overplotting.
     return gens.slice(-40);
   }, [chartData.length, mode, selectedLangId, series, state.tree, scrubGen, generation]);
 
@@ -392,9 +378,6 @@ export function TimelineChart() {
                   name={s.label}
                   stroke={s.color}
                   strokeWidth={2}
-                  // Small dots on every recorded generation so users can
-                  // pinpoint individual form changes. Active dot grows on
-                  // hover — drives the tooltip.
                   dot={{ r: 2, stroke: s.color, fill: s.color }}
                   activeDot={{ r: 5 }}
                   isAnimationActive={false}

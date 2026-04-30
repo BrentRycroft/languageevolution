@@ -25,25 +25,6 @@ import {
 } from "./discourse";
 import type { Meaning } from "../types";
 
-/**
- * §2.2 narrative generator: discourse-coherent, multi-line stories
- * realised through the §2.1 tree translator.
- *
- * Pipeline per line:
- *   1. Pick a template from the genre pool, alternating between
- *      `introducesEntity` (fresh subject) and `topicSubject` (refers
- *      back via pronoun) so the narrative has rhythm.
- *   2. Fill open-class slots from the noun/verb/adjective pools.
- *   3. Substitute the {TOPIC} placeholder with the appropriate pronoun
- *      from the discourse state (he/she/it/they).
- *   4. Run the assembled English sentence through translateSentence so
- *      the language's grammar features (article placement, agreement,
- *      negation, prodrop, word order) all kick in.
- *   5. Update the discourse context.
- *
- * Output is per-line so the UI can stream results.
- */
-
 export interface DiscourseLine {
   english: string;
   text: string;
@@ -64,7 +45,6 @@ function fillTemplate(
 
   if (template.topicSubject && ctx.topic) {
     english = english.replace("{TOPIC}", ctx.topic.pronoun);
-    // Don't mention the topic here — it stays as the topic for next turn.
   }
 
   if (template.needs.subject) {
@@ -91,12 +71,6 @@ function fillTemplate(
     slots.push(p);
   }
 
-  // Tense-aware verb realisation. Verb pool depends on the
-  // template's transitivity demands so we don't emit "the fish die
-  // the horse" — die is intransitive. Templates with {O} draw from
-  // TRANSITIVE_VERB_POOL only; no-object templates draw from the
-  // intransitive pool (or full pool when neither distinction
-  // applies).
   const verbPool = template.needs.object
     ? TRANSITIVE_VERB_POOL
     : INTRANSITIVE_VERB_POOL.length > 0
@@ -112,11 +86,6 @@ function fillTemplate(
   return { english, openClassSlots: slots };
 }
 
-/**
- * Pick the next template, alternating between introducing-new and
- * topic-continuing patterns so the narrative gets rhythm. The first
- * sentence always introduces.
- */
 function pickTemplate(
   genre: DiscourseGenre,
   ctx: DiscourseContext,
@@ -125,9 +94,7 @@ function pickTemplate(
   const all = templatesFor(genre);
   const introducing = all.filter((t) => t.introducesEntity);
   const continuing = all.filter((t) => t.topicSubject);
-  // First sentence: introduce.
   if (ctx.turnIndex === 0 || !ctx.topic) return pick(introducing, rng);
-  // Otherwise alternate, biased 60/40 towards continuing for cohesion.
   return rng.next() < 0.6 ? pick(continuing, rng) : pick(introducing, rng);
 }
 
@@ -151,36 +118,17 @@ export function generateDiscourseNarrative(
     const template = pickTemplate(genre, ctx, rng);
     const { english, openClassSlots } = fillTemplate(template, ctx, rng);
 
-    // Update discourse: any subject from this template becomes
-    // mentioned + the topic. This drives pronoun choice next turn.
     if (template.needs.subject && openClassSlots[0]) {
       mention(ctx, openClassSlots[0]);
     }
-    // Object also gets mentioned but doesn't override topic if a fresh
-    // subject was introduced.
     if (template.needs.object && openClassSlots[template.needs.subject ? 1 : 0]) {
       const objMeaning = openClassSlots[template.needs.subject ? 1 : 0]!;
       const wasNew = !ctx.entities.has(objMeaning);
       mention(ctx, objMeaning);
-      // If the subject was a pronoun (no fresh subject mention), the
-      // object becomes the new topic candidate. Otherwise the subject
-      // stays as topic.
       if (!template.needs.subject && wasNew) ctx.topic = ctx.entities.get(objMeaning)!;
     }
-    // Realise via translateSentence — this gets us all the §2.1
-    // grammar+typology behaviour for free. Then re-render each
-    // token's WordForm through formatForm so the user's script
-    // preference (IPA / Roman / both) is honoured. Without this we
-    // emit raw phoneme concatenations and the narrative reads in
-    // bare IPA regardless of the picker.
     const tx = translateSentence(lang, english);
     const renderToken = (t: typeof tx.targetTokens[number]): string => {
-      // Quoted unresolved tokens (`"dragon"`, `"?"`) and synthesised
-      // closed-class forms (NEG / Q / DET) live on `targetSurface`
-      // only — they don't carry a real WordForm to romanise. Pass
-      // those through verbatim. Everything else goes through
-      // formatForm so the language's drifted Latin orthography
-      // (when picked) actually surfaces.
       const surf = t.targetSurface;
       if (!surf) return "";
       if (t.targetForm && t.targetForm.length > 0 && surf !== `“${t.englishLemma}”` && surf !== "?") {

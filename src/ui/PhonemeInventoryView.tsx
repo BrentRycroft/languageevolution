@@ -4,15 +4,6 @@ import { featuresOf } from "../engine/phonology/features";
 import { isVowel, isSyllabic } from "../engine/phonology/ipa";
 import type { Phoneme } from "../engine/types";
 
-/**
- * Segmental-phoneme inventory for the selected language, bucketed by
- * manner + broad type. Phonemes that weren't in the proto language's
- * inventory are marked as "innovative" — a quick visual of how far the
- * language has drifted sound-inventory-wise from its seed.
- *
- * The audit agent flagged `phoneme inventory display` as an under-
- * developed but pedagogically valuable feature; this is that view.
- */
 export function PhonemeInventoryView() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);

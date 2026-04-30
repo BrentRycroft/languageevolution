@@ -2,11 +2,7 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
-// Hand-authored Proto-Germanic seed. Forms are simplified Ringe-style
-// reconstructions: PIE after Grimm's Law (p→f, t→θ, k→h, b→p, d→t, g→k)
-// and Verner's Law conditioned voicing. Long vowels marked with macron.
 const LEXICON: Lexicon = {
-  // — natural world / weather —
   water: ["w", "a", "t", "a", "r"],
   fire: ["f", "u", "r"],
   stone: ["s", "t", "a", "i", "n", "a", "z"],
@@ -32,7 +28,6 @@ const LEXICON: Lexicon = {
   field: ["f", "e", "l", "θ", "u", "z"],
   road: ["w", "e", "g", "a", "z"],
   path: ["p", "a", "θ", "a", "z"],
-  // — sky cycle / time —
   day: ["d", "a", "g", "a", "z"],
   night: ["n", "a", "x", "t"],
   morning: ["m", "u", "r", "g", "a", "n"],
@@ -42,7 +37,6 @@ const LEXICON: Lexicon = {
   winter: ["w", "i", "n", "t", "r", "u", "z"],
   summer: ["s", "u", "m", "a", "r", "a", "z"],
   time: ["t", "iː", "m", "oː"],
-  // — flora / fauna —
   tree: ["b", "a", "g", "m", "a"],
   wood: ["w", "i", "d", "u", "z"],
   leaf: ["l", "a", "u", "b", "a"],
@@ -56,7 +50,6 @@ const LEXICON: Lexicon = {
   oak: ["a", "i", "k", "s"],
   birch: ["b", "e", "r", "k", "oː"],
   apple: ["a", "p", "l", "u", "z"],
-  // — animals —
   dog: ["x", "u", "n", "d", "a", "z"],
   wolf: ["w", "u", "l", "f", "a", "z"],
   horse: ["x", "r", "u", "s", "s", "a"],
@@ -79,7 +72,6 @@ const LEXICON: Lexicon = {
   wing: ["f", "e", "θ", "r", "a"],
   horn: ["x", "u", "r", "n", "a"],
   tail: ["s", "t", "e", "r", "t", "a", "z"],
-  // — body —
   body: ["l", "iː", "k", "ã"],
   head: ["x", "a", "u", "b", "u", "d"],
   hair: ["x", "eː", "r"],
@@ -110,7 +102,6 @@ const LEXICON: Lexicon = {
   knee: ["k", "n", "i", "w", "a"],
   leg: ["l", "a", "g", "j", "a"],
   foot: ["f", "oː", "t", "s"],
-  // — kinship / people —
   person: ["m", "a", "n", "n", "a", "n"],
   man: ["w", "i", "r", "a", "z"],
   woman: ["kʷ", "e", "n", "oː"],
@@ -122,14 +113,12 @@ const LEXICON: Lexicon = {
   daughter: ["d", "u", "x", "t", "eː", "r"],
   brother: ["b", "r", "oː", "θ", "eː", "r"],
   sister: ["s", "w", "e", "s", "t", "eː", "r"],
-  // *hūsbōnda- is Old Norse, not Proto-Germanic — dropped.
   wife: ["w", "iː", "b", "ã"],
   friend: ["f", "r", "i", "j", "oː", "n", "d", "s"],
   king: ["k", "u", "n", "i", "n", "g", "a", "z"],
   god: ["g", "u", "d", "a", "n"],
   guest: ["g", "a", "s", "t", "i", "z"],
   enemy: ["f", "i", "j", "a", "n", "d", "s"],
-  // — household / artifact —
   house: ["x", "uː", "s", "ã"],
   door: ["d", "u", "r", "u"],
   hearth: ["x", "e", "r", "θ", "a", "z"],
@@ -145,13 +134,11 @@ const LEXICON: Lexicon = {
   rope: ["r", "a", "i", "p", "a"],
   cloth: ["k", "l", "a", "i", "θ", "a"],
   wool: ["w", "u", "l", "l", "oː"],
-  // — food / drink —
   bread: ["b", "r", "a", "u", "θ", "ã"],
   meat: ["f", "l", "a", "i", "s", "k", "a"],
   milk: ["m", "e", "l", "u", "k", "s"],
   honey: ["x", "u", "n", "a", "g", "a"],
   salt: ["s", "a", "l", "t", "ã"],
-  // — verbs of motion / state —
   be: ["w", "e", "s"],
   go: ["g", "a", "n", "g"],
   come: ["kʷ", "e", "m"],
@@ -163,7 +150,6 @@ const LEXICON: Lexicon = {
   fall: ["f", "a", "l", "l"],
   fly: ["f", "l", "i", "u", "g"],
   swim: ["s", "w", "i", "m"],
-  // — verbs of perception / cognition —
   see: ["s", "e", "xʷ"],
   hear: ["x", "a", "u", "z"],
   know: ["k", "u", "n", "n"],
@@ -172,7 +158,6 @@ const LEXICON: Lexicon = {
   say: ["s", "a", "g", "j"],
   call: ["k", "a", "l", "l"],
   ask: ["b", "i", "d"],
-  // — verbs of action —
   do: ["d", "oː", "n"],
   make: ["m", "a", "k"],
   take: ["n", "e", "m"],
@@ -190,7 +175,6 @@ const LEXICON: Lexicon = {
   wash: ["w", "a", "s", "k"],
   weave: ["w", "e", "b"],
   plant: ["s", "eː"],
-  // — verbs of life —
   eat: ["e", "t"],
   drink: ["d", "r", "i", "n", "k"],
   sleep: ["s", "l", "eː", "p"],
@@ -203,7 +187,6 @@ const LEXICON: Lexicon = {
   fear: ["f", "u", "r", "x", "t"],
   laugh: ["x", "l", "a", "x"],
   cry: ["w", "oː", "p"],
-  // — numbers —
   one: ["a", "i", "n", "a", "z"],
   two: ["t", "w", "a", "i"],
   three: ["θ", "r", "iː", "z"],
@@ -215,7 +198,6 @@ const LEXICON: Lexicon = {
   nine: ["n", "i", "u", "n"],
   ten: ["t", "e", "x", "u", "n"],
   hundred: ["x", "u", "n", "d", "a"],
-  // — qualities —
   big: ["m", "i", "k", "i", "l", "a", "z"],
   small: ["l", "iː", "t", "i", "l", "a", "z"],
   long: ["l", "a", "n", "g", "a", "z"],
@@ -243,14 +225,12 @@ const LEXICON: Lexicon = {
   weak: ["w", "a", "i", "k", "a", "z"],
   fast: ["s", "n", "e", "l", "l", "a", "z"],
   slow: ["s", "l", "a", "i", "w", "a", "z"],
-  // — colour —
   red: ["r", "a", "u", "d", "a", "z"],
   black: ["s", "w", "a", "r", "t", "a", "z"],
   white: ["xʷ", "iː", "t", "a", "z"],
   green: ["g", "r", "oː", "n", "i", "z"],
   yellow: ["g", "e", "l", "w", "a", "z"],
   blue: ["b", "l", "eː", "w", "a", "z"],
-  // — abstract / pronouns —
   name: ["n", "a", "m", "oː"],
   word: ["w", "u", "r", "d", "a"],
   truth: ["s", "a", "n", "θ", "a", "z"],
@@ -262,10 +242,6 @@ const LEXICON: Lexicon = {
   you: ["θ", "uː"],
   we: ["w", "iː", "z"],
   they: ["θ", "a", "i"],
-  // — closed-class roots (Proto-Germanic *sa / *þat / *jainaz; *ne;
-  //   *unde; *ana; *furi; *bi). Articles are reflexes of the *sa
-  //   demonstrative — turning articlePresence on lets the engine
-  //   surface them. —
   he: ["s", "a"],
   she: ["s", "oː"],
   it: ["θ", "a", "t"],
@@ -313,13 +289,6 @@ export function presetGermanic(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
-    // Germanic typology: SOV → SVO drift over time; free articles
-    // (`the`-style); preposition strategy for case marking; pre-noun
-    // adjectives.
-    // Proto-Germanic underwent a stress shift to fixed initial-syllable
-    // accent (post-PIE). This is the prosodic foundation of all the
-    // subsequent unstressed-final reduction (Verner's Law alternations,
-    // OE → ME ending erosion, etc.).
     seedStressPattern: "initial",
     seedGrammar: {
       wordOrder: "SVO",

@@ -1,24 +1,13 @@
 import type { SimulationConfig } from "../engine/types";
 
-/**
- * Compact URL-sharing payload. We encode only seed + config + the per-language
- * ruleBias overrides (applied post-load) — not the full simulation state, since
- * the procedural engine is deterministic from those inputs. This keeps the
- * share link short (typically < 2 KB after base64).
- */
 export interface SharePayload {
   v: 1;
   seed: string;
   config: SimulationConfig;
-  /** Optional per-language ruleBias overrides keyed by language id. */
   biases?: Record<string, Record<string, number>>;
-  /** Generations to replay from the seed state. */
   replay?: number;
 }
 
-/**
- * Base64url encoding that's safe to put in a URL without further escaping.
- */
 function toBase64Url(str: string): string {
   const utf8 = new TextEncoder().encode(str);
   let binary = "";
@@ -52,10 +41,6 @@ export function decodeShare(raw: string): SharePayload | null {
   }
 }
 
-/**
- * Build a full share URL for the given config. Uses location.origin + pathname
- * so it works regardless of whether the app sits under /languageevolution/.
- */
 export function shareUrl(payload: SharePayload): string {
   const base =
     typeof location !== "undefined"
@@ -64,11 +49,6 @@ export function shareUrl(payload: SharePayload): string {
   return `${base}?s=${encodeShare(payload)}`;
 }
 
-/**
- * Read the ?s= share parameter from the current URL, decode it, and return
- * the payload. Returns null if absent or malformed. Safe to call at any
- * render phase.
- */
 export function readShareFromLocation(): SharePayload | null {
   if (typeof location === "undefined") return null;
   const params = new URLSearchParams(location.search);
@@ -77,11 +57,6 @@ export function readShareFromLocation(): SharePayload | null {
   return decodeShare(raw);
 }
 
-/**
- * Remove the share parameter from the current URL without reloading. Called
- * after a successful deep-link load so subsequent copies of the URL reflect
- * the user's live simulation instead of the original deep link.
- */
 export function clearShareFromLocation(): void {
   if (typeof location === "undefined" || typeof history === "undefined") return;
   const params = new URLSearchParams(location.search);

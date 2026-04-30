@@ -43,8 +43,6 @@ describe("parseBias", () => {
   });
 
   it("rejects non-number values (null, boolean, string)", () => {
-    // null: Number(null) === 0 — without strict type check this would
-    // become 0.2 (clamped). String/bool also coerce sneakily.
     expect(parseBias(`{"lenition": null}`)).toBeNull();
     expect(parseBias(`{"lenition": true, "fortition": false}`)).toBeNull();
     expect(parseBias(`{"lenition": "1.5"}`)).toBeNull();
@@ -54,7 +52,6 @@ describe("parseBias", () => {
     const raw = `{"foo":9,"lenition":1.4,"bar":2}`;
     const bias = parseBias(raw);
     expect(bias?.lenition).toBeCloseTo(1.4, 2);
-    // Unknown keys absent from output.
     expect("foo" in (bias ?? {})).toBe(false);
   });
 });

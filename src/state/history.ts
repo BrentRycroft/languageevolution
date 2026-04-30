@@ -7,12 +7,6 @@ export interface TimelineEntry {
   generation: number;
   form: WordForm;
   formKey: string;
-  /**
-   * Short tag describing why this form entered the timeline at this
-   * generation: "coinage", "sound_change", "semantic_drift", or — when
-   * no matching event was found on the same generation — undefined.
-   * Lets the UI annotate each form change with its cause.
-   */
   origin?: string;
 }
 
@@ -24,9 +18,7 @@ export interface HistoryByLangMeaning {
 
 export interface ActivityPoint {
   generation: number;
-  /** Total form-mutations in the generation across all leaves. */
   count: number;
-  /** Number of procedural rules that were born this generation. */
   ruleBirths?: number;
 }
 
@@ -42,16 +34,6 @@ export function recordHistory(
     const lex = node.language.lexicon;
     if (!next[id]) next[id] = {};
     const byMeaning = (next[id] = { ...next[id] });
-    // Build a quick lookup of events on this generation, keyed by meaning.
-    // The simulator's event descriptions follow predictable shapes:
-    //   "compound: water-fire", "metonymy: hand → foot",
-    //   "metonymy (takeover): hand → foot", "coinage: foo".
-    // We try to extract the affected meaning from the trailing token
-    // (after "→" if present, otherwise the last token after ": ").
-    // For drift events where the meaning is the *new* slot, that's the
-    // arrow target. For coinage and the unannotated "N forms shifted"
-    // case, the description doesn't carry a per-meaning annotation —
-    // the kind alone wins, applied as the default origin below.
     const eventsByMeaning: Record<string, string> = {};
     for (const e of node.language.events) {
       if (e.generation !== state.generation) continue;
@@ -78,7 +60,7 @@ export function recordHistory(
         };
         const origin = eventsByMeaning[m];
         if (origin) entry.origin = origin;
-        else if (last) entry.origin = "sound_change"; // default for form changes
+        else if (last) entry.origin = "sound_change";
         const nextArr = arr.concat(entry);
         byMeaning[m] =
           nextArr.length > MAX_HISTORY
@@ -101,10 +83,6 @@ export function recordActivity(
   return next.length > MAX_ACTIVITY ? next.slice(next.length - MAX_ACTIVITY) : next;
 }
 
-/**
- * Count how many "new sound law" events landed on `generation` across the
- * state's tree. Used to populate ActivityPoint.ruleBirths.
- */
 export function countRuleBirthsAt(
   state: import("../engine/types").SimulationState,
   generation: number,
@@ -125,11 +103,6 @@ export function countRuleBirthsAt(
   return n;
 }
 
-/**
- * Look up the form for `meaning` in `langId` as it existed at or before
- * `generation`. Returns undefined if no history exists that early.
- * Used by the timeline scrubber to render a past generation.
- */
 export function formAtGeneration(
   history: HistoryByLangMeaning,
   langId: string,
@@ -146,10 +119,6 @@ export function formAtGeneration(
   return candidate;
 }
 
-/**
- * All meanings ever recorded for any leaf. Used by the global search so that
- * meanings retired via obsolescence are still searchable.
- */
 export function allHistoricalMeanings(history: HistoryByLangMeaning): Set<string> {
   const out = new Set<string>();
   for (const byLang of Object.values(history)) {

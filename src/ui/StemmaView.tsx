@@ -2,11 +2,6 @@ import { useMemo } from "react";
 import { useSimStore } from "../state/store";
 import { buildStemma, stemmaMatrix, type StemmaNode } from "../engine/analysis/stemma";
 
-/**
- * Rule-similarity stemma: an agglomerative tree built from pairwise Jaccard
- * distance over active-rule template ids. Distinct from the phylogeny tree
- * (which is the split history) — this reveals convergence/areal patterns.
- */
 export function StemmaView() {
   const state = useSimStore((s) => s.state);
   const { root, edges } = useMemo(() => {

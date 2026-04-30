@@ -13,17 +13,9 @@ import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
 
-/**
- * Half-distance for areal diffusion of a newly-proposed sound law.
- * A sister language at this distance has a 50 % chance of receiving
- * the rule; sisters far outside the areal lose it quickly. Tuned
- * against the split step size (80 px) so primary-branch neighbours
- * are candidates, second-cousins are marginal.
- */
 const AREAL_HALF_LIFE = 150;
 const AREAL_BASE_PROBABILITY = 0.25;
 
-/** Try to invent a rule roughly every this many generations per language. */
 const PROPOSAL_CADENCE = 8;
 
 export function stepPhonology(
@@ -52,18 +44,10 @@ export function stepPhonology(
     frequencyHints: lang.wordFrequencyHints,
     agesSinceChange: ages,
     registerOf: lang.registerOf,
-    // Plumb stress info through so rules with a `stressFilter` (e.g.
-    // unstressed-vowel reduction) only fire at matching positions.
     stressPattern: lang.stressPattern,
     lexicalStress: lang.lexicalStress,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
-  // applyChangesToLexicon drops meanings whose forms became empty via
-  // deletion rules. Clean up every per-meaning auxiliary map so we don't
-  // accumulate dangling registerOf / wordOrigin / localNeighbors entries
-  // over long runs. Also stamp lastChangeGeneration only for meanings
-  // that still exist — the old loop would otherwise set a generation for
-  // a now-deleted slot.
   for (const m of Object.keys(before)) {
     if (lang.lexicon[m]) continue;
     delete lang.wordFrequencyHints[m];
@@ -84,12 +68,6 @@ export function stepPhonology(
     }, form);
   };
   applyPhonologyToAffixes(lang.morphology, evolveForm);
-  // Suppletive forms evolve too, but at half rate — high-frequency
-  // irregulars (went, was, fuī) historically resist regular sound
-  // change but never freeze entirely (cf. Old English `wende` →
-  // Modern `went`). We do a half-rate Bernoulli gate per suppletive
-  // form so over many generations they drift with the rest of the
-  // language.
   if (lang.suppletion) {
     for (const meaning of Object.keys(lang.suppletion)) {
       const slots = lang.suppletion[meaning]!;
@@ -101,12 +79,6 @@ export function stepPhonology(
       }
     }
   }
-  // Productive derivational suffixes are language-specific and stored
-  // on `lang.derivationalSuffixes`. They must evolve with the rest of
-  // the phonology — otherwise a language whose `-er` was coined as
-  // /er/ keeps the literal /er/ shape forever while every word that
-  // uses it shifts, producing implausibly stable affixes after many
-  // generations.
   if (lang.derivationalSuffixes) {
     for (const s of lang.derivationalSuffixes) {
       s.affix = evolveForm(s.affix);
@@ -114,8 +86,6 @@ export function stepPhonology(
   }
   let mutated = 0;
   for (const m of Object.keys(before)) {
-    // Skip meanings that were dropped by applyChangesToLexicon above —
-    // they don't have a current form to compare against.
     if (!lang.lexicon[m]) continue;
     const a = before[m]!.join("");
     const b = lang.lexicon[m]!.join("");
@@ -125,17 +95,10 @@ export function stepPhonology(
     }
   }
   if (mutated > 0) {
-    // Snapshot the inventory BEFORE refresh so we can mark any
-    // newly-introduced phoneme as "internal-rule" provenance. The
-    // refresh defaults missing entries to "native"; we override
-    // here so the Phonemes tab can show 🔧 for engine-coined
-    // phonemes (umlaut outputs, palatalisation outputs, etc.).
     const oldInventory = new Set(lang.phonemeInventory.segmental);
     refreshInventory(lang);
     for (const p of lang.phonemeInventory.segmental) {
       if (!oldInventory.has(p) && lang.inventoryProvenance) {
-        // refreshInventory just defaulted this to "native"; correct
-        // it to "internal-rule" since it was produced this step.
         if (lang.inventoryProvenance[p]?.source === "native") {
           lang.inventoryProvenance[p] = {
             source: "internal-rule",
@@ -190,12 +153,6 @@ export function stepPhonology(
     });
   }
 
-  // Procedural rule lifecycle: reinforce rules that still have sites to
-  // feed on, then age & retire the rest. Finally consider inventing a new
-  // rule every PROPOSAL_CADENCE generations. We use the full context-aware
-  // matchSites here — not just the cheap "outputMap contains a phoneme in
-  // this word" check — so rules that have input phonemes but fail their
-  // contextual guard don't get falsely reinforced.
   if (lang.activeRules && lang.activeRules.length > 0) {
     lang.activeRules = lang.activeRules.map((rule) => {
       for (const m of Object.keys(lang.lexicon)) {
@@ -215,8 +172,6 @@ export function stepPhonology(
     }
   }
 
-  // Proposal: roughly once per PROPOSAL_CADENCE generations, gated by
-  // conservatism (timid languages invent fewer laws).
   if (
     generation > 0 &&
     generation % PROPOSAL_CADENCE === 0 &&
@@ -231,10 +186,6 @@ export function stepPhonology(
         kind: "sound_change",
         description: `new sound law: ${rule.description}`,
       });
-      // Chain-shift coupling: if a single-vowel raise would crash into a
-      // phoneme the inventory already uses, paire-generate a push rule
-      // that moves that pre-existing vowel one step further. Emit a
-      // distinct chain_shift event linking the two by id.
       const pushRule = proposePushChain(lang, rule, generation);
       if (pushRule) {
         lang.activeRules.push(pushRule);
@@ -245,13 +196,6 @@ export function stepPhonology(
           meta: { pairedRuleId: rule.id },
         });
       }
-      // Areal diffusion. Spatially-close alive sisters have a
-      // distance-decayed probability of picking up the new rule —
-      // models Sprachbund / wave-diffusion effects (the Balkan
-      // linguistic area, the Rhenish fan, the Indian subcontinent's
-      // retroflex spread across unrelated families). Only fires if
-      // the sister's current inventory has a site for the rule;
-      // otherwise there's nothing for the rule to operate on.
       if (state) {
         propagateArealRule(state, lang, rule, generation, rng);
       }
@@ -259,13 +203,6 @@ export function stepPhonology(
   }
 }
 
-/**
- * Distance-decayed propagation of a freshly-minted sound law to
- * nearby alive sisters. Each candidate gets a separate chance based
- * on `AREAL_BASE_PROBABILITY × half-life / (half-life + d)`. The
- * donor language doesn't emit the event a second time — only the
- * recipient gets the history note.
- */
 function propagateArealRule(
   state: SimulationState,
   donor: Language,
@@ -286,8 +223,6 @@ function propagateArealRule(
     const affinity = AREAL_HALF_LIFE / (AREAL_HALF_LIFE + d);
     const p = AREAL_BASE_PROBABILITY * affinity;
     if (!rng.chance(p)) continue;
-    // Copy the rule with a sister-scoped id so the stemma doesn't
-    // confuse them later.
     const adopted: typeof rule = {
       ...rule,
       id: `${sister.id}.g${generation}.areal.${rule.templateId}`,
@@ -296,8 +231,6 @@ function propagateArealRule(
     };
     if (!hasAnyMatch(adopted, sister)) continue;
     if (!sister.activeRules) sister.activeRules = [];
-    // Avoid duplicate-template adoption — if the sister already has a
-    // rule of the same templateId, skip.
     if (sister.activeRules.some((r) => r.templateId === rule.templateId)) continue;
     sister.activeRules.push(adopted);
     pushEvent(sister, {
@@ -308,12 +241,6 @@ function propagateArealRule(
   }
 }
 
-/**
- * Minimum map-space distance from `lang` to any other alive leaf.
- * Returns undefined if we can't compute it (no state, no coords, or
- * `lang` is the sole surviving leaf) so callers can fall back to a
- * neutral factor.
- */
 function nearestNeighborDistance(
   state: SimulationState | undefined,
   lang: Language,
@@ -333,7 +260,6 @@ function nearestNeighborDistance(
 }
 
 function ruleShortId(id: string): string {
-  // Strip language + generation prefix so UI reads "lenition.stops_to_fricatives".
   const parts = id.split(".");
   if (parts.length <= 2) return id;
   return parts.slice(2).join(".");

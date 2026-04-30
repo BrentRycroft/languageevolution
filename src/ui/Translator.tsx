@@ -246,7 +246,7 @@ function SentenceOutput({
         borderRadius: 6,
       }}
     >
-      {/* Surface row — narrow IPA / romanised, depending on script */}
+      {}
       <div
         style={{
           fontSize: "var(--fs-3)",
@@ -265,15 +265,11 @@ function SentenceOutput({
               })
               .join(" ")}
       </div>
-      {/* Per-token gloss row */}
+      {}
       <div
         className="token-row"
       >
         {result.targetTokens.map((t, i) => (
-          // Stable key: english lemma + tag + position. A plain `i`
-          // would re-key every cell when the user edits the input
-          // and the token count changes, dropping animations and
-          // hover state.
           <div
             key={`${t.englishLemma}-${t.englishTag}-${i}`}
             className="token-card"

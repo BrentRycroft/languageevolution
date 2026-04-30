@@ -19,7 +19,6 @@ describe("semantic clusters", () => {
   it("relatedMeanings returns cluster-mates for seed meanings", () => {
     const related = relatedMeanings("water");
     expect(related.length).toBeGreaterThan(0);
-    // Expected cluster-mates are in 'environment': fire, stone, tree, sun, moon, star, night.
     expect(related).toContain("fire");
   });
 
@@ -104,7 +103,6 @@ describe("simulation end-to-end with clusters + taboo + expressive", () => {
       (n) => n.language.events,
     );
     const tabooEvents = events.filter((e) => e.description.startsWith("taboo:"));
-    // Probability 0.004/gen × 600 gens × several leaves ≈ multiple occurrences.
     expect(tabooEvents.length).toBeGreaterThan(0);
   });
 });

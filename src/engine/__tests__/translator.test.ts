@@ -41,7 +41,6 @@ describe("translator", () => {
   it("inflects when a morphology category is provided", () => {
     const r = translate(sampleLang(), "water", { inflect: "verb.tense.past" });
     expect(r.source).toBe("exact");
-    // "water" + past "ed"
     expect(r.form.endsWith("ed")).toBe(true);
   });
 

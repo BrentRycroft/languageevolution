@@ -5,11 +5,9 @@ import { defaultConfig } from "../../engine/config";
 
 describe("autosave", () => {
   beforeEach(() => {
-    // jsdom provides a real localStorage; reset it between tests.
     try {
       localStorage.clear();
     } catch {
-      // ignore
     }
     clearAutosave();
   });
@@ -48,15 +46,11 @@ describe("autosave", () => {
     saveAutosave({ config, state: first, generationsRun: 1 });
     const a = loadAutosave();
     expect(a.ok && a.payload.state.generation).toBe(1);
-    // A second save within the throttle window should NOT overwrite the
-    // first (no `force`). So loading still shows gen=1 even though we
-    // passed a higher-generation state.
     sim.step();
     const second = sim.getState();
     saveAutosave({ config, state: second, generationsRun: 2 });
     const b = loadAutosave();
     expect(b.ok && b.payload.state.generation).toBe(1);
-    // But `force: true` always writes.
     saveAutosave(
       { config, state: second, generationsRun: 2 },
       { force: true },
@@ -84,7 +78,6 @@ describe("autosave", () => {
     try {
       localStorage.setItem("lev.autosave.v2", "{not valid json");
     } catch {
-      // ignore
     }
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const result = loadAutosave();
@@ -106,7 +99,6 @@ describe("autosave", () => {
         }),
       );
     } catch {
-      // ignore
     }
     const result = loadAutosave();
     expect(result.ok).toBe(false);

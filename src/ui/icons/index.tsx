@@ -1,4 +1,3 @@
-// Minimal inline SVG icons — keep bundle tiny, consistent across platforms.
 import type { SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };

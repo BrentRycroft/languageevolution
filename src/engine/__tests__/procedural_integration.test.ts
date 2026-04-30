@@ -20,11 +20,9 @@ describe("procedural sound-change integration", () => {
 
   it("splitLeaf drops a fraction of parent's active rules into each daughter", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "splitbase" });
-    // Step enough that the proto has some rules.
     for (let i = 0; i < 40; i++) sim.step();
     const state = sim.getState();
     const root = state.tree[state.rootId]!.language;
-    // Seed a handful of synthetic rules so the drop ratio is measurable.
     const fakeRules: GeneratedRule[] = Array.from({ length: 6 }, (_v, i) => ({
       id: `${root.id}.g0.fake.${i}`,
       family: "lenition",
@@ -59,9 +57,6 @@ describe("procedural sound-change integration", () => {
     for (const id of Object.keys(state.tree)) {
       for (const e of state.tree[id]!.language.events) {
         if (e.kind !== "semantic_drift") continue;
-        // Event descriptions look like "metonymy: foo → bar" or
-        // "metaphor (takeover): foo → bar". We only need to detect the
-        // taxonomy label at the start of the description.
         for (const tag of ["metonymy", "metaphor", "narrowing", "broadening"]) {
           if (e.description.startsWith(tag)) found.add(tag);
         }

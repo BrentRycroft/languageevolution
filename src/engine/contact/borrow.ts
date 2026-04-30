@@ -13,28 +13,11 @@ export interface LoanEvent {
   meaning: string;
   originalForm: string;
   adaptedForm: string;
-  /**
-   * Map-space distance between donor and recipient at the moment of
-   * borrowing. Used by the UI to scale the borrow-arrow length and by
-   * tests to verify the distance-decay weighting.
-   */
   distance: number;
 }
 
-/**
- * Distance at which borrow affinity drops to half. Split-step size at
- * generation 0 is 80 px (see `tree/split.ts`), so this keeps sister-to-
- * sister borrows common while making great-great-aunt contact rare —
- * roughly how cultural borrowing falls off in real geography.
- */
 const BORROW_HALF_LIFE = 200;
 
-/**
- * Attempt one loanword event: pick a living sibling language, copy one of its
- * words that our language doesn't yet have (or has a very different form for),
- * adapting the phonemes to segments our language actually uses.
- * Returns a description or null.
- */
 export function tryBorrow(
   recipient: Language,
   tree: LanguageTree,
@@ -50,19 +33,11 @@ export function tryBorrow(
   );
   if (donors.length === 0) return null;
 
-  // Weight each candidate donor by contact affinity. When both
-  // languages have territory on the world map, use the cell-edge
-  // share metric (1 − exp(−sharedEdges / 3)) — strongest signal
-  // because two languages with a long border genuinely contact
-  // every generation. Otherwise fall back to centroid distance with
-  // the existing half-life decay (preserves behaviour for back-
-  // compat saves and tests).
   const recipCoords = recipient.coords;
   const weighted: Array<{ id: string; weight: number }> = donors.map((id) => {
     const donor = tree[id]!.language;
     if (worldMap && recipient.territory && donor.territory) {
       const shareAffinity = arealShareAffinity(worldMap, recipient, donor);
-      // Boost slightly so non-touching neighbours can still borrow.
       return { id, weight: 0.1 + shareAffinity };
     }
     const donorCoords = donor.coords;
@@ -72,9 +47,6 @@ export function tryBorrow(
     const d = geoDistance(recipCoords, donorCoords);
     return { id, weight: BORROW_HALF_LIFE / (BORROW_HALF_LIFE + d) };
   });
-  // Scale the Poisson-gated probability by the best available affinity
-  // so a tribe with no nearby neighbours borrows rarely — distance
-  // throttles the event rate, not just the donor pick.
   const maxWeight = weighted.reduce((m, w) => (w.weight > m ? w.weight : m), 0);
   if (!rng.chance(probability * maxWeight)) return null;
 
@@ -92,8 +64,6 @@ export function tryBorrow(
   const distance =
     recipCoords && donor.coords ? geoDistance(recipCoords, donor.coords) : 0;
 
-  // Prefer meanings that exist in the donor but not in the recipient —
-  // that's the canonical "cultural loanword" case.
   const donorMeanings = Object.keys(donor.lexicon);
   const candidates = donorMeanings.filter((m) => !recipient.lexicon[m]);
   const pool = candidates.length > 0 ? candidates : donorMeanings;
@@ -102,28 +72,13 @@ export function tryBorrow(
   const originalForm = donor.lexicon[meaning]!;
   const adapted = adaptPhonemes(originalForm, recipient, rng);
   if (adapted.length === 0) return null;
-  // Word-shape gate: a borrowed form must still be pronounceable and
-  // long enough for a content word. Full rule in
-  // `phonology/wordShape.ts::isFormLegal`.
   if (!isFormLegal(meaning, adapted)) return null;
   recipient.lexicon[meaning] = adapted;
-  // Loanword prestige. Donors with substantially more speakers than
-  // the recipient count as "superstrate" — they contribute high-
-  // register prestige loans (Latin into medieval English,
-  // Sanskrit into Javanese). Equal or smaller donors contribute
-  // low-register adstrate borrowings (neighbour-community
-  // vocabulary). We encode this via the existing `registerOf` tag so
-  // downstream change rates naturally treat prestige loans as
-  // conservative (high register) and adstrate loans as more drift-
-  // prone (low register).
   const donorPop = donor.speakers ?? 10000;
   const recipPop = recipient.speakers ?? 10000;
   const prestige: "high" | "low" = donorPop > recipPop * 2 ? "high" : "low";
   if (!recipient.registerOf) recipient.registerOf = {};
   recipient.registerOf[meaning] = prestige;
-  // Loanwords typically enter with medium frequency. High-prestige
-  // loans enter a bit higher (0.55) since they're used in formal /
-  // learned contexts widely; adstrate loans at the usual 0.45.
   recipient.wordFrequencyHints[meaning] = Math.max(
     recipient.wordFrequencyHints[meaning] ?? 0,
     prestige === "high" ? 0.55 : 0.45,
@@ -152,8 +107,6 @@ function adaptPhonemes(form: string[], recipient: Language, rng: Rng): string[] 
   if (inv.size === 0) return form.slice();
   return form.map((p) => {
     if (inv.has(p)) return p;
-    // Nearest-neighbour substitution: pick a phoneme of the same class
-    // (vowel/consonant) that the recipient actually has.
     const targetVowel = isVowel(p);
     const candidates = recipient.phonemeInventory.segmental.filter(
       (q) => isVowel(q) === targetVowel,

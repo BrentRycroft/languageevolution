@@ -4,7 +4,6 @@ import { render } from "@testing-library/react";
 import { useSimStore } from "../../state/store";
 import { App } from "../App";
 
-// Lazy-load every UI component so we can mount them individually too.
 import { ControlsPanel } from "../ControlsPanel";
 import { LexiconView } from "../LexiconView";
 import { GrammarView } from "../GrammarView";
@@ -33,31 +32,14 @@ import { RulesTimeline } from "../RulesTimeline";
 import { LanguageTreeView } from "../LanguageTreeView";
 import { TimelineChart } from "../TimelineChart";
 
-/**
- * End-to-end render harness. Mounts every UI component against a sim
- * that has been stepped enough generations to exercise every new
- * optional language field — culturalTier advancement, capacity
- * resizing, recarves, suppletion, conjugation classes, derivational
- * suffixes, areal phonology, all running. The test passes if no
- * component throws during render.
- *
- * This catches the "feature added to the engine but the UI never
- * heard about it" failure mode that pure-engine tests can't see —
- * e.g. a component that iterates `paradigms[cat].variants` without a
- * null-check, or that breaks when `lang.colexifiedAs` is undefined.
- */
-
 function step(n: number) {
   const { sim } = useSimStore.getState();
   for (let i = 0; i < n; i++) sim.step();
-  // Force a state replacement so React subscribers re-fetch.
   useSimStore.setState({ state: { ...sim.getState() } });
 }
 
 describe("UI render harness — every tab and every standalone component", () => {
   beforeEach(() => {
-    // Reset to a fresh sim before each render so tests don't bleed
-    // selection state into one another.
     useSimStore.getState().reset();
   });
 
@@ -70,8 +52,6 @@ describe("UI render harness — every tab and every standalone component", () =>
     expect(() => render(<App />)).not.toThrow();
   });
 
-  // Mount every panel-level component individually so a failure
-  // pinpoints exactly which one is the culprit.
   const PANELS: Array<readonly [string, () => React.ReactElement]> = [
     ["ControlsPanel", () => <ControlsPanel />],
     ["LexiconView", () => <LexiconView />],

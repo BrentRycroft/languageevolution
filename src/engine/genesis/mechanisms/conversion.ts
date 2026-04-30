@@ -1,13 +1,6 @@
 import type { CoinageMechanism } from "./types";
 import { clusterOf } from "../../semantics/clusters";
 
-/**
- * Conversion / zero-derivation: take an existing word from a related
- * meaning without any form change. This is how English gets "a run"
- * from "to run" — same form, new category/meaning.
- *
- * We only fire when the target and source share a cluster.
- */
 export const MECHANISM_CONVERSION: CoinageMechanism = {
   id: "mechanism.conversion",
   label: "zero-derivation",

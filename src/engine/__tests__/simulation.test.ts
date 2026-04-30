@@ -17,12 +17,6 @@ function serializeLeafLexicons(tree: LanguageTree): Record<string, Lexicon> {
   return out;
 }
 
-/**
- * Serialize everything that should be deterministic across runs: active +
- * retired rules, rule-bias, OT ranking, register tags, word origins. Used
- * to catch regressions in procedural-engine determinism that the lexicon-
- * only check from the earliest tests couldn't see.
- */
 function serializeRuleState(tree: LanguageTree): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const id of Object.keys(tree).sort()) {
@@ -66,9 +60,6 @@ describe("simulation determinism", () => {
     expect(serializeLeafLexicons(a.getState().tree)).toEqual(
       serializeLeafLexicons(b.getState().tree),
     );
-    // Procedural-engine state must also be identical — this catches
-    // regressions where activeRules, retiredRules, ruleBias, or register
-    // assignments accidentally diverge even though the lexicons agree.
     expect(serializeRuleState(a.getState().tree)).toEqual(
       serializeRuleState(b.getState().tree),
     );

@@ -1,12 +1,6 @@
 import type { Language, LanguageTree } from "../types";
 import { leafIds } from "../tree/split";
 
-/**
- * Similarity-by-rules distance ∈ [0, 1]. 0 = identical active-rule set,
- * 1 = disjoint. Uses Jaccard distance on `templateId` (so a rule that fired
- * in A and a rule that fired in B from the same template count as "shared",
- * regardless of language-prefixed id).
- */
 export function ruleDistance(a: Language, b: Language): number {
   const aTemplates = new Set((a.activeRules ?? []).map((r) => r.templateId));
   const bTemplates = new Set((b.activeRules ?? []).map((r) => r.templateId));
@@ -24,10 +18,6 @@ export interface StemmaEdge {
   distance: number;
 }
 
-/**
- * Pairwise rule-Jaccard matrix across all living leaves. Sorted by ascending
- * distance so the UI can render the tightest cousins first.
- */
 export function stemmaMatrix(tree: LanguageTree): StemmaEdge[] {
   const leaves = leafIds(tree).filter((id) => !tree[id]!.language.extinct);
   const edges: StemmaEdge[] = [];
@@ -46,15 +36,9 @@ export interface StemmaNode {
   id: string;
   name: string;
   children: StemmaNode[];
-  /** Average distance inside this cluster (0 for leaves). */
   distance: number;
 }
 
-/**
- * Single-linkage agglomerative clustering over the rule-distance matrix.
- * Produces a binary tree whose leaves are language ids. Ties are broken
- * by input order so output is deterministic for a given tree input.
- */
 export function buildStemma(tree: LanguageTree): StemmaNode | null {
   const leaves = leafIds(tree).filter((id) => !tree[id]!.language.extinct);
   if (leaves.length === 0) return null;
@@ -67,7 +51,6 @@ export function buildStemma(tree: LanguageTree): StemmaNode | null {
     };
   }
 
-  // Each active "cluster" tracks its member leaf ids and the StemmaNode tree.
   interface Cluster {
     id: string;
     members: string[];
@@ -85,7 +68,6 @@ export function buildStemma(tree: LanguageTree): StemmaNode | null {
     },
   }));
 
-  // Precompute leaf-leaf distances.
   const dist = new Map<string, number>();
   const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
   for (let i = 0; i < leaves.length; i++) {
@@ -97,7 +79,6 @@ export function buildStemma(tree: LanguageTree): StemmaNode | null {
   }
 
   const pairDistance = (u: Cluster, v: Cluster): number => {
-    // Single-linkage: min distance across cluster members.
     let best = Infinity;
     for (const x of u.members) {
       for (const y of v.members) {
@@ -134,7 +115,6 @@ export function buildStemma(tree: LanguageTree): StemmaNode | null {
         distance: bestD,
       },
     };
-    // Remove bestJ first (higher index) so bestI remains valid.
     clusters.splice(bestJ, 1);
     clusters.splice(bestI, 1);
     clusters.push(merged);
