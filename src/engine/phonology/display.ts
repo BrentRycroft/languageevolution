@@ -21,8 +21,11 @@ export function formatForm(
   form: WordForm,
   lang: Language,
   script: DisplayScript,
+  /** Optional meaning key — lets the IPA renderer pick a per-word
+   *  lexical-stress override when `lang.stressPattern === "lexical"`. */
+  meaning?: string,
 ): string {
-  const ipa = narrowTranscribe(form, lang);
+  const ipa = narrowTranscribe(form, lang, meaning);
   if (script === "ipa") return `[${ipa}]`;
   const roman = romanize(form, lang);
   if (script === "roman") return roman;

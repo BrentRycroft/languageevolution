@@ -13,14 +13,18 @@ import { maybeReanalyse } from "../lexicon/reanalysis";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 
-/** Stress-pattern drift adjacencies — avoid teleporting initial↔final. */
+/** Stress-pattern drift adjacencies — avoid teleporting initial↔final.
+ * `lexical` (PIE-style mobile accent) is its own attractor and only
+ * drifts to `penult` (the universal default for "no rule"). */
 const STRESS_ADJACENT: Record<
   NonNullable<Language["stressPattern"]>,
   NonNullable<Language["stressPattern"]>[]
 > = {
   initial: ["penult"],
-  penult: ["initial", "final"],
+  penult: ["initial", "final", "antepenult"],
   final: ["penult"],
+  antepenult: ["penult"],
+  lexical: ["penult"],
 };
 
 export function stepGrammar(

@@ -140,6 +140,19 @@ export interface Language {
    */
   ruleBias?: Record<string, number>;
   /**
+   * Per-meaning lexical-stress override for languages whose
+   * `grammar.stressRule` is `"lexical"` (e.g. PIE mobile accent).
+   * Each entry is the index of the stressed syllable (0-based) for
+   * that meaning's form. Meanings absent from the map fall back to
+   * the default penult rule.
+   *
+   * Stress is recomputed on the fly from the current form; it
+   * persists across phonological drift only when the syllabification
+   * is stable, which is fine for the simulator's purposes (mobile
+   * accent in PIE was already mostly stable per-paradigm).
+   */
+  lexicalStress?: Record<string, number>;
+  /**
    * Register assignment per meaning: some meanings have a "high" / "low"
    * split recorded here so narrative / cultural features can style output.
    */
@@ -189,7 +202,7 @@ export interface Language {
    * Protected vowels (those under stress) reduce less, so a stress-
    * shift can reshape vowel-reduction patterns across the lexicon.
    */
-  stressPattern?: "initial" | "penult" | "final";
+  stressPattern?: "initial" | "penult" | "final" | "antepenult" | "lexical";
   /**
    * Suppletive paradigm entries. Keyed by meaning → morph category →
    * full surface form that overrides the usual `stem + affix` inflection.
@@ -517,6 +530,18 @@ export interface SimulationConfig {
    * etc.) without engine changes.
    */
   seedGrammar?: Partial<GrammarFeatures>;
+  /**
+   * Optional seed stress pattern for the proto language. Overrides
+   * the engine's default `penult`. Use `lexical` for languages with
+   * mobile / inherited word-accent (PIE).
+   */
+  seedStressPattern?: NonNullable<Language["stressPattern"]>;
+  /**
+   * Optional seed lexical-stress map for protos with `seedStressPattern
+   * = "lexical"`. Each entry maps a meaning → stressed-syllable index
+   * (0-based vowel position).
+   */
+  seedLexicalStress?: Record<Meaning, number>;
   /**
    * Opt-in: run fast-forward steps in a Web Worker so the UI thread
    * stays responsive during long runs.

@@ -323,6 +323,9 @@ export function presetBantu(): SimulationConfig {
     // prefixes); preposition strategy; pre-noun adjectives in Swahili
     // ("kitabu kikubwa" — but we keep adj=pre as a coarse default);
     // post-noun possessor ("kitabu cha mtoto").
+    // Most Bantu languages have penultimate-syllable stress (with
+    // length / tone interactions). Penult is the right approximation.
+    seedStressPattern: "penult",
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "none",

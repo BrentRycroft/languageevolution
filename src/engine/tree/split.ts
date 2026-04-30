@@ -237,6 +237,12 @@ export function splitLeaf(
       // Stress pattern is inherited; daughters only diverge on this
       // axis through the grammar-drift step, not at split time.
       stressPattern: parentLang.stressPattern,
+      // Lexical-stress overrides (PIE mobile accent) inherit too.
+      // Daughters can later drift off `lexical` to a fixed pattern;
+      // the override map is then ignored but kept for cognate trace.
+      lexicalStress: parentLang.lexicalStress
+        ? { ...parentLang.lexicalStress }
+        : undefined,
       // Suppletion tables are deep-cloned so daughter paradigms can
       // diverge independently. The whole map is usually tiny (a
       // handful of verbs), so the copy cost is negligible.

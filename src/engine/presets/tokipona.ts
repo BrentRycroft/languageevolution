@@ -210,6 +210,9 @@ export function presetTokipona(): SimulationConfig {
     // (synthesisIndex 1.0); preposition strategy via particles like
     // `lon` / `tawa` / `kepeken`; pre-noun modifier convention
     // (sona ike = "bad knowledge").
+    // Toki Pona stress always falls on the first syllable per the
+    // canonical pu rules.
+    seedStressPattern: "initial",
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "none",
