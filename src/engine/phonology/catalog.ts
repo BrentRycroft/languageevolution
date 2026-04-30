@@ -1,7 +1,7 @@
 import type { SoundChange, WordForm, Phoneme } from "../types";
 import { isVowel, isConsonant, isSyllabic } from "./ipa";
 import { HIGH, LOW, stripTone, toneOf } from "./tone";
-import { UNSTRESSED_REDUCTION } from "./stress";
+import { UNSTRESSED_REDUCTION, stressedPositions } from "./stress";
 
 const CLICKS = ["ǀ", "ǃ", "ǂ", "ǁ"] as const;
 const VOICED = new Set(["b", "d", "g", "v", "z", "ʒ", "dʒ", "dz"]);
@@ -757,8 +757,195 @@ export const CATALOG: SoundChange[] = [
     "Retroflex series emerges. Rare; when on, gradually retroflexes alveolars.",
   ),
 
-  // --- Stress-sensitive reduction (new) ---
+  // --- Stress-sensitive rules ---
+  // The first one was already wired up; the rest were added in PR #3
+  // of the stress series. Each declares a `stressFilter` so apply.ts
+  // skips it on words with no matching position (e.g. monosyllables).
   UNSTRESSED_REDUCTION,
+
+  // Pretonic weakening — the syllable immediately before the stressed
+  // one tends to lose vowel quality (Russian akanye-style /o → a/, or
+  // Romance pretonic schwa). Modeled here as collapse to schwa.
+  {
+    id: "stress.pretonic_weakening",
+    label: "V → ə / pretonic",
+    category: "vowel",
+    description:
+      "Pretonic vowels (immediately before the stressed syllable) weaken toward schwa. Russian akanye and Romance pretonic reductions are the canonical examples.",
+    stressFilter: "pretonic",
+    enabledByDefault: false,
+    baseWeight: 0.7,
+    probabilityFor: (w) => {
+      const sites = stressedPositions(w, "pretonic");
+      return 1 - Math.pow(1 - 0.04, sites.length);
+    },
+    apply: (w, rng) => {
+      const sites = stressedPositions(w, "pretonic");
+      if (sites.length === 0) return w;
+      const idx = sites[rng.int(sites.length)]!;
+      const stripped = stripTone(w[idx]!);
+      if (stripped === "ə") return w;
+      const tone = w[idx]!.length > stripped.length ? w[idx]!.slice(stripped.length) : "";
+      const out = w.slice();
+      out[idx] = "ə" + tone;
+      return out;
+    },
+  },
+
+  // Stressed-vowel diphthongisation — short stressed mid vowels
+  // (e, o) sprout a glide onset. Romance is the textbook case:
+  // Latin `porta` → Spanish `puerta`, Italian `uomo` from `homo`.
+  // Applies only to the stressed-syllable nucleus.
+  {
+    id: "stress.stressed_diphthongization",
+    label: "V[ + stress, mid] → diph",
+    category: "vowel",
+    description:
+      "Stressed short mid vowels diphthongise (e → je, o → wo). Mediterranean Romance development; rare elsewhere but plausible in any language with a strong stress accent.",
+    stressFilter: "stressed",
+    enabledByDefault: false,
+    baseWeight: 0.4,
+    probabilityFor: (w) => {
+      const sites = stressedPositions(w, "stressed");
+      let n = 0;
+      for (const i of sites) {
+        const v = stripTone(w[i]!);
+        if (v === "e" || v === "o") n++;
+      }
+      return 1 - Math.pow(1 - 0.05, n);
+    },
+    apply: (w, rng) => {
+      const sites = stressedPositions(w, "stressed").filter((i) => {
+        const v = stripTone(w[i]!);
+        return v === "e" || v === "o";
+      });
+      if (sites.length === 0) return w;
+      const idx = sites[rng.int(sites.length)]!;
+      const v = stripTone(w[idx]!);
+      const tone = w[idx]!.length > v.length ? w[idx]!.slice(v.length) : "";
+      const glide = v === "e" ? "j" : "w";
+      const out = w.slice();
+      // Prepend the glide as a separate phoneme to the stressed
+      // vowel; downstream the syllabifier treats it as part of the
+      // onset of the same syllable (rising sonority).
+      out.splice(idx, 1, glide, v + tone);
+      return out;
+    },
+  },
+
+  // Open-syllable lengthening — stressed short vowels in open
+  // syllables (no following coda within the syllable) lengthen.
+  // Middle English open-syllable lengthening: stān → stoːn ("stone").
+  // Approximated here by checking the next phoneme is a non-doubled
+  // consonant or word-final.
+  {
+    id: "stress.open_syllable_lengthening",
+    label: "V → Vː / σ̌_open",
+    category: "vowel",
+    description:
+      "Stressed short vowels in open syllables lengthen. Middle English `stān` → `stoːn`; Old High German `tag` → `tāg`. Skips already-long vowels and closed-syllable nuclei.",
+    stressFilter: "stressed",
+    enabledByDefault: false,
+    baseWeight: 0.5,
+    probabilityFor: (w) => {
+      const sites = stressedPositions(w, "stressed");
+      let n = 0;
+      for (const i of sites) {
+        const v = stripTone(w[i]!);
+        if (v.endsWith("ː")) continue;
+        // "Open" approximation: the next phoneme is a consonant
+        // followed by a vowel, OR the vowel is word-final.
+        const nxt = w[i + 1];
+        const aft = w[i + 2];
+        if (!nxt) {
+          n++;
+          continue;
+        }
+        if (isConsonant(nxt) && aft && isVowel(stripTone(aft))) n++;
+      }
+      return 1 - Math.pow(1 - 0.03, n);
+    },
+    apply: (w, rng) => {
+      const sites = stressedPositions(w, "stressed").filter((i) => {
+        const v = stripTone(w[i]!);
+        if (v.endsWith("ː")) return false;
+        const nxt = w[i + 1];
+        if (!nxt) return true;
+        const aft = w[i + 2];
+        return isConsonant(nxt) && !!aft && isVowel(stripTone(aft));
+      });
+      if (sites.length === 0) return w;
+      const idx = sites[rng.int(sites.length)]!;
+      const v = stripTone(w[idx]!);
+      const tone = w[idx]!.length > v.length ? w[idx]!.slice(v.length) : "";
+      const out = w.slice();
+      out[idx] = v + "ː" + tone;
+      return out;
+    },
+  },
+
+  // Unstressed-final apocope — word-final unstressed vowels delete.
+  // Old English → Middle English: `nama` → `name` (silent e), then
+  // /name/ → /næːm/. Norwegian `jente`-class endings, Bulgarian
+  // post-nasal vowel loss, etc.
+  {
+    id: "stress.unstressed_final_apocope",
+    label: "V[ - stress]# → ∅",
+    category: "deletion",
+    description:
+      "Word-final unstressed vowels delete. The mechanism behind Old → Middle English ending erosion. Skips monosyllables (the language already keeps the stressed nucleus).",
+    stressFilter: "unstressed",
+    positionBias: "final",
+    enabledByDefault: false,
+    baseWeight: 0.5,
+    probabilityFor: (w) => {
+      if (w.length < 3) return 0;
+      const last = w[w.length - 1]!;
+      if (!isVowel(stripTone(last))) return 0;
+      // Need at least one other vowel/syllabic in the word for the
+      // result to keep a nucleus.
+      const others = stressedPositions(w, "unstressed");
+      if (others.length === 0) return 0;
+      if (!others.includes(w.length - 1)) return 0;
+      return 0.04;
+    },
+    apply: (w) => {
+      if (w.length < 3) return w;
+      const last = w[w.length - 1]!;
+      if (!isVowel(stripTone(last))) return w;
+      return w.slice(0, -1);
+    },
+  },
+
+  // Unstressed-medial syncope — medial unstressed vowels delete.
+  // Latin `calidus` → Vulgar Latin `caldus` → Italian `caldo`,
+  // English `cam(e)ra`, French `tem(p)s`. Word-internal only.
+  {
+    id: "stress.unstressed_medial_syncope",
+    label: "V[ - stress] → ∅ / V_C…",
+    category: "deletion",
+    description:
+      "Medial unstressed vowels delete in word-internal position. Drives the Latin-to-Romance simplification of multi-syllable roots. Word-final apocope is handled by a separate rule.",
+    stressFilter: "unstressed",
+    enabledByDefault: false,
+    baseWeight: 0.4,
+    probabilityFor: (w) => {
+      const sites = stressedPositions(w, "unstressed").filter(
+        (i) => i > 0 && i < w.length - 1,
+      );
+      return 1 - Math.pow(1 - 0.025, sites.length);
+    },
+    apply: (w, rng) => {
+      const sites = stressedPositions(w, "unstressed").filter(
+        (i) => i > 0 && i < w.length - 1,
+      );
+      if (sites.length === 0) return w;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = w.slice();
+      out.splice(idx, 1);
+      return out;
+    },
+  },
 
   // --- Compensatory lengthening ---
   // When a word-final consonant deletes after a short vowel, the vowel
