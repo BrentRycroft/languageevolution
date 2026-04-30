@@ -20,7 +20,6 @@ import {
   endTurn,
   makeDiscourse,
   mention,
-  shouldPronominalise,
   type DiscourseContext,
   type DiscourseGenre,
 } from "./discourse";
@@ -168,11 +167,6 @@ export function generateDiscourseNarrative(
       // stays as topic.
       if (!template.needs.subject && wasNew) ctx.topic = ctx.entities.get(objMeaning)!;
     }
-    // Pronominalise the next mention if appropriate (cosmetic note —
-    // the actual rendering is driven by the {TOPIC} placeholder, but
-    // we expose the heuristic for tests).
-    void shouldPronominalise;
-
     // Realise via translateSentence — this gets us all the §2.1
     // grammar+typology behaviour for free. Then re-render each
     // token's WordForm through formatForm so the user's script

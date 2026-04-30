@@ -362,7 +362,7 @@ function EventList({ events }: { events: LanguageEvent[] }) {
     <div className="col-2">
       {recent.map((e, i) => (
         <div
-          key={i}
+          key={`${e.generation}-${e.kind}-${i}`}
           style={{
             fontFamily: "var(--font-mono)",
             fontSize: "var(--fs-1)",
@@ -383,7 +383,7 @@ function EventList({ events }: { events: LanguageEvent[] }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="compare-section">
-      <div className="grammar-section-label" style={{ marginBottom: 4 }}>
+      <div className="grammar-section-label mb-4">
         {title}
       </div>
       {children}
@@ -544,7 +544,11 @@ function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[]
         {lang.name} · word order {lang.grammar.wordOrder} · {Object.keys(lang.morphology.paradigms).length} paradigms
       </div>
       {lines.map((line, i) => (
-        <div key={i} style={{ marginBottom: 6 }}>
+        // Stable key: gloss + position. NarrativeLine doesn't carry
+        // an English source field, but the gloss is unique per line
+        // (it includes the meaning slots). Plain `i` would re-key
+        // every cell on rerender.
+        <div key={`${line.gloss}-${i}`} className="mb-6">
           <div
             style={{
               fontFamily: "var(--font-mono)",

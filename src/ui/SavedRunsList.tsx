@@ -7,6 +7,7 @@ export function SavedRunsList() {
   const config = useSimStore((s) => s.config);
   const state = useSimStore((s) => s.state);
   const loadConfig = useSimStore((s) => s.loadConfig);
+  const showConfirm = useSimStore((s) => s.showConfirm);
   const [runs, setRuns] = useState<SavedRun[]>([]);
 
   const refresh = () => setRuns(listRuns());
@@ -35,8 +36,14 @@ export function SavedRunsList() {
   const onLoad = (r: SavedRun) => {
     loadConfig(r.config, r.generationsRun, r.stateSnapshot);
   };
-  const onDelete = (id: string) => {
-    if (!confirm("Delete this run?")) return;
+  const onDelete = async (id: string) => {
+    const ok = await showConfirm({
+      title: "Delete this run?",
+      message: "The saved checkpoint will be removed from your browser. This can't be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     deleteRun(id);
     refresh();
   };

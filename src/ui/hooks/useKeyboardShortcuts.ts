@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useSimStore } from "../../state/store";
 
 type Tab =
   | "tree"
@@ -39,6 +40,7 @@ interface Options {
  */
 export function useKeyboardShortcuts(options: Options): void {
   const { playing, togglePlay, step, stepN, reset, setActiveTab } = options;
+  const showConfirm = useSimStore((s) => s.showConfirm);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -61,7 +63,17 @@ export function useKeyboardShortcuts(options: Options): void {
         stepN(50);
       } else if (e.key === "r" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        if (confirm("Reset to generation 0?")) reset();
+        // Async confirm — the keyboard handler returns immediately;
+        // reset() runs on user confirmation.
+        void (async () => {
+          const ok = await showConfirm({
+            title: "Reset to generation 0?",
+            message: "This discards the current run.",
+            confirmLabel: "Reset",
+            danger: true,
+          });
+          if (ok) reset();
+        })();
       } else if (e.key >= "1" && e.key <= "9") {
         const idx = parseInt(e.key, 10) - 1;
         if (TAB_ORDER[idx]) setActiveTab(TAB_ORDER[idx]);
@@ -69,5 +81,5 @@ export function useKeyboardShortcuts(options: Options): void {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [playing, togglePlay, step, stepN, reset, setActiveTab]);
+  }, [playing, togglePlay, step, stepN, reset, setActiveTab, showConfirm]);
 }

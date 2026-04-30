@@ -156,16 +156,21 @@ export function LanguageTreeView() {
       ) : (
       <svg className="tree-svg" width={size.w} height={size.h}>
         <g transform={`translate(${layout.margin},${layout.margin})`}>
-          {layout.root.links().map((link, i) => {
+          {layout.root.links().map((link) => {
             const s = link.source as unknown as { x: number; y: number };
             const t = link.target as unknown as { x: number; y: number };
-            const targetExtinct = (link.target.data as NodeDatum).extinct;
+            const sourceData = link.source.data as NodeDatum;
+            const targetData = link.target.data as NodeDatum;
+            const targetExtinct = targetData.extinct;
             // Vertical orientation: route via midpoint Y.
             const midY = (s.y + t.y) / 2;
             const path = `M${s.x},${s.y} C${s.x},${midY} ${t.x},${midY} ${t.x},${t.y}`;
             return (
+              // Stable key: parent → child id pair. Survives layout
+              // recomputation across re-renders so D3's link order
+              // doesn't reset SVG path identity.
               <path
-                key={i}
+                key={`${sourceData.id}->${targetData.id}`}
                 className="tree-link"
                 d={path}
                 strokeDasharray={targetExtinct ? "4 4" : undefined}

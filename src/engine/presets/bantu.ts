@@ -35,11 +35,11 @@ const LEXICON: Lexicon = {
   // — sky cycle / time —
   day: ["i", "s", "i", "k", "u"],
   night: ["b", "u", "s", "i", "k", "u"],
-  morning: ["a", "s", "u", "b", "u˥", "i"],
+  // Swahili `asubuhi` (morning) is Arabic أول صبح — not PB; dropped.
   evening: ["i", "j", "i", "o"],
   year: ["m", "w", "a˩", "k", "a"],
   season: ["i", "k", "i", "p", "i", "n", "d", "i"],
-  time: ["m", "u", "d", "a˩"],
+  // Swahili `muda` (time) is Arabic مدّة — not PB; dropped.
   // — flora / fauna —
   tree: ["m", "u˥", "t", "i"],
   wood: ["m", "u", "t", "i"],
@@ -105,7 +105,10 @@ const LEXICON: Lexicon = {
   flesh: ["ɲ", "a˩", "m", "a"],
   knee: ["i", "g", "o", "t", "i"],
   leg: ["m", "u", "a˩", "g", "u", "l", "u"],
-  foot: ["i", "k", "u", "p", "a"],
+  // PB *gùdù "foot" (Swahili mguu); previously duplicated `bone`'s
+  // form `ikupa`. Now distinct, sharing a root with `leg` (which
+  // many Bantu languages also conflate — but at least bone ≠ foot).
+  foot: ["m", "u", "g", "u", "l", "u"],
   // — kinship / people —
   person: ["m", "u˥", "t", "u"],
   man: ["m", "u˥", "a˩", "n", "a", "u", "m", "e"],

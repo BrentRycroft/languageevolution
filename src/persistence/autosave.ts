@@ -26,6 +26,16 @@ interface AutosavePayload {
   stateSnapshot: SimulationState;
 }
 
+/**
+ * Discriminated result for autosave persistence operations. Lets the
+ * caller distinguish a successful save from quota-exceeded / browser-
+ * disabled storage so the UI can surface a notice instead of silently
+ * dropping the user's progress.
+ */
+export type StorageWriteResult =
+  | { ok: true }
+  | { ok: false; reason: "quota" | "disabled" | "other" };
+
 function safeGet(key: string): string | null {
   try {
     if (typeof localStorage === "undefined") return null;
@@ -35,13 +45,24 @@ function safeGet(key: string): string | null {
   }
 }
 
-function safeSet(key: string, value: string): void {
+function safeSet(key: string, value: string): StorageWriteResult {
+  if (typeof localStorage === "undefined") {
+    return { ok: false, reason: "disabled" };
+  }
   try {
-    if (typeof localStorage === "undefined") return;
     localStorage.setItem(key, value);
-  } catch {
-    // quota or unavailable; silently skip so the running sim isn't
-    // disturbed by storage pressure.
+    return { ok: true };
+  } catch (e) {
+    // QuotaExceededError name varies across browsers (Safari, FF, Chrome
+    // each used to differ); detect by name + code.
+    const name = (e as { name?: string })?.name ?? "";
+    const code = (e as { code?: number })?.code ?? -1;
+    const isQuota =
+      name === "QuotaExceededError" ||
+      name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      code === 22 ||
+      code === 1014;
+    return { ok: false, reason: isQuota ? "quota" : "other" };
   }
 }
 
@@ -74,9 +95,12 @@ export function saveAutosave(
     generationsRun: number;
   },
   opts: { force?: boolean } = {},
-): void {
+): StorageWriteResult {
   const now = Date.now();
-  if (!opts.force && now - lastSaveAt < MIN_SAVE_INTERVAL_MS) return;
+  if (!opts.force && now - lastSaveAt < MIN_SAVE_INTERVAL_MS) {
+    // Throttled — not a failure.
+    return { ok: true };
+  }
   lastSaveAt = now;
   const body: AutosavePayload = {
     version: AUTOSAVE_VERSION,
@@ -85,12 +109,16 @@ export function saveAutosave(
     generationsRun: payload.generationsRun,
     stateSnapshot: payload.state,
   };
+  let serialized: string;
   try {
-    safeSet(AUTOSAVE_KEY, JSON.stringify(body));
+    serialized = JSON.stringify(body);
   } catch {
-    // Stringify can fail on exotic cycles; autosave is best-effort so
-    // swallow.
+    // Stringify can fail on exotic cycles. Autosave is best-effort —
+    // surface as a generic failure so the caller can decide whether
+    // to warn the user.
+    return { ok: false, reason: "other" };
   }
+  return safeSet(AUTOSAVE_KEY, serialized);
 }
 
 export interface AutosaveLoaded {
@@ -101,37 +129,62 @@ export interface AutosaveLoaded {
 }
 
 /**
- * Read the autosave from localStorage, running the `migrateSavedRun`
- * upgrade path so older saves still work. Returns null if nothing is
- * stored, the payload is corrupt, or the migration drops the snapshot.
+ * Discriminated load result. Lets the caller distinguish "nothing saved
+ * yet" (empty) from "save was found but couldn't be loaded" (corrupt /
+ * future-version / migration-failed). The UI surfaces non-empty
+ * failures as a toast so the user knows their progress was lost
+ * instead of silently re-booting from defaults.
+ *
+ * - `empty`            no autosave key in localStorage; clean boot.
+ * - `corrupt`          payload didn't parse as JSON.
+ * - `future-version`   payload's `version > AUTOSAVE_VERSION`. The
+ *                      user's current build is older than the build
+ *                      that wrote the save; we can't safely consume.
+ * - `migration-failed` `migrateSavedRun` returned null or dropped the
+ *                      stateSnapshot (e.g. unrecognised config shape).
  */
-export function loadAutosave(): AutosaveLoaded | null {
+export type AutosaveLoadResult =
+  | { ok: true; payload: AutosaveLoaded }
+  | { ok: false; reason: "empty" | "corrupt" | "future-version" | "migration-failed" };
+
+export function loadAutosave(): AutosaveLoadResult {
   const raw = safeGet(AUTOSAVE_KEY);
-  if (!raw) return null;
+  if (!raw) return { ok: false, reason: "empty" };
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(raw);
-    // Wrap into the SavedRun shape so migrateSavedRun applies its
-    // existing per-version upgrades. Autosave uses the same schema as
-    // the Saved Runs list.
-    const migrated = migrateSavedRun({
-      version: parsed.version ?? 1,
-      id: "autosave",
-      label: "autosave",
-      createdAt: parsed.savedAt ?? 0,
-      config: parsed.config,
-      generationsRun: parsed.generationsRun ?? 0,
-      stateSnapshot: parsed.stateSnapshot,
-    });
-    if (!migrated || !migrated.stateSnapshot) return null;
-    return {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { ok: false, reason: "corrupt" };
+  }
+  const obj = (parsed ?? {}) as Record<string, unknown>;
+  const ver = typeof obj.version === "number" ? obj.version : 1;
+  if (ver > AUTOSAVE_VERSION) {
+    return { ok: false, reason: "future-version" };
+  }
+  // Wrap into the SavedRun shape so migrateSavedRun applies its
+  // existing per-version upgrades. Autosave uses the same schema as
+  // the Saved Runs list.
+  const migrated = migrateSavedRun({
+    version: ver,
+    id: "autosave",
+    label: "autosave",
+    createdAt: typeof obj.savedAt === "number" ? obj.savedAt : 0,
+    config: obj.config,
+    generationsRun: typeof obj.generationsRun === "number" ? obj.generationsRun : 0,
+    stateSnapshot: obj.stateSnapshot,
+  });
+  if (!migrated || !migrated.stateSnapshot) {
+    return { ok: false, reason: "migration-failed" };
+  }
+  return {
+    ok: true,
+    payload: {
       config: migrated.config,
       state: migrated.stateSnapshot,
       generationsRun: migrated.generationsRun,
-      savedAt: parsed.savedAt ?? 0,
-    };
-  } catch {
-    return null;
-  }
+      savedAt: typeof obj.savedAt === "number" ? obj.savedAt : 0,
+    },
+  };
 }
 
 export function clearAutosave(): void {
