@@ -162,8 +162,10 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
               <Row generation={0} language="Proto seed" form={formatForm(seedForm, lang, script)} accent />
             )}
             {stitchedHistory.map((r, i) => (
+              // Stable key: generation + lang + index — multiple rows
+              // can share a generation when sound changes alternated.
               <Row
-                key={i}
+                key={`${r.generation}-${r.languageName}-${i}`}
                 generation={r.generation}
                 language={r.languageName}
                 form={r.form}
@@ -180,7 +182,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
             <div className="col-2">
               {recentChanges.map((e, i) => (
                 <div
-                  key={i}
+                  key={`${e.generation}-${e.kind}-${i}`}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "60px 1fr",

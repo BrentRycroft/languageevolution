@@ -276,8 +276,12 @@ function SentenceOutput({
         }}
       >
         {result.targetTokens.map((t, i) => (
+          // Stable key: english lemma + tag + position. A plain `i`
+          // would re-key every cell when the user edits the input
+          // and the token count changes, dropping animations and
+          // hover state.
           <div
-            key={i}
+            key={`${t.englishLemma}-${t.englishTag}-${i}`}
             style={{
               display: "flex",
               flexDirection: "column",
