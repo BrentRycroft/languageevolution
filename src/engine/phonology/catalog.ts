@@ -2,10 +2,18 @@ import type { SoundChange, WordForm, Phoneme } from "../types";
 import { isVowel, isConsonant, isSyllabic } from "./ipa";
 import { HIGH, LOW, stripTone, toneOf } from "./tone";
 import { UNSTRESSED_REDUCTION, stressedPositions } from "./stress";
+import {
+  ALL_VOICELESS_CONSONANTS,
+  VOICED_OBSTRUENTS,
+  STOPS,
+  isVelarStop,
+  isFrontVowel,
+  placeOf,
+  mirrorDiacritics,
+} from "./inventory";
 
 const CLICKS = ["ǀ", "ǃ", "ǂ", "ǁ"] as const;
-const VOICED = new Set(["b", "d", "g", "v", "z", "ʒ", "dʒ", "dz"]);
-const VOICELESS = new Set(["p", "t", "k", "f", "s", "ʃ", "tʃ", "ts", "θ"]);
+const VOICELESS = ALL_VOICELESS_CONSONANTS;
 
 type Mapping = readonly (readonly [Phoneme, Phoneme])[];
 
@@ -234,13 +242,14 @@ export const CATALOG: SoundChange[] = [
     id: "assimilation.n_before_labial_velar",
     label: "n → m/ŋ (assim.)",
     category: "assimilation",
-    description: "n assimilates in place before p/b (→m) or k/g (→ŋ).",
+    description: "n assimilates in place before a labial stop (→m) or velar stop (→ŋ).",
     probabilityFor: (w) => {
       let n = 0;
       for (let i = 0; i < w.length - 1; i++) {
         if (w[i] === "n") {
-          const nx = w[i + 1];
-          if (nx === "p" || nx === "b" || nx === "k" || nx === "g") n++;
+          const nx = w[i + 1]!;
+          const place = placeOf(nx);
+          if (STOPS.has(nx) && (place === "labial" || place === "labiodental" || place === "velar")) n++;
         }
       }
       return 1 - Math.pow(1 - 0.1, n);
@@ -249,15 +258,17 @@ export const CATALOG: SoundChange[] = [
       const sites: number[] = [];
       for (let i = 0; i < word.length - 1; i++) {
         if (word[i] === "n") {
-          const nx = word[i + 1];
-          if (nx === "p" || nx === "b" || nx === "k" || nx === "g") sites.push(i);
+          const nx = word[i + 1]!;
+          const place = placeOf(nx);
+          if (STOPS.has(nx) && (place === "labial" || place === "labiodental" || place === "velar")) sites.push(i);
         }
       }
       if (sites.length === 0) return word;
       const idx = sites[rng.int(sites.length)]!;
       const nx = word[idx + 1]!;
+      const place = placeOf(nx);
       const out = word.slice();
-      out[idx] = nx === "p" || nx === "b" ? "m" : "ŋ";
+      out[idx] = place === "labial" || place === "labiodental" ? "m" : "ŋ";
       return out;
     },
     enabledByDefault: true,
@@ -275,25 +286,25 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "palatalization.k_before_front_V",
-    label: "k → tʃ / _i,e",
+    label: "K → tʃ / _front-V",
     category: "palatalization",
-    description: "k palatalizes before front vowels.",
+    description: "Velar stop palatalizes before any front vowel.",
     probabilityFor: (w) => {
       let n = 0;
       for (let i = 0; i < w.length - 1; i++) {
-        if (w[i] === "k" && (w[i + 1] === "i" || w[i + 1] === "e" || w[i + 1] === "iː" || w[i + 1] === "eː")) n++;
+        if (isVelarStop(w[i]!) && isFrontVowel(stripTone(w[i + 1]!))) n++;
       }
       return 1 - Math.pow(1 - 0.09, n);
     },
     apply: (word, rng) => {
       const sites: number[] = [];
       for (let i = 0; i < word.length - 1; i++) {
-        if (word[i] === "k" && (word[i + 1] === "i" || word[i + 1] === "e" || word[i + 1] === "iː" || word[i + 1] === "eː")) sites.push(i);
+        if (isVelarStop(word[i]!) && isFrontVowel(stripTone(word[i + 1]!))) sites.push(i);
       }
       if (sites.length === 0) return word;
       const idx = sites[rng.int(sites.length)]!;
       const out = word.slice();
-      out[idx] = "tʃ";
+      out[idx] = mirrorDiacritics(word[idx]!, "tʃ");
       return out;
     },
     enabledByDefault: true,
@@ -614,7 +625,7 @@ export const CATALOG: SoundChange[] = [
       const prev = w[w.length - 2]!;
       if (toneOf(prev)) return 0;
       if (!isVowel(stripTone(prev))) return 0;
-      if (VOICED.has(last)) return 0.04;
+      if (VOICED_OBSTRUENTS.has(last)) return 0.04;
       if (VOICELESS.has(last)) return 0.04;
       return 0;
     },
@@ -624,7 +635,7 @@ export const CATALOG: SoundChange[] = [
       const prev = word[word.length - 2]!;
       if (toneOf(prev)) return word;
       if (!isVowel(stripTone(prev))) return word;
-      const isVoicedCtx = VOICED.has(last);
+      const isVoicedCtx = VOICED_OBSTRUENTS.has(last);
       const isVoicelessCtx = VOICELESS.has(last);
       if (!isVoicedCtx && !isVoicelessCtx) return word;
       const canonical = isVoicedCtx ? LOW : HIGH;
@@ -648,14 +659,14 @@ export const CATALOG: SoundChange[] = [
       if (w.length < 2) return 0;
       const last = w[w.length - 1]!;
       const prev = w[w.length - 2]!;
-      if (toneOf(prev) && VOICED.has(last)) return 0.08;
+      if (toneOf(prev) && VOICED_OBSTRUENTS.has(last)) return 0.08;
       return 0;
     },
     apply: (word) => {
       if (word.length < 2) return word;
       const last = word[word.length - 1]!;
       const prev = word[word.length - 2]!;
-      if (toneOf(prev) && VOICED.has(last)) return word.slice(0, -1);
+      if (toneOf(prev) && VOICED_OBSTRUENTS.has(last)) return word.slice(0, -1);
       return word;
     },
     enabledByDefault: false,
@@ -685,14 +696,13 @@ export const CATALOG: SoundChange[] = [
       "Very rare: a stop consonant is reanalyzed as a click, typically spreading via prestige vocabulary.",
     probabilityFor: (w) => {
       let stops = 0;
-      for (const p of w) if (p === "t" || p === "k" || p === "p") stops++;
+      for (const p of w) if (STOPS.has(p)) stops++;
       return stops > 0 ? 0.002 : 0;
     },
     apply: (word, rng) => {
       const sites: number[] = [];
       for (let i = 0; i < word.length; i++) {
-        const p = word[i]!;
-        if (p === "t" || p === "k" || p === "p") sites.push(i);
+        if (STOPS.has(word[i]!)) sites.push(i);
       }
       if (sites.length === 0) return word;
       const idx = sites[rng.int(sites.length)]!;
