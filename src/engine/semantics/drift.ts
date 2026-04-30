@@ -111,13 +111,17 @@ export function driftOneMeaning(
 ): SemanticDrift | null {
   const meanings = Object.keys(lang.lexicon);
   if (meanings.length === 0) return null;
-  const shuffled: string[] = [];
-  const used = new Set<number>();
-  while (shuffled.length < meanings.length) {
-    const idx = rng.int(meanings.length);
-    if (used.has(idx)) continue;
-    used.add(idx);
-    shuffled.push(meanings[idx]!);
+  // Fisher–Yates shuffle — O(n) walk producing an unbiased
+  // permutation. Replaces an earlier rejection-sampling loop
+  // (`while (shuffled.length < n) { idx = rand; if (used.has) continue
+  // ... }`) that ran O(n²) on tier-3 lexicons (~1000 words ⇒
+  // ~1M iterations every drift call).
+  const shuffled = meanings.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = rng.int(i + 1);
+    const tmp = shuffled[i]!;
+    shuffled[i] = shuffled[j]!;
+    shuffled[j] = tmp;
   }
   // Two passes: first try to drift into an EMPTY slot (the clean case),
   // then allow crowded drift where the target already has a form (the

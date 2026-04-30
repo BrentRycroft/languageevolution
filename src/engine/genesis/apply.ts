@@ -161,36 +161,3 @@ function smoothForm(form: WordForm, lang: Language, rng: Rng): WordForm {
   return current;
 }
 
-/**
- * Legacy entry point retained for genesis.ts's step function. Returns
- * just the meaning to preserve the old signature; callers should switch
- * to `tryCoin` for rich outcome info.
- */
-export function tryGenesis(
-  lang: Language,
-  rules: GenesisRule[],
-  weights: Record<string, number>,
-  globalRate: number,
-  rng: Rng,
-): Meaning | null {
-  const out = tryCoinBackCompat(lang, rules, weights, globalRate, rng);
-  return out ? out.meaning : null;
-}
-
-/**
- * Back-compat shim for callers that don't pass the language tree in.
- * Runs the full mechanism pipeline with an empty tree — that disables
- * calque but keeps everything else working.
- */
-function tryCoinBackCompat(
-  lang: Language,
-  rules: GenesisRule[],
-  weights: Record<string, number>,
-  globalRate: number,
-  rng: Rng,
-): CoinageOutcome | null {
-  const tree: LanguageTree = { [lang.id]: { language: lang, parentId: null, childrenIds: [] } };
-  const result = tryCoin(lang, tree, rules, weights, globalRate, rng);
-  if (result) lang.lexicon[result.meaning] = result.form;
-  return result;
-}

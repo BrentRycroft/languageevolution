@@ -10,7 +10,7 @@ import { stepObsolescence } from "./steps/obsolescence";
 import { stepCopulaErosion, stepCopulaGenesis } from "./steps/copula";
 import { stepCreolization } from "./steps/creolization";
 import { stepContact } from "./steps/contact";
-import { stepTreeSplit, stepDeath } from "./steps/tree";
+import { stepTreeSplit, stepDeath, precomputeClosenessVector } from "./steps/tree";
 import { stepTaboo } from "./steps/taboo";
 import { computeTierCandidate, lexicalCapacity, populationCap } from "./lexicon/tier";
 import { pushEvent } from "./steps/helpers";
@@ -62,6 +62,13 @@ export function createSimulation(
     }
 
     const leaves = leafIds(state.tree);
+    // Precompute closeness for every alive leaf once per generation.
+    // Without this, `stepDeath` rediscovered the entire N×N closeness
+    // matrix for every leaf (O(N³) per gen). Now it's O(N²) total.
+    const aliveAtStart = leaves.filter((id) => !state.tree[id]!.language.extinct);
+    const closenessCache = config.modes.death
+      ? precomputeClosenessVector(state, aliveAtStart)
+      : undefined;
     for (const leafId of leaves) {
       const lang = state.tree[leafId]!.language;
       if (lang.extinct) continue;
@@ -154,7 +161,7 @@ export function createSimulation(
       // the freshly-internal parent as `extinct` while its newborn
       // daughters are still live.
       const stillLeaf = (state.tree[leafId]?.childrenIds.length ?? 0) === 0;
-      if (config.modes.death && stillLeaf) stepDeath(state, lang, config, rng);
+      if (config.modes.death && stillLeaf) stepDeath(state, lang, config, rng, closenessCache);
     }
     // Cross-language event: creolization. Runs once per gen across
     // the whole tree, not per-language. Very rare — usually a no-op.

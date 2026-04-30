@@ -3,6 +3,7 @@ import { CATALOG, CATALOG_BY_ID } from "../phonology/catalog";
 import { generateName } from "../naming";
 import { cloneLexicon, cloneGrammar, cloneMorphology } from "../utils/clone";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
+import { fnv1a } from "../rng";
 import type { Rng } from "../rng";
 import { lexicalCapacity } from "../lexicon/tier";
 import { partitionTerritory } from "../geo/territory";
@@ -71,13 +72,12 @@ function depthOf(tree: LanguageTree, id: string): number {
   return depth;
 }
 
+/**
+ * Float in [0, 1) derived from `fnv1a`. Local helper since `rng.ts`
+ * exports the integer hash but not the normalised float form.
+ */
 function fnv1aFloat(s: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
-  }
-  return (h >>> 0) / 0xffffffff;
+  return (fnv1a(s) >>> 0) / 0xffffffff;
 }
 
 function jitterBias(

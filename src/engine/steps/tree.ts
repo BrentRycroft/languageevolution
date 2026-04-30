@@ -102,11 +102,42 @@ function closenessFactor(
   return 1 + closeCount;
 }
 
+/**
+ * Precompute closeness for every alive leaf in one O(N²) pass — saving
+ * the per-leaf `stepDeath` from re-running its own O(N²) closeness loop
+ * (which made the per-generation cost O(N³)).
+ *
+ * Snapshot semantics: the cache reflects the alive-set at call time and
+ * doesn't update when a leaf goes extinct mid-loop. That's fine for the
+ * simulator because all death decisions in one generation now share a
+ * consistent denominator — arguably more correct than the previous
+ * iteration-order-sensitive behaviour.
+ */
+export function precomputeClosenessVector(
+  state: SimulationState,
+  aliveLeaves: readonly string[],
+): Map<string, number> {
+  const out = new Map<string, number>();
+  let total = 0;
+  for (const id of aliveLeaves) {
+    const c = closenessFactor(state, id, aliveLeaves);
+    out.set(id, c);
+    total += c;
+  }
+  // Stash the mean under a sentinel key so consumers don't recompute.
+  // Map iteration order is insertion-order so this never appears in the
+  // alive-leaf scan above.
+  const mean = aliveLeaves.length > 0 ? Math.max(1, total / aliveLeaves.length) : 1;
+  out.set("__mean__", mean);
+  return out;
+}
+
 export function stepDeath(
   state: SimulationState,
   lang: Language,
   config: SimulationConfig,
   rng: Rng,
+  closenessCache?: Map<string, number>,
 ): void {
   const aliveLeaves = leafIds(state.tree).filter(
     (id) => !state.tree[id]!.language.extinct,
@@ -131,12 +162,23 @@ export function stepDeath(
   // toward over-represented lineages. Without this redistribution the
   // survivors tended to cluster in one or two sibling-rich subgroups,
   // whereas real families preserve diverse deep branches.
-  const myCloseness = closenessFactor(state, lang.id, aliveLeaves);
-  let meanCloseness = 0;
-  for (const id of aliveLeaves) {
-    meanCloseness += closenessFactor(state, id, aliveLeaves);
+  // Closeness lookup. When the caller pre-computed the vector via
+  // `precomputeClosenessVector` the cost here is O(1); without the
+  // cache we fall back to the per-call O(N²) computation that the
+  // pre-cache code did N times per generation.
+  let myCloseness: number;
+  let meanCloseness: number;
+  if (closenessCache) {
+    myCloseness = closenessCache.get(lang.id) ?? closenessFactor(state, lang.id, aliveLeaves);
+    meanCloseness = closenessCache.get("__mean__") ?? 1;
+  } else {
+    myCloseness = closenessFactor(state, lang.id, aliveLeaves);
+    let total = 0;
+    for (const id of aliveLeaves) {
+      total += closenessFactor(state, id, aliveLeaves);
+    }
+    meanCloseness = Math.max(1, total / aliveLeaves.length);
   }
-  meanCloseness = Math.max(1, meanCloseness / aliveLeaves.length);
   const diversityMult = myCloseness / meanCloseness;
 
   const p =
