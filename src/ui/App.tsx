@@ -256,10 +256,17 @@ export function App() {
 
       <nav className="tab-bar" role="tablist">
         {TABS.map((t) => (
+          // a11y: each tab carries an `id` so its corresponding
+          // tabpanel can reference it via `aria-labelledby`. The
+          // `aria-controls` link is the inverse direction — assistive
+          // tech traverses tab → panel via this attribute.
           <button
             key={t.id}
+            id={`tab-${t.id}`}
             role="tab"
             aria-selected={activeTab === t.id}
+            aria-controls={`tabpanel-${t.id}`}
+            tabIndex={activeTab === t.id ? 0 : -1}
             className={activeTab === t.id ? "active" : ""}
             onClick={() => setActiveTab(t.id)}
             title={t.title}
@@ -282,7 +289,7 @@ export function App() {
       <main id="main-content" className="main" style={{ position: "relative" }}>
         {activeTab === "tree" && <WelcomeBanner />}
         {activeTab === "tree" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-tree" aria-labelledby="tab-tree">
             <h3>Language Tree</h3>
             <ActivityHeatmap />
             <Suspense fallback={<PanelSkeleton />}>
@@ -291,13 +298,13 @@ export function App() {
           </div>
         )}
         {activeTab === "dictionary" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-dictionary" aria-labelledby="tab-dictionary">
             <h3>Dictionary</h3>
             <DictionaryView />
           </div>
         )}
         {activeTab === "timeline" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-timeline" aria-labelledby="tab-timeline">
             <h3>Timeline</h3>
             <Suspense fallback={<PanelSkeleton />}>
               <TimelineChart />
@@ -305,25 +312,25 @@ export function App() {
           </div>
         )}
         {activeTab === "grammar" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-grammar" aria-labelledby="tab-grammar">
             <h3>Grammar</h3>
             <GrammarView />
           </div>
         )}
         {activeTab === "phonemes" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-phonemes" aria-labelledby="tab-phonemes">
             <h3>Phoneme inventory</h3>
             <PhonemeInventoryView />
           </div>
         )}
         {activeTab === "laws" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-laws" aria-labelledby="tab-laws">
             <h3>Sound laws</h3>
             <SoundLawsView />
           </div>
         )}
         {activeTab === "glossary" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-glossary" aria-labelledby="tab-glossary">
             <h3>Glossary</h3>
             <Glossary />
           </div>
@@ -336,6 +343,9 @@ export function App() {
             mount cheap. */}
         <div
           className="panel panel-single"
+          role="tabpanel"
+          id="tabpanel-events"
+          aria-labelledby="tab-events"
           style={{ display: activeTab === "events" ? "" : "none" }}
           aria-hidden={activeTab !== "events"}
         >
@@ -344,6 +354,9 @@ export function App() {
         </div>
         <div
           className="panel panel-single"
+          role="tabpanel"
+          id="tabpanel-translate"
+          aria-labelledby="tab-translate"
           style={{ display: activeTab === "translate" ? "" : "none" }}
           aria-hidden={activeTab !== "translate"}
         >
@@ -351,19 +364,19 @@ export function App() {
           <Translator />
         </div>
         {activeTab === "compare" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-compare" aria-labelledby="tab-compare">
             <h3>Compare</h3>
             <CompareView />
           </div>
         )}
         {activeTab === "stats" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-stats" aria-labelledby="tab-stats">
             <h3>Stats</h3>
             <StatsPanel />
           </div>
         )}
         {activeTab === "map" && (
-          <div className="panel panel-single">
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-map" aria-labelledby="tab-map">
             <h3>World Map</h3>
             <MapView />
           </div>
