@@ -1,14 +1,19 @@
 import type { WordForm } from "../types";
-import { isVowel } from "./ipa";
+import { isVowel, isSyllabic } from "./ipa";
 import { stripTone } from "./tone";
 
 /**
- * Locate indices of vowel phonemes in a form.
+ * Locate indices of nucleus phonemes in a form. A nucleus is either
+ * a vowel or a syllabic resonant (`r̩`, `m̩`, `l̩`, `n̩` and friends —
+ * see `phonology/ipa.ts::SYLLABIC_RESONANTS`). Excluding the
+ * resonants would break stress alignment for forms like PIE *septḿ̥
+ * "seven" where the stressed syllable's nucleus is a syllabic m̩.
  */
 export function vowelIndices(form: WordForm): number[] {
   const idxs: number[] = [];
   for (let i = 0; i < form.length; i++) {
-    if (isVowel(stripTone(form[i]!))) idxs.push(i);
+    const base = stripTone(form[i]!);
+    if (isVowel(base) || isSyllabic(base)) idxs.push(i);
   }
   return idxs;
 }
@@ -89,6 +94,27 @@ export function stressClass(
 }
 
 /**
+ * Return the indices of every vowel matching the given stress class.
+ * Convenience for rule authors: avoids reimplementing the
+ * vowel-loop + stressClass-check on every rule. Pretonic class
+ * matches both immediate and second-pretonic positions.
+ */
+export function stressedPositions(
+  form: WordForm,
+  filter: "stressed" | "unstressed" | "pretonic",
+  pattern: StressPattern = "penult",
+  lexicalIdx?: number,
+): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < form.length; i++) {
+    const p = form[i]!;
+    if (!isVowel(stripTone(p))) continue;
+    if (stressClass(form, i, pattern, lexicalIdx) === filter) out.push(i);
+  }
+  return out;
+}
+
+/**
  * Probability that a sound change at position `i` actually applies to this
  * phoneme, based on stress. Multiplies into the base per-site probability
  * already computed by the change rule. Only applies to vowels; consonants
@@ -120,6 +146,10 @@ export const UNSTRESSED_REDUCTION: SoundChange = {
   category: "vowel",
   description:
     "Unstressed vowels reduce toward schwa. Stressed vowels resist; pretonic slightly protected.",
+  // Declarative stress filter — `apply.ts` short-circuits the rule
+  // when no unstressed vowel exists, so the inner `probabilityFor`
+  // / `apply` callbacks only ever see candidate sites.
+  stressFilter: "unstressed",
   probabilityFor: (word) => {
     let n = 0;
     for (let i = 0; i < word.length; i++) {

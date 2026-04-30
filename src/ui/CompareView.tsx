@@ -319,6 +319,9 @@ function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Languag
 }
 
 function GrammarRows({ lang, other }: { lang: Language; other: Language }) {
+  // Compact stress label — just the rule, no override count (the
+  // GrammarView elsewhere shows the full breakdown).
+  const stressOf = (l: Language) => l.stressPattern ?? "penult";
   const rows: Array<[string, string, string]> = [
     ["order", lang.grammar.wordOrder, other.grammar.wordOrder],
     ["affix", lang.grammar.affixPosition, other.grammar.affixPosition],
@@ -330,6 +333,7 @@ function GrammarRows({ lang, other }: { lang: Language; other: Language }) {
       String(lang.grammar.genderCount),
       String(other.grammar.genderCount),
     ],
+    ["stress", stressOf(lang), stressOf(other)],
   ];
   return (
     <table style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: "var(--fs-1)" }}>

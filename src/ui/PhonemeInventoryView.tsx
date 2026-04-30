@@ -107,6 +107,10 @@ export function PhonemeInventoryView() {
         <span className="t-muted">
           {lang.name} · {lang.phonemeInventory.segmental.length} segmental
           {usesTones ? ` + ${tones.length} tones` : ""}
+          {" · "}stress {lang.stressPattern ?? "penult"}
+          {lang.stressPattern === "lexical" && lang.lexicalStress
+            ? ` (${Object.keys(lang.lexicalStress).length} overrides)`
+            : ""}
         </span>
         <span className="label-line">
           <span style={{ color: "var(--accent-2)" }}>●</span> innovative vs proto · 🤝 areal · 🔧 internal rule

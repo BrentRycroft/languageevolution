@@ -204,10 +204,10 @@ export function Translator() {
           >
             {mode === "lang-to-lang" && langB
               ? wordResult.phonemes.length > 0
-                ? formatForm(wordResult.phonemes, langB, script)
+                ? formatForm(wordResult.phonemes, langB, script, text.trim().toLowerCase())
                 : wordResult.form
               : lang && wordResult.phonemes.length > 0
-                ? formatForm(wordResult.phonemes, lang, script)
+                ? formatForm(wordResult.phonemes, lang, script, text.trim().toLowerCase())
                 : wordResult.form}
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
@@ -261,7 +261,7 @@ function SentenceOutput({
               .map((_, i) => {
                 const tok = result.targetTokens[i]!;
                 if (tok.targetForm.length === 0) return tok.targetSurface;
-                return formatForm(tok.targetForm, lang, script);
+                return formatForm(tok.targetForm, lang, script, tok.englishLemma);
               })
               .join(" ")}
       </div>
@@ -288,7 +288,7 @@ function SentenceOutput({
             title={`${t.englishLemma} (${t.englishTag})${t.glossNote ? " · " + t.glossNote : ""} · ${t.resolution}`}
           >
             <span style={{ fontSize: "var(--fs-2)", color: "var(--text)" }}>
-              {t.targetForm.length > 0 ? formatForm(t.targetForm, lang, script) : t.targetSurface}
+              {t.targetForm.length > 0 ? formatForm(t.targetForm, lang, script, t.englishLemma) : t.targetSurface}
             </span>
             <span style={{ fontSize: 10, color: "var(--muted)" }}>
               {t.englishLemma}
