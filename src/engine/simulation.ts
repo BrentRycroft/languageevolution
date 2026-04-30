@@ -183,11 +183,22 @@ export function createSimulation(
       state = buildInitialState(config);
     },
     restoreState: (snapshot) => {
+      // Deep-clone the tree so the simulation owns its mutable copy.
+      // Prefer `structuredClone` (handles Maps, Sets, typed arrays,
+      // Dates and cycles correctly) and fall back to the older
+      // JSON-roundtrip on environments without it (Safari < 15.4,
+      // some test runners). The fallback is the previous default —
+      // the only reason to migrate is correctness for richer data
+      // shapes added in later schemas.
+      const cloneTree =
+        typeof structuredClone === "function"
+          ? structuredClone(snapshot.tree)
+          : (JSON.parse(JSON.stringify(snapshot.tree)) as typeof snapshot.tree);
       state = {
         generation: snapshot.generation,
         rootId: snapshot.rootId,
         rngState: snapshot.rngState,
-        tree: JSON.parse(JSON.stringify(snapshot.tree)),
+        tree: cloneTree,
       };
     },
   };

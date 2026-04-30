@@ -24,6 +24,22 @@ import {
 } from "../persistence/autosave";
 
 /**
+ * Persistence-layer notice rendered by the toast UI. Each `kind`
+ * corresponds to a discrete failure or warning the user should know
+ * about — autosave couldn't write because storage is full, an old
+ * snapshot was rejected because it was authored by a future build,
+ * etc. The store exposes `setPersistenceNotice` /
+ * `dismissPersistenceNotice` for UI surfacing.
+ */
+export interface PersistenceNotice {
+  kind: "quota" | "future-version" | "corrupt" | "migration-failed" | "save-error";
+  message: string;
+  /** Generation timestamp (in ms) so consecutive identical notices
+   *  don't suppress; the toast component keys on this. */
+  shownAt: number;
+}
+
+/**
  * Tiny FNV-1a hash for mixing a language id into a numeric RNG seed.
  * Used by applyRuleBiasToLanguage so every language gets a deterministic
  * but distinct sub-seed when proposing an immediate post-bias rule.
@@ -98,6 +114,12 @@ interface SimStore {
   unlockedAchievements: string[];
   /** Most recently unlocked achievement id, for the toast. null = dismissed. */
   lastAchievement: string | null;
+  /** Most recent persistence-layer notice (autosave quota / migration
+   *  failure / corrupt save / future-version). The PersistenceToast
+   *  component renders this; `dismissPersistenceNotice` clears it.
+   *  Distinct from the achievement toast so a single user action
+   *  doesn't accidentally clear the other. */
+  persistenceNotice: PersistenceNotice | null;
   step: () => void;
   stepN: (n: number) => void;
   stepNAsync: (n: number) => Promise<void>;
@@ -136,6 +158,8 @@ interface SimStore {
   randomiseSeed: () => void;
   applyRuleBiasToLanguage: (langId: string, bias: Record<string, number>) => void;
   dismissAchievementToast: () => void;
+  dismissPersistenceNotice: () => void;
+  setPersistenceNotice: (notice: PersistenceNotice) => void;
   clearAchievements: () => void;
   clearAutosave: () => void;
   loadConfig: (
@@ -177,16 +201,20 @@ function bootState(): {
   history: HistoryByLangMeaning;
   seedForms: Record<Meaning, WordForm>;
   resumed: boolean;
+  /** When boot fell back to defaults despite an autosave existing,
+   *  carries the load-failure reason so the UI can surface a toast. */
+  loadFailure?: PersistenceNotice;
 } {
   const loaded = loadAutosave();
-  if (loaded) {
-    const { sim, seedForms } = initFromConfig(loaded.config);
+  let loadFailure: PersistenceNotice | undefined;
+  if (loaded.ok) {
+    const { sim, seedForms } = initFromConfig(loaded.payload.config);
     try {
-      sim.restoreState(loaded.state);
+      sim.restoreState(loaded.payload.state);
       const restored = sim.getState();
       const { next: rehydrated } = recordHistory({}, restored);
       return {
-        config: loaded.config,
+        config: loaded.payload.config,
         sim,
         state: restored,
         history: rehydrated,
@@ -194,9 +222,30 @@ function bootState(): {
         resumed: true,
       };
     } catch {
-      // Restoration failed — corrupt or migrated-out snapshot. Fall
-      // through to the fresh boot path.
+      // Restoration failed AFTER a successful migrate — the snapshot
+      // shape parsed but the engine couldn't rehydrate it. Surface as
+      // a corrupt notice and fall through to fresh boot.
+      loadFailure = {
+        kind: "corrupt",
+        message: "Couldn't restore your last autosave; starting fresh.",
+        shownAt: Date.now(),
+      };
     }
+  } else if (loaded.reason !== "empty") {
+    // Distinct messages per failure mode so the user understands
+    // exactly what happened — silent loss is the bug we're fixing.
+    const msg: Record<"corrupt" | "future-version" | "migration-failed", string> = {
+      corrupt: "Your last autosave was corrupt; starting fresh.",
+      "future-version":
+        "Your last autosave was written by a newer build; starting fresh.",
+      "migration-failed":
+        "Your last autosave couldn't be migrated to the current schema; starting fresh.",
+    };
+    loadFailure = {
+      kind: loaded.reason,
+      message: msg[loaded.reason],
+      shownAt: Date.now(),
+    };
   }
   const cfg = defaultConfig();
   const fresh = initFromConfig(cfg);
@@ -207,12 +256,71 @@ function bootState(): {
     history: fresh.history,
     seedForms: fresh.seedForms,
     resumed: false,
+    loadFailure,
   };
 }
 
 const booted = bootState();
 const initialConfig = booted.config;
 const initial = booted;
+
+/**
+ * Throttle quota-exceeded warnings so we don't spam a toast on every
+ * step once `localStorage` fills up. One warning per minute is plenty
+ * to signal to the user; the autosave best-effort path keeps trying
+ * (and may succeed if the user clears space).
+ */
+let lastQuotaWarnAt = 0;
+const QUOTA_WARN_INTERVAL_MS = 60_000;
+
+/**
+ * Wraps `saveAutosave` so a quota or stringify failure surfaces a
+ * persistence notice in the store instead of silently dropping the
+ * write. Throttled per `QUOTA_WARN_INTERVAL_MS` so a full localStorage
+ * doesn't spam one toast per step.
+ *
+ * On modern browsers, autosave may also be deferred to the next idle
+ * callback to avoid serializing the entire SimulationState on the
+ * step path. The save itself stays synchronous when `requestIdleCallback`
+ * isn't available (Safari < 16, JSDOM, …).
+ */
+function tryAutosave(args: Parameters<typeof saveAutosave>): void {
+  const run = () => {
+    const result = saveAutosave(args[0], args[1]);
+    if (result.ok) return;
+    const now = Date.now();
+    if (result.reason === "quota") {
+      if (now - lastQuotaWarnAt < QUOTA_WARN_INTERVAL_MS) return;
+      lastQuotaWarnAt = now;
+      useSimStore.setState({
+        persistenceNotice: {
+          kind: "quota",
+          message:
+            "Storage is full — autosave can't write your latest progress. Free space in your browser or export a snapshot.",
+          shownAt: now,
+        },
+      });
+    } else if (result.reason === "other") {
+      useSimStore.setState({
+        persistenceNotice: {
+          kind: "save-error",
+          message: "Couldn't write the autosave — your latest progress isn't persisted.",
+          shownAt: now,
+        },
+      });
+    }
+    // `disabled` is silent — the user has localStorage off; spamming
+    // them about it isn't useful.
+  };
+  // Defer off the step path when available so a 200-leaf state's
+  // ~MB of JSON.stringify doesn't land on the render frame.
+  const ric = (globalThis as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+  if (typeof ric === "function") {
+    ric(run, { timeout: 1500 });
+  } else {
+    run();
+  }
+}
 
 export const useSimStore = create<SimStore>((set, get) => ({
   sim: initial.sim,
@@ -238,6 +346,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
   seedFormsByMeaning: initial.seedForms,
   unlockedAchievements: loadPersistedAchievements(),
   lastAchievement: null,
+  persistenceNotice: initial.loadFailure ?? null,
   step: () => {
     const { sim, history, activityHistory, unlockedAchievements, config } = get();
     sim.step();
@@ -263,7 +372,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
     // Throttled autosave so the running simulation survives an
     // accidental reload (or a WebLLM chunk-load failure). Saved every
     // MIN_SAVE_INTERVAL_MS at most — no-op during fast playback.
-    saveAutosave({ config, state, generationsRun: state.generation });
+    tryAutosave([{ config, state, generationsRun: state.generation }]);
   },
   stepN: (n) => {
     const s = get();
@@ -331,10 +440,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
     });
     // Overwrite autosave with the fresh state so a page reload after a
     // reset doesn't resurrect the old simulation.
-    saveAutosave(
+    tryAutosave([
       { config: nextConfig, state: init.state, generationsRun: init.state.generation },
       { force: true },
-    );
+    ]);
   },
   updateConfig: (patch) => {
     const { config } = get();
@@ -351,10 +460,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
       timelineScrubGeneration: null,
       playing: false,
     });
-    saveAutosave(
+    tryAutosave([
       { config: next, state: init.state, generationsRun: init.state.generation },
       { force: true },
-    );
+    ]);
   },
   updateModes: (patch) => get().patchConfigKey("modes", patch),
   updatePhonology: (patch) => get().patchConfigKey("phonology", patch),
@@ -469,6 +578,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
     set({ state: { ...state, tree: { ...state.tree } } });
   },
   dismissAchievementToast: () => set({ lastAchievement: null }),
+  dismissPersistenceNotice: () => set({ persistenceNotice: null }),
+  setPersistenceNotice: (notice) => set({ persistenceNotice: notice }),
   clearAchievements: () => {
     persistAchievements([]);
     set({ unlockedAchievements: [], lastAchievement: null });
@@ -490,10 +601,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
       });
       // Loading an explicit save/run replaces the autosave slot so a
       // subsequent reload resumes where the user just landed.
-      saveAutosave(
+      tryAutosave([
         { config, state: restored, generationsRun: restored.generation },
         { force: true },
-      );
+      ]);
       return;
     }
     set({
@@ -511,14 +622,14 @@ export const useSimStore = create<SimStore>((set, get) => ({
       const s = get();
       for (let i = 0; i < generationsToReplay; i++) s.step();
     } else {
-      saveAutosave(
+      tryAutosave([
         {
           config,
           state: init.state,
           generationsRun: init.state.generation,
         },
         { force: true },
-      );
+      ]);
     }
   },
   /**

@@ -10,6 +10,7 @@ import { MapView } from "./MapView";
 import { SoundLawsView } from "./SoundLawsView";
 import { Glossary } from "./Glossary";
 import { AchievementToast } from "./Achievements";
+import { PersistenceToast } from "./PersistenceToast";
 import { UpdateBanner } from "./UpdateBanner";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
@@ -184,6 +185,7 @@ export function App() {
         Skip to content
       </a>
       <AchievementToast />
+      <PersistenceToast />
       <UpdateBanner />
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       <header className="header">

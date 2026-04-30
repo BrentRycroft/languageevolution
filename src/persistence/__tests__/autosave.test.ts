@@ -14,8 +14,11 @@ describe("autosave", () => {
     clearAutosave();
   });
 
-  it("returns null when nothing has been saved", () => {
-    expect(loadAutosave()).toBeNull();
+  it("returns ok=false / reason=empty when nothing has been saved", () => {
+    const result = loadAutosave();
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe("empty");
   });
 
   it("round-trips a real simulation state", () => {
@@ -28,13 +31,13 @@ describe("autosave", () => {
       { force: true },
     );
     const loaded = loadAutosave();
-    expect(loaded).not.toBeNull();
-    if (!loaded) return;
-    expect(loaded.state.generation).toBe(state.generation);
-    expect(Object.keys(loaded.state.tree).length).toBe(
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    expect(loaded.payload.state.generation).toBe(state.generation);
+    expect(Object.keys(loaded.payload.state.tree).length).toBe(
       Object.keys(state.tree).length,
     );
-    expect(loaded.config.seed).toBe("autosave-round");
+    expect(loaded.payload.config.seed).toBe("autosave-round");
   });
 
   it("throttles rapid repeat saves", () => {
@@ -44,7 +47,7 @@ describe("autosave", () => {
     const first = sim.getState();
     saveAutosave({ config, state: first, generationsRun: 1 });
     const a = loadAutosave();
-    expect(a?.state.generation).toBe(1);
+    expect(a.ok && a.payload.state.generation).toBe(1);
     // A second save within the throttle window should NOT overwrite the
     // first (no `force`). So loading still shows gen=1 even though we
     // passed a higher-generation state.
@@ -52,14 +55,14 @@ describe("autosave", () => {
     const second = sim.getState();
     saveAutosave({ config, state: second, generationsRun: 2 });
     const b = loadAutosave();
-    expect(b?.state.generation).toBe(1);
+    expect(b.ok && b.payload.state.generation).toBe(1);
     // But `force: true` always writes.
     saveAutosave(
       { config, state: second, generationsRun: 2 },
       { force: true },
     );
     const c = loadAutosave();
-    expect(c?.state.generation).toBe(2);
+    expect(c.ok && c.payload.state.generation).toBe(2);
   });
 
   it("clearAutosave empties the slot", () => {
@@ -70,19 +73,54 @@ describe("autosave", () => {
       { config, state: sim.getState(), generationsRun: 1 },
       { force: true },
     );
-    expect(loadAutosave()).not.toBeNull();
+    expect(loadAutosave().ok).toBe(true);
     clearAutosave();
-    expect(loadAutosave()).toBeNull();
+    const result = loadAutosave();
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("empty");
   });
 
-  it("survives a corrupt payload without throwing", () => {
+  it("returns reason=corrupt on an invalid JSON payload", () => {
     try {
-      localStorage.setItem("lev.autosave.v1", "{not valid json");
+      localStorage.setItem("lev.autosave.v2", "{not valid json");
     } catch {
       // ignore
     }
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(loadAutosave()).toBeNull();
+    const result = loadAutosave();
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("corrupt");
     spy.mockRestore();
+  });
+
+  it("returns reason=future-version on a payload from a newer build", () => {
+    try {
+      localStorage.setItem(
+        "lev.autosave.v2",
+        JSON.stringify({
+          version: 99,
+          savedAt: 1234,
+          config: defaultConfig(),
+          generationsRun: 0,
+          stateSnapshot: {},
+        }),
+      );
+    } catch {
+      // ignore
+    }
+    const result = loadAutosave();
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("future-version");
+  });
+
+  it("saveAutosave returns ok=true on success", () => {
+    const config = { ...defaultConfig(), seed: "result-shape" };
+    const sim = createSimulation(config);
+    sim.step();
+    const result = saveAutosave(
+      { config, state: sim.getState(), generationsRun: 1 },
+      { force: true },
+    );
+    expect(result.ok).toBe(true);
   });
 });

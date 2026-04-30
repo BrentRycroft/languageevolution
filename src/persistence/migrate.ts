@@ -1,17 +1,25 @@
 import type { SavedRun, SimulationConfig } from "../engine/types";
 import { defaultConfig } from "../engine/config";
 
+/** Latest schema version this migrator knows how to read. Update
+ *  whenever a backwards-incompatible field is added or its semantics
+ *  change. Forward-version snapshots (saved by a newer build than the
+ *  one running) are deliberately rejected — a downgrade can't safely
+ *  guess what new fields mean. The `loadAutosave` / `loadRun` paths
+ *  surface this rejection as a `future-version` notice. */
+export const LATEST_SAVE_VERSION = 5;
+
 /**
- * Migrate a saved run from any older schema to the latest (currently v4).
- * v4 drops the `customRules` field (procedural sound-change engine replaces
- * the user-defined DSL) and adds procedural rule state per language.
- * Returns null if the data is unrecognizable.
+ * Migrate a saved run from any older schema to the latest. Returns
+ * null if the data is unrecognizable or its version is newer than
+ * `LATEST_SAVE_VERSION`. Callers can distinguish the two via their
+ * own checks — this function deliberately collapses both into null.
  */
 export function migrateSavedRun(raw: unknown): SavedRun | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   const version = typeof obj.version === "number" ? obj.version : 1;
-  if (version > 5) return null;
+  if (version > LATEST_SAVE_VERSION) return null;
   if (!obj.config || typeof obj.config !== "object") return null;
 
   const defaults = defaultConfig();
