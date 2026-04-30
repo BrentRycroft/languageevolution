@@ -1,5 +1,5 @@
 import type { Language, WordForm } from "../types";
-import { isVowel, isSyllabic } from "./ipa";
+import { syllabify as sonoritySyllabify } from "./syllable";
 
 /**
  * Render a phoneme array as a narrow phonetic transcription:
@@ -53,54 +53,25 @@ interface Syllable {
   coda: string[];
 }
 
+/**
+ * Project the engine's index-based syllable structure (from
+ * `phonology/syllable.ts`) into the phoneme-string view this module
+ * uses. Going through the proper sonority-aware syllabifier means
+ * `matre` parses as `[ma.tre]` (rising-sonority `tr` onset) rather
+ * than the old 50/50 heuristic's `[mat.re]`.
+ */
 function syllabify(form: WordForm): Syllable[] {
-  // Walk the form finding nuclei (vowels + syllabic resonants). Each
-  // nucleus anchors one syllable. Consonants between nuclei are split
-  // by the max-onset principle: as many as possible attach to the
-  // following syllable's onset, with the first consonant always going
-  // to the following onset when there's one nucleus left.
-  const nucleusIdx: number[] = [];
-  for (let i = 0; i < form.length; i++) {
-    if (isVowel(form[i]!) || isSyllabic(form[i]!)) nucleusIdx.push(i);
+  const sylls = sonoritySyllabify(form);
+  if (sylls.length === 0) {
+    return form.length > 0
+      ? [{ onset: [], nucleus: form.slice(), coda: [] }]
+      : [];
   }
-  if (nucleusIdx.length === 0) {
-    // No real nucleus — emit one syllable with whatever we have.
-    return [{ onset: [], nucleus: form.slice(), coda: [] }];
-  }
-
-  const sylls: Syllable[] = [];
-  // Initial onset: everything before the first nucleus.
-  const firstNuc = nucleusIdx[0]!;
-  sylls.push({
-    onset: form.slice(0, firstNuc),
-    nucleus: [form[firstNuc]!],
-    coda: [],
-  });
-
-  for (let n = 1; n < nucleusIdx.length; n++) {
-    const prevNuc = nucleusIdx[n - 1]!;
-    const thisNuc = nucleusIdx[n]!;
-    const between = form.slice(prevNuc + 1, thisNuc);
-    // Max-onset: give the following onset as many consonants as we
-    // can, leaving at most `between.length - 1` for the previous coda.
-    // Simple heuristic: one C between → all to onset; two C → 1 coda + 1
-    // onset; three+ C → split evenly, favouring onset.
-    let codaCount = 0;
-    if (between.length >= 2) codaCount = Math.floor(between.length / 2);
-    const coda = between.slice(0, codaCount);
-    const onset = between.slice(codaCount);
-    sylls[sylls.length - 1]!.coda = coda;
-    sylls.push({
-      onset,
-      nucleus: [form[thisNuc]!],
-      coda: [],
-    });
-  }
-
-  // Final coda: everything after the last nucleus.
-  const lastNuc = nucleusIdx[nucleusIdx.length - 1]!;
-  sylls[sylls.length - 1]!.coda = form.slice(lastNuc + 1);
-  return sylls;
+  return sylls.map((s) => ({
+    onset: s.onset.map((i) => form[i]!),
+    nucleus: [form[s.nucleus]!],
+    coda: s.coda.map((i) => form[i]!),
+  }));
 }
 
 function renderSyllable(s: Syllable, laxVowels: boolean): string {
@@ -108,14 +79,22 @@ function renderSyllable(s: Syllable, laxVowels: boolean): string {
   return s.onset.join("") + nucleus + s.coda.join("");
 }
 
-export function narrowTranscribe(form: WordForm, lang?: Language): string {
+export function narrowTranscribe(
+  form: WordForm,
+  lang?: Language,
+  meaning?: string,
+): string {
   if (form.length === 0) return "";
   const sylls = syllabify(form);
   if (sylls.length === 0) return form.join("");
-  // Primary stress position follows the language's stressPattern
-  // (default penult for back-compat when the field is absent). For
-  // single-syllable words the stress mark is suppressed.
+  // Stress placement: read the language's `stressPattern`, falling
+  // back to `penult` (back-compat). When the language uses
+  // `lexical` accent (PIE mobile-accent style), consult
+  // `lang.lexicalStress[meaning]` for a per-word syllable override.
   const pattern = lang?.stressPattern ?? "penult";
+  const lexicalIdx = pattern === "lexical" && meaning && lang?.lexicalStress
+    ? lang.lexicalStress[meaning]
+    : undefined;
   let stressedIdx: number;
   if (sylls.length <= 1) {
     stressedIdx = 0;
@@ -123,7 +102,12 @@ export function narrowTranscribe(form: WordForm, lang?: Language): string {
     stressedIdx = 0;
   } else if (pattern === "final") {
     stressedIdx = sylls.length - 1;
+  } else if (pattern === "antepenult") {
+    stressedIdx = Math.max(0, sylls.length - 3);
+  } else if (pattern === "lexical" && lexicalIdx !== undefined && lexicalIdx >= 0 && lexicalIdx < sylls.length) {
+    stressedIdx = lexicalIdx;
   } else {
+    // penult (also the lexical fallback)
     stressedIdx = sylls.length - 2;
   }
   const parts = sylls.map((s, i) => {

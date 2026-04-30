@@ -316,6 +316,11 @@ export function presetGermanic(): SimulationConfig {
     // Germanic typology: SOV → SVO drift over time; free articles
     // (`the`-style); preposition strategy for case marking; pre-noun
     // adjectives.
+    // Proto-Germanic underwent a stress shift to fixed initial-syllable
+    // accent (post-PIE). This is the prosodic foundation of all the
+    // subsequent unstressed-final reduction (Verner's Law alternations,
+    // OE → ME ending erosion, etc.).
+    seedStressPattern: "initial",
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "free",

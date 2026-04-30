@@ -318,6 +318,11 @@ export function presetRomance(): SimulationConfig {
     // Romance typology: SVO; free articles (lu < ille; un < unus);
     // preposition strategy; post-noun adjectives (Spanish/French
     // default — "la casa grande").
+    // Latin had penultimate stress (with antepenult retraction when
+    // the penult was light); preserved into all daughter Romance
+    // languages and the precondition for medieval unstressed-vowel
+    // reduction.
+    seedStressPattern: "penult",
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "free",

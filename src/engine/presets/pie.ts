@@ -497,6 +497,12 @@ export function presetPIE(): SimulationConfig {
     // *so / *to); case-marking strategy with eight cases; pre-noun
     // adjectives; pre-noun possessor (genitive). Synthesis ~2.5
     // (highly inflecting fusional system).
+    // PIE had a mobile, lexically-determined word accent — different
+    // roots / paradigm slots stressed different syllables. Daughter
+    // languages later froze the system into fixed positions
+    // (Germanic → initial, Greek → recessive trisyllabic, Latin →
+    // penult, Sanskrit kept mobile longer).
+    seedStressPattern: "lexical",
     seedGrammar: {
       wordOrder: "SOV",
       articlePresence: "none",

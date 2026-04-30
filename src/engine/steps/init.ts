@@ -78,10 +78,14 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     orthography: {},
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},
-    // Proto-languages default to penultimate stress — it's the
-    // typologically commonest pattern worldwide and a neutral
-    // starting point for drift in either direction.
-    stressPattern: "penult",
+    // Proto-languages default to penultimate stress — typologically
+    // the commonest pattern worldwide. Presets may override via
+    // `config.seedStressPattern` (e.g. PIE → `lexical` mobile accent,
+    // Proto-Germanic → `initial` post-stress-shift).
+    stressPattern: config.seedStressPattern ?? "penult",
+    lexicalStress: config.seedLexicalStress
+      ? { ...config.seedLexicalStress }
+      : undefined,
     // Cultural tier starts at 0 (foraging). Advances slowly via
     // `lexicon/tier.ts::computeTierCandidate`. Lexical capacity is
     // tier + age + population driven; initialised below once the
