@@ -13,9 +13,6 @@ import { maybeReanalyse } from "../lexicon/reanalysis";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 
-/** Stress-pattern drift adjacencies — avoid teleporting initial↔final.
- * `lexical` (PIE-style mobile accent) is its own attractor and only
- * drifts to `penult` (the universal default for "no rule"). */
 const STRESS_ADJACENT: Record<
   NonNullable<Language["stressPattern"]>,
   NonNullable<Language["stressPattern"]>[]
@@ -44,11 +41,6 @@ export function stepGrammar(
       description: `${s.feature}: ${String(s.from)} → ${String(s.to)}`,
     });
   }
-  // Stress pattern drifts independently, at roughly a third of the
-  // grammar-drift rate — it's a deeper feature (reshapes the whole
-  // rhythm of the language) and real languages only flip every few
-  // millennia (proto-Germanic initial → Old English initial → Middle
-  // English mixed → Modern English mixed).
   if (rng.chance(0.3)) {
     const current = lang.stressPattern ?? "penult";
     const options = STRESS_ADJACENT[current];
@@ -89,14 +81,7 @@ export function stepMorphology(
         : undefined,
     });
   }
-  // Trudgill-effect: large communities shed paradigms faster than small
-  // ones. Multiplies into the configured probability so very small
-  // languages mostly hold onto their inflections.
   const trudgill = simplificationFactor(lang.speakers);
-  // Substrate-acceleration phase (set by contact.ts when the loan
-  // rate exceeds the threshold). Triples the merger probability for
-  // up to 50 gens — models the case-system collapse we see in
-  // languages that absorb mass loans (Old English under Norse).
   const substrateBoost =
     (lang.substrateAccelerationRemaining ?? 0) > 0 ? 3 : 1;
   const merge = maybeMergeParadigms(
@@ -139,9 +124,6 @@ export function stepMorphology(
       });
     }
   }
-  // Conjugation/declension class emergence. Inverse of the Trudgill
-  // factor — small isolated communities elaborate phonologically-
-  // conditioned class splits more readily than big lingua francas.
   const conjClassRate = 0.005 * lang.conservatism / Math.max(0.7, simplificationFactor(lang.speakers));
   if (conjClassRate > 0) {
     const split = maybeSplitParadigm(lang, rng, conjClassRate);
@@ -153,11 +135,6 @@ export function stepMorphology(
       });
     }
   }
-  // Morphological reanalysis: occasional compound → productive
-  // suffix promotion. Low rate because productive suffixes
-  // historically take centuries to stabilise out of fossil
-  // compounds. Bigger effect in the long run since it expands the
-  // language's derivational repertoire.
   const reanalysisRate = 0.004 * lang.conservatism;
   if (reanalysisRate > 0) {
     const ev = maybeReanalyse(lang, rng, reanalysisRate);

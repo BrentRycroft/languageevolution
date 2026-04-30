@@ -1,10 +1,5 @@
 import type { Language } from "../types";
 
-/**
- * Map a wordOrder enum value to the constituent permutation used by
- * the realiser. Single source of truth — was duplicated verbatim in
- * `sentence.ts` and `realise.ts`.
- */
 export function sliceOrder(
   wo: Language["grammar"]["wordOrder"],
 ): Array<"S" | "V" | "O"> {

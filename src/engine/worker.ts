@@ -1,8 +1,4 @@
-/// <reference lib="webworker" />
 
-// Engine Web Worker: holds a Simulation and handles messages for
-// fast-forward (stepN) off the main thread. This keeps the UI thread
-// responsive during long runs without making every interaction async.
 
 import { createSimulation, type Simulation } from "./simulation";
 import type { SimulationConfig, SimulationState } from "./types";

@@ -17,8 +17,6 @@ describe("stagnation resistance", () => {
         tree[id]!.language.events.filter((e) => e.kind === "sound_change").length,
       )
       .reduce((a, b) => a + b, 0);
-    // With the event ring buffer capped at 80 per language and several leaves,
-    // we expect comfortably more than a trivial number.
     expect(totalSoundChanges).toBeGreaterThan(40);
   });
 
@@ -27,7 +25,6 @@ describe("stagnation resistance", () => {
     for (let g = 0; g < 200; g++) {
       values.add(rateMultiplier(g, "L-0").toFixed(3));
     }
-    // Sinusoidal + burst produces many distinct values over 200 generations.
     expect(values.size).toBeGreaterThan(25);
   });
 });

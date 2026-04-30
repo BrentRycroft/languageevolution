@@ -62,7 +62,6 @@ describe("phonology/templates", () => {
       produced++;
       expect(Object.keys(proposal.outputMap).length).toBeGreaterThan(0);
     }
-    // Most templates should produce something for a rich inventory.
     expect(produced).toBeGreaterThan(5);
   });
 
@@ -74,7 +73,7 @@ describe("phonology/templates", () => {
       const proposal = t.propose(rich, rng);
       if (!proposal) continue;
       for (const output of Object.values(proposal.outputMap)) {
-        if (output === "") continue; // Deletion.
+        if (output === "") continue;
         expect(PHONE_FEATURES[output]).toBeDefined();
       }
     }

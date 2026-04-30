@@ -7,16 +7,6 @@ import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import type { Language } from "../engine/types";
 
-/**
- * One-language dictionary view. Replaces the multi-language
- * matrix-style Lexicon tab (which moved to the Compare tab in PR C).
- *
- * Lists every meaning the selected language knows, sorted alphabetically
- * by default, with surface form, POS, semantic cluster, and cultural
- * tier per row. A grammar summary at the top shows the language's
- * typology profile (word order, article system, case strategy, etc.) so
- * the dictionary doubles as a per-language grammar sheet.
- */
 export function DictionaryView() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);
@@ -154,11 +144,6 @@ function DictionaryHeader({ lang, entryCount }: { lang: Language; entryCount: nu
   );
 }
 
-/**
- * Grammar summary card — surfaces the typology profile so a user
- * landing on the dictionary tab can immediately read off the
- * language's grammatical character.
- */
 function GrammarCard({ lang }: { lang: Language }) {
   const g = lang.grammar;
   const rows: Array<[string, string]> = [

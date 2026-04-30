@@ -8,7 +8,6 @@ function freshLang(seed: string): Language {
   const sim = createSimulation({ ...defaultConfig(), seed });
   sim.step();
   const lang = sim.getState().tree["L-0"]!.language;
-  // Backfill a few common content words so the resolver has hits.
   if (!lang.lexicon["water"]) lang.lexicon["water"] = ["w", "a", "t"];
   if (!lang.lexicon["see"]) lang.lexicon["see"] = ["s", "i"];
   if (!lang.lexicon["mother"]) lang.lexicon["mother"] = ["m", "a"];
@@ -25,7 +24,6 @@ describe("§2.1 — tree-driven realisation: word order", () => {
     lang.grammar.articlePresence = "none";
     lang.grammar.caseStrategy = "case";
     const out = translateSentence(lang, "the dog sees the mother");
-    // SOV: dog (S), mother (O), sees (V) — find their indices in arranged.
     const arr = out.targetTokens.map((t) => t.englishLemma);
     const sIdx = arr.indexOf("dog");
     const oIdx = arr.indexOf("mother");
@@ -82,7 +80,6 @@ describe("§2.1 — negation", () => {
     const arr = out.targetTokens.map((t) => t.glossNote);
     const negIdx = arr.indexOf("neg");
     expect(negIdx).toBeGreaterThanOrEqual(0);
-    // The verb should be after the negator.
     const vIdx = out.targetTokens.findIndex((t) => t.englishLemma === "see");
     expect(vIdx).toBeGreaterThan(negIdx);
   });
@@ -91,7 +88,6 @@ describe("§2.1 — negation", () => {
     const lang = freshLang("neg-suf");
     lang.grammar.negationPosition = "suffix";
     const out = translateSentence(lang, "the dog does not see");
-    // There should be no standalone NEG token.
     expect(out.targetTokens.find((t) => t.glossNote === "neg")).toBeUndefined();
   });
 });
@@ -100,8 +96,6 @@ describe("§2.1 — prodrop", () => {
   it("drops pronoun subject when verb agreement carries it", () => {
     const lang = freshLang("prodrop");
     lang.grammar.prodrop = true;
-    // Manufacture a verb.person.3sg paradigm so the agreement check
-    // succeeds and the realiser drops the subject pronoun.
     lang.morphology.paradigms["verb.person.3sg"] = {
       affix: ["t"],
       position: "suffix",

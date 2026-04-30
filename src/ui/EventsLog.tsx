@@ -55,12 +55,6 @@ export function EventsLog() {
       )}
       <div className="col-2">
         {events.map((e, i) => (
-          // Stable key: generation + kind + index-within-the-rendered
-          // list. The reverse() above means newer events sit at lower
-          // indices, so a fresh event prepends and React would
-          // otherwise re-key every existing row under a plain `i`.
-          // Including `e.generation` and `e.kind` keeps the row's
-          // identity tied to the event itself across re-renders.
           <div
             key={`${e.generation}-${e.kind}-${i}`}
             style={{

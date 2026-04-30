@@ -3,17 +3,6 @@ import type { Rng } from "../rng";
 import { clusterOf, relatedMeanings } from "../semantics/clusters";
 import { isFormLegal } from "../phonology/wordShape";
 
-/**
- * Analogical leveling: occasionally reshape a form that stands out
- * from its semantic-cluster mates. Real languages do this all the
- * time — irregular survivors get replaced by the productive pattern
- * (English `holp → helped`, `boughten → bought`). We pick the
- * clearest proxy for "irregular": a content word whose length
- * differs by ≥ 2 segments from its cluster mean, and trim / pad it
- * toward the mean by snipping a tail or duplicating a nucleus.
- *
- * Called from `stepMorphology` at `analogyProbability` per generation.
- */
 export interface AnalogyEvent {
   meaning: string;
   from: string;
@@ -26,13 +15,8 @@ export function maybeAnalogicalLevel(
   probability: number,
 ): AnalogyEvent | null {
   if (!rng.chance(probability)) return null;
-  // Pick a random semantic cluster the language has at least 3
-  // representatives of; looking at a single cluster gives the
-  // analogy target a defined neighbourhood.
   const meanings = Object.keys(lang.lexicon);
   if (meanings.length < 3) return null;
-  // Candidate meanings: those with a cluster AND two or more
-  // cluster-mates in the lexicon.
   const candidates: Array<{
     meaning: string;
     mean: number;
@@ -57,12 +41,8 @@ export function maybeAnalogicalLevel(
   const target = Math.round(chosen.mean);
   let next: WordForm;
   if (chosen.form.length > target) {
-    // Trim from the end; the accented stressed syllable stays at the
-    // start (leveling rarely chops the stressed root).
     next = chosen.form.slice(0, Math.max(2, target));
   } else {
-    // Pad by duplicating the nucleus-adjacent segment — a crude way
-    // to make a short outlier feel closer to its cluster-mates.
     const middle = Math.floor(chosen.form.length / 2);
     const pad = chosen.form[middle]!;
     next = [...chosen.form.slice(0, middle + 1), pad, ...chosen.form.slice(middle + 1)];

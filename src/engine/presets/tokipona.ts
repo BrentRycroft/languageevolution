@@ -2,189 +2,146 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
-/**
- * Toki pona preset — the famously minimal constructed language.
- *
- * ~120 root words, phonology limited to {a e i o u} + {p t k s m n l j w},
- * SVO, no tense marking, no case, no gender, no paradigms. Conservatism
- * set slightly above average since the community actively preserves the
- * minimalist character.
- *
- * The mapping from toki pona roots to Basic-240 meanings is opinionated
- * — toki pona's words are famously abstract ("pona" = good / simple /
- * correct) so there's no clean 1:1 match. We pick the most conventional
- * gloss and let semantic drift + the procedural engine take it from there.
- */
-
 const LEXICON: Lexicon = {
-  // Environment
-  water: ["t", "e", "l", "o"],      // telo
-  fire: ["s", "e", "l", "i"],       // seli
-  stone: ["k", "i", "w", "e", "n"], // kiwen
-  tree: ["k", "a", "s", "i"],       // kasi
-  sun: ["s", "u", "n", "o"],        // suno
-  moon: ["m", "u", "n"],            // mun
-  star: ["m", "u", "n"],            // mun (reused)
-  night: ["p", "i", "m", "e", "j", "a"], // pimeja
-  day: ["s", "u", "n", "o"],        // suno (reused)
-  sky: ["s", "e", "w", "i"],        // sewi
-  earth: ["m", "a"],                // ma
-  sea: ["t", "e", "l", "o"],        // telo (reused)
+  water: ["t", "e", "l", "o"],
+  fire: ["s", "e", "l", "i"],
+  stone: ["k", "i", "w", "e", "n"],
+  tree: ["k", "a", "s", "i"],
+  sun: ["s", "u", "n", "o"],
+  moon: ["m", "u", "n"],
+  star: ["m", "u", "n"],
+  night: ["p", "i", "m", "e", "j", "a"],
+  day: ["s", "u", "n", "o"],
+  sky: ["s", "e", "w", "i"],
+  earth: ["m", "a"],
+  sea: ["t", "e", "l", "o"],
 
-  // Body
-  head: ["l", "a", "w", "a"],       // lawa
-  eye: ["l", "u", "k", "i", "n"],   // lukin
-  mouth: ["u", "t", "a"],           // uta
-  ear: ["k", "u", "t", "e"],        // kute
-  hand: ["l", "u", "k", "a"],       // luka
-  foot: ["n", "o", "k", "a"],       // noka
-  body: ["s", "i", "j", "e", "l", "o"], // sijelo
-  skin: ["s", "e", "l", "o"],       // selo
-  bone: ["k", "i", "w", "e", "n"],  // kiwen (reused)
-  blood: ["t", "e", "l", "o"],      // telo (reused)
-  hair: ["l", "i", "n", "j", "a"],  // linja
-  nose: ["n", "e", "n", "a"],       // nena
-  heart: ["p", "i", "l", "i", "n"], // pilin
+  head: ["l", "a", "w", "a"],
+  eye: ["l", "u", "k", "i", "n"],
+  mouth: ["u", "t", "a"],
+  ear: ["k", "u", "t", "e"],
+  hand: ["l", "u", "k", "a"],
+  foot: ["n", "o", "k", "a"],
+  body: ["s", "i", "j", "e", "l", "o"],
+  skin: ["s", "e", "l", "o"],
+  bone: ["k", "i", "w", "e", "n"],
+  blood: ["t", "e", "l", "o"],
+  hair: ["l", "i", "n", "j", "a"],
+  nose: ["n", "e", "n", "a"],
+  heart: ["p", "i", "l", "i", "n"],
 
-  // Kinship / person
-  mother: ["m", "a", "m", "a"],     // mama
-  father: ["m", "a", "m", "a"],     // mama (same)
-  child: ["j", "a", "n"],           // jan (person)
-  friend: ["j", "a", "n"],          // jan
-  wife: ["m", "e", "l", "i"],       // meli
-  husband: ["m", "i", "j", "e"],    // mije
+  mother: ["m", "a", "m", "a"],
+  father: ["m", "a", "m", "a"],
+  child: ["j", "a", "n"],
+  friend: ["j", "a", "n"],
+  wife: ["m", "e", "l", "i"],
+  husband: ["m", "i", "j", "e"],
 
-  // Actions
-  go: ["t", "a", "w", "a"],         // tawa
-  come: ["t", "a", "w", "a"],       // tawa (reused)
-  see: ["l", "u", "k", "i", "n"],   // lukin
-  know: ["s", "o", "n", "a"],       // sona
-  eat: ["m", "o", "k", "u"],        // moku
-  drink: ["m", "o", "k", "u"],      // moku (reused)
-  sleep: ["l", "a", "p", "e"],      // lape
-  die: ["m", "o", "l", "i"],        // moli
-  speak: ["t", "o", "k", "i"],      // toki
-  hear: ["k", "u", "t", "e"],       // kute (reused)
-  fight: ["u", "t", "a", "l", "a"], // utala
-  work: ["p", "a", "l", "i"],       // pali
-  give: ["p", "a", "n", "a"],       // pana
-  open: ["o", "p", "e", "n"],       // open
-  stay: ["a", "w", "e", "n"],       // awen
+  go: ["t", "a", "w", "a"],
+  come: ["t", "a", "w", "a"],
+  see: ["l", "u", "k", "i", "n"],
+  know: ["s", "o", "n", "a"],
+  eat: ["m", "o", "k", "u"],
+  drink: ["m", "o", "k", "u"],
+  sleep: ["l", "a", "p", "e"],
+  die: ["m", "o", "l", "i"],
+  speak: ["t", "o", "k", "i"],
+  hear: ["k", "u", "t", "e"],
+  fight: ["u", "t", "a", "l", "a"],
+  work: ["p", "a", "l", "i"],
+  give: ["p", "a", "n", "a"],
+  open: ["o", "p", "e", "n"],
+  stay: ["a", "w", "e", "n"],
 
-  // Animals
-  dog: ["s", "o", "w", "e", "l", "i"],  // soweli
-  cow: ["s", "o", "w", "e", "l", "i"],  // soweli
-  wolf: ["s", "o", "w", "e", "l", "i"], // soweli
+  dog: ["s", "o", "w", "e", "l", "i"],
+  cow: ["s", "o", "w", "e", "l", "i"],
+  wolf: ["s", "o", "w", "e", "l", "i"],
   horse: ["s", "o", "w", "e", "l", "i"],
-  fish: ["k", "a", "l", "a"],       // kala
-  bird: ["w", "a", "s", "o"],       // waso
-  snake: ["p", "i", "p", "i"],      // pipi
+  fish: ["k", "a", "l", "a"],
+  bird: ["w", "a", "s", "o"],
+  snake: ["p", "i", "p", "i"],
   cat: ["s", "o", "w", "e", "l", "i"],
   bear: ["s", "o", "w", "e", "l", "i"],
 
-  // Plants
-  flower: ["k", "a", "s", "i"],     // kasi
-  fruit: ["k", "i", "l", "i"],      // kili
-  seed: ["k", "i", "l", "i"],       // kili
-  leaf: ["l", "i", "p", "u"],       // lipu
+  flower: ["k", "a", "s", "i"],
+  fruit: ["k", "i", "l", "i"],
+  seed: ["k", "i", "l", "i"],
+  leaf: ["l", "i", "p", "u"],
 
-  // Quality
-  good: ["p", "o", "n", "a"],       // pona
-  bad: ["i", "k", "e"],             // ike
-  big: ["s", "u", "l", "i"],        // suli
-  small: ["l", "i", "l", "i"],      // lili
-  new: ["s", "i", "n"],             // sin
-  // `majuna` isn't in the canonical 137-word pu list (post-pu / `ku
-  // suli` extension). Use `pi tenpo pini` paraphrase by mapping to
-  // `tenpo` (time) + `pini` (end) — but flat lookup forces a single
-  // form, so we use `tenpo` here. Languages that want a richer form
-  // can compose at narrative time.
-  old: ["t", "e", "n", "p", "o"],   // tenpo "time" (proxy)
-  hot: ["s", "e", "l", "i"],        // seli (reused)
-  cold: ["l", "e", "t", "e"],       // lete
-  hard: ["k", "i", "w", "e", "n"],  // kiwen
-  soft: ["k", "o"],                 // ko
-  strong: ["w", "a", "w", "a"],     // wawa
-  weak: ["l", "i", "l", "i"],       // lili "small" — TP merges weak/small
-  long: ["l", "i", "n", "j", "a"],  // linja
-  short: ["l", "i", "l", "i"],      // lili
+  good: ["p", "o", "n", "a"],
+  bad: ["i", "k", "e"],
+  big: ["s", "u", "l", "i"],
+  small: ["l", "i", "l", "i"],
+  new: ["s", "i", "n"],
+  old: ["t", "e", "n", "p", "o"],
+  hot: ["s", "e", "l", "i"],
+  cold: ["l", "e", "t", "e"],
+  hard: ["k", "i", "w", "e", "n"],
+  soft: ["k", "o"],
+  strong: ["w", "a", "w", "a"],
+  weak: ["l", "i", "l", "i"],
+  long: ["l", "i", "n", "j", "a"],
+  short: ["l", "i", "l", "i"],
 
-  // Pronouns
-  i: ["m", "i"],                    // mi
-  you: ["s", "i", "n", "a"],        // sina
-  they: ["o", "n", "a"],            // ona
-  we: ["m", "i"],                   // mi (plural by context)
-  "he-she": ["o", "n", "a"],        // ona
-  this: ["n", "i"],                 // ni
-  that: ["n", "i"],                 // ni
+  i: ["m", "i"],
+  you: ["s", "i", "n", "a"],
+  they: ["o", "n", "a"],
+  we: ["m", "i"],
+  "he-she": ["o", "n", "a"],
+  this: ["n", "i"],
+  that: ["n", "i"],
 
-  // Numbers
-  one: ["w", "a", "n"],             // wan
-  two: ["t", "u"],                  // tu
-  three: ["m", "u", "t", "e"],      // mute (many)
-  many: ["m", "u", "t", "e"],       // mute
-  few: ["l", "i", "l", "i"],        // lili
+  one: ["w", "a", "n"],
+  two: ["t", "u"],
+  three: ["m", "u", "t", "e"],
+  many: ["m", "u", "t", "e"],
+  few: ["l", "i", "l", "i"],
 
-  // Abstract / cultural
-  name: ["n", "i", "m", "i"],       // nimi
-  word: ["n", "i", "m", "i"],       // nimi
-  song: ["k", "a", "l", "a", "m", "a"], // kalama
-  home: ["t", "o", "m", "o"],       // tomo
-  village: ["m", "a"],              // ma
-  road: ["n", "a", "s", "i", "n"],  // nasin
-  love: ["o", "l", "i", "n"],       // olin
-  war: ["u", "t", "a", "l", "a"],   // utala
-  // `ke` isn't a Toki Pona word. Use `ken` "able / can / possible"
-  // — the closest canonical concept to "free".
-  free: ["k", "e", "n"],            // ken
-  spirit: ["k", "o", "n"],          // kon
-  god: ["s", "e", "w", "i"],        // sewi
-  law: ["l", "a", "w", "a"],        // lawa (extended)
-  gift: ["p", "a", "n", "a"],       // pana
-  story: ["t", "o", "k", "i"],      // toki
-  // — closed-class roots (toki pona has no articles; coordinator
-  //   `en`; preposition particles; negator `ala`). —
-  he: ["o", "n", "a"],              // ona
-  she: ["o", "n", "a"],             // ona
-  it: ["n", "i"],                   // ni
-  and: ["e", "n"],                  // en (with subjects); coord
-  or: ["a", "n", "u"],              // anu
-  not: ["a", "l", "a"],             // ala
-  in: ["l", "o", "n"],              // lon
-  on: ["s", "u", "p", "a"],         // supa
-  to: ["t", "a", "w", "a"],         // tawa
-  for: ["t", "a", "w", "a"],        // tawa (covers benefactive)
-  by: ["k", "e", "p", "e", "k", "e", "n"], // kepeken (instrument/by)
-  // — colours + canonical pu staples that were missing —
-  yellow: ["j", "e", "l", "o"],     // jelo
-  red: ["l", "o", "j", "e"],        // loje
-  // pu merges blue and green into `laso`.
-  blue: ["l", "a", "s", "o"],       // laso
-  green: ["l", "a", "s", "o"],      // laso
-  white: ["w", "a", "l", "o"],      // walo
-  black: ["p", "i", "m", "e", "j", "a"], // pimeja
-  time: ["t", "e", "n", "p", "o"],  // tenpo
-  thing: ["i", "j", "o"],           // ijo
-  all: ["a", "l", "i"],             // ali / ale
-  become: ["k", "a", "m", "a"],     // kama
+  name: ["n", "i", "m", "i"],
+  word: ["n", "i", "m", "i"],
+  song: ["k", "a", "l", "a", "m", "a"],
+  home: ["t", "o", "m", "o"],
+  village: ["m", "a"],
+  road: ["n", "a", "s", "i", "n"],
+  love: ["o", "l", "i", "n"],
+  war: ["u", "t", "a", "l", "a"],
+  free: ["k", "e", "n"],
+  spirit: ["k", "o", "n"],
+  god: ["s", "e", "w", "i"],
+  law: ["l", "a", "w", "a"],
+  gift: ["p", "a", "n", "a"],
+  story: ["t", "o", "k", "i"],
+  he: ["o", "n", "a"],
+  she: ["o", "n", "a"],
+  it: ["n", "i"],
+  and: ["e", "n"],
+  or: ["a", "n", "u"],
+  not: ["a", "l", "a"],
+  in: ["l", "o", "n"],
+  on: ["s", "u", "p", "a"],
+  to: ["t", "a", "w", "a"],
+  for: ["t", "a", "w", "a"],
+  by: ["k", "e", "p", "e", "k", "e", "n"],
+  yellow: ["j", "e", "l", "o"],
+  red: ["l", "o", "j", "e"],
+  blue: ["l", "a", "s", "o"],
+  green: ["l", "a", "s", "o"],
+  white: ["w", "a", "l", "o"],
+  black: ["p", "i", "m", "e", "j", "a"],
+  time: ["t", "e", "n", "p", "o"],
+  thing: ["i", "j", "o"],
+  all: ["a", "l", "i"],
+  become: ["k", "a", "m", "a"],
 };
 
-/** Per-meaning default frequency hint. Toki pona has no "rare" words to
- *  speak of; the ~120 roots each do a lot of work. */
 const FREQ: Record<Meaning, number> = {
   i: 0.98, you: 0.98, good: 0.95, bad: 0.9,
   water: 0.9, fire: 0.85, eat: 0.9, see: 0.9,
   big: 0.85, small: 0.85, speak: 0.9,
 };
 
-/** Toki pona has no inflectional morphology. */
 const MORPHOLOGY: Morphology = { paradigms: {} };
 
-/**
- * Bias the procedural generator toward minimal change. Halves lenition
- * and fortition; zeroes tone and metathesis; leaves vowel shifts and
- * palatalisation near default so the language can still drift in flavour.
- */
 const RULE_BIAS: Record<string, number> = {
   lenition: 0.5,
   fortition: 0.5,
@@ -206,12 +163,6 @@ export function presetTokipona(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
-    // Toki Pona typology: SVO; no articles; minimalist analytical
-    // (synthesisIndex 1.0); preposition strategy via particles like
-    // `lon` / `tawa` / `kepeken`; pre-noun modifier convention
-    // (sona ike = "bad knowledge").
-    // Toki Pona stress always falls on the first syllable per the
-    // canonical pu rules.
     seedStressPattern: "initial",
     seedGrammar: {
       wordOrder: "SVO",

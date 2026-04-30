@@ -9,12 +9,6 @@ export interface CognateEntry {
   extinct: boolean;
 }
 
-/**
- * Trace a meaning across every language in the tree (alive and extinct).
- * Returns the form in each one, rendered in the caller's chosen script
- * (IPA by default, also roman / both), or "—" if the word has been
- * retired or semantically shifted out of that language.
- */
 export function findCognates(
   tree: LanguageTree,
   meaning: Meaning,
@@ -41,10 +35,6 @@ export interface EtymologyStep {
   languageName: string;
 }
 
-/**
- * Trace a meaning back up the ancestry chain of one leaf language, so we can
- * show "water was wodr in Proto, watr in L-3, wat in Modern Foo."
- */
 export function traceEtymology(
   tree: LanguageTree,
   leafId: string,
@@ -71,9 +61,6 @@ export function traceEtymology(
   return steps;
 }
 
-/**
- * For cross-language comparisons in the UI.
- */
 export function aliveLeafIds(tree: LanguageTree): string[] {
   return leafIds(tree).filter((id) => !tree[id]!.language.extinct);
 }

@@ -1,7 +1,3 @@
-// Smoke test: run each preset, dump tier/capacity/recarve telemetry.
-// Standalone Node script (TS via ts-node-style import resolution that
-// vitest inherits — we run it through vitest so the existing tsconfig
-// applies).
 import { describe, it } from "vitest";
 import { createSimulation } from "../simulation";
 import { PRESETS } from "../presets";
@@ -73,7 +69,6 @@ function runPreset(presetId: string, generations: number): {
 } {
   const preset = PRESETS.find((p) => p.id === presetId)!;
   const config = preset.build();
-  // Force a fixed seed so the smoke test is reproducible.
   const sim = createSimulation({ ...config, seed: `smoke-${presetId}` });
   for (let i = 0; i < generations; i++) sim.step();
   const state = sim.getState();
@@ -95,10 +90,6 @@ function runPreset(presetId: string, generations: number): {
 describe("concept-dictionary integration smoke test", () => {
   it.each(PRESETS.map((p) => p.id))("preset %s runs 800 gens cleanly", (presetId) => {
     const result = runPreset(presetId, 800);
-    // Dump a compact telemetry summary so a CI log shows what shape the
-    // run took. We don't assert specific tier/recarve counts since
-    // they're stochastic; we only assert non-crashing behaviour and
-    // reasonable bounds.
     // eslint-disable-next-line no-console
     console.log(
       `\n=== ${presetId} @ gen ${result.generation} ===\n` +
@@ -117,11 +108,8 @@ describe("concept-dictionary integration smoke test", () => {
           (l.exampleColex.length > 0 ? ` colex=${l.exampleColex.join(",")}` : ""),
       );
     }
-    // Sanity bounds:
-    //  - At least one leaf is alive.
     const alive = result.leaves.filter((l) => l.alive);
     if (alive.length === 0) throw new Error(`${presetId}: no alive leaves at gen ${result.generation}`);
-    //  - No leaf has lexSize > 3× capacity (capacity should throttle).
     for (const l of alive) {
       if (l.lexSize > 3 * l.capacity) {
         throw new Error(
@@ -129,7 +117,6 @@ describe("concept-dictionary integration smoke test", () => {
         );
       }
     }
-    //  - No leaf has lexSize < 20 (something is very wrong).
     for (const l of alive) {
       if (l.lexSize < 20) {
         throw new Error(
@@ -140,11 +127,6 @@ describe("concept-dictionary integration smoke test", () => {
   });
 
   it("default preset shows tier advancement over a long run", () => {
-    // Try a handful of seeds — tier advancement is stochastic (age
-    // pressure fires with 10% probability per check) so a single
-    // seed can legitimately stay at tier 0. We only need at least
-    // one of the sample to advance, which proves the mechanism is
-    // wired in and working.
     const SEEDS = ["tier-stress-a", "tier-stress-b", "tier-stress-c", "tier-stress-d"];
     let bestTier = 0;
     let bestSpeakers = 0;

@@ -5,20 +5,6 @@ import { PRESETS } from "../presets";
 import { leafIds } from "../tree/split";
 import { buildGrammarBrief } from "../../persistence/export";
 
-/**
- * End-to-end integration smoke test. Exercises the full engine over
- * a long run on every preset, then poke at the produced state in the
- * same shape the UI consumes. The point is to catch any contract drift
- * between engine internals and view-layer expectations:
- *   - every Language has the fields the UI reads (extinct, lexicon,
- *     grammar, events, conservatism, speakers, …);
- *   - new optional fields (culturalTier, lexicalCapacity,
- *     colexifiedAs, derivationalSuffixes, suppletion, stressPattern)
- *     are either undefined or have the type they're declared as;
- *   - serialising the state via JSON.stringify (the persistence
- *     transport) and round-tripping through restoreState works;
- *   - a grammarBrief Markdown render doesn't throw.
- */
 describe("end-to-end integration", () => {
   it.each(PRESETS.map((p) => p.id))("preset %s runs + serialises + restores cleanly", (presetId) => {
     const config = PRESETS.find((p) => p.id === presetId)!.build();
@@ -28,7 +14,6 @@ describe("end-to-end integration", () => {
     const alive = leafIds(state.tree).filter((id) => !state.tree[id]!.language.extinct);
     expect(alive.length).toBeGreaterThan(0);
 
-    // Every alive language must have the fields the UI reads.
     for (const id of alive) {
       const lang = state.tree[id]!.language;
       expect(typeof lang.id).toBe("string");
@@ -41,7 +26,6 @@ describe("end-to-end integration", () => {
       expect(lang.phonemeInventory).toBeDefined();
       expect(Array.isArray(lang.phonemeInventory.segmental)).toBe(true);
       expect(lang.morphology).toBeDefined();
-      // New optional fields must have correct types when present.
       if (lang.culturalTier !== undefined) {
         expect([0, 1, 2, 3]).toContain(lang.culturalTier);
       }
@@ -64,7 +48,6 @@ describe("end-to-end integration", () => {
           expect(Array.isArray(s.affix)).toBe(true);
         }
       }
-      // Every form must be a non-empty array of strings.
       for (const [m, form] of Object.entries(lang.lexicon)) {
         expect(typeof m).toBe("string");
         expect(Array.isArray(form)).toBe(true);
@@ -73,22 +56,17 @@ describe("end-to-end integration", () => {
       }
     }
 
-    // Persistence round-trip via JSON (matches what the saved-runs
-    // store does over IndexedDB).
     const json = JSON.stringify(state);
     const parsed = JSON.parse(json);
     expect(parsed.generation).toBe(state.generation);
     expect(Object.keys(parsed.tree).sort()).toEqual(Object.keys(state.tree).sort());
 
-    // restoreState should accept the parsed snapshot without throwing.
     const sim2 = createSimulation({ ...config, seed: `e2e-${presetId}` });
     sim2.restoreState(parsed);
     expect(sim2.getState().generation).toBe(state.generation);
-    // After restore, one more step should produce a valid state.
     sim2.step();
     expect(sim2.getState().generation).toBe(state.generation + 1);
 
-    // The grammarBrief Markdown renderer should accept any alive language.
     for (const id of alive.slice(0, 1)) {
       const brief = buildGrammarBrief(state, id);
       expect(typeof brief).toBe("string");
@@ -106,10 +84,6 @@ describe("end-to-end integration", () => {
         families.add(e.kind);
       }
     }
-    // The sim emits these event kinds in normal use. We don't assert
-    // every single one fires within 600 gens (some are rare), but at
-    // least the common ones should appear. If the contract changes
-    // and a kind disappears entirely, this test will catch it.
     expect(families.has("sound_change")).toBe(true);
     expect(families.has("coinage")).toBe(true);
   });
@@ -129,7 +103,6 @@ describe("end-to-end integration", () => {
     for (const id of Object.keys(stateA.tree)) {
       const langA = stateA.tree[id]!.language;
       const langB = stateB.tree[id]!.language;
-      // Compare lexicon by joined-form strings (cheaper than deep equality).
       const formA: Record<string, string> = {};
       const formB: Record<string, string> = {};
       for (const [m, f] of Object.entries(langA.lexicon)) formA[m] = f.join("|");

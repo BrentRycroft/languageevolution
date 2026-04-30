@@ -10,17 +10,6 @@ import { YEARS_PER_GENERATION } from "../engine/constants";
 
 type TreeMode = "phylogeny" | "stemma";
 
-/**
- * Structured payload for the tree-node hover card. Replaces the
- * previous one-line string passed through SVG `<title>` (slow to
- * appear, can't be styled, no multi-line on every browser).
- *
- * Fields are read by `TreeNodeHover` in render order: header (name +
- * extinct flag + age) → stat row (conservatism icon + word/borrow
- * counts) → sample IPA chips. Building structured data lets us
- * style each row independently and change the layout without
- * touching the data builder.
- */
 interface TooltipData {
   name: string;
   extinct: boolean;
@@ -38,9 +27,6 @@ interface NodeDatum {
   sample: string;
   isLeaf: boolean;
   extinct: boolean;
-  /** Structured tooltip data — the hover card surfaces these fields
-   *  individually (name in the header, samples as IPA chips, etc.)
-   *  instead of squashing everything into an SVG <title>. */
   tooltip: TooltipData;
   children?: NodeDatum[];
 }
@@ -78,11 +64,6 @@ function buildTooltip(
   };
 }
 
-/**
- * Hover-card flatten for screen readers / fallback aria-label. The
- * card itself is the primary surface; this string keeps a useful
- * announcement when AT can't reach the rendered card.
- */
 function tooltipToString(t: TooltipData): string {
   return [
     t.name + (t.extinct ? " (extinct)" : ""),
@@ -159,7 +140,6 @@ export function LanguageTreeView() {
     const data = buildHierarchy(state.tree, state.rootId, sample, state.generation, script, yearsPerGen);
     const root = hierarchy(data);
     const margin = 24;
-    // Vertical layout: x spreads horizontally, y is depth downward.
     const w = Math.max(200, size.w - margin * 2);
     const h = Math.max(160, size.h - margin * 2 - 20);
     d3tree<NodeDatum>().size([w, h]).separation(() => 1.2)(root);
@@ -211,13 +191,9 @@ export function LanguageTreeView() {
             const sourceData = link.source.data as NodeDatum;
             const targetData = link.target.data as NodeDatum;
             const targetExtinct = targetData.extinct;
-            // Vertical orientation: route via midpoint Y.
             const midY = (s.y + t.y) / 2;
             const path = `M${s.x},${s.y} C${s.x},${midY} ${t.x},${midY} ${t.x},${t.y}`;
             return (
-              // Stable key: parent → child id pair. Survives layout
-              // recomputation across re-renders so D3's link order
-              // doesn't reset SVG path identity.
               <path
                 key={`${sourceData.id}->${targetData.id}`}
                 className="tree-link"
@@ -234,7 +210,6 @@ export function LanguageTreeView() {
               (d.isLeaf ? "leaf" : "internal") +
               (d.extinct ? " extinct" : "") +
               (selectedLangId === d.id ? " selected" : "");
-            // Labels drop BELOW node for leaves (room), ABOVE for internals.
             const labelY = d.isLeaf ? 18 : -10;
             const sampleY = d.isLeaf ? 30 : -22;
             return (
@@ -314,9 +289,6 @@ function TreeNodeHover({
   y: number;
   data: TooltipData;
 }) {
-  // Offset slightly down-right of the cursor so the card doesn't sit
-  // under the pointer (which would re-trigger mouseleave on every
-  // pixel of motion).
   const left = x + 14;
   const top = y + 14;
   return (

@@ -28,7 +28,7 @@ describe("§3 — generation → real-time anchor", () => {
   });
 
   it("formatElapsed shows fractional ky / my for non-round values", () => {
-    expect(formatElapsed(50)).toBe("1.3 ky"); // 50 × 25 = 1250 yr
+    expect(formatElapsed(50)).toBe("1.3 ky");
     expect(formatElapsed(45000)).toBe("1.13 my");
   });
 

@@ -6,19 +6,6 @@ import { stripTone } from "../phonology/tone";
 import { stressIndex } from "../phonology/stress";
 import { narrowTranscribe } from "../phonology/narrow";
 
-/**
- * PIE lexical-accent regression tests. The seed map in
- * `presets/pie.ts` lists ~13 overrides where the inherited mobile
- * accent diverges from the `lexical → penult` fallback. These tests
- * keep the override map honest:
- *
- *   - every key exists in the seed lexicon;
- *   - every value is a valid vowel-position index for its form;
- *   - the override actually changes the surface IPA (otherwise it's
- *     redundant noise);
- *   - daughter languages inherit the map intact at split time.
- */
-
 function vowelCount(form: readonly string[]): number {
   let n = 0;
   for (const p of form) {
@@ -49,9 +36,6 @@ describe("PIE lexical-accent map", () => {
   });
 
   it("only lists overrides that actually differ from the penult fallback", () => {
-    // For each override, compute what `lexical → penult` would have
-    // chosen and compare against the explicit override. They must
-    // differ — otherwise the entry is redundant.
     for (const [meaning, idx] of Object.entries(seedAccent)) {
       const form = seedLex[meaning]!;
       const vs: number[] = [];
@@ -59,9 +43,6 @@ describe("PIE lexical-accent map", () => {
         const b = stripTone(form[i]!);
         if (isVowel(b) || isSyllabic(b)) vs.push(i);
       }
-      // Penult fallback for ≥ 2 vowels is vowel index `vs.length - 2`.
-      // For 1-vowel forms there's only one position (idx 0) and no
-      // override should be needed; the map shouldn't list those.
       expect(vs.length, `${meaning}: 1-vowel form shouldn't need override`).toBeGreaterThanOrEqual(2);
       const penultIdx = vs.length - 2;
       expect(idx, `${meaning}: override matches penult fallback (redundant entry)`).not.toBe(penultIdx);
@@ -72,8 +53,6 @@ describe("PIE lexical-accent map", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     const ipa = (m: string) => narrowTranscribe(lang.lexicon[m]!, lang, m);
-    // mother / daughter / child should all carry the stress mark on
-    // the second syllable, NOT the first.
     expect(ipa("mother")).toMatch(/^[^ˈ]+\.ˈ/);
     expect(ipa("daughter")).toMatch(/^[^ˈ]+\.ˈ/);
     expect(ipa("child")).toMatch(/^[^ˈ]+\.ˈ/);
@@ -94,8 +73,6 @@ describe("PIE lexical-accent map", () => {
     for (const [meaning, idx] of Object.entries(seedAccent)) {
       const form = lang.lexicon[meaning]!;
       const stressed = stressIndex(form, "lexical", idx);
-      // The returned index must be the form-position of the
-      // override-selected vowel.
       const vs: number[] = [];
       for (let i = 0; i < form.length; i++) {
         const b = stripTone(form[i]!);
@@ -116,7 +93,6 @@ describe("PIE lexical-accent map", () => {
     for (const d of daughters as any[]) {
       const map = d.language.lexicalStress;
       expect(map, `${d.language.name} lost lexicalStress on split`).toBeDefined();
-      // Every parent entry must survive on the daughter.
       for (const m of Object.keys(seedAccent)) {
         expect(map[m]).toBe(seedAccent[m]);
       }

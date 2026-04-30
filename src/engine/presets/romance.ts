@@ -2,11 +2,7 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
-// Hand-authored Late Latin / Proto-Romance seed. Forms are simplified
-// post-classical Vulgar Latin: vowel quantity collapsed, intervocalic
-// voicing under way, accusative singular as the source of nouns.
 const LEXICON: Lexicon = {
-  // — natural world / weather —
   water: ["a", "k", "w", "a"],
   fire: ["f", "o", "k", "u"],
   stone: ["p", "e", "t", "r", "a"],
@@ -32,7 +28,6 @@ const LEXICON: Lexicon = {
   field: ["k", "a", "m", "p", "u"],
   road: ["v", "i", "a"],
   path: ["s", "e", "m", "i", "t", "a"],
-  // — sky cycle / time —
   day: ["d", "i", "e"],
   night: ["n", "o", "k", "t", "e"],
   morning: ["m", "a", "n", "e"],
@@ -42,7 +37,6 @@ const LEXICON: Lexicon = {
   winter: ["i", "v", "e", "r", "n", "u"],
   summer: ["s", "t", "a", "t", "e"],
   time: ["t", "e", "m", "p", "u"],
-  // — flora / fauna —
   tree: ["a", "r", "b", "o", "r", "e"],
   wood: ["l", "i", "g", "n", "u"],
   leaf: ["f", "o", "l", "j", "a"],
@@ -56,7 +50,6 @@ const LEXICON: Lexicon = {
   oak: ["k", "w", "e", "r", "k", "u"],
   birch: ["b", "e", "t", "u", "l", "a"],
   apple: ["m", "e", "l", "a"],
-  // — animals —
   dog: ["k", "a", "n", "e"],
   wolf: ["l", "u", "p", "u"],
   horse: ["k", "a", "b", "a", "l", "l", "u"],
@@ -79,7 +72,6 @@ const LEXICON: Lexicon = {
   wing: ["a", "l", "a"],
   horn: ["k", "o", "r", "n", "u"],
   tail: ["k", "a", "u", "d", "a"],
-  // — body —
   body: ["k", "o", "r", "p", "u", "s"],
   head: ["k", "a", "p", "u", "t"],
   hair: ["k", "a", "p", "i", "l", "l", "u"],
@@ -110,7 +102,6 @@ const LEXICON: Lexicon = {
   knee: ["g", "e", "n", "u", "k", "u", "l", "u"],
   leg: ["g", "a", "m", "b", "a"],
   foot: ["p", "e", "d", "e"],
-  // — kinship / people —
   person: ["p", "e", "r", "s", "o", "n", "a"],
   man: ["o", "m", "i", "n", "e"],
   woman: ["m", "u", "l", "j", "e", "r", "e"],
@@ -128,7 +119,6 @@ const LEXICON: Lexicon = {
   god: ["d", "e", "u"],
   guest: ["o", "s", "p", "e", "t", "e"],
   enemy: ["i", "n", "i", "m", "i", "k", "u"],
-  // — household / artifact —
   house: ["k", "a", "s", "a"],
   door: ["p", "o", "r", "t", "a"],
   hearth: ["f", "o", "k", "u"],
@@ -144,7 +134,6 @@ const LEXICON: Lexicon = {
   rope: ["k", "o", "r", "d", "a"],
   cloth: ["v", "e", "s", "t", "e"],
   wool: ["l", "a", "n", "a"],
-  // — food / drink —
   bread: ["p", "a", "n", "e"],
   meat: ["k", "a", "r", "n", "e"],
   milk: ["l", "a", "k", "t", "e"],
@@ -152,7 +141,6 @@ const LEXICON: Lexicon = {
   salt: ["s", "a", "l", "e"],
   wine: ["v", "i", "n", "u"],
   oil: ["o", "l", "j", "u"],
-  // — verbs of motion / state —
   be: ["e", "s", "s", "e", "r", "e"],
   go: ["i", "r"],
   come: ["v", "e", "n", "i", "r", "e"],
@@ -164,7 +152,6 @@ const LEXICON: Lexicon = {
   fall: ["k", "a", "d", "e", "r", "e"],
   fly: ["v", "o", "l", "a", "r", "e"],
   swim: ["n", "a", "t", "a", "r", "e"],
-  // — verbs of perception / cognition —
   see: ["v", "i", "d", "e", "r", "e"],
   hear: ["a", "u", "d", "i", "r", "e"],
   know: ["s", "k", "i", "r", "e"],
@@ -173,7 +160,6 @@ const LEXICON: Lexicon = {
   say: ["d", "i", "k", "e", "r", "e"],
   call: ["k", "l", "a", "m", "a", "r", "e"],
   ask: ["r", "o", "g", "a", "r", "e"],
-  // — verbs of action —
   do: ["f", "a", "k", "e", "r", "e"],
   make: ["f", "a", "k", "e", "r", "e"],
   take: ["p", "r", "e", "n", "d", "e", "r", "e"],
@@ -191,7 +177,6 @@ const LEXICON: Lexicon = {
   wash: ["l", "a", "v", "a", "r", "e"],
   weave: ["t", "e", "k", "s", "e", "r", "e"],
   plant: ["p", "l", "a", "n", "t", "a", "r", "e"],
-  // — verbs of life —
   eat: ["k", "o", "m", "e", "d", "e", "r", "e"],
   drink: ["b", "i", "b", "e", "r", "e"],
   sleep: ["d", "o", "r", "m", "i", "r", "e"],
@@ -204,7 +189,6 @@ const LEXICON: Lexicon = {
   fear: ["t", "i", "m", "e", "r", "e"],
   laugh: ["r", "i", "d", "e", "r", "e"],
   cry: ["p", "l", "o", "r", "a", "r", "e"],
-  // — numbers —
   one: ["u", "n", "u"],
   two: ["d", "u", "o"],
   three: ["t", "r", "e", "s"],
@@ -216,7 +200,6 @@ const LEXICON: Lexicon = {
   nine: ["n", "o", "v", "e"],
   ten: ["d", "e", "k", "e"],
   hundred: ["k", "e", "n", "t", "u"],
-  // — qualities —
   big: ["g", "r", "a", "n", "d", "e"],
   small: ["p", "i", "k", "k", "u", "l", "u"],
   long: ["l", "o", "n", "g", "u"],
@@ -244,14 +227,12 @@ const LEXICON: Lexicon = {
   weak: ["d", "e", "b", "i", "l", "e"],
   fast: ["k", "i", "t", "u"],
   slow: ["l", "e", "n", "t", "u"],
-  // — colour —
   red: ["r", "u", "b", "j", "u"],
   black: ["n", "i", "g", "r", "u"],
   white: ["b", "l", "a", "n", "k", "u"],
   green: ["v", "i", "r", "i", "d", "e"],
   yellow: ["g", "a", "l", "b", "u"],
   blue: ["k", "a", "e", "r", "u", "l", "u"],
-  // — abstract / pronouns —
   name: ["n", "o", "m", "e", "n"],
   word: ["v", "e", "r", "b", "u"],
   truth: ["v", "e", "r", "i", "t", "a", "t", "e"],
@@ -263,20 +244,19 @@ const LEXICON: Lexicon = {
   you: ["t", "u"],
   we: ["n", "o", "s"],
   they: ["i", "l", "l", "i"],
-  // — closed-class roots (Vulgar Latin reflexes) —
   he: ["i", "l", "l", "u"],
   she: ["i", "l", "l", "a"],
   it: ["i", "l", "l", "u", "d"],
-  the: ["i", "l", "l", "u"],          // < ille
-  a: ["u", "n"],            // < unus
-  and: ["e", "t"],          // et
-  or: ["a", "u", "t"],      // aut
-  not: ["n", "o", "n"],     // non
-  in: ["i", "n"],           // in
-  on: ["s", "u", "p", "r", "a"], // supra
-  to: ["a", "d"],           // ad
-  for: ["p", "r", "o"],     // pro
-  by: ["p", "e", "r"],      // per
+  the: ["i", "l", "l", "u"],
+  a: ["u", "n"],
+  and: ["e", "t"],
+  or: ["a", "u", "t"],
+  not: ["n", "o", "n"],
+  in: ["i", "n"],
+  on: ["s", "u", "p", "r", "a"],
+  to: ["a", "d"],
+  for: ["p", "r", "o"],
+  by: ["p", "e", "r"],
 };
 
 const FREQ: Record<Meaning, number> = {
@@ -315,13 +295,6 @@ export function presetRomance(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
-    // Romance typology: SVO; free articles (lu < ille; un < unus);
-    // preposition strategy; post-noun adjectives (Spanish/French
-    // default — "la casa grande").
-    // Latin had penultimate stress (with antepenult retraction when
-    // the penult was light); preserved into all daughter Romance
-    // languages and the precondition for medieval unstressed-vowel
-    // reduction.
     seedStressPattern: "penult",
     seedGrammar: {
       wordOrder: "SVO",

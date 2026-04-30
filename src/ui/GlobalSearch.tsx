@@ -14,11 +14,6 @@ interface Hit {
 
 const MAX_HITS = 30;
 
-/**
- * Header-level search over meanings AND surface forms across every living
- * language. Picking a result jumps to the Lexicon tab, selects the language,
- * and scrolls the meaning into view (handled by the Lexicon via selection).
- */
 export function GlobalSearch({
   onJumpToLexicon,
 }: {

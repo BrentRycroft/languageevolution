@@ -8,7 +8,6 @@ import { phonotacticFit } from "./phonotactics";
 import { otFit } from "../phonology/ot";
 import { complexityFor } from "../lexicon/complexity";
 
-/** Blend OT constraint ranking with bigram-frequency fit; both map to [0,1]. */
 function combinedFit(form: WordForm, lang: Language): number {
   return 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
 }
@@ -52,16 +51,12 @@ export const GENESIS_CATALOG: GenesisRule[] = [
     enabledByDefault: true,
     baseWeight: 1,
     tryCoin: (lang, rng) => {
-      // 70% of the time, prefer a semantically related pair so coinages are
-      // coherent (dark+night rather than stone+foot). Fall back to random.
       let a: Meaning | undefined;
       let b: Meaning | undefined;
       const meanings = Object.keys(lang.lexicon);
       if (meanings.length === 0) return null;
       if (rng.chance(0.7)) {
         a = meanings[rng.int(meanings.length)];
-        // Prefer a cluster-mate (body+body, environment+environment, etc.)
-        // Fall back to the static neighbor table, then random.
         const pool = a
           ? relatedMeanings(a).filter((n) => lang.lexicon[n])
           : [];
@@ -81,14 +76,10 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       const fb = lang.lexicon[b]!;
       if (fa.length + fb.length > 10) return null;
       let form = [...fa, ...fb];
-      // Complexity-length bias: coinages for more abstract meanings stay
-      // longer. If the combined form is shorter than 2 + complexity, append
-      // a simple schwa to pad it.
       const minLen = 2 + complexityFor(newMeaning);
       if (form.length < minLen) {
         form = [...form, "ə"];
       }
-      // Reject on obviously-bad phonotactics (score < 0.25).
       if (combinedFit(form, lang) < 0.25) return null;
       return { meaning: newMeaning, form };
     },

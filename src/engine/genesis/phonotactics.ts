@@ -1,19 +1,8 @@
 import type { Language, Phoneme } from "../types";
 import { isVowel } from "../phonology/ipa";
 
-/**
- * Estimate the phonotactic "fit" of a candidate form against a language's
- * current lexicon. Returns a score clamped to [0, 1].
- *
- * Heuristic: penalises runs of consonants that never appear in the language
- * as a whole, and rewards CV alternation the language tends to favour.
- * Not a probability — treat it as a relative score where callers compare
- * two forms or threshold at ~0.25.
- */
 export function phonotacticFit(form: Phoneme[], lang: Language): number {
   if (form.length === 0) return 0;
-  // Skip the bigram penalty for very small languages — they haven't yet
-  // established their phonotactics, so we'd reject every candidate.
   const lexSize = Object.keys(lang.lexicon).length;
   const trustBigrams = lexSize >= 6;
   let cvHits = 0;

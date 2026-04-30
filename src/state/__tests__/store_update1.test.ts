@@ -14,7 +14,6 @@ describe("store Update 1 actions", () => {
     const after = useSimStore.getState().config.seed;
     expect(after).not.toEqual(before);
     expect(after.length).toBeGreaterThanOrEqual(4);
-    // A new seed rebuilds from gen 0 like a reset.
     expect(useSimStore.getState().state.generation).toBe(0);
   });
 

@@ -26,7 +26,7 @@ function rule(overrides: Partial<GeneratedRule> = {}): GeneratedRule {
 describe("phonology/generated", () => {
   it("matchSites finds intervocalic stops", () => {
     const r = rule();
-    expect(matchSites(r, ["p", "a", "t", "a"])).toEqual([2]); // /p/ is word-initial.
+    expect(matchSites(r, ["p", "a", "t", "a"])).toEqual([2]);
     expect(matchSites(r, ["a", "p", "a", "t", "a"])).toEqual([1, 3]);
     expect(matchSites(r, ["p"])).toEqual([]);
   });

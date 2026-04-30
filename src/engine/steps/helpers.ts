@@ -14,9 +14,6 @@ import { GENESIS_BY_ID } from "../genesis/catalog";
 import type { GenesisRule } from "../genesis/types";
 import type { SimulationConfig } from "../types";
 
-// Ring-buffer cap for per-language events. Re-exported from the
-// engine constants module so callers continue to import from this
-// helper module.
 export { MAX_EVENTS_PER_LANGUAGE } from "../constants";
 import { MAX_EVENTS_PER_LANGUAGE } from "../constants";
 
@@ -37,12 +34,6 @@ export function inventoryFromLexicon(lex: Lexicon): PhonemeInventory {
   };
 }
 
-/**
- * Seed the per-phoneme provenance map with "native" for every
- * phoneme already in the inventory. Called from init.ts so the
- * proto's inventory has a recorded provenance baseline; subsequent
- * refreshInventory calls maintain it.
- */
 export function seedNativeProvenance(lang: Language): void {
   if (!lang.inventoryProvenance) lang.inventoryProvenance = {};
   for (const p of lang.phonemeInventory.segmental) {
@@ -65,10 +56,6 @@ export function refreshInventory(lang: Language): void {
   lang.phonemeInventory.segmental = Array.from(observed).sort();
   lang.phonemeInventory.tones = Array.from(tones).sort();
   lang.phonemeInventory.usesTones = tones.size > 0;
-  // Provenance bookkeeping: any phoneme that's in the inventory but
-  // not in the provenance map gets defaulted to "native". Phonemes
-  // that disappeared from the inventory have their provenance entry
-  // cleared (avoids stale entries piling up over millennia).
   if (!lang.inventoryProvenance) lang.inventoryProvenance = {};
   for (const p of observed) {
     if (!lang.inventoryProvenance[p]) {
@@ -85,12 +72,6 @@ export function changesForLang(lang: Language): SoundChange[] {
   const catalog = lang.enabledChangeIds
     .map((id) => CATALOG_BY_ID[id])
     .filter((c): c is SoundChange => !!c)
-    // Specialise UNSTRESSED_REDUCTION to the language's actual stress
-    // pattern. The catalog ships a generic penult-default version, but
-    // a language with `stressPattern: "initial"` should reduce
-    // non-initial vowels, not non-penult ones — otherwise stress
-    // pattern drift only changes the narrow-transcription view but
-    // leaves the underlying reduction targeting the wrong syllables.
     .map((c) =>
       c.id === "stress.unstressed_reduction" && pattern && pattern !== "penult"
         ? specialiseUnstressedReduction(c, pattern)
@@ -104,11 +85,6 @@ function specialiseUnstressedReduction(
   base: SoundChange,
   pattern: NonNullable<Language["stressPattern"]>,
 ): SoundChange {
-  // Rebuild a thin wrapper that delegates to stress.ts's per-pattern
-  // `stressClass`. Without this the catalog version always uses
-  // penult, so a language that drifted to initial or final stress
-  // would have its narrow transcription show one stress and its
-  // underlying reduction target a different one.
   return {
     ...base,
     probabilityFor: (word) => {

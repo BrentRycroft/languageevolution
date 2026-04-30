@@ -1,10 +1,6 @@
 import type { Lexicon } from "../types";
 import { fillMissing, type FormPhonology } from "./basic240";
 
-/**
- * Default "English-ish" phonology used to fill out the Basic-240 lexicon
- * when a preset doesn't provide hand-authored forms for every meaning.
- */
 const DEFAULT_PHONOLOGY: FormPhonology = {
   onsets: ["p", "t", "k", "b", "d", "g", "m", "n", "s", "l", "r", "w", "j", "h", "f"],
   vowels: ["a", "e", "i", "o", "u"],
@@ -13,11 +9,6 @@ const DEFAULT_PHONOLOGY: FormPhonology = {
   maxSyllables: 3,
 };
 
-/**
- * Hand-authored core of the default preset — mostly the original 44 Swadesh
- * entries with IPA-shaped glosses. Everything else (~196 meanings) is
- * generated deterministically from DEFAULT_PHONOLOGY.
- */
 const CORE: Lexicon = {
   water: ["w", "a", "t", "e", "r"],
   fire: ["p", "u", "r"],

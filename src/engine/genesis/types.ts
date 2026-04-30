@@ -10,9 +10,5 @@ export interface GenesisRule {
   description: string;
   enabledByDefault: boolean;
   baseWeight: number;
-  /**
-   * Attempt one coinage. Returns the new (meaning, form) or null if no site applied.
-   * `tryCoin` is responsible for picking source material from the language's lexicon.
-   */
   tryCoin: (lang: Language, rng: Rng) => { meaning: Meaning; form: WordForm } | null;
 }

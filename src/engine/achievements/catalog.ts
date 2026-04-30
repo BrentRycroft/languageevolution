@@ -5,17 +5,10 @@ export interface Achievement {
   id: string;
   label: string;
   description: string;
-  /** Unicode glyph shown in the trophy strip. Kept ascii-safe for SVG fallback. */
   icon: string;
   predicate: (state: SimulationState) => boolean;
 }
 
-/**
- * Catalog of runtime-detectable achievements. All predicates are pure
- * functions of the state, so the detector can re-run them cheaply each step.
- * Thresholds are chosen to sit inside a single 500-gen run with a default
- * preset, but none should fire in the first ~30 gens.
- */
 export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     id: "polyglot",
@@ -78,10 +71,6 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     label: "Methuselah",
     description: "A living language has reached age 300 generations.",
     icon: "⌛",
-    // Skip the proto language: its `birthGeneration` is 0, so it
-    // would trivially "live to 300" without ever splitting or
-    // evolving meaningfully. Filter by `birthGeneration > 0` so
-    // only daughter languages count.
     predicate: (s) =>
       anyLanguage(s, (l) => !l.extinct && l.birthGeneration > 0 && s.generation - l.birthGeneration >= 300),
   },

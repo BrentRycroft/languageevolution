@@ -22,7 +22,7 @@ describe("checkpoint save/restore", () => {
     const cfg = { ...defaultConfig(), seed: "checkpoint-test" };
     const simA = createSimulation(cfg);
     for (let i = 0; i < 80; i++) simA.step();
-    const snapshot = JSON.parse(JSON.stringify(simA.getState())); // simulate round-trip through storage
+    const snapshot = JSON.parse(JSON.stringify(simA.getState()));
 
     const simB = createSimulation(cfg);
     simB.restoreState(snapshot);

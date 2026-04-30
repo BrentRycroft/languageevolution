@@ -5,24 +5,6 @@ import { closedClassForm } from "./closedClass";
 import { parseSyntaxAll } from "./parse";
 import { realiseSentence } from "./realise";
 
-/**
- * Rule-based English-to-target-language sentence translator.
- *
- * Pipeline:
- *   1. Tokenise + POS-tag the English input via a small rule-based
- *      tagger.
- *   2. Resolve each tag-bearing token to a target-language form via
- *      a 5-step lookup chain (direct → stem → colex → reverse-colex →
- *      [no equivalent]).
- *   3. Inflect verbs / nouns based on the inferred features (tense,
- *      plurality, accusative case).
- *   4. Reorder by `lang.grammar.wordOrder` — at the granularity of
- *      one S-V-O cluster per clause.
- *
- * Designed to be deterministic (no RNG) and cheap (~tens of µs per
- * sentence). Replaces the deleted WebLLM-driven translator.
- */
-
 export type { EnglishTag, EnglishToken } from "./tokens";
 import type { EnglishTag, EnglishToken } from "./tokens";
 import { WH_LEMMAS } from "./tokens";
@@ -31,8 +13,8 @@ export interface TranslatedToken {
   englishLemma: string;
   englishTag: EnglishTag;
   targetForm: WordForm;
-  targetSurface: string; // joined string of phonemes
-  glossNote: string;     // "concept", "*compound", "?missing", "↔ colex"
+  targetSurface: string;
+  glossNote: string;
   resolution:
     | "direct"
     | "concept"
@@ -45,16 +27,10 @@ export interface SentenceTranslation {
   english: string;
   englishTokens: EnglishToken[];
   targetTokens: TranslatedToken[];
-  /** The reordered surface-form sequence for display. */
   arranged: string[];
-  /** English lemmas the dictionary couldn't resolve at all. */
   missing: string[];
   notes: string;
 }
-
-// ---------------------------------------------------------------------------
-// 1. Tokenise + tag
-// ---------------------------------------------------------------------------
 
 const PUNCT = /^[.,!?;:'"()]+$/;
 
@@ -65,7 +41,6 @@ const DETERMINERS = new Set([
   "the", "a", "an",
   "this", "that", "these", "those",
   "some", "any", "all", "no", "every", "each",
-  // Possessive determiners — close to articles in distribution.
   "my", "your", "his", "her", "its", "our", "their",
 ]);
 const PREPOSITIONS = new Set([
@@ -76,10 +51,6 @@ const PREPOSITIONS = new Set([
 const CONJUNCTIONS = new Set([
   "and", "or", "but",
   "because", "so", "if", "when", "while", "though", "although",
-  // Comparative + similative connectives — without these, "than" /
-  // "as" fall through to the noun fallback and get sucked into the
-  // wrong NP slot ("the king is bigger than the wolf" puts "than"
-  // in as a noun).
   "than", "as",
 ]);
 const AUX_VERBS = new Set([
@@ -91,7 +62,6 @@ const AUX_VERBS = new Set([
 ]);
 const COPULAS = new Set(["am", "is", "are", "was", "were", "be"]);
 const NEGATORS = new Set(["not", "n't", "never"]);
-// Bare cardinal numerals.
 const BARE_NUMERALS = new Set([
   "zero", "one", "two", "three", "four", "five", "six", "seven",
   "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen",
@@ -99,10 +69,6 @@ const BARE_NUMERALS = new Set([
   "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
   "hundred", "thousand", "million",
 ]);
-// Bare nouns whose surface form would otherwise trigger the -ing /
-// -ed verb heuristic (king, morning, evening, …) or the noun-fallback
-// stripping logic (loss → "los"). Checked BEFORE the verb heuristics
-// so the parser sees them as N.
 const BARE_NOUNS = new Set([
   "king", "ring", "string", "wing", "thing", "spring",
   "morning", "evening", "ceiling", "ending", "beginning",
@@ -113,29 +79,21 @@ const BARE_NOUNS = new Set([
   "house", "village", "forest", "winter", "summer",
   "water", "fire", "moon", "sun", "tree",
 ]);
-// Bare verbs the tokeniser can recognise without -ed / -ing / `to` cue.
 const BARE_VERBS = new Set([
-  // motion / state
   "go", "come", "walk", "run", "stand", "sit", "lie", "fall", "fly", "swim",
-  // perception / cognition
   "see", "hear", "know", "think", "speak", "say", "call", "ask",
-  // action
   "do", "make", "take", "give", "hold", "carry", "throw", "pull",
   "push", "cut", "break", "bend", "build", "burn", "wash", "weave",
   "plant", "sow", "freeze", "melt", "hunt", "fight", "scratch",
   "dig", "split", "sew", "rub", "wipe", "pour", "flow", "suck",
   "blow", "spit", "bite", "kill", "breathe",
-  // life
   "eat", "drink", "sleep", "live", "die", "grow",
   "love", "fear", "laugh", "cry", "play",
-  // common short
   "want", "need", "like", "find", "lose", "win", "open", "close",
   "start", "stop", "wait", "help",
-  // pursuit / interaction
   "chase", "follow", "attack", "meet", "leave", "send", "save",
   "catch", "reach", "join", "show", "tell",
 ]);
-// Bare adjectives the tokeniser can recognise without -er/-est suffix.
 const BARE_ADJECTIVES = new Set([
   "big", "small", "tall", "short", "fast", "slow", "new", "old",
   "good", "bad", "long", "wide", "narrow", "deep", "shallow",
@@ -146,10 +104,6 @@ const BARE_ADJECTIVES = new Set([
   "wise", "foolish", "brave", "kind", "cruel", "true", "false",
 ]);
 
-// Comparative / superlative bases. Only fire `-er` / `-est`
-// promotion to ADJ when the stripped stem hits this set, since "-er"
-// is also the agent-noun suffix (`mother`, `teacher`, `writer`) which
-// would otherwise mistag as ADJ and break subject detection.
 const COMPARATIVE_BASES = new Set([
   "big", "small", "tall", "short", "fast", "slow", "new", "old",
   "good", "bad", "long", "wide", "narrow", "deep", "shallow",
@@ -157,11 +111,6 @@ const COMPARATIVE_BASES = new Set([
   "poor", "strong", "weak", "happy", "sad", "easy", "hard",
 ]);
 
-// Past-participle forms whose surface differs from both their
-// present and preterite. Used downstream to mark passive cues
-// ("the king was seen") and perfect-aspect cues ("the king has been
-// seen") that would otherwise miss because the participle doesn't
-// end in `-ed` and isn't tagged past.
 const PAST_PARTICIPLES = new Set([
   "seen", "gone", "taken", "given", "made", "fallen", "flown",
   "swum", "written", "broken", "spoken", "known", "heard",
@@ -171,11 +120,6 @@ const PAST_PARTICIPLES = new Set([
   "shown", "sung", "sat", "stood", "found",
 ]);
 
-// Bridge-set membership: covers BARE_NOUNS / BARE_VERBS / BARE_ADJECTIVES
-// AND the cross-engine POS catalog. The catalog gives us access to the
-// genesis-time vocabulary (water, eat, big, ...) without duplicating it
-// here; the BARE_* sets cover the -ing trap and translator-specific
-// extensions (king, ring, morning, chase, ...).
 const isBareNoun = (w: string): boolean =>
   BARE_NOUNS.has(w) || posOf(w) === "noun";
 const isBareVerb = (w: string): boolean =>
@@ -198,7 +142,6 @@ const PRONOUN_FEATURES: Record<string, EnglishToken["features"]> = {
   them: { person: "3", number: "pl", role: "object" },
 };
 
-/** A handful of irregular English verbs whose -ed-stripping wouldn't recover the lemma. */
 const IRREGULAR_VERBS: Record<string, string> = {
   went: "go", goes: "go", gone: "go", going: "go",
   came: "come", comes: "come", coming: "come",
@@ -231,7 +174,6 @@ const IRREGULAR_VERBS: Record<string, string> = {
   felt: "feel", feels: "feel", feeling: "feel",
 };
 
-/** Irregular plural nouns whose -s isn't a real plural marker. */
 const IRREGULAR_PLURALS: Record<string, string> = {
   men: "man", women: "woman", children: "child",
   feet: "foot", teeth: "tooth", mice: "mouse",
@@ -240,30 +182,21 @@ const IRREGULAR_PLURALS: Record<string, string> = {
 
 function stripVerbSuffix(s: string): string {
   if (IRREGULAR_VERBS[s]) return IRREGULAR_VERBS[s]!;
-  // -ies → -y
   if (s.length >= 4 && s.endsWith("ies")) return s.slice(0, -3) + "y";
-  // -ied → -y
   if (s.length >= 4 && s.endsWith("ied")) return s.slice(0, -3) + "y";
-  // -ing → bare (drop the 'e'-plus-ing case lazily)
   if (s.length >= 5 && s.endsWith("ing")) {
     const stem = s.slice(0, -3);
     return stem;
   }
-  // -ed
   if (s.length >= 3 && s.endsWith("ed")) {
     const stem = s.slice(0, -2);
     return stem;
   }
-  // -es → drop. Disambiguate `chases` (lemma `chase`) from `washes`
-  // (lemma `wash`) by checking the stripped-`s` stem against the
-  // bare-verb / POS-catalog union — a known verb in the dictionary
-  // wins over the naive `-es → 0` rule.
   if (s.length >= 4 && s.endsWith("es")) {
     const dropS = s.slice(0, -1);
     if (isBareVerb(dropS)) return dropS;
     return s.slice(0, -2);
   }
-  // -s
   if (s.length >= 2 && s.endsWith("s") && !s.endsWith("ss")) {
     return s.slice(0, -1);
   }
@@ -274,9 +207,6 @@ function stripNounSuffix(s: string): string {
   if (IRREGULAR_PLURALS[s]) return IRREGULAR_PLURALS[s]!;
   if (s.length >= 4 && s.endsWith("ies")) return s.slice(0, -3) + "y";
   if (s.length >= 4 && s.endsWith("ses")) return s.slice(0, -2);
-  // -ves → -f / -fe (wolves → wolf, knives → knife). Pure heuristic;
-  // words like "saves" (verb) shouldn't reach here because the verb
-  // detector fires first on -es endings via IRREGULAR_VERBS.
   if (s.length >= 5 && s.endsWith("ves")) {
     const stem = s.slice(0, -3);
     return stem + "f";
@@ -285,22 +215,14 @@ function stripNounSuffix(s: string): string {
   return s;
 }
 
-/**
- * Tokenise + POS-tag an English sentence. Rule-based, ~80 % accuracy
- * — good enough for the simulator's purposes.
- */
 export function tokeniseEnglish(text: string): EnglishToken[] {
   const tokens: EnglishToken[] = [];
-  // Split on whitespace + punctuation, keeping punctuation as separate tokens.
   const rawSplit = text
     .toLowerCase()
     .split(/(\s+|[.,!?;:()'"])/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-  // Map common contraction hosts to their full auxiliary form so
-  // "doesn't" round-trips through the tokeniser as `does` + NEG and
-  // gets the right tense / mood signal.
   const CONTRACTION_HOST: Record<string, string> = {
     doesn: "does", don: "do", didn: "did",
     won: "will", wouldn: "would",
@@ -308,12 +230,9 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     hasn: "has", haven: "have", hadn: "had",
     couldn: "could", shouldn: "should", mustn: "must",
     shan: "shall", mightn: "might",
-    "can": "can", // bare "can't" leaves the host as "can"
+    "can": "can",
   };
 
-  // Re-glue possessive `'s` ("king's wolf") and contractions `n't`
-  // ("doesn't"). Without this the apostrophe split scatters them
-  // into 3 tokens — the parser then sees a phantom "s" or "t" noun.
   const raw: string[] = [];
   const possessorIndices = new Set<number>();
   const negatorIndices = new Set<number>();
@@ -328,7 +247,6 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       continue;
     }
     if (next === "'" && after === "t") {
-      // contractions like don't / doesn't / won't / can't / isn't
       raw.push(CONTRACTION_HOST[w] ?? w);
       negatorIndices.add(raw.length - 1);
       i += 2;
@@ -346,13 +264,7 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
     }
-    // Closed-class checks (most specific first).
     if (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w)) {
-      // Object-form pronouns alias to the subject lemma so the
-      // dictionary resolution chain finds them under "i" / "he" /
-      // "she" / "we" / "they". The role/case from PRONOUN_FEATURES
-      // still carries through so case-marking morphology still
-      // fires on the right form.
       const PRONOUN_LEMMA: Record<string, string> = {
         me: "i", him: "he", her: "she", us: "we", them: "they",
       };
@@ -377,19 +289,10 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       continue;
     }
     if (WH_LEMMAS.has(w)) {
-      // Tag as PUNCT so the parser doesn't pull these into NP slots.
-      // The lemma stays so realisation can surface a closed-class
-      // form via closedClassForm if the language has one. Without
-      // this guard "the king who sees the wolf" turns "who" into
-      // the subject head and silently drops "king".
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
     }
     if (NEGATORS.has(w)) {
-      // Tag negators as PUNCT-like — they don't carry inflection but
-      // we want a stable lemma for the parser's negation detection.
-      // The realiser handles them via the sentence-level `negated`
-      // flag; this token is dropped during reordering.
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
     }
@@ -416,17 +319,9 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       continue;
     }
     if (AUX_VERBS.has(w)) {
-      // Auxiliaries carry tense info that the next verb inherits.
       const past = ["was", "were", "did", "had"].includes(w);
       const future = w === "will" || w === "would";
       const isHave = w === "have" || w === "has" || w === "had";
-      // Special case: when `have/has/had` follows a do-auxiliary (do /
-      // does / did), the do is the tense carrier and `have` is in
-      // base form. Inherit the do's tense instead of overwriting
-      // pendingTense with `have`'s literal present-vs-past flavour.
-      // Without this, "did not have" loses past and the V-promoted
-      // `have` ends up tagged present. Walk back over intervening
-      // PUNCT / NEG tokens so "did NOT have" still hits the do-aux.
       let prevIsDoAux = false;
       for (let pj = tokens.length - 1; pj >= 0; pj--) {
         const u = tokens[pj]!;
@@ -454,13 +349,10 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       tokens.push({ surface: w, lemma: w, tag: "NUM", features: {} });
       continue;
     }
-    // Bare cardinal numerals — needed so the tokenizer doesn't misread
-    // "three dogs" as N + N.
     if (BARE_NUMERALS.has(w)) {
       tokens.push({ surface: w, lemma: w, tag: "NUM", features: {} });
       continue;
     }
-    // Suffix-based heuristics.
     if (w.length >= 3 && w.endsWith("ly")) {
       tokens.push({
         surface: w,
@@ -470,14 +362,9 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       });
       continue;
     }
-    // Comparative / superlative adjective detection — guarded by
-    // COMPARATIVE_BASES (module scope) so agent nouns ending in `-er`
-    // (mother / teacher / writer) don't mistag as ADJ.
     if (w.length >= 5 && (w.endsWith("er") || w.endsWith("est"))) {
       const stem = w.endsWith("est") ? w.slice(0, -3) : w.slice(0, -2);
       const stemY = stem.endsWith("i") ? stem.slice(0, -1) + "y" : stem;
-      // Doubled-final-consonant variant (`bigg(er)` → `big`,
-      // `runn(er)` → `run`). When the last two chars match, drop one.
       const stemD =
         stem.length >= 2 && stem[stem.length - 1] === stem[stem.length - 2]
           ? stem.slice(0, -1)
@@ -493,13 +380,7 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
         });
         continue;
       }
-      // Otherwise fall through to noun/verb detection below.
     }
-    // Verb detection: ends in -ed, -ing, matches an irregular form, OR
-    // is a 3sg-present `-es` / `-s` form whose stripped stem hits the
-    // bare-verb list. The 3sg branch fixes coordinated VPs ("the king
-    // runs and chases the wolf") whose second verb otherwise falls
-    // through to the noun fallback and breaks multi-clause splitting.
     const looksVerb =
       IRREGULAR_VERBS[w] !== undefined ||
       (w.length >= 4 && (w.endsWith("ed") || w.endsWith("ing"))) ||
@@ -512,10 +393,6 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     if (looksVerb) {
       const lemma = stripVerbSuffix(w);
       const isParticiple = PAST_PARTICIPLES.has(w);
-      // Past participles override pendingTense — "is seen" /
-      // "has been seen" still mark the verb as past so the parser
-      // can detect passive / perfect aspect, not echo the AUX's
-      // present tense.
       const tense: "past" | "present" | "future" | undefined =
         isParticiple
           ? "past"
@@ -538,7 +415,6 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       lastWasVerb = true;
       continue;
     }
-    // Noun fallback: -s might mark plural.
     const isPlural = w.length >= 3 && w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us");
     const lemma = isPlural ? stripNounSuffix(w) : (IRREGULAR_PLURALS[w] ?? w);
     tokens.push({
@@ -550,15 +426,11 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     lastWasVerb = false;
   }
 
-  // Mark possessor nouns ("king's wolf" → king is possessor) and
-  // contracted negators ("can't" → can is negator).
   for (const idx of possessorIndices) {
     const t = tokens[idx];
     if (t) t.features.possessor = true;
   }
   for (const idx of negatorIndices) {
-    // Inject a synthetic NEG token after the contraction host so the
-    // parser's negation detector (which scans by lemma) picks it up.
     tokens.splice(idx + 1, 0, {
       surface: "n't",
       lemma: "not",
@@ -567,12 +439,6 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     });
   }
 
-  // Demonstrative-pronoun pass: a DET-tagged demonstrative
-  // (this/that/these/those) followed by anything OTHER than an N or
-  // ADJ is a standalone demonstrative pronoun ("I see THAT", "I want
-  // these"), not a determiner. Retag as PRON so the parser collects
-  // it as an NP head. Without this pass, "It did not have that"
-  // silently loses the object slot.
   const DEMONSTRATIVES = new Set(["this", "that", "these", "those"]);
   for (let k = 0; k < tokens.length; k++) {
     const t = tokens[k]!;
@@ -594,13 +460,11 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     };
   }
 
-  // Second pass: tag the first noun as subject and the second noun as
-  // object (very crude; works for simple SVO English).
   let nounsSeen = 0;
   for (const t of tokens) {
     if (t.tag !== "N" && t.tag !== "PRON") continue;
-    if (t.features.possessor) continue; // possessor never plays subj/obj role
-    if (t.features.role) continue; // pronoun already marked
+    if (t.features.possessor) continue;
+    if (t.features.role) continue;
     if (nounsSeen === 0) t.features.role = "subject";
     else if (nounsSeen === 1) t.features.role = "object";
     nounsSeen++;
@@ -608,14 +472,6 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
   return tokens;
 }
 
-// ---------------------------------------------------------------------------
-// 2. Resolver chain
-// ---------------------------------------------------------------------------
-
-/**
- * Resolve a single English lemma to a target-language form via the
- * 5-step chain. Returns the form + glossNote + resolution kind.
- */
 function resolveLemma(
   lang: Language,
   lemma: string,
@@ -624,7 +480,6 @@ function resolveLemma(
   resolution: TranslatedToken["resolution"];
   glossNote: string;
 } {
-  // 1. Direct hit.
   if (lang.lexicon[lemma]) {
     return {
       form: lang.lexicon[lemma]!.slice(),
@@ -632,9 +487,6 @@ function resolveLemma(
       glossNote: "",
     };
   }
-  // (Stem→direct hit was step 1 — `lemma` is the stripped form.)
-  // 2. Colex resolution: walk colexification synonyms. arm → look up
-  //    "hand" (and vice versa) when the language merged the two.
   if (isRegisteredConcept(lemma)) {
     for (const partner of colexWith(lemma)) {
       if (lang.lexicon[partner]) {
@@ -646,8 +498,6 @@ function resolveLemma(
       }
     }
   }
-  // 4. Reverse colex: maybe this language merged `lemma`'s sister
-  //    INTO `lemma`. Walk the language's colexifiedAs map.
   if (lang.colexifiedAs) {
     for (const [winner, losers] of Object.entries(lang.colexifiedAs)) {
       if (losers.includes(lemma) && lang.lexicon[winner]) {
@@ -659,9 +509,6 @@ function resolveLemma(
       }
     }
   }
-  // 5. POS-aware nearest-neighbor in the same cluster. If the lemma
-  //    is a registered concept, find a same-cluster + same-POS
-  //    concept the language does have.
   const concept = CONCEPTS[lemma];
   if (concept) {
     let bestMatch: Meaning | null = null;
@@ -681,24 +528,13 @@ function resolveLemma(
       };
     }
   }
-  // 6. Total miss.
   void posOf;
   return { form: null, resolution: "fallback", glossNote: "?" };
 }
 
-// ---------------------------------------------------------------------------
-// Top-level translate
-// ---------------------------------------------------------------------------
-
 export function translateSentence(lang: Language, english: string): SentenceTranslation {
   const englishTokens = tokeniseEnglish(english);
 
-  // §2.1 path: try to parse the input into one or more clauses and run
-  // the tree-driven realiser on each. Handles agreement, adjective
-  // placement, possessor placement, negation, prodrop, PP order, and
-  // multi-clause input ("X sees Y AND Z runs", "X runs BECAUSE Y
-  // chases X"). Falls through to a minimal fragment fallback when
-  // parseSyntaxAll returns zero clauses (no verb at all).
   const parsedAll = parseSyntaxAll(englishTokens);
   if (parsedAll.length > 0) {
     return translateViaTree(lang, english, englishTokens, parsedAll);
@@ -706,16 +542,6 @@ export function translateSentence(lang: Language, english: string): SentenceTran
   return translateFragment(lang, english, englishTokens);
 }
 
-/**
- * Verb-less / parse-failure fallback. Walks the token stream, emits
- * each meaningful token in surface order, and skips closed-class
- * function words for languages that don't have them (case strategy =
- * case, articlePresence = none, etc.). No S/V/O reordering — there's
- * no clause to reorder.
- *
- * Used for noun-phrase inputs, interjections, and any other input
- * the clause parser can't recover.
- */
 function translateFragment(
   lang: Language,
   english: string,
@@ -723,17 +549,9 @@ function translateFragment(
 ): SentenceTranslation {
   const articlePresence = lang.grammar.articlePresence ?? "none";
   const caseStrategy = lang.grammar.caseStrategy ?? (lang.grammar.hasCase ? "case" : "preposition");
-  // PREP host detection: in case-only languages, a preposition's
-  // semantics surfaces via case morphology on the host noun. If the
-  // fragment has no N/PRON to inflect, the PREP becomes orphaned and
-  // dropping it loses the only content (e.g. "for what" → empty).
-  // Track whether a host exists; if not, emit PREPs as closed-class.
   const hasNominalHost = englishTokens.some((t) => t.tag === "N" || t.tag === "PRON");
   const targetTokens: TranslatedToken[] = [];
   const missing: string[] = [];
-  // Pending enclitic / proclitic article — attaches to the next N/PRON
-  // form instead of being emitted as a standalone token. Cleared on
-  // attachment or when a V crosses (no noun to host it).
   let pendingArticle: WordForm | null = null;
   let pendingAffix: "enclitic" | "proclitic" | null = null;
   const emitClosedClass = (lemma: string, tag: EnglishTag, glossNote: string) => {
@@ -752,11 +570,6 @@ function translateFragment(
   for (const tok of englishTokens) {
     switch (tok.tag) {
       case "PUNCT":
-        // Surface negators ("not"/"n't"/"never") and wh-words via
-        // their closed-class forms — fragment input is often a wh-
-        // question or short reply ("what?", "for what?", "not me")
-        // and silently dropping them leaves nothing. Drop only the
-        // genuine punctuation tokens.
         if (tok.lemma === "not" || tok.lemma === "n't" || tok.lemma === "never") {
           emitClosedClass("not", "PUNCT", "neg");
         } else if (WH_LEMMAS.has(tok.lemma)) {
@@ -764,8 +577,6 @@ function translateFragment(
         }
         continue;
       case "AUX":
-        // AUX tense info would normally fold into the next verb's
-        // inflection; with no verb, drop silently.
         continue;
       case "DET": {
         const isArticle = tok.lemma === "the" || tok.lemma === "a" || tok.lemma === "an";
@@ -782,11 +593,6 @@ function translateFragment(
         continue;
       }
       case "PREP":
-        // Case-only languages express prepositional semantics via case
-        // morphology on the host noun. Drop the PREP when there's a
-        // nominal in the input that can carry that case (regular
-        // path), but emit it when no nominal host exists — otherwise
-        // "for what?" would surface as an empty target.
         if (caseStrategy === "case" && hasNominalHost) continue;
         emitClosedClass(tok.lemma, "PREP", caseStrategy === "postposition" ? "postp" : "prep");
         continue;
@@ -809,7 +615,6 @@ function translateFragment(
         continue;
       }
       default: {
-        // N / PRON / V / ADJ / ADV — open-class lookup chain.
         const { form, resolution, glossNote } = resolveLemma(lang, tok.lemma);
         if (!form) {
           missing.push(tok.lemma);
@@ -857,15 +662,6 @@ function translateFragment(
   };
 }
 
-/**
- * Tree-driven translation path (§2.1).
- *
- * Parses the tagged English tokens into a Sentence, runs the realiser
- * with language-specific typology, then maps the resulting
- * RealisedTokens back into the legacy `TranslatedToken` / `arranged`
- * surface so the UI doesn't need to change. The `englishTokens` field
- * is preserved verbatim so the gloss view still aligns rows.
- */
 function translateViaTree(
   lang: Language,
   english: string,
@@ -881,19 +677,10 @@ function translateViaTree(
     }
     return { form: r.form, resolution: r.resolution };
   };
-  // Realise each clause and concatenate. Multi-clause input ("X sees
-  // Y and Z runs") emits clause 1 then clause 2's tokens (with its
-  // leading conjunction surfaced first via realiseSentence's
-  // leadingConj branch), so the user sees both clauses joined by the
-  // language's "and".
   const realised = parsedAll.flatMap((s) =>
     realiseSentence(s, lang, { resolveOpen }),
   );
 
-  // Map RealisedToken[] → TranslatedToken[]. Only open-class slots
-  // (S, V, O, ADJ, ADV, possessive heads) carry a real englishLemma;
-  // function-word slots (DET, PREP, NEG, NUM) carry the closed-class
-  // lemma so the gloss row still labels them.
   const translated: TranslatedToken[] = realised.map((r) => ({
     englishLemma: r.english,
     englishTag:
@@ -904,12 +691,8 @@ function translateViaTree(
       r.role === "DET" ? "DET" :
       r.role === "NUM" ? "NUM" :
       r.role === "PREP" || r.role === "POSTP" ? "PREP" :
-      r.role === "NEG" ? "AUX" : // legacy fallback tag
+      r.role === "NEG" ? "AUX" :
       "PUNCT",
-    // Carry the realiser's true phoneme array through (PR #4 of the
-    // stress series). Falling back to `[r.surface]` for unresolved
-    // tokens (quoted "wise" passthroughs etc.) keeps targetForm.length
-    // > 0 so downstream display still renders them.
     targetForm: r.form.length > 0 ? r.form : [r.surface],
     targetSurface: r.surface,
     glossNote:

@@ -5,40 +5,15 @@ import { formatForm, type DisplayScript } from "../phonology/display";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 
-/**
- * Narrative generation is split into two stages so the Narrative view's
- * compare mode can render the same skeleton across two languages:
- *
- *  1. `planSkeleton(seedStr, lines)` deterministically picks the pattern
- *     index + meaning slots for each sentence from a seed that does NOT
- *     depend on any particular language. Both columns in compare mode
- *     call this with the same seed and get identical skeletons.
- *  2. `realizeSkeleton(lang, skeleton)` plugs each language's own
- *     lexicon, morphology, and word order into the skeleton to produce
- *     the rendered text + gloss.
- *
- * The user-visible consequence: "the {S} {V} the {adj} {O}" is the same
- * template in both columns; only the specific forms, affixes, and
- * surface order vary by language. That's the apple-to-apple comparison.
- */
-
 const NOUN_POOL = [
-  // kinship
   "mother", "father", "child", "brother", "sister", "friend",
-  // animals
   "dog", "wolf", "horse", "cow", "bird", "fish", "snake", "bear",
-  // body
   "hand", "foot", "eye", "head", "heart",
-  // environment
   "tree", "water", "fire", "stone", "moon", "sun", "star", "river",
   "mountain", "forest", "wind", "rain",
-  // social
   "king", "warrior", "stranger", "village", "house",
 ] as const;
 
-// Transitive-only pool — used whenever a template includes an {O}
-// slot. Without this split the planner can pair "die" / "sleep" / "go"
-// with an object and produce "the fish die the horse"-type output.
 const TRANSITIVE_VERBS = [
   "see", "know", "hear", "think",
   "eat", "drink",
@@ -48,9 +23,6 @@ const INTRANSITIVE_VERBS = [
   "go", "come", "walk", "run", "fall", "fly",
   "sleep", "die",
 ] as const;
-// Combined pool — used by intransitive templates when transitivity
-// genuinely doesn't matter. Kept as `VERB_POOL` for backwards-compat
-// with downstream call sites.
 const VERB_POOL = [...TRANSITIVE_VERBS, ...INTRANSITIVE_VERBS] as const;
 
 const ADJECTIVE_POOL = [
@@ -64,40 +36,25 @@ interface SentencePattern {
   template: string;
   needsObject: boolean;
   needsAdj: boolean;
-  /** Time-of-day or season prefix ("In the morning, …"). */
   needsTime?: boolean;
-  /** Bare (no English connectives) — usable for any language regardless of grammar. */
   bare?: boolean;
 }
 
 const SENTENCE_PATTERNS: SentencePattern[] = [
-  // Bare core (work in any preset)
   { template: "The {S} {V} the {O}.",            needsObject: true,  needsAdj: false, bare: true },
   { template: "The {S} {V} the {adj} {O}.",      needsObject: true,  needsAdj: true,  bare: true },
   { template: "The {adj} {S} {V}.",              needsObject: false, needsAdj: true,  bare: true },
   { template: "{S} {V}.",                         needsObject: false, needsAdj: false, bare: true },
-  // Embellished — add a time prefix
   { template: "In the {time}, the {S} {V}.",     needsObject: false, needsAdj: false, needsTime: true },
   { template: "In the {time}, the {S} {V} the {O}.", needsObject: true, needsAdj: false, needsTime: true },
   { template: "Long ago, the {S} {V} the {O}.",  needsObject: true,  needsAdj: false },
-  // Existential / state
   { template: "The {S} is {adj}.",                needsObject: false, needsAdj: true,  bare: true },
   { template: "The {S} is the {O}.",              needsObject: true,  needsAdj: false, bare: true },
-  // Question pattern (declarative answer; the engine renders both as flat)
   { template: "The {S} {V} where the {O} is.",   needsObject: true,  needsAdj: false },
-  // Cause-effect
   { template: "The {S} {V}, so the {O} {V}.",    needsObject: true,  needsAdj: false },
-  // Possession / kinship
   { template: "The {S}'s {O} {V}.",               needsObject: true,  needsAdj: false, bare: true },
 ];
 
-/**
- * Language-agnostic sentence skeleton. Meanings are picked from fixed
- * pools using a seed-only RNG so every language that's asked to
- * realize this skeleton starts from the same structural choice. Each
- * language then falls back to its own lexicon when a meaning isn't
- * there.
- */
 export interface Skeleton {
   patternIdx: number;
   subjectNoun: Meaning;
@@ -112,23 +69,14 @@ function pickFromPoolByIndex<T extends string>(pool: readonly T[], rng: Rng): T 
 }
 
 export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
-  // Seed depends only on the user seed string + line count — not on
-  // any language — so both compare-mode columns get the same plan.
   const rng = makeRng(`narrative:${seedStr}:${lines}`);
   const out: Skeleton[] = [];
   for (let i = 0; i < lines; i++) {
     const patternIdx = rng.int(SENTENCE_PATTERNS.length);
     const pattern = SENTENCE_PATTERNS[patternIdx]!;
     const subject = pickFromPoolByIndex(NOUN_POOL, rng);
-    // Pick verb from the transitivity-appropriate pool so a template
-    // that wants an object never gets paired with an intransitive
-    // verb ("the fish die the horse").
     const verbPool = pattern.needsObject ? TRANSITIVE_VERBS : VERB_POOL;
     const verb = pickFromPoolByIndex(verbPool, rng);
-    // Still consume an RNG step for object + adjective even when the
-    // pattern doesn't need them, so the stream stays deterministic
-    // regardless of pattern choice. The unused values just get
-    // dropped.
     const objectCand = pickFromPoolByIndex(NOUN_POOL, rng);
     const adjCand = pickFromPoolByIndex(ADJECTIVE_POOL, rng);
     const timeCand = pickFromPoolByIndex(TIME_POOL, rng);
@@ -144,13 +92,6 @@ export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
   return out;
 }
 
-/**
- * Per-language fallback: if the planned meaning isn't in this
- * language's lexicon, walk the pool in a stable order looking for
- * something that is. As a last resort fall back to any non-compound
- * lexeme the language has. Returns null only if the language's
- * lexicon is effectively empty.
- */
 function resolveMeaning(
   lang: Language,
   planned: Meaning,
@@ -254,8 +195,6 @@ function realizeSkeleton(
   const timeForm = timeMeaning ? lang.lexicon[timeMeaning] : null;
   const T = timeForm ? render(timeForm) : "";
 
-  // Time prefix — ":" separator keeps the gloss aligned with the
-  // surface order without imposing English connectives.
   const timePrefixText = T ? `${T} · ` : "";
   const timePrefixGloss = timeMeaning ? `[${timeMeaning}] ` : "";
 
@@ -289,11 +228,6 @@ function realizeSkeleton(
   };
 }
 
-/**
- * A short, pronounceable random seed for narratives — used by the
- * "🎲 New story" button so the user gets a fresh skeleton without
- * thinking about seed values.
- */
 export function randomNarrativeSeed(): string {
   const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
   let out = "";
@@ -303,12 +237,6 @@ export function randomNarrativeSeed(): string {
   return out;
 }
 
-/**
- * Produce a short narrative. Pass the same `seedStr` to two languages
- * in compare mode and the two outputs share their skeleton — same
- * sentence patterns, same meaning slots — with only the realized
- * forms varying per language.
- */
 export function generateNarrative(
   lang: Language,
   seedStr: string,

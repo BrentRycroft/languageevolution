@@ -5,10 +5,6 @@ interface Props {
   onClose: () => void;
 }
 
-/**
- * About / credits modal. Lists the tech stack, the procedural engine in
- * plain language, and links to the repo. Dismissed on ESC or backdrop click.
- */
 export function AboutModal({ onClose }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

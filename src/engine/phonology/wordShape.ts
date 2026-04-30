@@ -1,14 +1,6 @@
 import type { Meaning, WordForm } from "../types";
 import { isSyllabic, isVowel } from "./ipa";
 
-/**
- * The resonant set: phonemes that can be syllabified into syllabic
- * resonants (l → l̩, r → r̩, m → m̩, n → n̩) when a word loses its
- * nucleus. Used by `repairSyllabicity` to fix forms that sound-change
- * cascades have stripped of vowels — real languages either insert an
- * epenthetic vowel or syllabify a remaining sonorant; the simulator
- * does the latter as the more compact repair.
- */
 const RESONANT_BASES: Record<string, string> = {
   l: "l̩",
   r: "r̩",
@@ -16,13 +8,6 @@ const RESONANT_BASES: Record<string, string> = {
   n: "n̩",
 };
 
-/**
- * Repair a form that's lost its syllable nucleus by syllabifying the
- * rightmost resonant (l/r/m/n → l̩/r̩/m̩/n̩). Returns the form unchanged
- * when it already has a nucleus, or when no resonant is available
- * (in which case `isFormLegal` will still reject it and the caller
- * rolls back).
- */
 export function repairSyllabicity(form: WordForm): WordForm {
   if (form.length === 0) return form;
   if (form.some((p) => isSyllabic(p))) return form;
@@ -38,15 +23,6 @@ export function repairSyllabicity(form: WordForm): WordForm {
   return form;
 }
 
-/**
- * Meanings allowed to shrink to a single phoneme. In real languages the
- * only surface forms that get away with one segment are pronouns,
- * deictics, and bare-minimum grammatical particles — e.g. English
- * "a", "I"; French "a", "y"; Italian "a", "o", "e". Content words
- * must carry at least two segments. This prevents cascading deletion
- * rules from collapsing "water", "beer", "before" etc. all into /r/
- * or a single-vowel blur.
- */
 export const ALLOWED_MONOSYLLABIC: ReadonlySet<Meaning> = new Set([
   "i",
   "you",
@@ -70,28 +46,11 @@ export const ALLOWED_MONOSYLLABIC: ReadonlySet<Meaning> = new Set([
   "on",
 ]);
 
-/**
- * True when a form contains at least one segment that can carry a
- * syllable — a vowel or an explicitly-syllabic resonant. This is the
- * core "is this a word?" constraint.
- */
 export function hasSyllabicNucleus(form: WordForm): boolean {
   for (const p of form) if (isSyllabic(p)) return true;
   return false;
 }
 
-/**
- * Is a post-change form legal for the given meaning?
- *
- * - Length ≥ 2 + has a nucleus: always legal.
- * - Length 1: legal only when the meaning is in
- *   `ALLOWED_MONOSYLLABIC` AND the lone segment is a nucleus (vowel
- *   or syllabic resonant). A lone consonant is never legal.
- * - Length 0: never legal.
- *
- * Intermediate apply steps that produce an illegal form are rolled
- * back by the caller — the rule may still succeed on a later pass.
- */
 export function isFormLegal(meaning: Meaning, form: WordForm): boolean {
   if (form.length >= 2) return hasSyllabicNucleus(form);
   if (form.length === 0) return false;

@@ -34,8 +34,6 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
   const currentForm = lang?.lexicon[meaning];
   const origin = lang?.wordOrigin?.[meaning];
 
-  // Stitch all per-language history rows for this meaning across the ancestry
-  // chain into a single timeline of (generation, language, form) entries.
   const stitchedHistory = useMemo(() => {
     type Row = { generation: number; languageName: string; form: string };
     const rows: Row[] = [];
@@ -52,7 +50,6 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
       }
     }
     rows.sort((a, b) => a.generation - b.generation);
-    // Collapse consecutive identical forms.
     const collapsed: Row[] = [];
     for (const r of rows) {
       const last = collapsed[collapsed.length - 1];
@@ -61,8 +58,6 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
     return collapsed;
   }, [ancestry, history, meaning, state.tree, script]);
 
-  // Sound-change events from the language's own log that we can list as the
-  // most likely culprits for the most recent change.
   const recentChanges = useMemo(() => {
     if (!lang) return [];
     return lang.events
@@ -71,7 +66,6 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
       .reverse();
   }, [lang]);
 
-  // Esc closes the modal.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -162,8 +156,6 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
               <Row generation={0} language="Proto seed" form={formatForm(seedForm, lang, script)} accent />
             )}
             {stitchedHistory.map((r, i) => (
-              // Stable key: generation + lang + index — multiple rows
-              // can share a generation when sound changes alternated.
               <Row
                 key={`${r.generation}-${r.languageName}-${i}`}
                 generation={r.generation}

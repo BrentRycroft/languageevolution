@@ -51,7 +51,6 @@ describe("GlobalSearch", () => {
       fireEvent.click(firstHit);
     });
     expect(onJump).toHaveBeenCalled();
-    // Selected meaning is synced into store so lexicon highlights it.
     expect(useSimStore.getState().selectedMeaning).toBe("water");
   });
 });

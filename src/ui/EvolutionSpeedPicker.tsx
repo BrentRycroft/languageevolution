@@ -12,8 +12,6 @@ export function EvolutionSpeedPicker() {
   const onChange = async (id: string) => {
     const profile = findEvolutionSpeed(id);
     if (!profile || id === current) return;
-    // Switching evolution speed changes every rate and therefore has to
-    // restart the simulation. Confirm so users don't lose their current run.
     const ok = await showConfirm({
       title: `Switch to "${profile.label}"?`,
       message:

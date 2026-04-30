@@ -2,11 +2,6 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isToneBearing, stripTone, toneOf } from "./tone";
 
-/**
- * Tone spreading: a toned vowel optionally copies its tone to a neighbouring
- * untoned vowel. Fires on tonal languages only; each generation has a small
- * probability of a single spreading event per word.
- */
 export function maybeSpreadTone(
   lang: Language,
   rng: Rng,
@@ -27,7 +22,6 @@ export function maybeSpreadTone(
 }
 
 function spreadOnce(form: WordForm, rng: Rng): WordForm {
-  // Find a toned vowel adjacent (within 2 positions through consonants) to an untoned vowel.
   const sites: Array<{ from: number; to: number; tone: string }> = [];
   for (let i = 0; i < form.length; i++) {
     const t = toneOf(form[i]!);

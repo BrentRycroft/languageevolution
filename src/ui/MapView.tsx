@@ -6,14 +6,6 @@ import { formatForm } from "../engine/phonology/display";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 import type { Language, LanguageNode, LanguageTree } from "../engine/types";
 
-/**
- * Voronoi-cell-based world map. Replaces the old centroid-only
- * MapView. Each language holds a contiguous set of map cells
- * (`lang.territory.cells`); we colour each cell by its owner's
- * id-hash hue, dim it for extinct languages, render ocean cells
- * blue, and draw an isogloss stroke between cells whose owners
- * differ. Pan + zoom via SVG viewBox manipulation.
- */
 export function MapView() {
   const state = useSimStore((s) => s.state);
   const config = useSimStore((s) => s.config);
@@ -25,11 +17,6 @@ export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 600, h: 400 });
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
-  // Per-language smoothed label position (exponential moving average).
-  // Keys are language ids; values are the previous-render projected
-  // centroids. Without this, every territory step moves the label by a
-  // fraction of a cell and the user sees visible jitter on stable
-  // languages.
   const smoothedLabelRef = useRef<Record<string, { x: number; y: number }>>({});
 
   useEffect(() => {
@@ -43,17 +30,13 @@ export function MapView() {
     return () => ro.disconnect();
   }, []);
 
-  // World map for the active sim. Memoised by mode + seed (the
-  // generator is itself memoised internally too).
   const worldMap = useMemo(
     () => getWorldMap(config.mapMode ?? "random", config.seed),
     [config.mapMode, config.seed],
   );
 
-  // Ownership map: cellId → languageId. Built once per render.
   const ownership = useMemo(() => buildOwnership(state.tree), [state.tree]);
 
-  // Fit viewBox to map bounds.
   const pad = 40;
   const fitScale = Math.min(
     (size.w - pad * 2) / (worldMap.bounds.maxX - worldMap.bounds.minX),
@@ -67,7 +50,6 @@ export function MapView() {
     py: (y - cy) * scale + size.h / 2 + view.y,
   });
 
-  // Drag-to-pan
   const drag = useRef<{ startX: number; startY: number; vx: number; vy: number } | null>(null);
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.button !== 0) return;
@@ -77,11 +59,6 @@ export function MapView() {
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const d = drag.current;
     if (!d) return;
-    // Capture vx/vy NOW — the setView updater runs asynchronously via
-    // React's scheduler, and `drag.current` can be null by then if
-    // onPointerUp fired between move and React's flush. The previous
-    // `drag.current!.vx` inside the updater crashed when this race
-    // happened on touch devices.
     const dx = e.clientX - d.startX;
     const dy = e.clientY - d.startY;
     const baseVx = d.vx;
@@ -93,7 +70,6 @@ export function MapView() {
     try {
       (e.target as Element).releasePointerCapture(e.pointerId);
     } catch {
-      // ignore
     }
   };
   const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
@@ -102,16 +78,11 @@ export function MapView() {
     setView((v) => ({ ...v, zoom: Math.max(0.4, Math.min(8, v.zoom * factor)) }));
   };
 
-  // Pre-compute fill colours per cell so repaints don't recompute.
   const cellFills = useMemo(() => {
     const out: string[] = new Array(worldMap.cells.length);
     for (let i = 0; i < worldMap.cells.length; i++) {
       const cell = worldMap.cells[i]!;
       if (cell.biome === "ocean") {
-        // Two ocean shades: shallow shelf for cells with elevation >
-        // 0 (close to coast — bilinear-blended on the bitmap), deep
-        // open ocean for the rest. Reads as a coastline halo and
-        // makes the continent silhouettes pop.
         out[i] = cell.elevation > 0.05 ? "#2c5275" : "#15293c";
         continue;
       }
@@ -123,13 +94,11 @@ export function MapView() {
           continue;
         }
       }
-      // Unowned land → biome-tinted neutral.
       out[i] = biomeColor(cell.biome);
     }
     return out;
   }, [worldMap, ownership, state.tree]);
 
-  // Tooltip state.
   const [hoverCell, setHoverCell] = useState<number | null>(null);
 
   return (
@@ -153,7 +122,7 @@ export function MapView() {
           userSelect: "none",
         }}
       >
-        {/* Cells. */}
+        {}
         {worldMap.cells.map((cell, i) => (
           <MapCellShape
             key={cell.id}
@@ -172,9 +141,7 @@ export function MapView() {
             }
           />
         ))}
-        {/* Language name labels — one per alive leaf at its centroid.
-            Positions are smoothed by a per-language ref so a 1-cell
-            territory shift doesn't visibly jitter the label every step. */}
+        {}
         {labelsForAliveLeavesSmoothed(state.tree, worldMap, smoothedLabelRef.current).map(({ langId, lang, point }) => {
           const { px, py } = project(point.x, point.y);
           const sample =
@@ -218,8 +185,7 @@ export function MapView() {
         })}
       </svg>
 
-      {/* Hover tooltip pinned to the corner — simpler than a tracking
-          tooltip and works on touch. */}
+      {}
       {hoverCell !== null && (
         <div
           style={{
@@ -290,15 +256,10 @@ function MapCellShape({
       return `${p.px},${p.py}`;
     })
     .join(" ");
-  // Isogloss thickness: thicker when the cell's neighbours have
-  // different owners (or the cell is on the ocean / land boundary).
   let isoglossEdges = 0;
   for (const n of cell.neighbours) {
     if (ownership[n] !== ownerId) isoglossEdges++;
   }
-  // Coastline stroke — darker + thicker so continent outlines pop
-  // against the ocean. Falls through to the isogloss / selected
-  // styling for non-coastal land.
   const isCoast = !!cell.isCoast;
   const stroke = isOwnerSelected
     ? "var(--accent-2)"
@@ -332,9 +293,6 @@ function buildOwnership(tree: LanguageTree): Record<number, string> {
     const lang = tree[id]!.language;
     const cells = lang.territory?.cells;
     if (!cells || cells.length === 0) continue;
-    // Alive leaves and extinct leaves can both own cells; but if
-    // multiple claim the same cell (during a transition), the alive
-    // one wins.
     for (const c of cells) {
       const existing = out[c];
       if (!existing) {
@@ -349,7 +307,6 @@ function buildOwnership(tree: LanguageTree): Record<number, string> {
 }
 
 function languageColor(langId: string, extinct: boolean, tier: number): string {
-  // Golden-angle hue spread so adjacent leaves visibly differ.
   const hue = (fnv1a(langId) % 360);
   const sat = extinct ? 6 : 30 + tier * 10;
   const light = extinct ? 30 : 50 - tier * 4;
@@ -371,9 +328,6 @@ function labelsForAliveLeavesSmoothed(
   cache: Record<string, { x: number; y: number }>,
 ): Array<{ langId: string; lang: Language; point: { x: number; y: number } }> {
   const out: Array<{ langId: string; lang: Language; point: { x: number; y: number } }> = [];
-  // Exponential moving average — a high alpha keeps the label
-  // tracking territory expansion smoothly while damping the per-step
-  // wobble that comes from a 1-cell shift.
   const ALPHA = 0.18;
   const seen = new Set<string>();
   for (const id of Object.keys(tree)) {
@@ -400,9 +354,6 @@ function labelsForAliveLeavesSmoothed(
     seen.add(id);
     out.push({ langId: id, lang, point: smoothed });
   }
-  // Evict cache entries for languages that no longer have a label
-  // (extinct, became internal node) so the cache doesn't grow
-  // unbounded over long runs.
   for (const id of Object.keys(cache)) {
     if (!seen.has(id)) delete cache[id];
   }

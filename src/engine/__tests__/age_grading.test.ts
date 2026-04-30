@@ -3,11 +3,6 @@ import { applyChangesToWord } from "../phonology/apply";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 
-/**
- * Check age-grading: a word freshly changed (age 0) should be more likely
- * to be re-changed than one that's been stable for generations (age 20+).
- * We measure average fire rate across many trials at both extremes.
- */
 describe("age-grading via agesSinceChange", () => {
   it("freshly-changed words mutate more often than stable ones", () => {
     const rule = CATALOG_BY_ID["lenition.p_to_f"]!;

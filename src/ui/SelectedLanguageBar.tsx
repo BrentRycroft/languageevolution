@@ -3,12 +3,6 @@ import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 
-/**
- * Sub-header lozenge: shows the currently-selected language with key
- * stats (speakers, tier, conservatism) and a dropdown for swapping.
- * Always visible — gives every tab a single source of truth for
- * "which language am I looking at?".
- */
 export function SelectedLanguageBar() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);

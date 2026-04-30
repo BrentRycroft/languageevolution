@@ -52,8 +52,6 @@ describe("tree split", () => {
   });
 
   it("child count is bounded in [2, 9]", () => {
-    // Sample many splits with different seeds to sanity-check the
-    // biased distribution stays inside the documented range.
     for (let i = 0; i < 40; i++) {
       const tree = makeTree();
       const rng = makeRng("n-" + i);

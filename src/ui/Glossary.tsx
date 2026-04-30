@@ -1,8 +1,3 @@
-/**
- * Small curated reference for the families, taxa, and labels the simulator
- * emits. Lets first-time users map our event messages to standard linguistic
- * terminology.
- */
 
 interface Entry {
   name: string;

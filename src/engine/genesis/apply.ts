@@ -14,13 +14,6 @@ export interface CoinageOutcome {
   register?: "high" | "low";
 }
 
-/**
- * Coin a new word for a target meaning sampled from the language's
- * lexical-need vector. Tries mechanisms in weighted order until one
- * accepts. Falls back to legacy catalog rules if no mechanism feeds.
- *
- * Returns the outcome so the caller can record origin + register tags.
- */
 export function tryCoin(
   lang: Language,
   tree: LanguageTree,
@@ -28,26 +21,19 @@ export function tryCoin(
   weights: Record<string, number>,
   globalRate: number,
   rng: Rng,
-  /** Optional pre-computed need vector — allows the step to compute it
-   *  once per step and reuse across multiple coinages in the same tick. */
   cachedNeed?: Record<Meaning, number>,
 ): CoinageOutcome | null {
   if (!rng.chance(Math.min(1, globalRate))) return null;
 
-  // 1. Sample a target meaning from lexical-need pressure.
   const need = cachedNeed ?? lexicalNeed(lang, tree);
   const target = sampleNeededMeaning(need, rng);
   if (!target) {
-    // No needed meaning. Fall back to legacy catalog for variety (lets
-    // reduplication/intens forms keep firing on dense lexicons).
     return coinViaLegacy(lang, rules, weights, rng);
   }
 
-  // 2. Pick a mechanism weighted by language style + mechanism bias.
   const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
   const weighted = MECHANISMS.map((m) => {
     let w = m.baseWeight;
-    // Isolating grammar: boost compound + clipping.
     const paradigms = Object.keys(lang.morphology.paradigms).length;
     if (paradigms === 0) {
       if (m.id === "mechanism.compound") w *= 1.4;
@@ -56,13 +42,6 @@ export function tryCoin(
     } else {
       if (m.id === "mechanism.derivation") w *= 1 + paradigms * 0.15;
     }
-    // Per-tier bias. Each cultural transition shifts which coinage
-    // mechanism feels most natural:
-    //   tier 0 (forager) — reduplication + ideophone are alive
-    //   tier 1 (agricultural) — compounding flourishes (millstone,
-    //                            cowherd) + calque from neighbours
-    //   tier 2 (iron-age) — derivation + borrow (Latin into English)
-    //   tier 3 (modern) — blending + clipping (portmanteau, abbrev)
     const TIER_MECHANISM_BIAS: Record<number, Record<string, number>> = {
       0: { "mechanism.reduplication": 1.3, "mechanism.ideophone": 1.2 },
       1: { "mechanism.compound": 1.4, "mechanism.calque": 1.3 },
@@ -71,12 +50,10 @@ export function tryCoin(
     };
     const tierBias = TIER_MECHANISM_BIAS[tier]?.[m.id];
     if (typeof tierBias === "number") w *= tierBias;
-    // Calque only viable when the meaning is compound-shaped.
     if (m.id === "mechanism.calque" && !target.includes("-")) w = 0;
     return { mech: m, weight: w };
   });
 
-  // Pick mechanisms in weighted random order and try each until one fires.
   const attempted = new Set<string>();
   for (let attempt = 0; attempt < MECHANISMS.length; attempt++) {
     const pick = weightedSample(
@@ -89,8 +66,6 @@ export function tryCoin(
     const result = pick.mech.tryCoin(lang, target, tree, rng);
     if (!result) continue;
 
-    // 3. Phonotactic smoothing: pass once through the language's active
-    //    procedural rules so the coinage fits the language's sound.
     const smoothed = smoothForm(result.form, lang, rng);
     return {
       meaning: target,
@@ -101,8 +76,6 @@ export function tryCoin(
     };
   }
 
-  // 4. Fallback: legacy catalog — generates compound/intens forms even
-  //    when the need vector is empty-ish.
   return coinViaLegacy(lang, rules, weights, rng);
 }
 
@@ -125,25 +98,6 @@ function coinViaLegacy(
   };
 }
 
-/**
- * Run up to three of the language's active sound changes serially over
- * the form so the coinage takes on the language's current phonological
- * character.
- *
- * Important semantics:
- *  - Each rule is tried once in catalog order; we stop as soon as
- *    MAX_SMOOTHING_APPLICATIONS rules have fired.
- *  - Rules CAN feed each other: rule B sees the form rule A produced.
- *    That's intentional — real coinages do compose multiple changes
- *    (e.g. an English compound that gets reduced AND voiced). What we
- *    avoid is the same rule firing repeatedly on the new form, which
- *    is what would let insertion-style rules inflate the form.
- *  - Cascade pairs that loop unbounded (gemination + anaptyxis) are
- *    structurally prevented in `tree/split.ts::perturbChangeSet` —
- *    they can't both be enabled in the same language.
- *
- * Deterministic under rng; doesn't modify the lexicon.
- */
 const MAX_SMOOTHING_APPLICATIONS = 3;
 function smoothForm(form: WordForm, lang: Language, rng: Rng): WordForm {
   const changes = changesForLang(lang);

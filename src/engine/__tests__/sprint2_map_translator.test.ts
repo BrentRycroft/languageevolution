@@ -79,17 +79,16 @@ describe("§C — geo / map module", () => {
   it("getWorldMap memoises by mode + seed", () => {
     const a1 = getWorldMap("random", "memo-test");
     const a2 = getWorldMap("random", "memo-test");
-    expect(a1).toBe(a2); // same reference
+    expect(a1).toBe(a2);
     const e1 = getWorldMap("earth", "any-seed");
     const e2 = getWorldMap("earth", "different-seed");
-    expect(e1).toBe(e2); // earth ignores seed
+    expect(e1).toBe(e2);
   });
 
   it("sharedEdgeCount is symmetric and zero for empty intersections", () => {
     const map = generateRandomContinent("share-edges");
     expect(sharedEdgeCount(map, [], [0])).toBe(0);
     expect(sharedEdgeCount(map, [0], [])).toBe(0);
-    // Two cells that ARE neighbours have ≥ 1 shared edge.
     const cellA = map.cells.find((c) => c.neighbours.length > 0);
     if (cellA) {
       const cellB = map.cells[cellA.neighbours[0]!]!;
@@ -144,7 +143,6 @@ describe("§C — territory dynamics", () => {
     for (const d of daughters) {
       expect(d.territory!.cells.length).toBeGreaterThan(0);
     }
-    // No cell should appear in more than one daughter.
     const seen = new Set<number>();
     for (const d of daughters) {
       for (const c of d.territory!.cells) {
@@ -159,7 +157,6 @@ describe("§C — territory dynamics", () => {
     const farA = bareLang("FA", { territory: { cells: [0] } });
     const farB = bareLang("FB", { territory: { cells: [map.cells.length - 1] } });
     expect(arealShareAffinity(map, farA, farB)).toBe(0);
-    // Touching languages: pick a cell with neighbours, give A the cell + B a neighbour.
     const cellA = map.cells.find((c) => c.neighbours.length > 0);
     if (cellA) {
       const aLang = bareLang("A", { territory: { cells: [cellA.id] } });
@@ -204,7 +201,7 @@ describe("§B — translator", () => {
     const obj = tokens.find((t) => t.features.role === "object");
     const verb = tokens.find((t) => t.tag === "V");
     expect(subj?.lemma).toBe("dog");
-    expect(verb?.lemma).toBe("see"); // 'sees' → stripped to 'se' actually...
+    expect(verb?.lemma).toBe("see");
     expect(obj?.lemma).toBe("mother");
   });
 
@@ -224,7 +221,6 @@ describe("§B — translator", () => {
     const lang = state.tree[id!]!.language;
     const result = translateSentence(lang, "the dog sees the mother");
     expect(result.targetTokens.length).toBeGreaterThan(0);
-    // At least one token should resolve directly to a lexicon entry.
     const direct = result.targetTokens.filter((t) => t.resolution === "direct");
     expect(direct.length).toBeGreaterThan(0);
   });
@@ -235,10 +231,8 @@ describe("§B — translator", () => {
     const state = sim.getState();
     const id = Object.keys(state.tree).find((k) => !state.tree[k]!.language.extinct)!;
     const lang = state.tree[id]!.language;
-    // Force a word-order for testing.
     lang.grammar.wordOrder = "SOV";
     const result = translateSentence(lang, "dog sees mother");
-    // SOV puts the verb last among the S/V/O cluster.
     expect(result.targetTokens.length).toBeGreaterThanOrEqual(3);
     const lastResolved = result.targetTokens[result.targetTokens.length - 1]!;
     expect(lastResolved.englishTag).toBe("V");

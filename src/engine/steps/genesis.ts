@@ -17,32 +17,16 @@ export function stepGenesis(
 ): void {
   const rules = genesisRulesFor(config);
   const lexSize = Object.keys(lang.lexicon).length;
-  // Capacity-driven coinage: compare current lexicon size against a
-  // per-language target that grows with cultural tier, age, and
-  // speakers (see `lexicon/tier.ts::lexicalCapacity`). When we're
-  // below capacity, coin aggressively; once at capacity, coinage
-  // drops to a trickle (one every handful of generations). Always
-  // keeps a small residual rate so stagnant languages still
-  // occasionally introduce ideophones, reduplications, etc.
   const capacity = lang.lexicalCapacity ?? lexicalCapacity(lang, generation);
   const deficit = Math.max(0, capacity - lexSize);
-  // Base target: ~5% of the deficit per step, +0.2 residual. Jitter
-  // keeps identical sizes out of lockstep.
   const base = 0.2 + 0.05 * deficit;
   const noise = 0.5 + rng.next();
   const target = Math.max(1, Math.round(base * noise * lang.conservatism));
-  // Capacity throttle: at or above the target capacity, gate the
-  // step behind a moderate probability so saturated languages still
-  // coin occasionally (reduplication, ideophones, new compound
-  // combinations) — just at a much slower rate. Below capacity, use
-  // the full gate so the deficit actually gets filled.
   const atCapacity = lexSize >= capacity;
   const gateProb = atCapacity
     ? 0.25 * lang.conservatism
     : Math.min(1, 0.5 + 0.5 * lang.conservatism);
   if (!rng.chance(gateProb)) return;
-  // Compute need once per step; cheaper than recomputing for each coinage.
-  // Gets stale across coinages within a single step but the drift is small.
   const need = lexicalNeed(lang, state.tree);
   for (let i = 0; i < target; i++) {
     const outcome = tryCoin(
@@ -55,18 +39,10 @@ export function stepGenesis(
       need,
     );
     if (!outcome) break;
-    // Word-shape gate: refuse coinages that are phonotactically bad —
-    // missing a nucleus, too short for a content word, or a lone
-    // consonant. `isFormLegal` encodes the full rule (see
-    // `phonology/wordShape.ts`). The need loop will reroll next step.
     if (!isFormLegal(outcome.meaning, outcome.form)) continue;
-    // Commit the coinage to the lexicon.
     lang.lexicon[outcome.meaning] = outcome.form;
-    // Mid-range frequency for freshly-coined words.
     lang.wordFrequencyHints[outcome.meaning] = 0.4;
-    // Origin tag from the mechanism.
     lang.wordOrigin[outcome.meaning] = outcome.originTag;
-    // Register: mechanism-supplied tag wins, else low-register default.
     if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
       lang.registerOf[outcome.meaning] = outcome.register ?? "low";
     }
@@ -78,9 +54,6 @@ export function stepGenesis(
   }
 }
 
-// Bootstrap: for each derived meaning (compound/affixed) that has no
-// entry in the static neighbor table, inherit neighbors from its parts so
-// semantic drift and the translator can still reach it.
 export function bootstrapNeologismNeighbors(lang: Language): void {
   for (const m of Object.keys(lang.lexicon)) {
     if (!m.includes("-") && !/-(er|ness|ic|al|ine|intens)$/.test(m)) continue;

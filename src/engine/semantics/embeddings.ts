@@ -9,47 +9,9 @@ import {
 } from "../lexicon/concepts";
 import { fnv1a } from "../rng";
 
-/**
- * Hand-engineered + programmatically-extended semantic embeddings.
- *
- * Every registered concept (700+) gets a 12-dimensional vector built
- * from three layers:
- *
- *   1. **Cluster centroid** — every cluster (body, kinship, environment,
- *      tools…) has a hand-curated centroid that sets the broad
- *      semantic neighbourhood.
- *   2. **POS / tier modifiers** — verbs lean motion-axis, adjectives
- *      lean evaluation-axis, tier-2/3 concepts lean abstract.
- *   3. **Per-concept id-hash perturbation** + **colexification
- *      refinement** — gives each concept a distinct vector while
- *      pulling colex pairs (arm/hand, see/know, sun/day) closer.
- *
- * The output is functionally what the deleted WebLLM module gave us
- * — a continuous semantic similarity space — without the 2 MB
- * runtime cost.
- *
- * Dimensions:
- *   0. animacy           (animals / kin / people = +, objects = −)
- *   1. concreteness      (physical = +, abstract = −)
- *   2. body-part-ness
- *   3. environment / nature
- *   4. motion / action
- *   5. perception / cognition
- *   6. metabolism / consumption
- *   7. size / magnitude
- *   8. evaluation        (good/bad polarity)
- *   9. temporal / rhythmic
- *  10. kinship
- *  11. numeric / quantity
- */
 export const EMBEDDING_DIMS = 12;
 
-/**
- * Hand-curated centroids per cluster. Each centroid is a "typical
- * member" vector. Per-concept perturbation moves around it.
- */
 const CLUSTER_CENTROIDS: Record<string, number[]> = {
-  // animacy, concrete, body, env, motion, perception, metabolism, size, eval, time, kinship, numeric
   body:        [0.3, 0.85, 1.0,  0.0,  0.1,  0.1, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
   kinship:     [1.0, 0.85, 0.0,  0.0,  0.0,  0.0, 0.0,  0.0,  0.3,  0.1,  1.0,  0.0],
   environment: [0.0, 0.85, 0.0,  1.0,  0.1,  0.1, 0.1,  0.5,  0.0,  0.3,  0.0,  0.0],
@@ -70,13 +32,6 @@ const CLUSTER_CENTROIDS: Record<string, number[]> = {
   abstract:    [0.0, -0.2, 0.0,  0.0,  0.0,  0.4, 0.0,  0.0,  0.2,  0.1,  0.1,  0.0],
 };
 
-/**
- * Hand-curated overrides: anchor concepts that should sit at very
- * specific positions (e.g. "water" anchors the environment cluster
- * along the metabolism axis because of the colex pair water/drink).
- * These nudge the cluster centroid in directions a uniform centroid
- * couldn't capture.
- */
 const ANCHOR_OVERRIDES: Record<Meaning, number[]> = {
   water:  [0.0, 0.9, 0.0, 1.0, 0.2, 0.0, 0.4, 0.4, 0.0, 0.0, 0.0, 0.0],
   fire:   [0.0, 0.9, 0.0, 1.0, 0.3, 0.0, 0.2, 0.3, 0.1, 0.0, 0.0, 0.0],
@@ -120,12 +75,9 @@ function avg(a: number[], b: number[]): number[] {
 }
 
 function jitter(id: Meaning, magnitude: number): number[] {
-  // Deterministic per-id perturbation: take FNV hash, expand to 12
-  // pseudo-random floats in [-magnitude, +magnitude].
   const out = zero();
   let seed = fnv1a(id);
   for (let i = 0; i < EMBEDDING_DIMS; i++) {
-    // xorshift32 step
     seed ^= seed << 13;
     seed ^= seed >>> 17;
     seed ^= seed << 5;
@@ -141,34 +93,23 @@ function applyPosTierModifiers(
   tier: number,
 ): number[] {
   const out = v.slice();
-  // Verbs lean motion + perception.
   if (pos === "verb") {
     out[4] += 0.3;
     out[1] -= 0.2;
   }
-  // Adjectives lean evaluation + size.
   if (pos === "adjective") {
     out[8] += 0.2;
     out[7] += 0.15;
     out[1] -= 0.15;
   }
-  // Numerals lean numeric.
   if (pos === "numeral") {
     out[11] = 1;
     out[1] -= 0.5;
   }
-  // Higher-tier concepts lean abstract (concreteness down).
   out[1] -= tier * 0.08;
   return out;
 }
 
-/**
- * One pass of colex-pair refinement. For every cross-linguistic
- * colexification pair (arm/hand, see/know, sun/day), nudge the
- * two vectors slightly closer — the average gets weighted in at
- * 30%. This pulls colex pairs together without collapsing the
- * cluster structure.
- */
 function refineByColex(table: Record<Meaning, number[]>): void {
   const seen = new Set<string>();
   for (const id of CONCEPT_IDS) {
@@ -181,9 +122,6 @@ function refineByColex(table: Record<Meaning, number[]>): void {
       if (!a || !b) continue;
       const m = avg(a, b);
       table[id] = add(a, m, 0.3);
-      // Re-normalise the trailing influence so we don't double-count.
-      // (Each concept can be in multiple colex pairs; cumulative effect
-      // is intentional but capped via the 0.3 weight.)
       table[partner] = add(b, m, 0.3);
     }
   }
@@ -209,13 +147,6 @@ function buildBase(): Record<Meaning, number[]> {
 
 const BASE: Record<Meaning, number[]> = buildBase();
 
-/**
- * Build an embedding for a meaning. Registered concepts come from
- * the precomputed BASE table. Compounds / derivations average their
- * components; affixed forms inherit from their stem with a
- * derivation kick. Unknown bare meanings get a cluster-or-zero
- * fallback.
- */
 export function embed(meaning: Meaning): number[] {
   if (BASE[meaning]) return BASE[meaning]!.slice();
   if (meaning.includes("-")) {
@@ -233,14 +164,12 @@ export function embed(meaning: Meaning): number[] {
       return v;
     }
   }
-  // Affixed (e.g., "water-er") — stem with derivation kick.
   const stripped = meaning.replace(/-(er|ness|ic|al|ine|intens)$/, "");
   if (stripped !== meaning && BASE[stripped]) {
     const v = BASE[stripped]!.slice();
     v[1] -= 0.2;
     return v;
   }
-  // Last fallback: cluster-only with complexity bump.
   const v = zero();
   const cluster = clusterOf(meaning);
   if (cluster && CLUSTER_CENTROIDS[cluster]) {
@@ -263,11 +192,6 @@ export function cosine(a: number[], b: number[]): number {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
-/**
- * Find semantic neighbors for a meaning by cosine similarity over
- * the embedding space. Filters to candidates available in
- * `candidates` and returns the top-k by similarity (descending).
- */
 export function nearestMeanings(
   meaning: Meaning,
   candidates: readonly Meaning[],
@@ -282,5 +206,4 @@ export function nearestMeanings(
   return scored.slice(0, k).map((x) => x.c);
 }
 
-/** Re-export convenience predicate so callers don't have to chase imports. */
 export { isRegisteredConcept };

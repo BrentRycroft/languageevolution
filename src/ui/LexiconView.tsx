@@ -48,15 +48,12 @@ export function LexiconView() {
   const allMeanings = useMemo(() => Object.keys(seedForms).sort(), [seedForms]);
   const debouncedSearch = useDebounced(search, 150);
 
-  // Pre-compute "last changed gen" + frequency hint per meaning,
-  // averaged across visible languages, for the non-alpha sorts.
   const sortKeyForMeaning = useMemo(() => {
     const out: Record<string, number> = {};
     for (const m of allMeanings) {
       if (sort === "frequency") {
-        out[m] = -frequencyFor(m); // higher freq → smaller key (top of table)
+        out[m] = -frequencyFor(m);
       } else if (sort === "last-changed") {
-        // Most-recently-changed comes first; aggregate over visible leaves.
         let maxGen = -1;
         for (const lid of visibleLeaves) {
           const g = state.tree[lid]?.language.lastChangeGeneration?.[m];
@@ -64,13 +61,12 @@ export function LexiconView() {
         }
         out[m] = -maxGen;
       } else if (sort === "cluster") {
-        out[m] = 0; // cluster ordering applied below as a string sort
+        out[m] = 0;
       } else {
         out[m] = 0;
       }
     }
     return out;
-    // visibleLeaves is the dependency but referenced via state.tree below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allMeanings, sort, state.tree]);
 

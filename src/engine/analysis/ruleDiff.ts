@@ -36,11 +36,6 @@ export interface OtDiffRow {
   bRank: number | null;
 }
 
-/**
- * Align two OT rankings and report each constraint's rank in A vs B.
- * Lower rank = higher priority (0 is "highest-ranked constraint").
- * Null means the constraint is absent from that language's ranking.
- */
 export function diffOtRankings(a: Language, b: Language): OtDiffRow[] {
   const rows = new Map<string, OtDiffRow>();
   a.otRanking.forEach((c, i) => {
@@ -51,7 +46,6 @@ export function diffOtRankings(a: Language, b: Language): OtDiffRow[] {
     if (row) row.bRank = i;
     else rows.set(c, { constraint: c, aRank: null, bRank: i });
   });
-  // Sort by largest rank disagreement so biggest differences surface first.
   return Array.from(rows.values()).sort((x, y) => {
     const deltaX = Math.abs((x.aRank ?? 0) - (x.bRank ?? 0));
     const deltaY = Math.abs((y.aRank ?? 0) - (y.bRank ?? 0));

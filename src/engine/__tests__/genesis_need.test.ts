@@ -24,7 +24,6 @@ describe("genesis/need", () => {
 
   it("sampleNeededMeaning picks weighted targets", () => {
     const rng = makeRng("s");
-    // Highly skewed vector — "rare" should almost never appear.
     const need = { common: 100, rare: 0.01 };
     const counts = { common: 0, rare: 0 };
     for (let i = 0; i < 200; i++) {
@@ -36,16 +35,13 @@ describe("genesis/need", () => {
   });
 
   it("underpopulated clusters generate positive need", () => {
-    // Start from default but drop a cluster's worth of meanings.
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
-    // Wipe all animals from the lexicon.
     for (const key of Object.keys(lang.lexicon)) {
       if (clusterOf(key) === "animals") delete lang.lexicon[key];
     }
     const need = lexicalNeed(lang, state.tree);
-    // Every now-empty animal slot should have positive need.
     expect(need["dog"]).toBeGreaterThan(0);
     expect(need["wolf"]).toBeGreaterThan(0);
   });

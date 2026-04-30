@@ -23,46 +23,21 @@ import {
   clearAutosave,
 } from "../persistence/autosave";
 
-/**
- * Persistence-layer notice rendered by the toast UI. Each `kind`
- * corresponds to a discrete failure or warning the user should know
- * about — autosave couldn't write because storage is full, an old
- * snapshot was rejected because it was authored by a future build,
- * etc. The store exposes `setPersistenceNotice` /
- * `dismissPersistenceNotice` for UI surfacing.
- */
 export interface PersistenceNotice {
   kind: "quota" | "future-version" | "corrupt" | "migration-failed" | "save-error";
   message: string;
-  /** Generation timestamp (in ms) so consecutive identical notices
-   *  don't suppress; the toast component keys on this. */
   shownAt: number;
 }
 
-/**
- * Pending confirm-dialog request. Stored as a single record on the
- * store rather than per-component so any caller in any component can
- * trigger the global dialog without threading a hook through the
- * tree. The Promise resolver is captured here so the resolver in
- * the caller's `await showConfirm(...)` fires when the user clicks
- * Confirm or Cancel.
- */
 export interface ConfirmRequest {
   title: string;
   message: string;
   confirmLabel: string;
   cancelLabel?: string;
-  /** When true, the confirm button styles as `danger` (destructive
-   *  action — delete, reset, etc.). Default `false`. */
   danger?: boolean;
   resolve: (ok: boolean) => void;
 }
 
-/**
- * Tiny FNV-1a hash for mixing a language id into a numeric RNG seed.
- * Used by applyRuleBiasToLanguage so every language gets a deterministic
- * but distinct sub-seed when proposing an immediate post-bias rule.
- */
 function fnv1aTinyHash(s: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
@@ -91,7 +66,6 @@ function persistAchievements(ids: string[]): void {
     if (typeof localStorage === "undefined") return;
     localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(ids));
   } catch {
-    // best-effort persistence
   }
 }
 
@@ -104,44 +78,22 @@ interface SimStore {
   selectedLangId: string | null;
   selectedMeaning: Meaning | null;
   timelineMeanings: Meaning[];
-  /** Lexicon visibility filter: "alive" (default), "all", "starred", "compare". */
   lexiconFilter: "alive" | "all" | "starred" | "compare";
-  /** Set of language ids the user has bookmarked. */
   starredLangIds: string[];
-  /** Language ids checked in the "compare" filter mode. */
   compareLangIds: string[];
-  /** Substring search over meanings in the lexicon view. */
   lexiconSearch: string;
-  /** Lexicon row sort key. */
   lexiconSort: "alpha" | "cluster" | "frequency" | "last-changed";
-  /** When true, rows are grouped by cluster with a header row per cluster. */
   lexiconGroupByCluster: boolean;
-  /** Script mode for the Lexicon view: phonemic (IPA) / orthographic / both. */
   displayScript: "ipa" | "roman" | "both";
-  /** Theme selection. "system" follows prefers-color-scheme. */
   theme: "dark" | "light" | "system";
-  /** Timeline display mode. "meanings" = one language, many meanings.
-   *  "cognates" = one meaning, many languages. */
   timelineMode: "meanings" | "cognates" | "rules";
-  /** Scrubber-selected generation for the timeline. null = follow live. */
   timelineScrubGeneration: number | null;
-  /** Ring buffer of per-generation activity counts, capped at 200. */
   activityHistory: ActivityPoint[];
   history: HistoryByLangMeaning;
   seedFormsByMeaning: Record<Meaning, WordForm>;
-  /** Ids of procedural-engine achievements unlocked across this session. */
   unlockedAchievements: string[];
-  /** Most recently unlocked achievement id, for the toast. null = dismissed. */
   lastAchievement: string | null;
-  /** Most recent persistence-layer notice (autosave quota / migration
-   *  failure / corrupt save / future-version). The PersistenceToast
-   *  component renders this; `dismissPersistenceNotice` clears it.
-   *  Distinct from the achievement toast so a single user action
-   *  doesn't accidentally clear the other. */
   persistenceNotice: PersistenceNotice | null;
-  /** Pending confirm-dialog request, or null when no dialog is open.
-   *  See `ConfirmRequest`. The single `<ConfirmDialog />` in App.tsx
-   *  reads this; resolved via `resolveConfirm`. */
   confirmDialog: ConfirmRequest | null;
   step: () => void;
   stepN: (n: number) => void;
@@ -183,8 +135,6 @@ interface SimStore {
   dismissAchievementToast: () => void;
   dismissPersistenceNotice: () => void;
   setPersistenceNotice: (notice: PersistenceNotice) => void;
-  /** Open a confirm dialog. Resolves to `true` on confirm,
-   *  `false` on cancel / Escape / backdrop click. */
   showConfirm: (req: Omit<ConfirmRequest, "resolve">) => Promise<boolean>;
   resolveConfirm: (ok: boolean) => void;
   clearAchievements: () => void;
@@ -205,8 +155,6 @@ function initFromConfig(config: SimulationConfig) {
   return { sim, state, seedForms, history };
 }
 
-// A short, pronounceable random seed like "l7jq2" — friendlier than a
-// UUID and easy to share verbally.
 function makeRandomSeed(): string {
   const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
   let out = "";
@@ -216,11 +164,6 @@ function makeRandomSeed(): string {
   return out;
 }
 
-/**
- * Boot-time state: if an autosave exists, rehydrate it so the user's
- * progress survives reloads (including reloads caused by a WebLLM chunk
- * failure or SW misroute). Otherwise start fresh from defaultConfig.
- */
 function bootState(): {
   config: SimulationConfig;
   sim: Simulation;
@@ -228,8 +171,6 @@ function bootState(): {
   history: HistoryByLangMeaning;
   seedForms: Record<Meaning, WordForm>;
   resumed: boolean;
-  /** When boot fell back to defaults despite an autosave existing,
-   *  carries the load-failure reason so the UI can surface a toast. */
   loadFailure?: PersistenceNotice;
 } {
   const loaded = loadAutosave();
@@ -249,9 +190,6 @@ function bootState(): {
         resumed: true,
       };
     } catch {
-      // Restoration failed AFTER a successful migrate — the snapshot
-      // shape parsed but the engine couldn't rehydrate it. Surface as
-      // a corrupt notice and fall through to fresh boot.
       loadFailure = {
         kind: "corrupt",
         message: "Couldn't restore your last autosave; starting fresh.",
@@ -259,8 +197,6 @@ function bootState(): {
       };
     }
   } else if (loaded.reason !== "empty") {
-    // Distinct messages per failure mode so the user understands
-    // exactly what happened — silent loss is the bug we're fixing.
     const msg: Record<"corrupt" | "future-version" | "migration-failed", string> = {
       corrupt: "Your last autosave was corrupt; starting fresh.",
       "future-version":
@@ -291,26 +227,9 @@ const booted = bootState();
 const initialConfig = booted.config;
 const initial = booted;
 
-/**
- * Throttle quota-exceeded warnings so we don't spam a toast on every
- * step once `localStorage` fills up. One warning per minute is plenty
- * to signal to the user; the autosave best-effort path keeps trying
- * (and may succeed if the user clears space).
- */
 let lastQuotaWarnAt = 0;
 const QUOTA_WARN_INTERVAL_MS = 60_000;
 
-/**
- * Wraps `saveAutosave` so a quota or stringify failure surfaces a
- * persistence notice in the store instead of silently dropping the
- * write. Throttled per `QUOTA_WARN_INTERVAL_MS` so a full localStorage
- * doesn't spam one toast per step.
- *
- * On modern browsers, autosave may also be deferred to the next idle
- * callback to avoid serializing the entire SimulationState on the
- * step path. The save itself stays synchronous when `requestIdleCallback`
- * isn't available (Safari < 16, JSDOM, …).
- */
 function tryAutosave(args: Parameters<typeof saveAutosave>): void {
   const run = () => {
     const result = saveAutosave(args[0], args[1]);
@@ -336,11 +255,7 @@ function tryAutosave(args: Parameters<typeof saveAutosave>): void {
         },
       });
     }
-    // `disabled` is silent — the user has localStorage off; spamming
-    // them about it isn't useful.
   };
-  // Defer off the step path when available so a 200-leaf state's
-  // ~MB of JSON.stringify doesn't land on the render frame.
   const ric = (globalThis as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
   if (typeof ric === "function") {
     ric(run, { timeout: 1500 });
@@ -397,9 +312,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
       unlockedAchievements: nextUnlocked,
       lastAchievement: fresh[0] ?? get().lastAchievement,
     });
-    // Throttled autosave so the running simulation survives an
-    // accidental reload (or a WebLLM chunk-load failure). Saved every
-    // MIN_SAVE_INTERVAL_MS at most — no-op during fast playback.
     tryAutosave([{ config, state, generationsRun: state.generation }]);
   },
   stepN: (n) => {
@@ -450,9 +362,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
   setSpeed: (s) => set({ speed: s }),
   reset: () => {
     const { config } = get();
-    // PR C: every reset rolls a fresh seed by default — most users
-    // expect "reset" to mean "give me a new run", not "redo the same
-    // run". Hold the same seed by editing it manually before reset.
     const nextConfig = { ...config, seed: makeRandomSeed() };
     const init = initFromConfig(nextConfig);
     set({
@@ -466,8 +375,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
       timelineScrubGeneration: null,
       playing: false,
     });
-    // Overwrite autosave with the fresh state so a page reload after a
-    // reset doesn't resurrect the old simulation.
     tryAutosave([
       { config: nextConfig, state: init.state, generationsRun: init.state.generation },
       { force: true },
@@ -569,26 +476,12 @@ export const useSimStore = create<SimStore>((set, get) => ({
     updateConfig({ ...config, seed: makeRandomSeed() });
   },
   applyRuleBiasToLanguage: (langId, bias) => {
-    // Bias lives on the language and is read by the procedural proposer
-    // each generation. We mutate the engine's state directly (the engine
-    // treats its state as owned-mutable inside step()), then hand React a
-    // fresh top-level wrapper so selectors re-run.
-    //
-    // We also fire a one-off rule proposal right away so the user sees
-    // an immediate effect. Previously this was async (dynamic import +
-    // separately-seeded Rng) which (a) raced with concurrent set() calls
-    // and (b) broke export/import determinism. Now we use the engine's
-    // current rngState directly so the proposal sits on the deterministic
-    // RNG stream — the same proposal would have fired had the user
-    // exported, then re-imported and stepped to the same generation.
     const { sim } = get();
     const state = sim.getState();
     const node = state.tree[langId];
     if (!node) return;
     node.language.ruleBias = { ...(node.language.ruleBias ?? {}), ...bias };
     try {
-      // makeRng accepts a number; consume one tick from the live state so
-      // the proposal advances rngState predictably from the user's seed.
       const rng = makeRng(state.rngState ^ fnv1aTinyHash(langId));
       const rule = proposeOneRule(node.language, rng, state.generation);
       if (rule) {
@@ -601,7 +494,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
         });
       }
     } catch {
-      // non-fatal — bias still takes effect for the next cadence.
     }
     set({ state: { ...state, tree: { ...state.tree } } });
   },
@@ -638,8 +530,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
         timelineScrubGeneration: null,
         playing: false,
       });
-      // Loading an explicit save/run replaces the autosave slot so a
-      // subsequent reload resumes where the user just landed.
       tryAutosave([
         { config, state: restored, generationsRun: restored.generation },
         { force: true },
@@ -671,11 +561,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
       ]);
     }
   },
-  /**
-   * Hard-reset: drop the autosave entirely so the next mount starts
-   * from defaultConfig. Exposed for the "Start over" UI affordance we
-   * may add later; not called by any normal reset path.
-   */
   clearAutosave: () => {
     clearAutosave();
   },

@@ -1,23 +1,11 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
 
-/**
- * Surfaces the "new version available" signal from `vite-plugin-pwa`.
- * Without a visible banner, users would get the new service worker
- * silently registered in the background, but the already-rendered page
- * still runs off the old bundle — so things like a preset rewrite
- * (PR 4's IPA pass) look like they "didn't land." Clicking the button
- * calls `updateServiceWorker()`, which reloads and promotes the waiting
- * SW so the fresh bundle is served.
- */
 export function UpdateBanner() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
-      // Periodically ask the SW if there's an update (every 60 min).
-      // This makes long-open sessions pick up new releases without a
-      // manual reload.
       if (!registration) return;
       setInterval(
         () => {

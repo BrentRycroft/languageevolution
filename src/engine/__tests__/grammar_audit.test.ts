@@ -9,7 +9,6 @@ function freshLang(seed: string): Language {
   const sim = createSimulation({ ...defaultConfig(), seed });
   sim.step();
   const lang = sim.getState().tree["L-0"]!.language;
-  // Backfill enough vocabulary for the realiser to surface tokens.
   if (!lang.lexicon["king"]) lang.lexicon["king"] = ["k", "i", "n"];
   if (!lang.lexicon["dog"]) lang.lexicon["dog"] = ["k", "u"];
   if (!lang.lexicon["see"]) lang.lexicon["see"] = ["s", "i"];
@@ -26,14 +25,6 @@ function p(category: Paradigm["category"], affix: string[], position: "prefix" |
 
 describe("§gap-1 — genitive case on possessor NPs", () => {
   it("possessor NP gets noun.case.gen morphology when role=POSS", () => {
-    // We don't have a clean English construction for possessor in the
-    // tokeniser yet, so we test the realiser path indirectly by
-    // turning on hasCase + a gen paradigm and watching the form
-    // change for an NP whose head sits inside a possessor slot.
-    // The existing tokeniser doesn't yet emit POSS roles, so this
-    // test asserts the no-regression case: a hasCase language with
-    // gen paradigm renders ordinary subject NPs in nominative
-    // (unmarked) and accusative objects in -m.
     const lang = freshLang("gen-1");
     lang.grammar.hasCase = true;
     lang.morphology.paradigms["noun.case.acc"] = p("noun.case.acc", ["m"]);
@@ -42,7 +33,6 @@ describe("§gap-1 — genitive case on possessor NPs", () => {
     const dog = out.targetTokens.find((t) => t.englishLemma === "dog");
     expect(dog?.targetSurface).toMatch(/m$/);
     const king = out.targetTokens.find((t) => t.englishLemma === "king");
-    // king is subject = nom = unmarked.
     expect(king?.targetSurface).not.toMatch(/[sm]$/);
   });
 });
@@ -111,9 +101,7 @@ describe("§gap-5 — noun incorporation", () => {
     const lang = freshLang("incorp");
     lang.grammar.incorporates = true;
     const out = translateSentence(lang, "the king sees water");
-    // Object should not surface as a separate token.
     expect(out.targetTokens.find((t) => t.englishLemma === "water")).toBeUndefined();
-    // The verb's surface should contain the water root.
     const verb = out.targetTokens.find((t) => t.englishLemma === "see");
     expect(verb?.targetSurface).toContain("wat");
   });
@@ -121,7 +109,6 @@ describe("§gap-5 — noun incorporation", () => {
   it("incorporates does NOT fuse modified object NPs", () => {
     const lang = freshLang("incorp-mod");
     lang.grammar.incorporates = true;
-    // Object has an adjective → modified → not incorporated.
     const out = translateSentence(lang, "the king sees the big water");
     expect(out.targetTokens.find((t) => t.englishLemma === "water")).toBeDefined();
   });
@@ -135,7 +122,6 @@ describe("§gap-6 — synthesisIndex caps verb-affix stack depth", () => {
     lang.morphology.paradigms["verb.person.3sg"] = p("verb.person.3sg", ["t"]);
     const out = translateSentence(lang, "the king saw the wolf");
     const v = out.targetTokens.find((t) => t.englishLemma === "see");
-    // Either past (-d) or 3sg (-t) should be present, but not both.
     const ends = v?.targetSurface ?? "";
     const hasPast = /d$/.test(ends);
     const hasPerson = /t$/.test(ends);
@@ -149,7 +135,6 @@ describe("§gap-6 — synthesisIndex caps verb-affix stack depth", () => {
     lang.morphology.paradigms["verb.person.3sg"] = p("verb.person.3sg", ["t"]);
     const out = translateSentence(lang, "the king saw the wolf");
     const v = out.targetTokens.find((t) => t.englishLemma === "see");
-    // Both past + person should fire at high synthesis.
     expect(v?.targetSurface).toMatch(/dt$/);
   });
 });
@@ -221,12 +206,11 @@ describe("§gap-8 — yes/no question strategies", () => {
   it("inversion: verb precedes subject regardless of base wordOrder", () => {
     const lang = freshLang("q-inv");
     lang.grammar.interrogativeStrategy = "inversion";
-    lang.grammar.wordOrder = "SOV"; // base: S, O, V
+    lang.grammar.wordOrder = "SOV";
     const out = translateSentence(lang, "is the king seeing the wolf?");
     const arr = out.targetTokens.map((t) => t.englishLemma);
     const vIdx = arr.indexOf("see");
     const sIdx = arr.indexOf("king");
-    // Question with inversion should put V before S.
     expect(vIdx).toBeLessThan(sIdx);
   });
 });

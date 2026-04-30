@@ -103,11 +103,6 @@ export async function importSnapshot(file: File): Promise<SnapshotPayload> {
   return parsed;
 }
 
-/**
- * Write a human-readable Markdown grammar brief for one language:
- * a summary of grammar features, active + retired sound laws, semantic
- * drift events bucketed by taxonomy, and the register distribution.
- */
 export function buildGrammarBrief(
   state: SimulationState,
   langId: string,
@@ -174,7 +169,6 @@ export function buildGrammarBrief(
     lines.push("");
   }
 
-  // Semantic-drift events bucketed by taxonomy prefix.
   const buckets: Record<string, string[]> = {
     metonymy: [],
     metaphor: [],

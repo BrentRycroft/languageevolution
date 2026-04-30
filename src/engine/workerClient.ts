@@ -1,14 +1,5 @@
 import type { SimulationConfig, SimulationState } from "./types";
 
-/**
- * Lightweight client for the engine Worker. Spawns the worker, initialises
- * it with a config, and exposes an async `stepN` that returns the state
- * snapshot once the worker is done. Used by the store's fast-forward path
- * when `useWorker` is enabled in config, so long runs don't block the UI.
- *
- * Falls back gracefully: if Worker is unavailable (SSR / jsdom tests), the
- * factory returns null and the caller runs sync on the main thread.
- */
 export interface EngineWorkerClient {
   stepN: (n: number) => Promise<SimulationState>;
   restore: (state: SimulationState) => Promise<void>;
@@ -29,7 +20,6 @@ export async function createEngineWorker(
     return null;
   }
 
-  // Correlate requests and responses by integer id.
   let nextId = 1;
   const pending = new Map<number, (msg: unknown) => void>();
 

@@ -2,13 +2,6 @@ import type { CoinageMechanism } from "./types";
 import type { Phoneme, WordForm } from "../../types";
 import { isVowel, isConsonant } from "../../phonology/ipa";
 
-/**
- * Ideophone: invent an iconic CVCV(CV) form using only phonemes
- * currently in the language's inventory. Tends to be short, often
- * reduplicative in feel.
- *
- * Register: "low" — ideophones are highly colloquial.
- */
 export const MECHANISM_IDEOPHONE: CoinageMechanism = {
   id: "mechanism.ideophone",
   label: "ideophone",
@@ -25,7 +18,6 @@ export const MECHANISM_IDEOPHONE: CoinageMechanism = {
     const syllables = rng.chance(0.5) ? 2 : 3;
     const form: WordForm = [];
     for (let i = 0; i < syllables; i++) {
-      // 70% reuse the same consonant/vowel for iconicity ("bababa").
       const c = rng.chance(0.7) ? c1 : consonants[rng.int(consonants.length)]!;
       const v = rng.chance(0.7) ? v1 : vowels[rng.int(vowels.length)]!;
       form.push(c, v);

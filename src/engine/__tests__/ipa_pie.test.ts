@@ -7,7 +7,6 @@ import { presetPIE } from "../presets/pie";
 
 describe("PIE character + syllabicity handling", () => {
   it("isVowel recognises IPA-diacritic vowels used in PIE", () => {
-    // Stress accents and long-vowel markers on the plain vowel.
     for (const v of ["a", "e", "i", "o", "u", "aː", "eː", "iː", "oː", "uː"]) {
       expect(isVowel(v), v).toBe(true);
     }
@@ -26,24 +25,20 @@ describe("PIE character + syllabicity handling", () => {
   });
 
   it("featuresOf returns bundles for PIE segments", () => {
-    // Laryngeals
     for (const h of ["h₁", "h₂", "h₃"]) {
       const f = featuresOf(h);
       expect(f, h).toBeDefined();
       expect(f!.type).toBe("consonant");
     }
-    // Palatalised velars
     for (const c of ["kʲ", "gʲ", "gʲʰ"]) {
       const f = featuresOf(c);
       expect(f, c).toBeDefined();
       expect(f!.type).toBe("consonant");
     }
-    // Labiovelars (IPA)
     for (const c of ["kʷ", "gʷ", "gʷʰ"]) {
       const f = featuresOf(c);
       expect(f, c).toBeDefined();
     }
-    // Voiced aspirates
     for (const c of ["bʰ", "dʰ", "gʰ"]) {
       const f = featuresOf(c);
       expect(f, c).toBeDefined();
@@ -51,12 +46,11 @@ describe("PIE character + syllabicity handling", () => {
   });
 
   it("featuresOf diacritic fallback handles unseen aspirate / labialised / syllabic forms", () => {
-    // Not in PHONE_FEATURES explicitly; fallback strips the diacritic.
     const ph = featuresOf("pʰ");
     expect(ph?.type).toBe("consonant");
     if (ph?.type === "consonant") expect(ph.aspirated).toBe(true);
     const syllabicP = featuresOf("b̩");
-    expect(syllabicP?.type).toBe("consonant"); // base /b/ features
+    expect(syllabicP?.type).toBe("consonant");
   });
 
   it("PIE preset runs 60 generations without crashing and preserves syllabicity", () => {
@@ -79,29 +73,20 @@ describe("PIE character + syllabicity handling", () => {
   it("textToIpa converts typed English digraphs", () => {
     expect(textToIpa("think")).toEqual(["θ", "i", "n", "k"]);
     expect(textToIpa("sheep")).toEqual(["ʃ", "eː", "p"]);
-    // The `gh` digraph gets mapped to IPA /ɣ/ (Arabic-style), not
-    // English "silent gh" — English orthography isn't reversible so the
-    // converter picks the most unambiguous IPA reading.
     expect(textToIpa("night")).toEqual(["n", "i", "ɣ", "t"]);
-    // `qu` → /k/+/w/.
     expect(textToIpa("queen")).toEqual(["k", "w", "eː", "n"]);
-    // `j` alone → /dʒ/.
     expect(textToIpa("jam")).toEqual(["dʒ", "a", "m"]);
-    // Silent final-e stripping on CVCe.
     expect(textToIpa("make").join("")).not.toContain("e");
   });
 
   it("textToIpa passes IPA through unchanged", () => {
-    // Combining-diacritic cluster survives round-trip.
     const out = textToIpa("m̩ater");
     expect(out[0]).toBe("m̩");
   });
 
   it("sanitizeForNewick preserves multi-codepoint phonemes as single tokens", () => {
     const out = sanitizeForNewick(["m̩", "a", "t", "e", "r"]);
-    // m̩ becomes one `%XX_XX` escape, not two separate escapes.
-    expect(out.split("%").length).toBe(2); // one `%…` escape for m̩
-    // Then plain ASCII for the rest.
+    expect(out.split("%").length).toBe(2);
     expect(out.endsWith("ater")).toBe(true);
   });
 

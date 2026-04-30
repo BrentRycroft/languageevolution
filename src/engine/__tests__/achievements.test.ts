@@ -8,8 +8,6 @@ describe("achievements", () => {
   it("no achievements unlock at gen 0 on a fresh run", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "fresh" });
     const fresh = detectNewAchievements(new Set(), sim.getState());
-    // "Polyglot" needs 6 alive leaves; "Methuselah" needs 300 gens.
-    // Some low-bar ones like "Museum" only fire if a rule has retired.
     expect(fresh).not.toContain("polyglot");
     expect(fresh).not.toContain("methuselah");
     expect(fresh).not.toContain("museum");

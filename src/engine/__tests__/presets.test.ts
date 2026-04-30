@@ -13,7 +13,6 @@ describe("presets", () => {
       expect(state.generation).toBe(50);
       const leaves = leafIds(state.tree);
       expect(leaves.length).toBeGreaterThan(0);
-      // Ensure the root has a non-empty lexicon.
       const root = state.tree[state.rootId]!;
       expect(Object.keys(root.language.lexicon).length).toBeGreaterThan(0);
     });

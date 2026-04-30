@@ -1,10 +1,5 @@
 import { useSimStore } from "../state/store";
 
-/**
- * Compact three-way picker for the global display script (IPA / Aa / both).
- * Reads and writes the `displayScript` setting on the shared store — so
- * flipping it in any view affects every view that formats phonetic forms.
- */
 export function ScriptPicker({
   compact = true,
 }: {

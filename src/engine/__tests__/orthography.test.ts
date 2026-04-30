@@ -40,7 +40,6 @@ describe("orthography", () => {
   it("driftOrthography flips a phoneme's spelling when triggered", () => {
     const lang = baseLang();
     const rng = makeRng("drift");
-    // Force probability=1 so it definitely fires.
     const shift = driftOrthography(lang, rng, 1);
     expect(shift).not.toBeNull();
     if (!shift) return;

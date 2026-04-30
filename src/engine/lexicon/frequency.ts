@@ -1,10 +1,5 @@
 import type { Meaning } from "../types";
 
-/**
- * Hand-tuned frequency-of-use hints for the default Swadesh-style lexicon.
- * Values in [0, 1]: higher = more common in everyday speech, which makes the
- * word mutate faster under phonological change (lexical-diffusion effect).
- */
 export const DEFAULT_FREQUENCY_HINTS: Record<Meaning, number> = {
   water: 0.95,
   fire: 0.8,

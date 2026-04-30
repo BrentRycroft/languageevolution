@@ -22,10 +22,6 @@ describe("genesis mechanisms", () => {
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
     const compound = MECHANISMS.find((m) => m.id === "mechanism.compound")!;
-    // Target a meaning the lexicon lacks. Compound's phonotactic filter
-    // rejects some random pairings (too long or bad cluster), so iterate
-    // a handful of seeds and assert at least one produces a form — this
-    // mirrors how the real engine calls tryCoin on every genesis step.
     let hit: { form: import("../types").WordForm } | null = null;
     for (let i = 0; i < 16; i++) {
       hit = compound.tryCoin(lang, "sky-fire", state.tree, makeRng("c" + i));
@@ -42,7 +38,6 @@ describe("genesis mechanisms", () => {
     const lang = state.tree[state.rootId]!.language;
     const rng = makeRng("calque-none");
     const calque = MECHANISMS.find((m) => m.id === "mechanism.calque")!;
-    // No sisters exist (root-only tree), so calque always returns null.
     expect(calque.tryCoin(lang, "water-bird", state.tree, rng)).toBeNull();
   });
 
@@ -50,7 +45,6 @@ describe("genesis mechanisms", () => {
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
-    // Ensure a long word exists.
     lang.lexicon["laboratory"] = ["l", "a", "b", "o", "r", "a", "t", "o", "r", "i"];
     const rng = makeRng("clip");
     const clip = MECHANISMS.find((m) => m.id === "mechanism.clipping")!;
@@ -81,11 +75,7 @@ describe("genesis mechanisms", () => {
     const lang = state.tree[state.rootId]!.language;
     const rng = makeRng("conv");
     const conv = MECHANISMS.find((m) => m.id === "mechanism.conversion")!;
-    // Target a slot in the "animals" cluster — there are plenty of
-    // cluster-mates we can zero-derive from.
     const result = conv.tryCoin(lang, "kitten", state.tree, rng);
-    // May return null if no cluster-mates exist for "kitten" (not in
-    // clusters); that's OK — the test asserts shape when it fires.
     if (result) {
       const allForms = Object.values(lang.lexicon).map((f) => f.join(""));
       expect(allForms).toContain(result.form.join(""));
@@ -108,7 +98,6 @@ describe("genesis mechanisms", () => {
         tags.add(tag);
       }
     }
-    // Expect at least two distinct origin tags across the run.
     expect(tags.size).toBeGreaterThanOrEqual(2);
   });
 });

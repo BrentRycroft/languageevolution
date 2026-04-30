@@ -25,20 +25,17 @@ describe("phonology/features", () => {
     expect(matchesQuery("p", { type: "consonant", voice: true })).toBe(false);
     expect(matchesQuery("i", { type: "vowel", backness: "front" })).toBe(true);
     expect(matchesQuery("u", { type: "vowel", backness: "front" })).toBe(false);
-    // Unknown segment never matches.
     expect(matchesQuery("ZZZ", { type: "consonant" })).toBe(false);
   });
 
   it("shiftHeight raises vowels by one step", () => {
     expect(shiftHeight("a", 1)).toBeDefined();
-    expect(shiftHeight("i", 1)).toBe("i"); // Already at top.
+    expect(shiftHeight("i", 1)).toBe("i");
     expect(shiftHeight("e", 1)).not.toBe("e");
   });
 
   it("findConsonant resolves simple feature queries", () => {
-    // Labial fricative voiceless = f
     expect(findConsonant({ type: "consonant", place: "labiodental", manner: "fricative", voice: false })).toBe("f");
-    // Velar nasal = ŋ
     expect(findConsonant({ type: "consonant", place: "velar", manner: "nasal", voice: true })).toBe("ŋ");
   });
 

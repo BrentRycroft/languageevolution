@@ -48,8 +48,6 @@ describe("OT constraints", () => {
   });
 
   it("maybeLearnOt swaps a pair when the lexicon violates a top constraint", () => {
-    // Fill the lexicon with coda-heavy forms so *Coda is violated a lot;
-    // learning should demote it.
     const lang = baseLang({
       lexicon: {
         a: ["k", "a", "k", "t"],
@@ -60,7 +58,6 @@ describe("OT constraints", () => {
     });
     const rng = makeRng("learn");
     const before = lang.otRanking.slice();
-    // High probability so a swap fires when conditions are met.
     const shift = maybeLearnOt(lang, rng, 1);
     expect(shift).not.toBeNull();
     if (!shift) return;

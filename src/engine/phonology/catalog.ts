@@ -188,18 +188,8 @@ export const CATALOG: SoundChange[] = [
     category: "deletion",
     description: "Drop word-final vowel (if a nucleus still remains).",
     probabilityFor: (w) => {
-      // Minimum word-length floor for content words. Without this
-      // every apocope cycle eats the word until it hits the
-      // hard-floor in `wordShape.isFormLegal` (length 2). Bumping
-      // the per-word floor to 4 keeps the surface lengths in the
-      // 3-6 range that's typical for attested content words.
       if (w.length < 4) return 0;
       if (!isVowel(w[w.length - 1]!)) return 0;
-      // Block deletion if the final vowel is the last remaining nucleus
-      // — otherwise the word collapses to an all-consonant form like
-      // `dw`, which `isFormLegal` later rejects anyway. Catching it
-      // here keeps the probability budget honest and prevents
-      // deterministic RNG waste on always-rejected outcomes.
       const remainder = w.slice(0, -1);
       if (!remainder.some((p) => isSyllabic(p))) return 0;
       return 0.07;
@@ -231,9 +221,6 @@ export const CATALOG: SoundChange[] = [
     category: "deletion",
     description: "Simplify word-initial consonant cluster.",
     probabilityFor: (w) =>
-      // Length floor: keep content words at ≥3 phonemes after the
-      // reduction. Two-phoneme words are already at the legal
-      // minimum and shouldn't get shorter.
       w.length >= 4 && isConsonant(w[0]!) && isConsonant(w[1]!) ? 0.08 : 0,
     apply: (word) => {
       if (word.length < 4) return word;
@@ -537,10 +524,6 @@ export const CATALOG: SoundChange[] = [
     baseWeight: 1,
   },
 
-  // --- Generative / cyclic rules ---
-  // These deliberately re-introduce phonemes that one-way chain shifts remove,
-  // keeping the inventory lively across long runs.
-
   {
     id: "monophthongization.au_to_o",
     label: "au → o / ai → e",
@@ -619,8 +602,6 @@ export const CATALOG: SoundChange[] = [
     "Palatal cascade: earlier palatalization outputs lenite, new palatalizations fill in.",
   ),
 
-  // --- Tonogenesis / detonogenesis ---
-
   {
     id: "tonogenesis.voiced_coda",
     label: "V → V˩ / _[+voiced]#",
@@ -643,9 +624,6 @@ export const CATALOG: SoundChange[] = [
       const prev = word[word.length - 2]!;
       if (toneOf(prev)) return word;
       if (!isVowel(stripTone(prev))) return word;
-      // Tonogenesis canonical mapping is: voiced → LOW, voiceless → HIGH.
-      // Probabilistic: 75% canonical, 20% reversed, 5% mid — gives languages
-      // unexpected tonal profiles rather than a deterministic rule.
       const isVoicedCtx = VOICED.has(last);
       const isVoicelessCtx = VOICELESS.has(last);
       if (!isVoicedCtx && !isVoicelessCtx) return word;
@@ -699,8 +677,6 @@ export const CATALOG: SoundChange[] = [
     baseWeight: 1,
   },
 
-  // --- Clicks (very rare) ---
-
   {
     id: "inventory.click_introduction",
     label: "C → click (rare)",
@@ -741,8 +717,6 @@ export const CATALOG: SoundChange[] = [
     "Clicks eroding into ordinary stops in daughter languages.",
   ),
 
-  // --- Retroflex series ---
-
   mappingSub(
     "retroflex.series",
     "s → ʂ, t → ʈ, d → ɖ, n → ɳ",
@@ -757,15 +731,8 @@ export const CATALOG: SoundChange[] = [
     "Retroflex series emerges. Rare; when on, gradually retroflexes alveolars.",
   ),
 
-  // --- Stress-sensitive rules ---
-  // The first one was already wired up; the rest were added in PR #3
-  // of the stress series. Each declares a `stressFilter` so apply.ts
-  // skips it on words with no matching position (e.g. monosyllables).
   UNSTRESSED_REDUCTION,
 
-  // Pretonic weakening — the syllable immediately before the stressed
-  // one tends to lose vowel quality (Russian akanye-style /o → a/, or
-  // Romance pretonic schwa). Modeled here as collapse to schwa.
   {
     id: "stress.pretonic_weakening",
     label: "V → ə / pretonic",
@@ -792,10 +759,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // Stressed-vowel diphthongisation — short stressed mid vowels
-  // (e, o) sprout a glide onset. Romance is the textbook case:
-  // Latin `porta` → Spanish `puerta`, Italian `uomo` from `homo`.
-  // Applies only to the stressed-syllable nucleus.
   {
     id: "stress.stressed_diphthongization",
     label: "V[ + stress, mid] → diph",
@@ -825,19 +788,11 @@ export const CATALOG: SoundChange[] = [
       const tone = w[idx]!.length > v.length ? w[idx]!.slice(v.length) : "";
       const glide = v === "e" ? "j" : "w";
       const out = w.slice();
-      // Prepend the glide as a separate phoneme to the stressed
-      // vowel; downstream the syllabifier treats it as part of the
-      // onset of the same syllable (rising sonority).
       out.splice(idx, 1, glide, v + tone);
       return out;
     },
   },
 
-  // Open-syllable lengthening — stressed short vowels in open
-  // syllables (no following coda within the syllable) lengthen.
-  // Middle English open-syllable lengthening: stān → stoːn ("stone").
-  // Approximated here by checking the next phoneme is a non-doubled
-  // consonant or word-final.
   {
     id: "stress.open_syllable_lengthening",
     label: "V → Vː / σ̌_open",
@@ -853,8 +808,6 @@ export const CATALOG: SoundChange[] = [
       for (const i of sites) {
         const v = stripTone(w[i]!);
         if (v.endsWith("ː")) continue;
-        // "Open" approximation: the next phoneme is a consonant
-        // followed by a vowel, OR the vowel is word-final.
         const nxt = w[i + 1];
         const aft = w[i + 2];
         if (!nxt) {
@@ -884,10 +837,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // Unstressed-final apocope — word-final unstressed vowels delete.
-  // Old English → Middle English: `nama` → `name` (silent e), then
-  // /name/ → /næːm/. Norwegian `jente`-class endings, Bulgarian
-  // post-nasal vowel loss, etc.
   {
     id: "stress.unstressed_final_apocope",
     label: "V[ - stress]# → ∅",
@@ -902,8 +851,6 @@ export const CATALOG: SoundChange[] = [
       if (w.length < 3) return 0;
       const last = w[w.length - 1]!;
       if (!isVowel(stripTone(last))) return 0;
-      // Need at least one other vowel/syllabic in the word for the
-      // result to keep a nucleus.
       const others = stressedPositions(w, "unstressed");
       if (others.length === 0) return 0;
       if (!others.includes(w.length - 1)) return 0;
@@ -917,9 +864,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // Unstressed-medial syncope — medial unstressed vowels delete.
-  // Latin `calidus` → Vulgar Latin `caldus` → Italian `caldo`,
-  // English `cam(e)ra`, French `tem(p)s`. Word-internal only.
   {
     id: "stress.unstressed_medial_syncope",
     label: "V[ - stress] → ∅ / V_C…",
@@ -947,13 +891,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // --- Compensatory lengthening ---
-  // When a word-final consonant deletes after a short vowel, the vowel
-  // lengthens in compensation. Classic sound change: Latin `noctem` →
-  // French `nuit`, Proto-Germanic `*gansiz` → Old English `gōs`. Modeled
-  // as a single opportunistic step — if the last phoneme is a consonant
-  // and the one before is a short vowel, delete the coda and mark the
-  // vowel long.
   {
     id: "compensatory.final_coda_lengthening",
     label: "VC# → Vː#",
@@ -968,7 +905,6 @@ export const CATALOG: SoundChange[] = [
       const prev = w[w.length - 2]!;
       if (!isConsonant(last)) return 0;
       if (!isVowel(prev)) return 0;
-      // Skip already-long vowels — nothing to lengthen.
       if (prev.endsWith("ː")) return 0;
       return 0.05;
     },
@@ -983,11 +919,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // --- Vowel harmony (front / back) ---
-  // Classic harmony: every vowel in a word matches the FIRST vowel's
-  // backness. Turkish / Finnish / Hungarian flavour. Disabled by
-  // default; a language can turn it on via the controls panel or by
-  // per-language change-weights reaching it during split jitter.
   {
     id: "harmony.backness",
     label: "V harmony by backness",
@@ -998,8 +929,6 @@ export const CATALOG: SoundChange[] = [
     enabledByDefault: false,
     baseWeight: 0.4,
     probabilityFor: (w) => {
-      // Fire when there are ≥ 2 vowels whose backness disagrees with
-      // the first vowel — i.e. there's work to do. Scale by count.
       let disagree = 0;
       let firstBack: "front" | "back" | null = null;
       for (const p of w) {
@@ -1012,7 +941,6 @@ export const CATALOG: SoundChange[] = [
       return disagree === 0 ? 0 : Math.min(0.25, 0.05 * disagree);
     },
     apply: (word) => {
-      // Find first vowel's backness; rewrite every subsequent vowel.
       let firstBack: "front" | "back" | null = null;
       const out = word.slice();
       for (let i = 0; i < out.length; i++) {
@@ -1032,13 +960,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // --- Umlaut / i-mutation ---
-  // A back vowel becomes fronted when a /i/ or /j/ appears within two
-  // segments to its right. Models Germanic umlaut (foot → feet type):
-  // the triggering /i/ may later delete via another rule, leaving
-  // only the fronted vowel as surface evidence of the original plural
-  // suffix. On by default — cheap to gate, produces strikingly
-  // realistic morphophonological alternations.
   {
     id: "umlaut.front_before_front_vowel",
     label: "V → V̈ / _…[i,j]",
@@ -1076,12 +997,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // --- Preglottalisation of word-final voiceless stops ---
-  // Final /p t k/ pick up a glottal onset (/ʔp ʔt ʔk/). Attested
-  // trajectory in Cockney English, colloquial Vietnamese, many Austro-
-  // Asiatic languages. Often the intermediate step toward full glottal
-  // replacement (t → ʔ in Estuary English). Left off by default so only
-  // languages that organically drift into it pick it up.
   {
     id: "glottalization.preglottal_final_stop",
     label: "p/t/k → ʔp/ʔt/ʔk / _#",
@@ -1104,12 +1019,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // --- Ejectivisation of initial voiceless stops ---
-  // Word-initial /p t k/ acquire a glottalic-egressive release,
-  // surfacing as /pʼ tʼ kʼ/. The emergence pathway is typologically
-  // well-attested in NW Caucasian, Salishan, Ethio-Semitic, and
-  // Quechuan. Often triggered by areal contact — the areal-diffusion
-  // machinery will carry it across sister languages when it fires.
   {
     id: "glottalization.initial_ejective",
     label: "p/t/k → pʼ/tʼ/kʼ / #_",
@@ -1132,12 +1041,6 @@ export const CATALOG: SoundChange[] = [
     },
   },
 
-  // --- Debuccalisation of ejectives and preglottals to bare glottal ---
-  // The tail of the glottalic cycle: preglottalised and ejective stops
-  // collapse to plain /ʔ/ (Estuary English "bu'er" for "butter",
-  // widespread in Polynesian and Melanesian histories). Left off by
-  // default; languages pick it up only if they've already undergone
-  // preglottalisation or ejectivisation and want to simplify.
   {
     id: "glottalization.debuccalise_to_glottal",
     label: "ʔp/ʔt/ʔk/pʼ/tʼ/kʼ → ʔ",
@@ -1174,13 +1077,7 @@ export const CATALOG: SoundChange[] = [
   },
 ];
 
-/**
- * Return the IPA backness of a vowel, or `null` for segments we can't
- * classify. Used by the harmony rule to check "does this disagree
- * with the word's first vowel?".
- */
 function vowelBackness(p: Phoneme): "front" | "back" | null {
-  // Strip tone + length suffixes for the lookup.
   let base = p;
   while (
     base.length > 1 &&
@@ -1198,8 +1095,6 @@ function vowelBackness(p: Phoneme): "front" | "back" | null {
   ]);
   if (front.has(base)) return "front";
   if (back.has(base)) return "back";
-  // /ə/ and /ɨ/ are central — treat as neutral by returning null so
-  // the harmony rule doesn't flip them either way.
   return null;
 }
 
@@ -1207,10 +1102,6 @@ function isBackVowel(p: Phoneme): boolean {
   return vowelBackness(p) === "back";
 }
 
-/**
- * For harmony: turn a vowel into its counterpart of the requested
- * backness, preserving height and rounding where possible.
- */
 function harmonizeVowel(p: Phoneme, want: "front" | "back"): Phoneme {
   const map: Record<string, { front: string; back: string }> = {
     i: { front: "i", back: "ɯ" },
@@ -1225,7 +1116,6 @@ function harmonizeVowel(p: Phoneme, want: "front" | "back"): Phoneme {
     ø: { front: "ø", back: "o" },
     ɯ: { front: "i", back: "ɯ" },
   };
-  // Preserve trailing length / tone suffix.
   let base = p;
   let suffix = "";
   while (
@@ -1240,9 +1130,6 @@ function harmonizeVowel(p: Phoneme, want: "front" | "back"): Phoneme {
   return swap[want] + suffix;
 }
 
-/**
- * For umlaut: pick the front counterpart of a back vowel.
- */
 function frontCounterpart(p: Phoneme): Phoneme | null {
   const map: Record<string, string> = {
     a: "æ",

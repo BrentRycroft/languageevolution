@@ -12,10 +12,6 @@ const SUFFIXES: ReadonlyArray<WordForm> = [
   ["i", "n"],
 ];
 
-/**
- * Derivation: take a semantically-close base and attach a suffix.
- * Prefers languages with suffix-position morphology but works for any.
- */
 export const MECHANISM_DERIVATION: CoinageMechanism = {
   id: "mechanism.derivation",
   label: "A + affix → A'",
@@ -29,9 +25,6 @@ export const MECHANISM_DERIVATION: CoinageMechanism = {
         : Object.keys(lang.lexicon)[rng.int(Object.keys(lang.lexicon).length)];
     if (!base) return null;
     const baseForm = lang.lexicon[base]!;
-    // Pick a suffix shaped by the language's morphology: if any paradigm
-    // is "suffix", use one of its affixes; otherwise fall back to the
-    // generic catalog.
     const paradigms = Object.values(lang.morphology.paradigms);
     const affixPool = paradigms
       .filter((p) => p && p.position === "suffix")

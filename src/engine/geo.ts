@@ -6,16 +6,6 @@ export interface GeoPosition {
   y: number;
 }
 
-/**
- * Deterministic 2D layout for the language tree, suitable for a world-map
- * visualization. Strategy:
- *   - Root is placed at origin (0, 0).
- *   - Each child of a node is offset by a fixed step in a direction biased
- *     by the child's language id hash (so splits push languages apart).
- *   - Leaves tend to fan outward over generations, mimicking migration.
- *
- * Fully deterministic given the tree structure: no RNG, only id hashes.
- */
 export function computeGeoLayout(state: SimulationState): Record<string, GeoPosition> {
   const out: Record<string, GeoPosition> = {};
   const visit = (id: string, pos: GeoPosition, depth: number) => {
@@ -26,9 +16,6 @@ export function computeGeoLayout(state: SimulationState): Record<string, GeoPosi
     if (children.length === 0) return;
     children.forEach((childId, i) => {
       const hash = fnv1a(childId) / 0xffffffff;
-      // Spread children around their parent, biased by id hash and birth order.
-      // Step magnitude decreases slightly with depth so nearby branches stay
-      // visually grouped.
       const step = 120 / Math.sqrt(1 + depth);
       const spread = children.length > 1 ? (i / (children.length - 1) - 0.5) : 0;
       const angle = hash * Math.PI * 2 + spread * 1.1;
@@ -45,9 +32,6 @@ export function geoDistance(a: GeoPosition, b: GeoPosition): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-/**
- * Return the bounding box of all positions in the layout.
- */
 export function boundingBox(positions: Record<string, GeoPosition>): {
   minX: number;
   minY: number;
