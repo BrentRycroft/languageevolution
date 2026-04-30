@@ -136,11 +136,11 @@ const LEXICON: Lexicon = {
   // PIE *putlós "young one, child".
   child: ["p", "u", "t", "l", "o", "s"],
   baby: ["s", "u", "n", "u"],
-  mother: ["m", "a", "h₂", "t", "eː", "r"],
+  mother: ["m", "e", "h₂", "t", "eː", "r"],
   father: ["p", "h₂", "t", "eː", "r"],
   son: ["s", "u", "n", "u"],
   daughter: ["dʰ", "u", "g", "h₂", "t", "eː", "r"],
-  brother: ["bʰ", "r", "a", "h₂", "t", "eː", "r"],
+  brother: ["bʰ", "r", "e", "h₂", "t", "eː", "r"],
   sister: ["s", "w", "e", "s", "oː", "r"],
   husband: ["p", "o", "t", "i", "s"],
   wife: ["d", "e", "m", "s", "p", "o", "t", "n", "i"],
@@ -150,7 +150,11 @@ const LEXICON: Lexicon = {
   // — household / artifact —
   house: ["d", "o", "m"],
   door: ["dʰ", "w", "o", "r"],
-  fire2: ["h₁", "n̩", "gʷ", "n", "i"],
+  // PIE distinguished *peh₂wr̩ "fire (natural force)" from *h₁n̥gʷnis
+  // "fire (ritual / domestic)" — Latin `ignis` etc. Kept as a separate
+  // gloss for the simulator since the two roots fed different
+  // descendant lineages.
+  fire_ritual: ["h₁", "n̩", "gʷ", "n", "i"],
   hearth: ["h₂", "e", "h₁", "s"],
   yoke: ["j", "u", "g", "o", "m"],
   wheel: ["kʷ", "e", "kʷ", "l", "o"],
@@ -239,7 +243,7 @@ const LEXICON: Lexicon = {
   hundred: ["kʲ", "m̩", "t", "o", "m"],
   // — qualities —
   big: ["m", "e", "gʲ", "h₂"],
-  small: ["p", "a", "u"],
+  small: ["p", "e", "h₂", "u"],
   long: ["d", "l̩", "h₁", "gʰ"],
   short: ["m", "r̩", "gʲʰ", "u"],
   tall: ["h₂", "l̩", "t", "o"],
@@ -253,13 +257,13 @@ const LEXICON: Lexicon = {
   wet: ["w", "o", "d", "n"],
   dry: ["s", "u", "k", "s", "o"],
   full: ["p", "l̩", "h₁", "n"],
-  empty: ["w", "a", "n", "o"],
+  empty: ["w", "e", "h₁", "n", "o"],
   new: ["n", "e", "w", "o", "s"],
   old: ["s", "e", "n"],
   young: ["j", "u", "h₃", "w", "n"],
   good: ["d", "w", "e", "n"],
   bad: ["d", "u", "s"],
-  sweet: ["s", "w", "aː", "d"],
+  sweet: ["s", "w", "e", "h₂", "d"],
   bitter: ["a", "k", "r", "o"],
   strong: ["s", "t", "e", "h₂"],
   weak: ["w", "e", "j", "k"],
@@ -268,8 +272,8 @@ const LEXICON: Lexicon = {
   // — colour —
   red: ["h₁", "r", "e", "w", "dʰ"],
   black: ["k", "r̩", "s", "n", "o"],
-  white: ["a", "l", "bʰ", "o"],
-  green: ["gʰ", "l̩", "h₃", "r", "o"],
+  white: ["h₂", "e", "l", "bʰ", "o"],
+  green: ["gʲʰ", "r", "o", "h₁"],
   yellow: ["gʲʰ", "e", "l", "h₃"],
   blue: ["bʰ", "l", "eː", "w"],
   // — abstract / pronouns —
@@ -343,8 +347,7 @@ const LEXICON: Lexicon = {
   hail: ["gʰ", "r", "o", "h₁"],
   dew: ["h₂", "e", "w", "s", "r̩"],
   fog: ["m", "e", "j", "gʰ"],
-  breeze: ["a", "n", "h₂", "m"],
-  storm: ["w", "e", "t", "e", "r"],
+  breeze: ["h₂", "e", "n", "h₁", "m"],
   // — directions —
   east: ["h₂", "e", "w", "s"],
   west: ["w", "e", "s", "p", "e", "r"],
@@ -375,7 +378,7 @@ const LEXICON: Lexicon = {
   steal: ["kʲ", "l", "e", "p"],
   hide_verb: ["k", "e", "l"],
   share: ["d", "e", "h₂"],
-  divide: ["d", "a", "j"],
+  divide: ["d", "e", "h₂", "j"],
   join: ["j", "e", "w", "g"],
   bind: ["d", "e", "h₁"],
   release: ["l", "e", "w", "h₁"],
@@ -393,7 +396,7 @@ const LEXICON: Lexicon = {
   offering: ["d", "e", "h₃", "n"],
   prayer: ["gʷʰ", "e", "dʰ"],
   oath: ["h₁", "o", "j"],
-  feast: ["d", "a", "j", "t"],
+  feast: ["d", "e", "h₂", "j", "t"],
   gift: ["d", "o", "h₃", "n"],
   host: ["d", "o", "m"],
   // — abstract —
@@ -415,7 +418,7 @@ const LEXICON: Lexicon = {
   yesterday: ["dʰ", "gʰ", "j", "e", "s"],
   // — quantifiers —
   all: ["s", "o", "l"],
-  many: ["m", "e", "gʰ"],
+  many: ["m", "e", "gʲ", "h₂"],
   some: ["s", "e", "m"],
   none: ["n", "e", "kʷ", "e"],
   half: ["s", "eː", "m", "i"],
@@ -431,8 +434,7 @@ const LEXICON: Lexicon = {
   yes: ["j", "a"],
   // — sensation / feeling —
   pain: ["p", "e", "h₁"],
-  joy: ["gʲ", "a", "w"],
-  anger: ["kʷ", "a", "r"],
+  joy: ["gʲ", "e", "h₂", "w"],
   hunger: ["gʷ", "e", "r"],
   thirst: ["t", "r̩", "s"],
   shame: ["s", "kʲ", "e", "m"],

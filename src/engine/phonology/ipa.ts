@@ -41,7 +41,7 @@ export const CONSONANTS: ReadonlySet<Phoneme> = new Set([
   // PIE labiovelars and palatalised consonants. The engine accepts the
   // Indo-Europeanist acute-over-consonant (`ḱ`, `ǵ`) as deprecated
   // aliases. Canonical form uses U+02B2 superscript j for palatalisation.
-  "kʷ", "gʷ", "gʷʰ",
+  "kʷ", "gʷ", "gʷʰ", "xʷ",
   "kʲ", "gʲ", "gʲʰ", "tʲ", "dʲ",
   "ḱ", "ǵ", "g̑",
   // Voiced aspirated stops (PIE)

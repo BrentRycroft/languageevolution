@@ -77,7 +77,13 @@ export function maybeGrammaticalize(
     // below selects it with the right prior.
     const isClitic = (lang.wordOrigin?.[m] ?? "").startsWith("clitic:");
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
-    if (freq < 0.6) continue;
+    // Clitics use a lower frequency floor: `maybeCliticize` stamps
+    // them with freq=0.45 (line 165), so the regular `< 0.6` gate
+    // would silently bar every clitic from ever reaching the affix
+    // stage — defeating the free→clitic→affix grammaticalisation
+    // pathway the comment claims. Clitics gate at 0.4 instead.
+    const freqFloor = isClitic ? 0.4 : 0.6;
+    if (freq < freqFloor) continue;
     for (const target of pathwayTargets(tag)) {
       if (lang.morphology.paradigms[target]) continue;
       const entry: Candidate = { meaning: m, tag, target, form };

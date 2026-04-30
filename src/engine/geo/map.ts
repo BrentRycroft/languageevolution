@@ -168,7 +168,25 @@ export function generateRandomContinent(seed: string): WorldMap {
   const neighbours = deriveNeighbours(voronoi, relaxed.length);
   for (let i = 0; i < relaxed.length; i++) {
     const verts = cellVertices(voronoi, i);
-    if (verts.length === 0) continue;
+    if (verts.length === 0) {
+      // Voronoi clipping artifact (relaxed seed exactly on the map
+      // boundary) → degenerate cell. Push a stub at the seed location
+      // so downstream `cells[id]` lookups stay aligned with their
+      // `id` field. Skipping previously left the array sparse,
+      // silently corrupting territory assignments after the first
+      // dropped cell.
+      const sx = relaxed[i]![0];
+      const sy = relaxed[i]![1];
+      cells.push({
+        id: i,
+        centroid: { x: sx, y: sy },
+        vertices: [{ x: sx, y: sy }],
+        neighbours: neighbours[i] ?? [],
+        elevation: 0,
+        biome: classifyBiome(0),
+      });
+      continue;
+    }
     const centroid = centroidOf(verts);
     // Elevation: noise + radial fall-off. Map edges get pushed under
     // sea level so the continent doesn't wrap to the border.
@@ -327,7 +345,25 @@ export function generateEarthMap(): WorldMap {
   const neighbours = deriveNeighbours(voronoi, relaxed.length);
   for (let i = 0; i < relaxed.length; i++) {
     const verts = cellVertices(voronoi, i);
-    if (verts.length === 0) continue;
+    if (verts.length === 0) {
+      // Voronoi clipping artifact (relaxed seed exactly on the map
+      // boundary) → degenerate cell. Push a stub at the seed location
+      // so downstream `cells[id]` lookups stay aligned with their
+      // `id` field. Skipping previously left the array sparse,
+      // silently corrupting territory assignments after the first
+      // dropped cell.
+      const sx = relaxed[i]![0];
+      const sy = relaxed[i]![1];
+      cells.push({
+        id: i,
+        centroid: { x: sx, y: sy },
+        vertices: [{ x: sx, y: sy }],
+        neighbours: neighbours[i] ?? [],
+        elevation: 0,
+        biome: classifyBiome(0),
+      });
+      continue;
+    }
     const centroid = centroidOf(verts);
     // Elevation from the hand-crafted bitmap. Bilinear-blended so
     // coastlines slope rather than stair-step. The +0.15 floor keeps

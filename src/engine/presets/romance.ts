@@ -31,9 +31,9 @@ const LEXICON: Lexicon = {
   forest: ["s", "i", "l", "v", "a"],
   field: ["k", "a", "m", "p", "u"],
   road: ["v", "i", "a"],
-  path: ["s", "e", "n", "d", "a"],
+  path: ["s", "e", "m", "i", "t", "a"],
   // — sky cycle / time —
-  day: ["d", "j", "e"],
+  day: ["d", "i", "e"],
   night: ["n", "o", "k", "t", "e"],
   morning: ["m", "a", "n", "e"],
   evening: ["s", "e", "r", "a"],
@@ -115,7 +115,7 @@ const LEXICON: Lexicon = {
   man: ["o", "m", "i", "n", "e"],
   woman: ["m", "u", "l", "j", "e", "r", "e"],
   child: ["i", "n", "f", "a", "n", "t", "e"],
-  baby: ["b", "a", "m", "b", "u"],
+  baby: ["i", "n", "f", "a", "n", "t", "e"],
   mother: ["m", "a", "t", "r", "e"],
   father: ["p", "a", "t", "r", "e"],
   son: ["f", "i", "l", "j", "u"],
@@ -172,7 +172,7 @@ const LEXICON: Lexicon = {
   speak: ["p", "a", "r", "a", "b", "o", "l", "a", "r", "e"],
   say: ["d", "i", "k", "e", "r", "e"],
   call: ["k", "l", "a", "m", "a", "r", "e"],
-  ask: ["d", "e", "m", "a", "n", "d", "a", "r", "e"],
+  ask: ["r", "o", "g", "a", "r", "e"],
   // — verbs of action —
   do: ["f", "a", "k", "e", "r", "e"],
   make: ["f", "a", "k", "e", "r", "e"],
@@ -187,7 +187,7 @@ const LEXICON: Lexicon = {
   break: ["r", "u", "m", "p", "e", "r", "e"],
   bend: ["p", "l", "i", "k", "a", "r", "e"],
   build: ["k", "o", "n", "s", "t", "r", "u", "e", "r", "e"],
-  burn: ["b", "r", "u", "k", "j", "a", "r", "e"],
+  burn: ["u", "r", "e", "r", "e"],
   wash: ["l", "a", "v", "a", "r", "e"],
   weave: ["t", "e", "k", "s", "e", "r", "e"],
   plant: ["p", "l", "a", "n", "t", "a", "r", "e"],
@@ -214,7 +214,7 @@ const LEXICON: Lexicon = {
   seven: ["s", "e", "p", "t", "e"],
   eight: ["o", "k", "t", "o"],
   nine: ["n", "o", "v", "e"],
-  ten: ["d", "j", "e", "k", "e"],
+  ten: ["d", "e", "k", "e"],
   hundred: ["k", "e", "n", "t", "u"],
   // — qualities —
   big: ["g", "r", "a", "n", "d", "e"],
@@ -250,7 +250,7 @@ const LEXICON: Lexicon = {
   white: ["b", "l", "a", "n", "k", "u"],
   green: ["v", "i", "r", "i", "d", "e"],
   yellow: ["g", "a", "l", "b", "u"],
-  blue: ["a", "z", "u", "r", "u"],
+  blue: ["k", "a", "e", "r", "u", "l", "u"],
   // — abstract / pronouns —
   name: ["n", "o", "m", "e", "n"],
   word: ["v", "e", "r", "b", "u"],
@@ -267,7 +267,7 @@ const LEXICON: Lexicon = {
   he: ["i", "l", "l", "u"],
   she: ["i", "l", "l", "a"],
   it: ["i", "l", "l", "u", "d"],
-  the: ["l", "u"],          // < ille
+  the: ["i", "l", "l", "u"],          // < ille
   a: ["u", "n"],            // < unus
   and: ["e", "t"],          // et
   or: ["a", "u", "t"],      // aut

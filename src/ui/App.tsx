@@ -149,12 +149,24 @@ export function App() {
       return;
     }
     const intervalMs = 1000 / speed;
+    // Cap how many generations we'll fast-forward in a single frame.
+    // Without this, backgrounding the tab stalls RAF; on resume the
+    // accumulated `ts - lastRef.current` is huge and we'd run
+    // hundreds of `step()` calls in one frame, hanging the main
+    // thread. Five steps per frame keeps the perceived rate close
+    // to `speed` while protecting against the burst.
+    const MAX_STEPS_PER_FRAME = 5;
     const loop = (ts: number) => {
       if (!lastRef.current) lastRef.current = ts;
-      while (ts - lastRef.current >= intervalMs) {
+      let iters = 0;
+      while (ts - lastRef.current >= intervalMs && iters < MAX_STEPS_PER_FRAME) {
         useSimStore.getState().step();
         lastRef.current += intervalMs;
+        iters++;
       }
+      // If we hit the cap, drop the remaining lag — refusing to
+      // catch up keeps the loop bounded after a long tab-background.
+      if (iters >= MAX_STEPS_PER_FRAME) lastRef.current = ts;
       rafRef.current = requestAnimationFrame(loop);
     };
     lastRef.current = 0;
