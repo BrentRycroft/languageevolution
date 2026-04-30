@@ -52,6 +52,10 @@ export function stepPhonology(
     frequencyHints: lang.wordFrequencyHints,
     agesSinceChange: ages,
     registerOf: lang.registerOf,
+    // Plumb stress info through so rules with a `stressFilter` (e.g.
+    // unstressed-vowel reduction) only fire at matching positions.
+    stressPattern: lang.stressPattern,
+    lexicalStress: lang.lexicalStress,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   // applyChangesToLexicon drops meanings whose forms became empty via

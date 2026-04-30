@@ -23,6 +23,21 @@ export interface SoundChange {
   category: SoundChangeCategory;
   description: string;
   positionBias?: PositionBias;
+  /**
+   * Optional stress filter. Rules with `unstressed` only fire at
+   * unstressed-syllable sites; `stressed` only at the stressed
+   * syllable; `pretonic` at the syllable immediately before stress;
+   * `any` (default) is stress-blind.
+   *
+   * The engine pre-checks this filter before invoking the rule —
+   * if no syllable in the form satisfies the filter, the rule is
+   * skipped entirely for that word, sparing the rule's own
+   * `probabilityFor` from rediscovering the same fact.
+   *
+   * The rule's `apply` function still controls *which* matching
+   * site to mutate; the filter just guarantees at least one exists.
+   */
+  stressFilter?: "stressed" | "unstressed" | "pretonic" | "any";
   probabilityFor: (word: WordForm) => number;
   apply: (word: WordForm, rng: Rng) => WordForm;
   enabledByDefault: boolean;

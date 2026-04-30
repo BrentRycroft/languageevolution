@@ -3,6 +3,9 @@ import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
 import { corenessResistance } from "../lexicon/coreness";
 import { isFormLegal, repairSyllabicity } from "./wordShape";
+import { stressClass, type StressPattern } from "./stress";
+import { isVowel } from "./ipa";
+import { stripTone } from "./tone";
 
 export interface ApplyOptions {
   globalRate: number;
@@ -28,6 +31,43 @@ export interface ApplyOptions {
    * conserves older forms); "low" words change a bit faster.
    */
   registerOf?: Record<Meaning, "high" | "low">;
+  /**
+   * Stress pattern of the language whose lexicon is being mutated.
+   * When present, rules carrying a `stressFilter` only fire at sites
+   * matching the requested stress class. Stress-blind rules (default
+   * `any` filter) are unaffected.
+   *
+   * Plumbed through from `steps/phonology.ts` — the per-word stress
+   * index is computed inside this module from `pattern` plus the
+   * optional `lexicalStress[meaning]` override.
+   */
+  stressPattern?: StressPattern;
+  /**
+   * Per-meaning lexical-stress map for languages with `stressPattern
+   * = "lexical"` (PIE-style mobile accent). Each entry is the
+   * stressed *vowel-position* index (0-based) within the form's
+   * vowel sequence.
+   */
+  lexicalStress?: Record<Meaning, number>;
+}
+
+/**
+ * True when the form has at least one vowel matching `filter` under
+ * the given stress regime. Used to short-circuit stress-conditioned
+ * rules before invoking their `probabilityFor` / `apply` callbacks.
+ */
+function hasStressFilterMatch(
+  word: WordForm,
+  filter: NonNullable<SoundChange["stressFilter"]>,
+  pattern: StressPattern | undefined,
+  lexicalIdx: number | undefined,
+): boolean {
+  if (filter === "any") return true;
+  for (let i = 0; i < word.length; i++) {
+    if (!isVowel(stripTone(word[i]!))) continue;
+    if (stressClass(word, i, pattern, lexicalIdx) === filter) return true;
+  }
+  return false;
 }
 
 /**
@@ -92,9 +132,18 @@ export function applyChangesToWord(
   const coreMult = corenessResistance(meaning);
 
   let current = word;
+  const lexicalIdx = opts.lexicalStress?.[meaning];
   for (const change of changes) {
     const weight = opts.weights[change.id] ?? change.baseWeight;
     if (weight <= 0) continue;
+    // Stress filter: skip the rule entirely when no syllable in the
+    // word matches its stress class. Cheaper than letting the rule's
+    // own `probabilityFor` rediscover this on every word.
+    if (change.stressFilter && change.stressFilter !== "any") {
+      if (!hasStressFilterMatch(current, change.stressFilter, opts.stressPattern, lexicalIdx)) {
+        continue;
+      }
+    }
     const base = change.probabilityFor(current);
     if (base <= 0) continue;
 

@@ -89,6 +89,27 @@ export function stressClass(
 }
 
 /**
+ * Return the indices of every vowel matching the given stress class.
+ * Convenience for rule authors: avoids reimplementing the
+ * vowel-loop + stressClass-check on every rule. Pretonic class
+ * matches both immediate and second-pretonic positions.
+ */
+export function stressedPositions(
+  form: WordForm,
+  filter: "stressed" | "unstressed" | "pretonic",
+  pattern: StressPattern = "penult",
+  lexicalIdx?: number,
+): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < form.length; i++) {
+    const p = form[i]!;
+    if (!isVowel(stripTone(p))) continue;
+    if (stressClass(form, i, pattern, lexicalIdx) === filter) out.push(i);
+  }
+  return out;
+}
+
+/**
  * Probability that a sound change at position `i` actually applies to this
  * phoneme, based on stress. Multiplies into the base per-site probability
  * already computed by the change rule. Only applies to vowels; consonants
@@ -120,6 +141,10 @@ export const UNSTRESSED_REDUCTION: SoundChange = {
   category: "vowel",
   description:
     "Unstressed vowels reduce toward schwa. Stressed vowels resist; pretonic slightly protected.",
+  // Declarative stress filter — `apply.ts` short-circuits the rule
+  // when no unstressed vowel exists, so the inner `probabilityFor`
+  // / `apply` callbacks only ever see candidate sites.
+  stressFilter: "unstressed",
   probabilityFor: (word) => {
     let n = 0;
     for (let i = 0; i < word.length; i++) {
