@@ -1015,6 +1015,19 @@ input[type="range"]:hover::-moz-range-thumb {
   padding: 2px 4px;
 }
 
+/* Tempo / tier icon columns. Without explicit min-width and a
+   slightly bigger glyph the emoji rendered nearly invisible at the
+   default 11px monospace size. Reserve enough room and bump font-size
+   so the badge is actually readable. */
+.stats-table th:nth-child(2),
+.stats-table th:nth-child(3),
+.stats-table td:nth-child(2),
+.stats-table td:nth-child(3) {
+  min-width: 38px;
+  font-size: 14px;
+  line-height: 1;
+}
+
 .lexicon-filter-bar {
   display: flex;
   gap: 4px;

@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { CloseIcon } from "./icons";
+import { useSimStore } from "../state/store";
 
 const DISMISSED_KEY = "lev.onboarding.dismissed.v2";
 
 export function WelcomeBanner() {
   const [dismissed, setDismissed] = useState<boolean | null>(null);
+  // Auto-dismiss once the user has stepped at least one generation.
+  // The banner is purely an onboarding nudge — once the simulation
+  // is running, it's just visual noise that obscures the tree view.
+  const generation = useSimStore((s) => s.state.generation);
 
   useEffect(() => {
     try {
@@ -14,7 +19,11 @@ export function WelcomeBanner() {
     }
   }, []);
 
+  // Treat "generation > 0" as an implicit dismissal. We don't write
+  // to localStorage here — if the user hits Reset, they're back at
+  // gen 0 and the banner reappears, which is the desired re-onboarding.
   if (dismissed === null || dismissed) return null;
+  if (generation > 0) return null;
 
   const close = () => {
     setDismissed(true);

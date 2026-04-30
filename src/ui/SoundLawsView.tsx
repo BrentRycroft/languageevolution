@@ -73,10 +73,7 @@ export function SoundLawsView() {
       <section>
         <h5 style={{ marginBottom: 6 }}>Active sound laws</h5>
         {active.length === 0 ? (
-          <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)" }}>
-            No procedurally-generated rules yet. Run the sim for a few dozen
-            generations and the language will start inventing its own.
-          </div>
+          <ProtoOrEmpty langId={lang.id} state={state} />
         ) : (
           <table className="sound-laws-table">
             <thead>
@@ -138,6 +135,60 @@ export function SoundLawsView() {
             </tbody>
           </table>
         </section>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Empty-state branch for the Active-sound-laws section. Splits the
+ * "language has no laws" case into two messages:
+ *
+ *   - **Proto**: the root never gets procedural rules — by design,
+ *     it's the frozen ancestor that daughters diverge from. So the
+ *     usual "run the sim for a few dozen generations" copy is
+ *     misleading (the user could run forever and Proto would still
+ *     show 0). Surface a one-click jump to the first alive daughter.
+ *   - **Daughter, no rules yet**: keep the original "run the sim"
+ *     copy — this is the legitimate "you haven't stepped enough"
+ *     state.
+ */
+function ProtoOrEmpty({
+  langId,
+  state,
+}: {
+  langId: string;
+  state: import("../engine/types").SimulationState;
+}) {
+  const isProto = langId === state.rootId;
+  const selectLanguage = useSimStore((s) => s.selectLanguage);
+  if (!isProto) {
+    return (
+      <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)" }}>
+        No procedurally-generated rules yet. Run the sim for a few dozen
+        generations and the language will start inventing its own.
+      </div>
+    );
+  }
+  // Find the first alive daughter to suggest as a jump target.
+  const aliveDaughter = Object.values(state.tree).find(
+    (n) => n.parentId !== null && n.childrenIds.length === 0 && !n.language.extinct,
+  );
+  return (
+    <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)", display: "flex", flexDirection: "column", gap: 8 }}>
+      <span>
+        The proto-language is the frozen ancestor — daughters invent
+        the sound laws, not Proto. Switch to a daughter to see its
+        active rules.
+      </span>
+      {aliveDaughter && (
+        <button
+          className="primary"
+          onClick={() => selectLanguage(aliveDaughter.language.id)}
+          style={{ alignSelf: "flex-start" }}
+        >
+          Switch to {aliveDaughter.language.name}
+        </button>
       )}
     </div>
   );
