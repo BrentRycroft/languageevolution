@@ -109,7 +109,7 @@ export function LexiconView() {
       for (const meaning of meanings) {
         const form = lang.lexicon[meaning];
         if (!form) continue;
-        m.set(`${lid}|${meaning}`, formatForm(form, lang, script));
+        m.set(`${lid}|${meaning}`, formatForm(form, lang, script, meaning));
       }
     }
     return m;

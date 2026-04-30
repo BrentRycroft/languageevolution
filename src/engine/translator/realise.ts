@@ -27,6 +27,12 @@ import { sliceOrder } from "./wordOrder";
 
 export interface RealisedToken {
   surface: string;
+  /** The phoneme-array form behind `surface` — kept alongside the
+   *  joined string so downstream consumers (display, narrow IPA,
+   *  reverse translation) can syllabify and apply per-vowel logic.
+   *  Empty array for synthesised closed-class tokens that were never
+   *  built from a phoneme array. */
+  form: WordForm;
   english: string;
   /** Tag used by the gloss / debug view. */
   role: "S" | "V" | "O" | "ADJ" | "DET" | "PREP" | "POSTP" | "POSS" | "NUM" | "NEG" | "ADV" | "PP-NP";
@@ -93,6 +99,7 @@ export function realiseSentence(
   const advTokens: RealisedToken[] = s.predicate.adverbs.flatMap((a) => {
     return [{
       surface: a.baseForm.length > 0 ? a.baseForm.join("") : `“${a.lemma}”`,
+      form: a.baseForm,
       english: a.lemma,
       role: "ADV" as const,
       resolution: a.resolution,
@@ -109,6 +116,7 @@ export function realiseSentence(
     }
     return {
       surface: af.length > 0 ? af.join("") : `“${a.lemma}”`,
+      form: af,
       english: a.lemma,
       role: "ADJ" as const,
       resolution: a.resolution,
@@ -149,6 +157,7 @@ export function realiseSentence(
     if (wf.length > 0) {
       out.push({
         surface: wf.join(""),
+        form: wf,
         english: s.leadingWh.lemma,
         role: "DET",
         resolution: "concept",
@@ -162,6 +171,7 @@ export function realiseSentence(
     if (cf.length > 0) {
       out.push({
         surface: cf.join(""),
+        form: cf,
         english: s.leadingConj.lemma,
         role: "DET",
         resolution: "concept",
@@ -201,6 +211,7 @@ export function realiseSentence(
     if (qf.length > 0) {
       const qTok: RealisedToken = {
         surface: qf.join(""),
+        form: qf,
         english: "Q",
         role: "DET",
         resolution: "concept",
@@ -211,7 +222,7 @@ export function realiseSentence(
     }
   }
   if (isQuestion && interStrategy === "intonation") {
-    out.push({ surface: "?", english: "?", role: "DET", resolution: "concept" });
+    out.push({ surface: "?", form: [], english: "?", role: "DET", resolution: "concept" });
   }
   return out;
 }
@@ -263,6 +274,7 @@ function realiseNP(
     surface: np.head.baseForm.length === 0
       ? `“${np.head.lemma}”`
       : headForm.join(""),
+    form: np.head.baseForm.length === 0 ? [] : headForm,
     english: np.head.lemma,
     role,
     resolution: np.head.resolution,
@@ -276,14 +288,14 @@ function realiseNP(
       if (ctx.articlePresence === "free") {
         const af = closedClassForm(lang, lemma === "an" ? "a" : lemma) ?? [];
         if (af.length > 0) {
-          detTokens.push({ surface: af.join(""), english: lemma, role: "DET" });
+          detTokens.push({ surface: af.join(""), form: af, english: lemma, role: "DET" });
         }
       }
     } else {
       // Non-article determiners (this/that/my/your) always emit.
       const df = closedClassForm(lang, lemma) ?? [];
       if (df.length > 0) {
-        detTokens.push({ surface: df.join(""), english: lemma, role: "DET" });
+        detTokens.push({ surface: df.join(""), form: df, english: lemma, role: "DET" });
       }
     }
   }
@@ -312,6 +324,7 @@ function realiseNP(
       // "the [missing] dog" reads as "the “shiny” dog" rather than
       // "the dog" (silent loss).
       surface: a.baseForm.length === 0 ? `“${a.lemma}”` : af.join(""),
+      form: a.baseForm.length === 0 ? [] : af,
       english: a.lemma,
       role: "ADJ" as const,
       resolution: a.resolution,
@@ -329,6 +342,7 @@ function realiseNP(
         if (nf.length > 0) {
           out.push({
             surface: nf.join(""),
+            form: nf,
             english: np.numeral!.lemma,
             role: "NUM" as const,
             resolution: lex ? "direct" : "concept",
@@ -341,6 +355,7 @@ function realiseNP(
             if (cf.length > 0) {
               out.push({
                 surface: cf.join(""),
+                form: cf,
                 english: "CLF",
                 role: "NUM" as const,
                 resolution: "concept",
@@ -386,6 +401,7 @@ function realiseNP(
     if (cf.length > 0) {
       out.push({
         surface: cf.join(""),
+        form: cf,
         english: np.coord.lemma,
         role: "DET" as const,
         resolution: "concept",
@@ -403,10 +419,10 @@ function realisePP(pp: PP, lang: Language, ctx: NPCtx): RealisedToken[] {
   const pf = closedClassForm(lang, pp.prep.lemma) ?? [];
   if (pf.length === 0) return npTokens;
   if (ctx.caseStrategy === "postposition") {
-    return [...npTokens, { surface: pf.join(""), english: pp.prep.lemma, role: "POSTP" }];
+    return [...npTokens, { surface: pf.join(""), form: pf, english: pp.prep.lemma, role: "POSTP" }];
   }
   // preposition or mixed → emit as preposition.
-  return [{ surface: pf.join(""), english: pp.prep.lemma, role: "PREP" }, ...npTokens];
+  return [{ surface: pf.join(""), form: pf, english: pp.prep.lemma, role: "PREP" }, ...npTokens];
 }
 
 function realiseVerb(
@@ -512,16 +528,16 @@ function realiseVerb(
     if (isZeroCopula) {
       // Zero-copula + negated → just emit the standalone NEG token.
       const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
-      return [{ surface: negForm.join(""), english: "not", role: "NEG", resolution: "concept" }];
+      return [{ surface: negForm.join(""), form: negForm, english: "not", role: "NEG", resolution: "concept" }];
     }
     if (negPos === "prefix" || negPos === "suffix") {
       const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
       form = negPos === "prefix" ? [...negForm, ...form] : [...form, ...negForm];
-      return [{ surface: form.join(""), english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
+      return [{ surface: form.join(""), form, english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
     }
     const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
-    const verbTok: RealisedToken = { surface: form.join(""), english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution };
-    const negTok: RealisedToken = { surface: negForm.join(""), english: "not", role: "NEG", resolution: "concept" };
+    const verbTok: RealisedToken = { surface: form.join(""), form, english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution };
+    const negTok: RealisedToken = { surface: negForm.join(""), form: negForm, english: "not", role: "NEG", resolution: "concept" };
     return negPos === "pre-verb" ? [negTok, verbTok] : [verbTok, negTok];
   }
   if (isZeroCopula) return [];
@@ -533,7 +549,13 @@ function realiseVerb(
   const verbSurface = vp.verb.baseForm.length === 0 && form.length === 0
     ? `“${vp.verb.lemma}”`
     : form.join("");
-  return [{ surface: verbSurface, english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
+  return [{
+    surface: verbSurface,
+    form: vp.verb.baseForm.length === 0 && form.length === 0 ? [] : form,
+    english: vp.verb.lemma,
+    role: "V",
+    resolution: vp.verb.resolution,
+  }];
 }
 
 

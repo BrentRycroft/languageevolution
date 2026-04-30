@@ -36,7 +36,7 @@ export function GrammarView() {
               <ScriptPicker />
             </span>
           </div>
-          <GrammarFeatureList grammar={selected.grammar} />
+          <GrammarFeatureList grammar={selected.grammar} lang={selected} />
           <InventoryDisplay lang={selected} />
           <ParadigmTable lang={selected} />
         </>
@@ -240,7 +240,23 @@ function ParadigmGroup({
   );
 }
 
-function GrammarFeatureList({ grammar }: { grammar: import("../engine/types").GrammarFeatures }) {
+function GrammarFeatureList({
+  grammar,
+  lang,
+}: {
+  grammar: import("../engine/types").GrammarFeatures;
+  lang: import("../engine/types").Language;
+}) {
+  // Stress row: surface the language's primary-stress rule. For
+  // `lexical` patterns (PIE-style mobile accent), append the count
+  // of per-word overrides so the user can see whether the language
+  // still tracks them or has drifted off lexical accent.
+  const stress = lang.stressPattern ?? "penult";
+  const lexCount = lang.lexicalStress ? Object.keys(lang.lexicalStress).length : 0;
+  const stressLabel =
+    stress === "lexical"
+      ? `lexical${lexCount > 0 ? ` · ${lexCount} overrides` : ""}`
+      : stress;
   const rows: Array<[string, string]> = [
     ["word order", grammar.wordOrder],
     ["affix position", grammar.affixPosition],
@@ -248,6 +264,7 @@ function GrammarFeatureList({ grammar }: { grammar: import("../engine/types").Gr
     ["tense marking", grammar.tenseMarking],
     ["case", grammar.hasCase ? "yes" : "no"],
     ["gender count", String(grammar.genderCount)],
+    ["stress", stressLabel],
   ];
   return (
     <table

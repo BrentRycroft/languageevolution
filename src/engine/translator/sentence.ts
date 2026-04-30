@@ -906,7 +906,11 @@ function translateViaTree(
       r.role === "PREP" || r.role === "POSTP" ? "PREP" :
       r.role === "NEG" ? "AUX" : // legacy fallback tag
       "PUNCT",
-    targetForm: [r.surface],
+    // Carry the realiser's true phoneme array through (PR #4 of the
+    // stress series). Falling back to `[r.surface]` for unresolved
+    // tokens (quoted "wise" passthroughs etc.) keeps targetForm.length
+    // > 0 so downstream display still renders them.
+    targetForm: r.form.length > 0 ? r.form : [r.surface],
     targetSurface: r.surface,
     glossNote:
       r.role === "DET" ? "art/det" :
