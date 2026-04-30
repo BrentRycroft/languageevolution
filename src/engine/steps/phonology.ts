@@ -7,6 +7,7 @@ import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../phonology/propose";
+import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
@@ -92,8 +93,10 @@ export function stepPhonology(
     if (a !== b) {
       mutated++;
       lang.lastChangeGeneration[m] = generation;
+      bumpFrequency(lang, m, 0.04);
     }
   }
+  decayFrequencies(lang);
   if (mutated > 0) {
     const oldInventory = new Set(lang.phonemeInventory.segmental);
     refreshInventory(lang);

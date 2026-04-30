@@ -4,6 +4,7 @@ import { maybeArealPhonemeShare } from "../contact/areal_phonology";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { getWorldMap } from "../geo/map";
+import { bumpFrequency } from "../lexicon/frequencyDynamics";
 
 const AREAL_PHONEME_PROBABILITY = 0.005;
 
@@ -39,6 +40,7 @@ export function stepContact(
   );
   if (loan) {
     lang.wordOrigin[loan.meaning] = `borrow:${loan.donor}`;
+    bumpFrequency(lang, loan.meaning, 0.1);
     if (!lang.recentLoanGens) lang.recentLoanGens = [];
     lang.recentLoanGens.push(generation);
     pushEvent(lang, {
