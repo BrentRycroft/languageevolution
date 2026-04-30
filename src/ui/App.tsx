@@ -11,6 +11,7 @@ import { SoundLawsView } from "./SoundLawsView";
 import { Glossary } from "./Glossary";
 import { AchievementToast } from "./Achievements";
 import { PersistenceToast } from "./PersistenceToast";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { UpdateBanner } from "./UpdateBanner";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
@@ -112,6 +113,7 @@ export function App() {
   const stepN = useSimStore((s) => s.stepN);
   const stepNAsync = useSimStore((s) => s.stepNAsync);
   const reset = useSimStore((s) => s.reset);
+  const showConfirm = useSimStore((s) => s.showConfirm);
   const generation = useSimStore((s) => s.state.generation);
   const yearsPerGen = useSimStore(
     (s) => s.config.yearsPerGeneration ?? YEARS_PER_GENERATION,
@@ -186,6 +188,7 @@ export function App() {
       </a>
       <AchievementToast />
       <PersistenceToast />
+      <ConfirmDialog />
       <UpdateBanner />
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       <header className="header">
@@ -235,14 +238,15 @@ export function App() {
             <FastForwardIcon size={16} />
           </button>
           <button
-            onClick={() => {
-              if (
-                confirm(
-                  "Reset simulation to generation 0? This wipes the current run (saved runs are preserved).",
-                )
-              ) {
-                reset();
-              }
+            onClick={async () => {
+              const ok = await showConfirm({
+                title: "Reset simulation?",
+                message:
+                  "This wipes the current run and rolls back to generation 0. Saved runs are preserved.",
+                confirmLabel: "Reset",
+                danger: true,
+              });
+              if (ok) reset();
             }}
             className="icon-only"
             aria-label="Reset simulation"

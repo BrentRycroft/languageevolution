@@ -4,18 +4,21 @@ import { PRESETS } from "../engine/presets";
 export function PresetPicker() {
   const config = useSimStore((s) => s.config);
   const loadConfig = useSimStore((s) => s.loadConfig);
+  const showConfirm = useSimStore((s) => s.showConfirm);
 
   const current = config.preset ?? "default";
 
-  const onChange = (id: string) => {
+  const onChange = async (id: string) => {
     const preset = PRESETS.find((p) => p.id === id);
     if (!preset) return;
-    if (
-      !confirm(
-        `Load "${preset.label}"? This resets the simulation to generation 0 with a new seed lexicon, grammar, and morphology.`,
-      )
-    )
-      return;
+    const ok = await showConfirm({
+      title: `Load "${preset.label}"?`,
+      message:
+        "This resets the simulation to generation 0 with a new seed lexicon, grammar, and morphology.",
+      confirmLabel: "Load preset",
+      danger: true,
+    });
+    if (!ok) return;
     loadConfig(preset.build());
   };
 

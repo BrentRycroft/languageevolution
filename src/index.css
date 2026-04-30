@@ -1015,6 +1015,40 @@ input[type="range"]:hover::-moz-range-thumb {
   padding: 2px 4px;
 }
 
+/* Global confirm dialog — replaces native `window.confirm()` so the
+   alert matches the rest of the app's styling and doesn't freeze the
+   React render loop while open. Backdrop click + Escape both cancel.
+   Auto-focused confirm button lets keyboard users hit Enter to
+   accept. Honours prefers-reduced-motion via the keyframes guard
+   already declared earlier in this file. */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.confirm-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-3);
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+  font-size: var(--fs-2);
+}
+
+.confirm-dialog h3 {
+  font-size: var(--fs-3);
+  font-weight: var(--fw-semi);
+}
+
 /* Tempo / tier icon columns. Without explicit min-width and a
    slightly bigger glyph the emoji rendered nearly invisible at the
    default 11px monospace size. Reserve enough room and bump font-size

@@ -4,22 +4,24 @@ import { EVOLUTION_SPEEDS, findEvolutionSpeed } from "../engine/presets/speed";
 export function EvolutionSpeedPicker() {
   const config = useSimStore((s) => s.config);
   const loadConfig = useSimStore((s) => s.loadConfig);
+  const showConfirm = useSimStore((s) => s.showConfirm);
 
   const current = config.evolutionSpeed ?? "standard";
   const desc = findEvolutionSpeed(current)?.description ?? "";
 
-  const onChange = (id: string) => {
+  const onChange = async (id: string) => {
     const profile = findEvolutionSpeed(id);
     if (!profile || id === current) return;
     // Switching evolution speed changes every rate and therefore has to
     // restart the simulation. Confirm so users don't lose their current run.
-    if (
-      !confirm(
-        `Switch to "${profile.label}"?\nThis resets the simulation to generation 0 because every rate changes.`,
-      )
-    ) {
-      return;
-    }
+    const ok = await showConfirm({
+      title: `Switch to "${profile.label}"?`,
+      message:
+        "This resets the simulation to generation 0 because every rate changes.",
+      confirmLabel: "Switch",
+      danger: true,
+    });
+    if (!ok) return;
     const next = profile.apply(config);
     loadConfig({ ...next, evolutionSpeed: id });
   };

@@ -60,7 +60,8 @@ export function SeedLexiconEditor({ onClose }: { onClose: () => void }) {
     setDraft((d) => ({ ...d, [m]: f }));
   };
 
-  const apply = () => {
+  const showConfirm = useSimStore((s) => s.showConfirm);
+  const apply = async () => {
     const unknown: string[] = [];
     for (const m of Object.keys(draft)) {
       for (const p of draft[m]!) {
@@ -69,14 +70,21 @@ export function SeedLexiconEditor({ onClose }: { onClose: () => void }) {
     }
     if (unknown.length > 0) {
       const sample = unknown.slice(0, 6).join(", ");
-      if (
-        !confirm(
-          `Warning: ${unknown.length} phoneme(s) not in the IPA inventory (${sample}${unknown.length > 6 ? ", ..." : ""}). Continue anyway?`,
-        )
-      )
-        return;
+      const proceed = await showConfirm({
+        title: `${unknown.length} unknown phoneme${unknown.length === 1 ? "" : "s"}`,
+        message: `Some forms reference phonemes not in the IPA inventory (${sample}${unknown.length > 6 ? ", …" : ""}). Continue anyway?`,
+        confirmLabel: "Continue",
+      });
+      if (!proceed) return;
     }
-    if (!confirm("Applying a new seed lexicon will reset the simulation to generation 0.")) return;
+    const ok = await showConfirm({
+      title: "Apply new seed lexicon?",
+      message:
+        "Applying a new seed lexicon resets the simulation to generation 0.",
+      confirmLabel: "Apply & reset",
+      danger: true,
+    });
+    if (!ok) return;
     updateConfig({ seedLexicon: draft });
     onClose();
   };

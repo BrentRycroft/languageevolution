@@ -40,6 +40,25 @@ export interface PersistenceNotice {
 }
 
 /**
+ * Pending confirm-dialog request. Stored as a single record on the
+ * store rather than per-component so any caller in any component can
+ * trigger the global dialog without threading a hook through the
+ * tree. The Promise resolver is captured here so the resolver in
+ * the caller's `await showConfirm(...)` fires when the user clicks
+ * Confirm or Cancel.
+ */
+export interface ConfirmRequest {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  /** When true, the confirm button styles as `danger` (destructive
+   *  action — delete, reset, etc.). Default `false`. */
+  danger?: boolean;
+  resolve: (ok: boolean) => void;
+}
+
+/**
  * Tiny FNV-1a hash for mixing a language id into a numeric RNG seed.
  * Used by applyRuleBiasToLanguage so every language gets a deterministic
  * but distinct sub-seed when proposing an immediate post-bias rule.
@@ -120,6 +139,10 @@ interface SimStore {
    *  Distinct from the achievement toast so a single user action
    *  doesn't accidentally clear the other. */
   persistenceNotice: PersistenceNotice | null;
+  /** Pending confirm-dialog request, or null when no dialog is open.
+   *  See `ConfirmRequest`. The single `<ConfirmDialog />` in App.tsx
+   *  reads this; resolved via `resolveConfirm`. */
+  confirmDialog: ConfirmRequest | null;
   step: () => void;
   stepN: (n: number) => void;
   stepNAsync: (n: number) => Promise<void>;
@@ -160,6 +183,10 @@ interface SimStore {
   dismissAchievementToast: () => void;
   dismissPersistenceNotice: () => void;
   setPersistenceNotice: (notice: PersistenceNotice) => void;
+  /** Open a confirm dialog. Resolves to `true` on confirm,
+   *  `false` on cancel / Escape / backdrop click. */
+  showConfirm: (req: Omit<ConfirmRequest, "resolve">) => Promise<boolean>;
+  resolveConfirm: (ok: boolean) => void;
   clearAchievements: () => void;
   clearAutosave: () => void;
   loadConfig: (
@@ -347,6 +374,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
   unlockedAchievements: loadPersistedAchievements(),
   lastAchievement: null,
   persistenceNotice: initial.loadFailure ?? null,
+  confirmDialog: null,
   step: () => {
     const { sim, history, activityHistory, unlockedAchievements, config } = get();
     sim.step();
@@ -580,6 +608,17 @@ export const useSimStore = create<SimStore>((set, get) => ({
   dismissAchievementToast: () => set({ lastAchievement: null }),
   dismissPersistenceNotice: () => set({ persistenceNotice: null }),
   setPersistenceNotice: (notice) => set({ persistenceNotice: notice }),
+  showConfirm: (req) =>
+    new Promise<boolean>((resolve) => {
+      set({ confirmDialog: { ...req, resolve } });
+    }),
+  resolveConfirm: (ok) => {
+    const { confirmDialog } = get();
+    if (confirmDialog) {
+      confirmDialog.resolve(ok);
+      set({ confirmDialog: null });
+    }
+  },
   clearAchievements: () => {
     persistAchievements([]);
     set({ unlockedAchievements: [], lastAchievement: null });
