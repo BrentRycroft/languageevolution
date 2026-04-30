@@ -12,6 +12,7 @@ const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   grammaticalize: "#7be0b5",
   chain_shift: "#ff8fd4",
   taboo: "#ff6363",
+  actuation: "#9bdcff",
 };
 
 const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
@@ -23,6 +24,7 @@ const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
   grammaticalize: "gram",
   chain_shift: "chain",
   taboo: "taboo",
+  actuation: "actuate",
 };
 
 export function EventsLog() {

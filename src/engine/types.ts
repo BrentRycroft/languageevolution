@@ -41,7 +41,8 @@ export interface LanguageEvent {
     | "borrow"
     | "grammaticalize"
     | "chain_shift"
-    | "taboo";
+    | "taboo"
+    | "actuation";
   description: string;
   meta?: {
     donorId?: string;
@@ -106,6 +107,13 @@ export interface Language {
   colexifiedAs?: Record<Meaning, Meaning[]>;
   substrateAccelerationRemaining?: number;
   recentLoanGens?: number[];
+  variants?: Record<Meaning, FormVariant[]>;
+}
+
+export interface FormVariant {
+  form: WordForm;
+  weight: number;
+  bornGeneration: number;
 }
 
 export interface LanguageNode {

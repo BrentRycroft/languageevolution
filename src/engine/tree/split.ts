@@ -187,6 +187,18 @@ export function splitLeaf(
             ]),
           )
         : undefined,
+      variants: parentLang.variants
+        ? Object.fromEntries(
+            Object.entries(parentLang.variants).map(([k, list]) => [
+              k,
+              list.map((v) => ({
+                form: v.form.slice(),
+                weight: v.weight * 0.7,
+                bornGeneration: v.bornGeneration,
+              })),
+            ]),
+          )
+        : undefined,
     };
   };
 
