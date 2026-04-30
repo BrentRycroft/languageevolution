@@ -6,6 +6,40 @@ import { leafIds } from "../tree/split";
 import { applyChangesToWord } from "../phonology/apply";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
+import { driftOneMeaning } from "../semantics/drift";
+import type { Language, WordForm } from "../types";
+
+function makeTestLang(forms: Record<string, WordForm>): Language {
+  return {
+    id: "L-prop",
+    name: "Prop",
+    lexicon: { ...forms },
+    enabledChangeIds: [],
+    changeWeights: {},
+    birthGeneration: 0,
+    grammar: {
+      wordOrder: "SVO",
+      affixPosition: "suffix",
+      pluralMarking: "none",
+      tenseMarking: "none",
+      hasCase: false,
+      genderCount: 0,
+    },
+    events: [],
+    wordFrequencyHints: {},
+    phonemeInventory: { segmental: ["p", "t", "a", "e", "i"], tones: [], usesTones: false },
+    morphology: { paradigms: {} },
+    localNeighbors: {},
+    conservatism: 1,
+    speakers: 10000,
+    wordOrigin: {},
+    activeRules: [],
+    retiredRules: [],
+    orthography: {},
+    otRanking: [],
+    lastChangeGeneration: {},
+  } as Language;
+}
 
 function stringifyLeafLexicons(tree: ReturnType<ReturnType<typeof createSimulation>["getState"]>["tree"]) {
   return Object.keys(tree)
@@ -97,6 +131,70 @@ describe("engine property tests", () => {
         },
       ),
       { numRuns: 5 },
+    );
+  });
+
+  it("driftOneMeaning on empty lexicon returns null", () => {
+    const lang = makeTestLang({});
+    const rng = makeRng("empty");
+    expect(driftOneMeaning(lang, rng)).toBeNull();
+  });
+
+  it("driftOneMeaning result has from !== to and form moved correctly", () => {
+    fc.assert(
+      fc.property(
+        fc.uniqueArray(
+          fc.constantFrom(
+            "water", "fire", "mother", "father", "child", "dog", "see",
+            "go", "eat", "hand", "foot", "head", "stone", "tree",
+          ),
+          { minLength: 4, maxLength: 8 },
+        ),
+        fc.string({ minLength: 1, maxLength: 8 }),
+        (meanings, seed) => {
+          const forms: Record<string, WordForm> = {};
+          for (let i = 0; i < meanings.length; i++) {
+            forms[meanings[i]!] = ["p", "a", "t", "i"].slice(0, 2 + (i % 3));
+          }
+          const lang = makeTestLang(forms);
+          const beforeSize = Object.keys(lang.lexicon).length;
+          const result = driftOneMeaning(lang, makeRng(seed));
+          if (result === null) return;
+          expect(result.from).not.toBe(result.to);
+          expect(result.from.length).toBeGreaterThan(0);
+          expect(result.to.length).toBeGreaterThan(0);
+          const afterSize = Object.keys(lang.lexicon).length;
+          expect(afterSize).toBeGreaterThanOrEqual(beforeSize - 1);
+          expect(afterSize).toBeLessThanOrEqual(beforeSize + 1);
+          expect(lang.lexicon[result.to]).toBeDefined();
+          if (!result.polysemous) {
+            expect(lang.lexicon[result.from]).toBeUndefined();
+          }
+        },
+      ),
+      { numRuns: 25 },
+    );
+  });
+
+  it("driftOneMeaning is deterministic for same seed + same lang", () => {
+    fc.assert(
+      fc.property(
+        fc.string({ minLength: 1, maxLength: 8 }),
+        (seed) => {
+          const meanings = ["water", "fire", "mother", "child", "dog", "see"];
+          const forms: Record<string, WordForm> = {};
+          for (let i = 0; i < meanings.length; i++) {
+            forms[meanings[i]!] = ["p", "a", "t", "i"].slice(0, 2 + (i % 3));
+          }
+          const a = makeTestLang(forms);
+          const b = makeTestLang(forms);
+          const ra = driftOneMeaning(a, makeRng(seed));
+          const rb = driftOneMeaning(b, makeRng(seed));
+          expect(JSON.stringify(ra)).toBe(JSON.stringify(rb));
+          expect(JSON.stringify(a.lexicon)).toBe(JSON.stringify(b.lexicon));
+        },
+      ),
+      { numRuns: 12 },
     );
   });
 

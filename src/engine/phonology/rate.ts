@@ -1,5 +1,17 @@
 import { fnv1a } from "../rng";
 
+const PI = Math.PI;
+const TWO_PI = 2 * PI;
+const PI_SQ = PI * PI;
+
+function sinApprox(x: number): number {
+  let t = x - TWO_PI * Math.floor((x + PI) / TWO_PI);
+  const sign = t < 0 ? -1 : 1;
+  const at = t < 0 ? -t : t;
+  const k = at * (PI - at);
+  return (sign * 16 * k) / (5 * PI_SQ - 4 * k);
+}
+
 /**
  * Realism master multiplier — a single global knob that scales every
  * stochastic rate the engine consults. 1.0 = stock pacing; 5.0 = fast
@@ -23,11 +35,11 @@ export function realismMultiplier(
  */
 export function rateMultiplier(generation: number, languageId: string): number {
   const seed = fnv1a(languageId) / 0xffffffff;
-  const base = 1 + 0.4 * Math.sin(generation / 30 + seed * Math.PI * 2);
+  const base = 1 + 0.4 * sinApprox(generation / 30 + seed * Math.PI * 2);
 
   // Burst window: every ~120 generations, a 5-generation spike.
   const phase = (generation + Math.floor(seed * 120)) % 120;
-  const burst = phase < 5 ? 2 + Math.sin((phase / 5) * Math.PI) : 0;
+  const burst = phase < 5 ? 2 + sinApprox((phase / 5) * Math.PI) : 0;
 
   return Math.max(0.2, base + burst);
 }

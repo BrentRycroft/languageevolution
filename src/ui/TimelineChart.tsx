@@ -376,6 +376,12 @@ export function TimelineChart() {
                   fontSize: "var(--fs-1)",
                   color: "var(--muted)",
                   paddingTop: 4,
+                  lineHeight: 1.4,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0 8px",
+                  maxHeight: 56,
+                  overflowY: "auto",
                 }}
               />
               {series.map((s) => (
