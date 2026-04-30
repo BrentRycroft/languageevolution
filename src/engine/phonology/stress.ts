@@ -1,14 +1,19 @@
 import type { WordForm } from "../types";
-import { isVowel } from "./ipa";
+import { isVowel, isSyllabic } from "./ipa";
 import { stripTone } from "./tone";
 
 /**
- * Locate indices of vowel phonemes in a form.
+ * Locate indices of nucleus phonemes in a form. A nucleus is either
+ * a vowel or a syllabic resonant (`r̩`, `m̩`, `l̩`, `n̩` and friends —
+ * see `phonology/ipa.ts::SYLLABIC_RESONANTS`). Excluding the
+ * resonants would break stress alignment for forms like PIE *septḿ̥
+ * "seven" where the stressed syllable's nucleus is a syllabic m̩.
  */
 export function vowelIndices(form: WordForm): number[] {
   const idxs: number[] = [];
   for (let i = 0; i < form.length; i++) {
-    if (isVowel(stripTone(form[i]!))) idxs.push(i);
+    const base = stripTone(form[i]!);
+    if (isVowel(base) || isSyllabic(base)) idxs.push(i);
   }
   return idxs;
 }

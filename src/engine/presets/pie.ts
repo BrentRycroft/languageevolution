@@ -466,6 +466,52 @@ const FREQ: Record<Meaning, number> = {
   good: 0.92, bad: 0.9, new: 0.85, old: 0.85,
 };
 
+/**
+ * Hand-authored mobile-accent map. Each entry is the *vowel-position*
+ * index (0-based, into the form's vowel sequence) that carries
+ * primary stress. Only entries whose accent diverges from the
+ * `lexical → penult` fallback are listed — most 1-vowel and many
+ * 2-vowel forms naturally land on the right position via penult, so
+ * including them here would be redundant noise.
+ *
+ * Sources: Mallory & Adams 2006, Beekes 2011, Sihler 1995, Fortson
+ * 2010. Two broad classes:
+ *
+ *   - **Oxytones** (final-stress 2-syllable nouns): kinship -tḗr /
+ *     -tor agent suffix, the *-tlós class, several adjectives ending
+ *     in *-ús (PIE u-stems), and the high-numeral oxytones.
+ *   - **3-syllable initial-stress words**: penult fallback would land
+ *     on the middle vowel, but the inherited acrostatic accent is
+ *     on the first.
+ *
+ * Daughter languages inherit this via `splitLeaf` (see
+ * `tree/split.ts:lexicalStress`). Once a daughter drifts off the
+ * `lexical` stress rule (typically to `initial` for Germanic-style
+ * descendants or `penult` for Romance-style), the override map
+ * becomes inert but stays around as a fossil etymology.
+ */
+const LEXICAL_STRESS: Record<Meaning, number> = {
+  // -tḗr agent oxytones
+  mother: 1,    // *meh₂tḗr
+  daughter: 1,  // *dʰugh₂tḗr
+  // *-tlós child / agent-product oxytone
+  child: 1,     // *putlós
+  // numeral oxytones
+  seven: 1,     // *septḿ̥
+  eight: 1,     // *h₃oḱtṓ
+  hundred: 1,   // *ḱm̥tóm
+  // u-stem adjective oxytones
+  short: 1,     // *mr̥gʲʰús
+  wide: 1,      // *pl̥th₂ús
+  // o-stem instrumental nouns with terminal accent
+  yoke: 1,      // *jugóm
+  wheel: 1,     // *kʷekʷlóm
+  // 3-syllable acrostatics (penult-fallback would mis-place to vowel 1)
+  evening: 0,   // *wésperos
+  four: 0,      // *kʷétwores
+  wife: 0,      // *déms-potniH (lady-of-house compound, acrostatic)
+};
+
 const MORPHOLOGY: Morphology = {
   paradigms: {
     "noun.case.nom": { affix: ["s"], position: "suffix", category: "noun.case.nom" },
@@ -503,6 +549,7 @@ export function presetPIE(): SimulationConfig {
     // (Germanic → initial, Greek → recessive trisyllabic, Latin →
     // penult, Sanskrit kept mobile longer).
     seedStressPattern: "lexical",
+    seedLexicalStress: LEXICAL_STRESS,
     seedGrammar: {
       wordOrder: "SOV",
       articlePresence: "none",
