@@ -8,7 +8,7 @@ import { defaultConfig } from "../config";
 // segments, palatal series (ɲ, j) preserved.
 const LEXICON: Lexicon = {
   // — natural world / weather —
-  water: ["m", "a", "ⁿj", "i"],
+  water: ["m", "a", "ɲ", "i"],
   fire: ["m", "u", "l", "i", "l", "o"],
   stone: ["b", "u", "e˩"],
   earth: ["i", "t", "a", "k", "a"],
@@ -21,12 +21,16 @@ const LEXICON: Lexicon = {
   wind: ["m", "u", "p", "e", "p", "o"],
   thunder: ["i", "k", "u˥", "p", "u", "g", "u"],
   river: ["m", "u", "k", "o"],
-  sea: ["b", "a", "h", "a", "r", "i"],
+  // Proto-Bantu had no securely-reconstructed "sea" lexeme (the
+  // *bahari Swahili form is an Arabic loan). Use the lake-extension
+  // *jɪ̀dà — many descendants conflate sea / lake.
+  sea: ["i", "j", "i", "d", "a"],
   lake: ["i", "z", "i", "w", "a"],
   mountain: ["m", "u", "l", "i", "m", "a"],
   hill: ["i", "k", "i", "l", "i", "m", "a"],
   forest: ["m", "u", "t", "i", "t", "u"],
-  field: ["i", "s", "h", "a", "m", "b", "a"],
+  // PB *gʊ̀ndá "field, garden" (Swahili `shamba` is an Arabic loan).
+  field: ["m", "u", "g", "u˩", "n", "d", "a"],
   road: ["m", "u", "n", "j", "i", "l", "a"],
   // — sky cycle / time —
   day: ["i", "s", "i", "k", "u"],
@@ -47,12 +51,11 @@ const LEXICON: Lexicon = {
   fruit: ["i", "t", "u", "n", "d", "a"],
   grain: ["i", "p", "u", "n", "d", "a"],
   bark: ["i", "g", "a", "n", "d", "a"],
-  oak: ["m", "u", "o˥", "k"],
-  apple: ["i", "p", "e", "r", "a"],
+  // No Proto-Bantu word for `oak` or `apple` (post-PB Portuguese
+  // loans) and `wolf` / `horse` (areal loans / no PB referent).
+  // `dog` *bʊ́á attested.
   // — animals —
   dog: ["m", "b", "u", "a˩"],
-  wolf: ["m", "b", "w", "a˩"],
-  horse: ["i", "f", "a", "r", "a", "s", "i"],
   cow: ["ɲ", "o", "m", "b", "e"],
   bull: ["i", "n", "d", "u", "m", "e"],
   sheep: ["i", "ⁿg", "o", "n", "d", "o", "l", "o"],
@@ -60,12 +63,12 @@ const LEXICON: Lexicon = {
   pig: ["i", "ⁿg", "u", "r", "u", "b", "e"],
   bear: ["m", "u", "b", "e", "a˩", "l", "e"],
   deer: ["m", "p", "a˩", "l", "a"],
-  fish: ["i", "s", "a", "m", "a", "k", "i"],
-  bird: ["ⁿj", "u", "n", "i"],
+  fish: ["i", "n", "s", "u", "i"],
+  bird: ["ɲ", "u", "n", "i"],
   eagle: ["i", "t", "a", "i"],
   snake: ["ɲ", "o", "k", "a"],
   worm: ["m", "a˩", "v", "a˩"],
-  louse: ["i", "ⁿj", "a˩", "a˩"],
+  louse: ["i", "ɲ", "a˩", "a˩"],
   bee: ["ɲ", "u˥", "k", "i"],
   egg: ["i", "j", "i", "l", "a"],
   feather: ["i", "a˩", "a˩"],
@@ -114,13 +117,17 @@ const LEXICON: Lexicon = {
   son: ["m", "w", "a˩", "n", "a"],
   daughter: ["m", "w", "a˩", "n", "a", "m", "k", "e"],
   brother: ["k", "a˩", "k", "a"],
-  sister: ["d", "a˩", "d", "a"],
+  // *dada "sister" is Swahili nursery; PB *kádí. Reuse the brother
+  // root with the káìká reduplication pattern.
+  sister: ["k", "a˩", "i", "k", "a"],
   husband: ["m", "u˥", "m", "e"],
   wife: ["m", "k", "e"],
-  king: ["m", "f", "a˩", "l", "m", "e"],
+  // PB *kʊ́mʊ́ "chief, ruler" (Swahili `mfalme` is an Arabic loan).
+  king: ["m", "u˥", "k", "u", "m", "u"],
   god: ["m", "u˥", "ⁿg", "u"],
   guest: ["m", "u", "g", "e", "n", "i"],
-  enemy: ["a", "d", "u", "i"],
+  // Drop `enemy` — Swahili `adui` is Arabic; PB lacked a single
+  // dedicated lexeme.
   // — household / artifact —
   house: ["ɲ", "u˥", "m", "b", "a"],
   door: ["m", "l", "a˩", "ⁿg", "o"],
@@ -128,19 +135,21 @@ const LEXICON: Lexicon = {
   yoke: ["m", "u", "g", "a", "a˩"],
   wheel: ["m", "u", "p", "i", "g", "i", "l", "i"],
   boat: ["m", "u", "a˩", "t", "u"],
-  ship: ["i", "m", "e", "l", "i"],
+  // Swahili `meli` is an English loan (← "mail-boat"); drop.
   knife: ["i", "k", "i", "s", "u"],
-  axe: ["i", "s", "h", "o˩", "k", "a"],
+  axe: ["i", "ʃ", "o˩", "k", "a"],
   spear: ["i", "f", "u˥", "m", "o"],
   bow: ["b", "u", "t", "a˩"],
   arrow: ["m", "u", "p", "i", "g", "a"],
   rope: ["k", "a˩", "m", "b", "a˩"],
   cloth: ["m", "p", "a˩"],
   // — food / drink —
-  bread: ["m", "k", "a˩", "t", "e"],
+  // Swahili `mkate` is an Arabic loan; PB had no securely-reconstructed
+  // bread word (cassava / millet / sorghum varied per region). Drop.
   meat: ["ɲ", "a˩", "m", "a"],
   milk: ["m", "a˩", "z", "i", "w", "a"],
-  honey: ["a", "s", "a˩", "l", "i"],
+  // PB *jʊ̀kɪ̀ "honey" (Swahili `asali` is Arabic عسل).
+  honey: ["b", "u˩", "j", "u", "k", "i"],
   salt: ["m", "u", "ɲ", "u"],
   // — verbs of motion / state —
   be: ["k", "u", "a˩"],
@@ -168,7 +177,7 @@ const LEXICON: Lexicon = {
   make: ["t", "e", "n", "g", "e", "n", "e", "z", "a"],
   take: ["t", "w", "a˩", "a˩"],
   give: ["p", "e", "a"],
-  hold: ["s", "h", "i", "k", "a"],
+  hold: ["ʃ", "i", "k", "a"],
   carry: ["b", "e", "b", "a"],
   throw: ["t", "u˥", "p", "a"],
   pull: ["v", "u", "t", "a"],
@@ -186,13 +195,13 @@ const LEXICON: Lexicon = {
   drink: ["ɲ", "w", "a"],
   sleep: ["l", "a˩", "l", "a"],
   dream: ["o", "t", "a"],
-  live: ["i", "s", "h", "i"],
+  live: ["i", "ʃ", "i"],
   die: ["f", "u", "a"],
   bear_child: ["z", "a", "a"],
   grow: ["k", "u", "a˩"],
   love: ["p", "e", "n", "d", "a"],
   fear: ["o", "p", "a"],
-  laugh: ["s", "h", "e", "k", "a"],
+  laugh: ["ʃ", "e", "k", "a"],
   cry: ["l", "i", "a"],
   // — numbers —
   one: ["m", "o˩", "j", "a"],
@@ -218,7 +227,8 @@ const LEXICON: Lexicon = {
   heavy: ["z", "i˥", "t", "o"],
   light: ["e", "p", "e", "s", "i"],
   hot: ["m", "o", "t", "o"],
-  cold: ["b", "a˩", "r", "i", "d", "i"],
+  // PB *pɔ́lɔ̀ "cold, cool" (Swahili `baridi` is Arabic بارد).
+  cold: ["i", "p", "o˥", "l", "o"],
   wet: ["l", "o˩", "a˩"],
   dry: ["k", "a˩", "v", "u"],
   full: ["j", "a˩", "a˩"],

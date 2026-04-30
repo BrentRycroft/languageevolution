@@ -1,5 +1,42 @@
 import type { Meaning, WordForm } from "../types";
-import { isSyllabic } from "./ipa";
+import { isSyllabic, isVowel } from "./ipa";
+
+/**
+ * The resonant set: phonemes that can be syllabified into syllabic
+ * resonants (l → l̩, r → r̩, m → m̩, n → n̩) when a word loses its
+ * nucleus. Used by `repairSyllabicity` to fix forms that sound-change
+ * cascades have stripped of vowels — real languages either insert an
+ * epenthetic vowel or syllabify a remaining sonorant; the simulator
+ * does the latter as the more compact repair.
+ */
+const RESONANT_BASES: Record<string, string> = {
+  l: "l̩",
+  r: "r̩",
+  m: "m̩",
+  n: "n̩",
+};
+
+/**
+ * Repair a form that's lost its syllable nucleus by syllabifying the
+ * rightmost resonant (l/r/m/n → l̩/r̩/m̩/n̩). Returns the form unchanged
+ * when it already has a nucleus, or when no resonant is available
+ * (in which case `isFormLegal` will still reject it and the caller
+ * rolls back).
+ */
+export function repairSyllabicity(form: WordForm): WordForm {
+  if (form.length === 0) return form;
+  if (form.some((p) => isSyllabic(p))) return form;
+  void isVowel;
+  for (let i = form.length - 1; i >= 0; i--) {
+    const replacement = RESONANT_BASES[form[i]!];
+    if (replacement) {
+      const out = form.slice();
+      out[i] = replacement;
+      return out;
+    }
+  }
+  return form;
+}
 
 /**
  * Meanings allowed to shrink to a single phoneme. In real languages the

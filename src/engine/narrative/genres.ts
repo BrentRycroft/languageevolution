@@ -60,6 +60,17 @@ export const PAST_TENSE_VERB: Record<string, string> = {
   make: "made", break: "broke", fall: "fell",
   sleep: "slept", die: "died",
   run: "ran", walk: "walked", fly: "flew",
+  // Cover the rest of the transitive pool used by `discourse_generate`.
+  // Without these the past-tense fallback emits `${verb}ed` and we
+  // get "heared" / "thinked" in myth / legend narratives.
+  hear: "heard", think: "thought", say: "said",
+  call: "called", ask: "asked", carry: "carried",
+  throw: "threw", pull: "pulled", push: "pushed",
+  cut: "cut", bend: "bent", build: "built",
+  burn: "burned", wash: "washed", weave: "wove",
+  sit: "sat", stand: "stood", lie: "lay",
+  swim: "swam", live: "lived", grow: "grew",
+  love: "loved", fear: "feared",
 };
 
 /**

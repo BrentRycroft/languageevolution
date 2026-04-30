@@ -131,7 +131,15 @@ export function closedClassTable(lang: Language): Record<string, WordForm> {
   if (cached) return cached;
   const out: Record<string, WordForm> = {};
   for (const lemma of CLOSED_CLASS_LEMMAS) {
-    out[lemma] = synthesise(lang, lemma);
+    // Authentic-form preference: when the language's open-class
+    // lexicon has a real seeded entry for a closed-class lemma (e.g.
+    // PIE `not: ["n","e"]` for *ne), use it directly. Otherwise fall
+    // back to phoneme-inventory synthesis. Without this guard, the
+    // synthesised form (deterministic but invented) overrides
+    // historically-attested closed-class forms even for the proto-
+    // language preset that explicitly seeded them.
+    const seeded = lang.lexicon[lemma];
+    out[lemma] = seeded && seeded.length > 0 ? seeded.slice() : synthesise(lang, lemma);
   }
   cache.set(lang, out);
   return out;

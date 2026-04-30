@@ -15,6 +15,11 @@ const INITIAL_STRENGTH = 0.3;
 const DEATH_STRENGTH = 0.04;
 /** Generations without a successful fire before retirement. */
 const MAX_DORMANT_GENERATIONS = 60;
+// Cap retired-rule history to prevent unbounded memory growth. Over
+// thousands of generations this list would otherwise accumulate
+// hundreds of dead rules per language; the timeline view only ever
+// reads the most-recent entries.
+const MAX_RETIRED_RULES = 200;
 /**
  * Centre of soft-cap pressure for active rules. Below this, proposals
  * fire at their normal rate; above it, the probability falls off
@@ -206,6 +211,14 @@ export function ageAndRetire(
       retired.push(rule.id);
       if (!lang.retiredRules) lang.retiredRules = [];
       lang.retiredRules.push({ ...rule, deathGeneration: generation });
+      // Ring-buffer to prevent unbounded growth over thousands of
+      // generations. Mirrors `MAX_EVENTS_PER_LANGUAGE` in
+      // `helpers.ts`. Keeps the most-recent retirements; the
+      // ones we drop are too old to be meaningful for the timeline
+      // visualiser anyway.
+      if (lang.retiredRules.length > MAX_RETIRED_RULES) {
+        lang.retiredRules = lang.retiredRules.slice(-MAX_RETIRED_RULES);
+      }
       continue;
     }
     survivors.push({ ...rule, strength: nextStrength });

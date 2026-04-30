@@ -94,13 +94,18 @@ const LEXICON: Lexicon = {
   big: ["s", "u", "l", "i"],        // suli
   small: ["l", "i", "l", "i"],      // lili
   new: ["s", "i", "n"],             // sin
-  old: ["m", "a", "j", "u"],        // majuna (shortened)
+  // `majuna` isn't in the canonical 137-word pu list (post-pu / `ku
+  // suli` extension). Use `pi tenpo pini` paraphrase by mapping to
+  // `tenpo` (time) + `pini` (end) — but flat lookup forces a single
+  // form, so we use `tenpo` here. Languages that want a richer form
+  // can compose at narrative time.
+  old: ["t", "e", "n", "p", "o"],   // tenpo "time" (proxy)
   hot: ["s", "e", "l", "i"],        // seli (reused)
   cold: ["l", "e", "t", "e"],       // lete
   hard: ["k", "i", "w", "e", "n"],  // kiwen
   soft: ["k", "o"],                 // ko
   strong: ["w", "a", "w", "a"],     // wawa
-  weak: ["m", "a", "j", "u"],       // majuna
+  weak: ["l", "i", "l", "i"],       // lili "small" — TP merges weak/small
   long: ["l", "i", "n", "j", "a"],  // linja
   short: ["l", "i", "l", "i"],      // lili
 
@@ -129,7 +134,9 @@ const LEXICON: Lexicon = {
   road: ["n", "a", "s", "i", "n"],  // nasin
   love: ["o", "l", "i", "n"],       // olin
   war: ["u", "t", "a", "l", "a"],   // utala
-  free: ["k", "e"],                 // ke? ~ just a placeholder
+  // `ke` isn't a Toki Pona word. Use `ken` "able / can / possible"
+  // — the closest canonical concept to "free".
+  free: ["k", "e", "n"],            // ken
   spirit: ["k", "o", "n"],          // kon
   god: ["s", "e", "w", "i"],        // sewi
   law: ["l", "a", "w", "a"],        // lawa (extended)
@@ -148,6 +155,18 @@ const LEXICON: Lexicon = {
   to: ["t", "a", "w", "a"],         // tawa
   for: ["t", "a", "w", "a"],        // tawa (covers benefactive)
   by: ["k", "e", "p", "e", "k", "e", "n"], // kepeken (instrument/by)
+  // — colours + canonical pu staples that were missing —
+  yellow: ["j", "e", "l", "o"],     // jelo
+  red: ["l", "o", "j", "e"],        // loje
+  // pu merges blue and green into `laso`.
+  blue: ["l", "a", "s", "o"],       // laso
+  green: ["l", "a", "s", "o"],      // laso
+  white: ["w", "a", "l", "o"],      // walo
+  black: ["p", "i", "m", "e", "j", "a"], // pimeja
+  time: ["t", "e", "n", "p", "o"],  // tenpo
+  thing: ["i", "j", "o"],           // ijo
+  all: ["a", "l", "i"],             // ali / ale
+  become: ["k", "a", "m", "a"],     // kama
 };
 
 /** Per-meaning default frequency hint. Toki pona has no "rare" words to

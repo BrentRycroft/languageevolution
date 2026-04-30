@@ -78,8 +78,12 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
     label: "Methuselah",
     description: "A living language has reached age 300 generations.",
     icon: "⌛",
+    // Skip the proto language: its `birthGeneration` is 0, so it
+    // would trivially "live to 300" without ever splitting or
+    // evolving meaningfully. Filter by `birthGeneration > 0` so
+    // only daughter languages count.
     predicate: (s) =>
-      anyLanguage(s, (l) => !l.extinct && s.generation - l.birthGeneration >= 300),
+      anyLanguage(s, (l) => !l.extinct && l.birthGeneration > 0 && s.generation - l.birthGeneration >= 300),
   },
   {
     id: "tonogenesis",

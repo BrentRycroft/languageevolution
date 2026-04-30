@@ -73,15 +73,39 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
       const haveIdx = tokens.findIndex(
         (t) => t.tag === "AUX" && (t.lemma === "have" || t.lemma === "has" || t.lemma === "had"),
       );
-      if (haveIdx < 0) return null;
-      const ht = tokens[haveIdx]!;
-      tokens[haveIdx] = {
-        ...ht,
-        tag: "V",
-        lemma: "have",
-        features: { ...ht.features, tense: ht.features.tense ?? (ht.surface === "had" ? "past" : "present") },
-      };
-      verbIdx = haveIdx;
+      if (haveIdx >= 0) {
+        const ht = tokens[haveIdx]!;
+        tokens[haveIdx] = {
+          ...ht,
+          tag: "V",
+          lemma: "have",
+          features: { ...ht.features, tense: ht.features.tense ?? (ht.surface === "had" ? "past" : "present") },
+        };
+        verbIdx = haveIdx;
+      } else {
+        // Do-promotion: "X did Y" / "X does Y" with no main verb means
+        // DO-as-action ("the king DID it", "she does the work").
+        // Mirrors the have-promotion path. Pick the LAST do-AUX so
+        // "does she do it" picks `do` as the main verb and `does`
+        // stays as a fronted yes/no auxiliary.
+        let doIdx = -1;
+        for (let i = tokens.length - 1; i >= 0; i--) {
+          const t = tokens[i]!;
+          if (t.tag === "AUX" && (t.lemma === "do" || t.lemma === "does" || t.lemma === "did")) {
+            doIdx = i;
+            break;
+          }
+        }
+        if (doIdx < 0) return null;
+        const dt = tokens[doIdx]!;
+        tokens[doIdx] = {
+          ...dt,
+          tag: "V",
+          lemma: "do",
+          features: { ...dt.features, tense: dt.features.tense ?? (dt.surface === "did" ? "past" : "present") },
+        };
+        verbIdx = doIdx;
+      }
     } else {
       // Mutate in place: rewrite the AUX as a V with lemma "be" and
       // its existing tense feature.
@@ -199,6 +223,10 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
         adjectives: [],
         pps: [],
       };
+      // The wh-word is the subject — clear leadingWh so the realiser
+      // doesn't surface it a second time at sentence start. Without
+      // this, "what is it" emits `what what is it`.
+      leadingWh = undefined;
     } else if (verbIdx === 0 || (verbIdx > 0 && tokens[0]!.tag === "AUX")) {
       subject = {
         kind: "NP",

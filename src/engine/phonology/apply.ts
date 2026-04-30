@@ -2,7 +2,7 @@ import type { Lexicon, Meaning, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
 import { corenessResistance } from "../lexicon/coreness";
-import { isFormLegal } from "./wordShape";
+import { isFormLegal, repairSyllabicity } from "./wordShape";
 
 export interface ApplyOptions {
   globalRate: number;
@@ -181,6 +181,16 @@ export function applyChangesToLexicon(
     // yields a single long vowel [Vː]. Revert those to the prior
     // generation's form instead of committing.
     if (!isFormLegal(m, next)) {
+      // Try a syllabicity repair before rolling back: when sound
+      // changes erode every vowel, syllabify a remaining resonant
+      // (l → l̩, r → r̩, …) — what real languages actually do under
+      // such pressure. Only commit the repair if it produces a legal
+      // form; otherwise fall back to the prior generation's form.
+      const repaired = repairSyllabicity(next);
+      if (repaired !== next && isFormLegal(m, repaired)) {
+        out[m] = repaired;
+        continue;
+      }
       out[m] = lexicon[m]!.slice();
       continue;
     }

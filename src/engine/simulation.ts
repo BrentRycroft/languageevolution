@@ -147,7 +147,14 @@ export function createSimulation(
       if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
       stepContact(state, lang, config, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
-      if (config.modes.death) stepDeath(state, lang, config, rng);
+      // Skip death-check on a node that just split — `stepTreeSplit`
+      // turned the leaf into an internal node + partitioned its
+      // territory to daughters. Running `stepDeath` here would
+      // operate on already-released territory (double-free) or mark
+      // the freshly-internal parent as `extinct` while its newborn
+      // daughters are still live.
+      const stillLeaf = (state.tree[leafId]?.childrenIds.length ?? 0) === 0;
+      if (config.modes.death && stillLeaf) stepDeath(state, lang, config, rng);
     }
     // Cross-language event: creolization. Runs once per gen across
     // the whole tree, not per-language. Very rare — usually a no-op.
