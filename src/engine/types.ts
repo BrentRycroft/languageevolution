@@ -28,6 +28,7 @@ export interface SoundChange {
   apply: (word: WordForm, rng: Rng) => WordForm;
   enabledByDefault: boolean;
   baseWeight: number;
+  priority?: number;
 }
 
 export interface LanguageEvent {
@@ -213,11 +214,19 @@ export interface SimulationConfig {
   originCellId?: number;
 }
 
+export interface PendingArealRule {
+  rule: import("./phonology/generated").GeneratedRule;
+  donorId: string;
+  donorCoords: { x: number; y: number };
+  birthGeneration: number;
+}
+
 export interface SimulationState {
   generation: number;
   tree: LanguageTree;
   rootId: string;
   rngState: number;
+  pendingArealRules?: PendingArealRule[];
 }
 
 export interface SavedRun {
