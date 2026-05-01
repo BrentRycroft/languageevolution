@@ -4,7 +4,7 @@ import { stripTone } from "./tone";
 
 export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "θ": "th",
-  "ð": "dh",
+  "ð": "th",
   "ʃ": "sh",
   "ʒ": "zh",
   "ŋ": "ng",
@@ -21,6 +21,13 @@ export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "ɛ": "e",
   "ɔ": "o",
   "ə": "e",
+  "ʌ": "u",
+  "æ": "a",
+  "ɪ": "i",
+  "ʊ": "oo",
+  "ɑ": "a",
+  "ɒ": "o",
+  "ʏ": "y",
   "ɨ": "y",
   "ɯ": "u",
   "ø": "oe",
@@ -67,11 +74,59 @@ export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "gʰ": "gh",
   "ǵʰ": "gh",
   "gʷʰ": "gwh",
-  "aː": "aa",
-  "eː": "ee",
-  "iː": "ii",
-  "oː": "oo",
-  "uː": "uu",
+  "aː": "a",
+  "eː": "e",
+  "iː": "ee",
+  "oː": "o",
+  "uː": "oo",
+};
+
+const DIPHTHONG_COMBINE_MEDIAL: Record<string, string> = {
+  "a+j": "i",
+  "e+j": "ay",
+  "o+j": "oy",
+  "i+j": "y",
+  "u+j": "ui",
+  "ə+j": "ay",
+  "ɔ+j": "oy",
+  "ɛ+j": "ay",
+  "æ+j": "i",
+  "ʌ+j": "i",
+  "ɪ+j": "y",
+  "a+w": "ow",
+  "e+w": "ew",
+  "o+w": "ow",
+  "i+w": "ew",
+  "u+w": "u",
+  "ə+w": "ow",
+  "ɔ+w": "ow",
+  "ɛ+w": "ew",
+  "æ+w": "ow",
+  "ʌ+w": "ow",
+};
+
+const DIPHTHONG_COMBINE_FINAL: Record<string, string> = {
+  "a+j": "y",
+  "e+j": "ay",
+  "o+j": "oy",
+  "i+j": "y",
+  "u+j": "uy",
+  "ə+j": "ay",
+  "ɔ+j": "oy",
+  "ɛ+j": "ay",
+  "æ+j": "y",
+  "ʌ+j": "y",
+  "ɪ+j": "y",
+  "a+w": "ow",
+  "e+w": "ew",
+  "o+w": "ow",
+  "i+w": "ew",
+  "u+w": "u",
+  "ə+w": "ow",
+  "ɔ+w": "ow",
+  "ɛ+w": "ew",
+  "æ+w": "ow",
+  "ʌ+w": "ow",
 };
 
 function toneToLatinDiacritic(tone: string): string {
@@ -118,16 +173,34 @@ function sanitizeLatin(s: string): string {
 
 export function romanize(form: WordForm, lang: Language): string {
   let out = "";
-  for (const p of form) {
+  let i = 0;
+  while (i < form.length) {
+    const p = form[i]!;
     const base = stripTone(p);
     const rawTone = p.length > base.length ? p.slice(base.length) : "";
     const diacritic = toneToLatinDiacritic(rawTone);
+
+    if (i + 1 < form.length && !lang.orthography[base]) {
+      const next = stripTone(form[i + 1]!);
+      const dipKey = `${base}+${next}`;
+      const isFinal = i + 2 === form.length;
+      const combined = isFinal
+        ? DIPHTHONG_COMBINE_FINAL[dipKey]
+        : DIPHTHONG_COMBINE_MEDIAL[dipKey];
+      if (combined) {
+        out += diacritic ? combined.charAt(0) + diacritic + combined.slice(1) : combined;
+        i += 2;
+        continue;
+      }
+    }
+
     const letter = lang.orthography[base] ?? DEFAULT_ORTHOGRAPHY[base] ?? base;
     if (diacritic && letter.length > 0) {
       out += letter.charAt(0) + diacritic + letter.slice(1);
     } else {
       out += letter;
     }
+    i++;
   }
   return sanitizeLatin(out);
 }
