@@ -9,6 +9,7 @@ import { applyPhonologyToAffixes } from "../morphology/evolve";
 import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../phonology/propose";
 import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
 import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/variants";
+import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
@@ -100,6 +101,7 @@ export function stepPhonology(
       bumpFrequency(lang, m, 0.04);
       recordVariant(lang, m, before[m]!, generation, 0.55);
       recordVariant(lang, m, lang.lexicon[m]!, generation, 0.7);
+      recordInnovation(lang, m, before[m]!, lang.lexicon[m]!, generation, "phonology");
     } else {
       reinforceCanonical(lang, m, lang.lexicon[m]!);
     }
@@ -113,6 +115,17 @@ export function stepPhonology(
       generation,
       kind: "actuation",
       description: `actuation: "${a.meaning}" /${a.fromForm.join("")}/ → /${a.toForm.join("")}/ (minority variant prevailed)`,
+    });
+  }
+  const socialActuations = stepSocialContagion(lang, generation, rng);
+  for (const a of socialActuations) {
+    lang.lastChangeGeneration[a.meaning] = generation;
+    bumpFrequency(lang, a.meaning, 0.06);
+    const innov = a.innovator ? ` [from ${a.innovator}]` : "";
+    pushEvent(lang, {
+      generation,
+      kind: "actuation",
+      description: `social-contagion actuation: "${a.meaning}" /${a.fromForm.join("")}/ → /${a.toForm.join("")}/${innov} @ ${(a.finalAdoption * 100).toFixed(0)}%`,
     });
   }
   if (mutated > 0) {

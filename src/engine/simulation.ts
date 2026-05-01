@@ -12,6 +12,7 @@ import { stepCreolization } from "./steps/creolization";
 import { stepContact } from "./steps/contact";
 import { stepTreeSplit, stepDeath, precomputeClosenessVector } from "./steps/tree";
 import { stepTaboo } from "./steps/taboo";
+import { stepLearner } from "./steps/learner";
 import { computeTierCandidate, lexicalCapacity, populationCap } from "./lexicon/tier";
 import { pushEvent } from "./steps/helpers";
 import { TIER_LABELS } from "./lexicon/concepts";
@@ -89,6 +90,7 @@ export function createSimulation(
         lang.lexicalCapacity = lexicalCapacity(lang, nextGen);
       }
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
+      if (config.modes.phonology) stepLearner(lang, config, rng, nextGen);
       stepObsolescence(lang, config, rng, nextGen);
       stepCopulaErosion(lang, config, rng, nextGen);
       stepCopulaGenesis(lang, config, rng, nextGen);

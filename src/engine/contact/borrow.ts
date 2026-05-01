@@ -69,8 +69,13 @@ export function tryBorrow(
   if (donors.length === 0) return null;
 
   const recipCoords = recipient.coords;
+  const bilingualLinks = recipient.bilingualLinks;
   const weighted: Array<{ id: string; weight: number }> = donors.map((id) => {
     const donor = tree[id]!.language;
+    const bilingual = bilingualLinks?.[id];
+    if (typeof bilingual === "number" && bilingual > 0) {
+      return { id, weight: 0.05 + bilingual * 1.5 };
+    }
     if (worldMap && recipient.territory && donor.territory) {
       const shareAffinity = arealShareAffinity(worldMap, recipient, donor);
       return { id, weight: 0.1 + shareAffinity };
