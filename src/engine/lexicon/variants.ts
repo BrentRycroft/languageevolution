@@ -6,8 +6,11 @@ const PRUNE_THRESHOLD = 0.08;
 const NEW_VARIANT_WEIGHT = 0.4;
 const RETAINED_BOOST = 0.6;
 
-function formKey(form: WordForm): string {
-  return form.join(" ");
+function formsEqual(a: WordForm, b: WordForm): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }
 
 export function recordVariant(
@@ -19,11 +22,11 @@ export function recordVariant(
 ): void {
   if (!lang.variants) lang.variants = {};
   const existing = lang.variants[meaning] ?? [];
-  const key = formKey(form);
-  const idx = existing.findIndex((v) => formKey(v.form) === key);
-  if (idx >= 0) {
-    existing[idx]!.weight = Math.min(1, existing[idx]!.weight + weight);
-    return;
+  for (let i = 0; i < existing.length; i++) {
+    if (formsEqual(existing[i]!.form, form)) {
+      existing[i]!.weight = Math.min(1, existing[i]!.weight + weight);
+      return;
+    }
   }
   existing.push({ form: form.slice(), weight, bornGeneration: generation });
   if (existing.length > MAX_VARIANTS) {
@@ -41,10 +44,9 @@ export function reinforceCanonical(
   if (!lang.variants) return;
   const list = lang.variants[meaning];
   if (!list) return;
-  const key = formKey(form);
-  for (const v of list) {
-    if (formKey(v.form) === key) {
-      v.weight = Math.min(1, v.weight + RETAINED_BOOST * 0.3);
+  for (let i = 0; i < list.length; i++) {
+    if (formsEqual(list[i]!.form, form)) {
+      list[i]!.weight = Math.min(1, list[i]!.weight + RETAINED_BOOST * 0.3);
     }
   }
 }
@@ -66,23 +68,29 @@ export function decayAndActuate(
   for (const m of meanings) {
     const list = lang.variants[m]!;
     const canonical = lang.lexicon[m];
-    const canonicalKey = canonical ? formKey(canonical) : null;
-    for (const v of list) {
-      if (canonicalKey && formKey(v.form) === canonicalKey) {
+    for (let i = 0; i < list.length; i++) {
+      const v = list[i]!;
+      if (canonical && formsEqual(v.form, canonical)) {
         v.weight = Math.min(1, v.weight + RETAINED_BOOST * 0.05);
       } else {
         v.weight *= decay;
       }
     }
-    const survivors = list.filter((v) => v.weight >= PRUNE_THRESHOLD);
+    let survivors = list;
+    let needFilter = false;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i]!.weight < PRUNE_THRESHOLD) { needFilter = true; break; }
+    }
+    if (needFilter) {
+      survivors = list.filter((v) => v.weight >= PRUNE_THRESHOLD);
+    }
     if (survivors.length === 0) {
       delete lang.variants[m];
       continue;
     }
     survivors.sort((a, b) => b.weight - a.weight);
     const top = survivors[0]!;
-    const topKey = formKey(top.form);
-    if (canonical && topKey !== canonicalKey && top.weight > 0.5 && generation - top.bornGeneration >= 2) {
+    if (canonical && !formsEqual(top.form, canonical) && top.weight > 0.5 && generation - top.bornGeneration >= 2) {
       actuations.push({ meaning: m, fromForm: canonical.slice(), toForm: top.form.slice() });
       lang.lexicon[m] = top.form.slice();
     }

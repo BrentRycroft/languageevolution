@@ -16,6 +16,7 @@ export interface ApplyOptions {
   registerOf?: Record<Meaning, "high" | "low">;
   stressPattern?: StressPattern;
   lexicalStress?: Record<Meaning, number>;
+  _orderedChanges?: SoundChange[];
 }
 
 function hasStressFilterMatch(
@@ -57,6 +58,16 @@ function priorityFor(change: SoundChange): number {
   return CATEGORY_PRIORITY[change.category] ?? 1.0;
 }
 
+const SORTED_CACHE = new WeakMap<SoundChange[], SoundChange[]>();
+
+export function sortByPriority(changes: SoundChange[]): SoundChange[] {
+  const cached = SORTED_CACHE.get(changes);
+  if (cached) return cached;
+  const out = changes.slice().sort((a, b) => priorityFor(b) - priorityFor(a));
+  SORTED_CACHE.set(changes, out);
+  return out;
+}
+
 function frequencyFor(meaning: Meaning, hints?: Record<Meaning, number>): number {
   if (!hints) return DEFAULT_FREQUENCY;
   const v = hints[meaning];
@@ -81,9 +92,7 @@ export function applyChangesToWord(
 
   let current = word;
   const lexicalIdx = opts.lexicalStress?.[meaning];
-  const ordered = changes.slice().sort(
-    (a, b) => priorityFor(b) - priorityFor(a),
-  );
+  const ordered = opts._orderedChanges ?? sortByPriority(changes);
   for (const change of ordered) {
     const weight = opts.weights[change.id] ?? change.baseWeight;
     if (weight <= 0) continue;
@@ -140,13 +149,16 @@ export function applyChangesToLexicon(
 ): Lexicon {
   const out: Lexicon = {};
   const meanings = Object.keys(lexicon).sort();
+  const optsWithOrder: ApplyOptions = opts._orderedChanges
+    ? opts
+    : { ...opts, _orderedChanges: sortByPriority(changes) };
   for (const m of meanings) {
     const sensitivity = soundChangeSensitivity(m);
     if (sensitivity < 1 && !rng.chance(sensitivity)) {
       out[m] = lexicon[m]!.slice();
       continue;
     }
-    const next = applyChangesToWord(lexicon[m]!, changes, rng, opts, m);
+    const next = applyChangesToWord(lexicon[m]!, changes, rng, optsWithOrder, m);
     if (next.length === 0) continue;
     if (!isFormLegal(m, next)) {
       const repaired = repairSyllabicity(next);

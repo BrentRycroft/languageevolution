@@ -176,10 +176,19 @@ export type FeatureQuery =
 
 const HEIGHT_ORDER: Height[] = ["low", "mid-low", "mid", "mid-high", "high"];
 
+const FEATURES_CACHE = new Map<Phoneme, FeatureBundle | undefined>();
+const TONE_MARKS = ["˥", "˧", "˩", "˧˥", "˥˩"];
+
 export function featuresOf(p: Phoneme): FeatureBundle | undefined {
   if (PHONE_FEATURES[p]) return PHONE_FEATURES[p];
-  const toneMarks = ["˥", "˧", "˩", "˧˥", "˥˩"];
-  for (const m of toneMarks) {
+  if (FEATURES_CACHE.has(p)) return FEATURES_CACHE.get(p);
+  const computed = computeFeatures(p);
+  FEATURES_CACHE.set(p, computed);
+  return computed;
+}
+
+function computeFeatures(p: Phoneme): FeatureBundle | undefined {
+  for (const m of TONE_MARKS) {
     if (p.endsWith(m)) {
       const base = p.slice(0, -m.length);
       if (PHONE_FEATURES[base]) return PHONE_FEATURES[base];
