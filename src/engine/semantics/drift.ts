@@ -44,7 +44,9 @@ export type SemanticShiftKind =
   | "metonymy"
   | "metaphor"
   | "narrowing"
-  | "broadening";
+  | "broadening"
+  | "amelioration"
+  | "pejoration";
 
 export interface SemanticDrift {
   from: string;
@@ -54,18 +56,47 @@ export interface SemanticDrift {
   polysemous?: boolean;
 }
 
-export function classifyShift(from: string, to: string): SemanticShiftKind {
+export function classifyShift(
+  from: string,
+  to: string,
+  rng?: { next: () => number },
+  fromRegister?: "high" | "low",
+): SemanticShiftKind {
   const cFrom = clusterOf(from);
   const cTo = clusterOf(to);
   const similarity = cosine(embed(from), embed(to));
   const sameCluster = cFrom && cTo && cFrom === cTo;
   const complexityDelta = complexityFor(to) - complexityFor(from);
 
-  if (sameCluster && similarity >= 0.6) return "metonymy";
-  if (complexityDelta <= -1) return "narrowing";
-  if (complexityDelta >= 1) return "broadening";
-  if (similarity >= 0.45) return "metonymy";
-  return "metaphor";
+  const weights: Partial<Record<SemanticShiftKind, number>> = {};
+  if (sameCluster && similarity >= 0.6) weights.metonymy = 3;
+  if (complexityDelta <= -1) weights.narrowing = 2.5;
+  if (complexityDelta >= 1) weights.broadening = 2.5;
+  if (similarity >= 0.45) weights.metonymy = (weights.metonymy ?? 0) + 1.5;
+  weights.metaphor = (weights.metaphor ?? 0) + 1;
+  if (fromRegister === "high") weights.amelioration = 1.2;
+  if (fromRegister === "low") weights.pejoration = 1.2;
+
+  if (!rng) {
+    let bestKind: SemanticShiftKind = "metaphor";
+    let bestW = 0;
+    for (const [k, w] of Object.entries(weights)) {
+      if ((w ?? 0) > bestW) {
+        bestW = w ?? 0;
+        bestKind = k as SemanticShiftKind;
+      }
+    }
+    return bestKind;
+  }
+  const entries = Object.entries(weights) as Array<[SemanticShiftKind, number]>;
+  const total = entries.reduce((s, [, w]) => s + w, 0);
+  if (total <= 0) return "metaphor";
+  let r = rng.next() * total;
+  for (const [k, w] of entries) {
+    r -= w;
+    if (r <= 0) return k;
+  }
+  return entries[entries.length - 1]![0];
 }
 
 export type NeighborOverride = Record<string, string[]>;
@@ -115,7 +146,7 @@ export function driftOneMeaning(
       if (strict && targetOccupied) continue;
       const form = lang.lexicon[m]!;
       if (!isFormLegal(target, form)) continue;
-      const kind = classifyShift(m, target);
+      const kind = classifyShift(m, target, rng, lang.registerOf?.[m]);
       const polysemous =
         !targetOccupied &&
         (kind === "metaphor" || kind === "metonymy") &&

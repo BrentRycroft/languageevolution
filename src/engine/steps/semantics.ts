@@ -5,6 +5,7 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { realismMultiplier } from "../phonology/rate";
 import { bumpFrequency } from "../lexicon/frequencyDynamics";
+import { stepSemanticBleaching } from "../semantics/bleaching";
 
 export function stepSemantics(
   lang: Language,
@@ -26,6 +27,16 @@ export function stepSemantics(
         description: `${tag}: ${drift.from} → ${drift.to}`,
       });
     }
+  }
+  const bleach = stepSemanticBleaching(lang, generation, rng);
+  if (bleach) {
+    pushEvent(lang, {
+      generation,
+      kind: "semantic_drift",
+      description: bleach.dropped
+        ? `bleaching: "${bleach.meaning}" fully bleached out (lexical entry retired, only morphology survives)`
+        : `bleaching: "${bleach.meaning}" frequency dropping (now ${bleach.newFrequency.toFixed(2)}; grammaticalised)`,
+    });
   }
   const recarveRate =
     (config.semantics.recarveProbabilityPerGeneration ?? 0) * lang.conservatism;

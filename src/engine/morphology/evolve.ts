@@ -282,3 +282,57 @@ export function maybeSuppletion(
   lang.suppletion[meaning]![category] = donorForm.slice();
   return { meaning, category, donorMeaning };
 }
+
+const VOWEL_MUTATIONS: Record<string, string> = {
+  a: "i", o: "i", u: "i",
+  e: "a",
+  i: "ɪ",
+};
+
+function vowelMutationOf(form: import("../types").WordForm): import("../types").WordForm | null {
+  for (let i = form.length - 1; i >= 0; i--) {
+    const p = form[i]!;
+    const swap = VOWEL_MUTATIONS[p];
+    if (swap) {
+      const out = form.slice();
+      out[i] = swap;
+      return out;
+    }
+  }
+  return null;
+}
+
+export function maybeVowelMutationIrregular(
+  lang: Language,
+  rng: Rng,
+  probability: number,
+): { meaning: string; category: MorphCategory } | null {
+  if (!rng.chance(probability)) return null;
+  const candidates = Object.keys(lang.lexicon).filter((m) => {
+    const pos = posOf(m);
+    return pos === "noun" || pos === "adjective";
+  });
+  if (candidates.length === 0) return null;
+  const highFreq = candidates.filter(
+    (m) => (lang.wordFrequencyHints[m] ?? 0.4) >= 0.55,
+  );
+  if (highFreq.length === 0) return null;
+  const meaning = highFreq[rng.int(highFreq.length)]!;
+  const isNoun = posOf(meaning) === "noun";
+  const category: MorphCategory = isNoun
+    ? "noun.num.pl"
+    : rng.chance(0.5)
+      ? "adj.degree.cmp"
+      : "adj.degree.sup";
+  if (!lang.morphology.paradigms[category]) return null;
+  const existing = lang.suppletion?.[meaning]?.[category];
+  if (existing) return null;
+  const baseForm = lang.lexicon[meaning];
+  if (!baseForm || baseForm.length < 2) return null;
+  const mutated = vowelMutationOf(baseForm);
+  if (!mutated) return null;
+  if (!lang.suppletion) lang.suppletion = {};
+  if (!lang.suppletion[meaning]) lang.suppletion[meaning] = {};
+  lang.suppletion[meaning]![category] = mutated;
+  return { meaning, category };
+}

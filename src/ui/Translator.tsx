@@ -8,6 +8,7 @@ import {
 } from "../engine/translator/translate";
 import { translateSentence, type SentenceTranslation } from "../engine/translator/sentence";
 import { findCognates, traceEtymology } from "../engine/translator/cognates";
+import { glossToEnglish } from "../engine/translator/glossToEnglish";
 import { formatForm } from "../engine/phonology/display";
 import type { MorphCategory } from "../engine/morphology/types";
 import { ScriptPicker } from "./ScriptPicker";
@@ -299,6 +300,13 @@ function SentenceOutput({
             </span>
           </div>
         ))}
+      </div>
+      <div
+        className="footer-note"
+        style={{ marginTop: 8, fontStyle: "italic", color: "var(--muted)" }}
+        title="Synthesized English from the target tokens' gloss metadata. SVO order, morphology applied (irregular pasts, plurals, 3sg, progressive)."
+      >
+        ← {glossToEnglish(result.targetTokens) || "(empty)"}
       </div>
       {result.missing.length > 0 && (
         <div className="footer-note warn">
