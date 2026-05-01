@@ -217,6 +217,32 @@ export function ControlsPanel() {
         <WorldMapPicker />
       </Section>
 
+      <Section title="Starting culture" defaultOpen={false}>
+        <label
+          className="label-line"
+          style={{ display: "flex", alignItems: "center", gap: 8 }}
+        >
+          <span style={{ minWidth: 110 }}>Proto cultural tier</span>
+          <select
+            aria-label="Seed cultural tier"
+            value={config.seedCulturalTier ?? 0}
+            onChange={(e) => {
+              const v = Number(e.target.value) as 0 | 1 | 2 | 3;
+              useSimStore.getState().updateConfig({ seedCulturalTier: v });
+            }}
+          >
+            <option value={0}>0 — forager</option>
+            <option value={1}>1 — pastoralist</option>
+            <option value={2}>2 — agrarian</option>
+            <option value={3}>3 — urban / modern</option>
+          </select>
+        </label>
+        <div className="label-line" style={{ marginTop: 4 }}>
+          The proto-language begins at this tier. Higher tiers unlock
+          larger lexical capacity and tier-3 vocabulary on day one.
+        </div>
+      </Section>
+
       <Section title="Time scale" defaultOpen={false}>
         <Slider
           label="Years per generation"

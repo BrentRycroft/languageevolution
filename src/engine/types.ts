@@ -227,6 +227,8 @@ export interface SimulationConfig {
   seedGrammar?: Partial<GrammarFeatures>;
   seedStressPattern?: NonNullable<Language["stressPattern"]>;
   seedLexicalStress?: Record<Meaning, number>;
+  seedCulturalTier?: 0 | 1 | 2 | 3;
+  seedSuppletion?: NonNullable<Language["suppletion"]>;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;

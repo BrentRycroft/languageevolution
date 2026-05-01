@@ -1,8 +1,41 @@
-import type { SimulationConfig, SimulationState } from "../engine/types";
+import type { Language, LanguageNode, LanguageTree, SimulationConfig, SimulationState } from "../engine/types";
 import { migrateSavedRun } from "./migrate";
 
 const AUTOSAVE_KEY = "lev.autosave.v2";
 const AUTOSAVE_VERSION = 5;
+
+const PERSIST_EVENT_CAP = 30;
+
+function trimLanguageForPersist(lang: Language): Language {
+  const events =
+    lang.events.length > PERSIST_EVENT_CAP
+      ? lang.events.slice(-PERSIST_EVENT_CAP)
+      : lang.events;
+  const out: Language = { ...lang, events };
+  delete (out as Partial<Language>).variants;
+  delete (out as Partial<Language>).bilingualLinks;
+  return out;
+}
+
+function trimStateForPersist(state: SimulationState): SimulationState {
+  const tree: LanguageTree = {};
+  for (const id of Object.keys(state.tree)) {
+    const node = state.tree[id]!;
+    const trimmedNode: LanguageNode = {
+      ...node,
+      language: trimLanguageForPersist(node.language),
+    };
+    tree[id] = trimmedNode;
+  }
+  const trimmed: SimulationState = {
+    generation: state.generation,
+    tree,
+    rootId: state.rootId,
+    rngState: state.rngState,
+    generationsOverCap: state.generationsOverCap,
+  };
+  return trimmed;
+}
 
 interface AutosavePayload {
   version: number;
@@ -73,7 +106,7 @@ export function saveAutosave(
     savedAt: now,
     config: payload.config,
     generationsRun: payload.generationsRun,
-    stateSnapshot: payload.state,
+    stateSnapshot: trimStateForPersist(payload.state),
   };
   let serialized: string;
   try {
