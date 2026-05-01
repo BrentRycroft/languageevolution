@@ -417,16 +417,35 @@ function attachRelativeClause(
       return [...merged, ...npTokens];
     }
     case "resumptive": {
-      const resumptive = closedClassForm(lang, role === "S" ? "they" : "them") ?? [];
+      const resumptiveLemma = pickResumptivePronoun(np, role);
+      const resumptive = lang.lexicon[resumptiveLemma] ?? closedClassForm(lang, resumptiveLemma) ?? [];
       const insertion: RealisedToken[] = resumptive.length > 0
-        ? [{ surface: resumptive.join(""), form: resumptive, english: "RESUMP", role: "PP-NP", resolution: "concept" }]
-        : [];
+        ? [{ surface: resumptive.join(""), form: resumptive, english: `RESUMP:${resumptiveLemma}`, role: "PP-NP", resolution: "concept" }]
+        : [{ surface: `“${resumptiveLemma}”`, form: [], english: `RESUMP:${resumptiveLemma}`, role: "PP-NP", resolution: "fallback" }];
       return [...npTokens, ...(relizerTok ? [relizerTok] : []), ...insertion, ...relTokens];
     }
     case "gap":
     default:
       return [...npTokens, ...(relizerTok ? [relizerTok] : []), ...relTokens];
   }
+}
+
+function pickResumptivePronoun(
+  np: NP,
+  role: "S" | "O" | "PP-NP" | "POSS",
+): string {
+  const subj = role === "S";
+  if (np.head.number === "pl") return subj ? "they" : "them";
+  const person = np.head.person ?? "3";
+  if (person === "1") return "i";
+  if (person === "2") return "you";
+  if (np.head.isPronoun) {
+    const lemma = np.head.lemma.toLowerCase();
+    if (lemma === "he" || lemma === "him") return subj ? "he" : "him";
+    if (lemma === "she" || lemma === "her") return subj ? "she" : "her";
+    if (lemma === "it") return "it";
+  }
+  return subj ? "he" : "him";
 }
 
 function realiseSentenceInner(

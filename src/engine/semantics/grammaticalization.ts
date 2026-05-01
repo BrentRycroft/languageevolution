@@ -13,7 +13,10 @@ export type SemanticTag =
   | "deixis"
   | "interrogative"
   | "topic_noun"
-  | "emphasis";
+  | "emphasis"
+  | "desire"
+  | "conditional"
+  | "honorific";
 
 export const SEMANTIC_TAG: Record<string, SemanticTag> = {
   go: "motion",
@@ -75,22 +78,34 @@ export const SEMANTIC_TAG: Record<string, SemanticTag> = {
   name: "topic_noun",
   word: "topic_noun",
   truth: "emphasis",
+  want: "desire",
+  hope: "desire",
+  wish: "desire",
+  if: "conditional",
+  may: "conditional",
+  might: "conditional",
+  honor: "honorific",
+  king: "honorific",
+  elder: "honorific",
 };
 
 export const PATHWAYS: Record<SemanticTag, MorphCategory[]> = {
-  motion: ["verb.tense.fut", "verb.aspect.pfv", "verb.aspect.ipfv"],
-  posture: ["verb.aspect.ipfv", "verb.aspect.pfv"],
-  existential: ["verb.tense.past", "verb.aspect.pfv"],
-  possession: ["noun.case.gen", "noun.case.dat", "verb.aspect.pfv"],
+  motion: ["verb.tense.fut", "verb.aspect.prosp", "verb.aspect.pfv", "verb.aspect.ipfv"],
+  posture: ["verb.aspect.ipfv", "verb.aspect.hab", "verb.aspect.pfv"],
+  existential: ["verb.tense.past", "verb.aspect.perf", "verb.aspect.pfv"],
+  possession: ["noun.case.gen", "noun.case.dat", "verb.aspect.perf", "verb.aspect.pfv"],
   body_core: ["noun.case.loc", "noun.case.dat", "noun.case.inst"],
   body_periphery: ["noun.case.loc", "noun.case.abl"],
-  quantifier: ["noun.num.pl", "noun.num.du"],
-  perception: ["verb.tense.past", "verb.aspect.pfv"],
+  quantifier: ["noun.num.pl", "noun.num.du", "noun.num.pauc"],
+  perception: ["verb.tense.past", "verb.aspect.pfv", "verb.evid.dir", "verb.evid.rep", "verb.evid.inf"],
   life: ["verb.aspect.pfv"],
   deixis: ["noun.case.nom"],
   interrogative: ["discourse.q"],
   topic_noun: ["discourse.topic"],
   emphasis: ["discourse.emph"],
+  desire: ["verb.mood.opt"],
+  conditional: ["verb.mood.cond"],
+  honorific: ["verb.honor.formal"],
 };
 
 export function semanticTagOf(meaning: string): SemanticTag | undefined {
