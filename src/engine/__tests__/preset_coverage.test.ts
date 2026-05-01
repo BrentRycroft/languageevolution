@@ -4,6 +4,7 @@ import { presetGermanic } from "../presets/germanic";
 import { presetRomance } from "../presets/romance";
 import { presetBantu } from "../presets/bantu";
 import { presetTokipona } from "../presets/tokipona";
+import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import {
   TRANSITIVE_VERB_POOL,
@@ -22,6 +23,7 @@ describe("preset closed-class coverage — every preset seeds the basics", () =>
     ["Romance", presetRomance],
     ["Bantu", presetBantu],
     ["Tokipona", presetTokipona],
+    ["English", presetEnglish],
   ] as const) {
     describe(name, () => {
       const lex = preset().seedLexicon;
@@ -46,13 +48,25 @@ describe("preset closed-class coverage — every preset seeds the basics", () =>
     });
   }
 
-  it("Germanic + Romance seed articles + set articlePresence=free", () => {
-    for (const preset of [presetGermanic, presetRomance]) {
+  it("Germanic + Romance + English seed articles + set articlePresence=free", () => {
+    for (const preset of [presetGermanic, presetRomance, presetEnglish]) {
       const cfg = preset();
       expect(cfg.seedLexicon["the"]).toBeDefined();
       expect(cfg.seedLexicon["a"]).toBeDefined();
       expect(cfg.seedGrammar?.articlePresence).toBe("free");
     }
+  });
+
+  it("English carries SVO + no case + -s plural + -ed past + -ing progressive", () => {
+    const cfg = presetEnglish();
+    expect(cfg.seedGrammar?.wordOrder).toBe("SVO");
+    expect(cfg.seedGrammar?.hasCase).toBe(false);
+    expect(cfg.seedGrammar?.pluralMarking).toBe("affix");
+    expect(cfg.seedGrammar?.tenseMarking).toBe("past");
+    expect(cfg.seedGrammar?.aspectMarking).toBe("progressive");
+    expect(cfg.seedMorphology?.paradigms["noun.num.pl"]).toBeDefined();
+    expect(cfg.seedMorphology?.paradigms["verb.tense.past"]).toBeDefined();
+    expect(cfg.seedMorphology?.paradigms["verb.aspect.prog"]).toBeDefined();
   });
 
   it("PIE + Tokipona + Bantu set articlePresence=none", () => {

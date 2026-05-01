@@ -4,6 +4,7 @@ import { presetGermanic } from "./germanic";
 import { presetRomance } from "./romance";
 import { presetBantu } from "./bantu";
 import { presetTokipona } from "./tokipona";
+import { presetEnglish } from "./english";
 import { defaultConfig } from "../config";
 
 export interface PresetDescriptor {
@@ -50,6 +51,13 @@ export const PRESETS: readonly PresetDescriptor[] = [
     description:
       "Minimal conlang: 120 root words, 9 consonants + 5 vowels, SVO, no inflection. A minimalist starting point.",
     build: presetTokipona,
+  },
+  {
+    id: "english",
+    label: "Modern English",
+    description:
+      "General-American English in narrow IPA: SVO, no case, articles, -s plural, -ed past, -ing progressive. Drift it forward to see what English becomes.",
+    build: presetEnglish,
   },
 ];
 
