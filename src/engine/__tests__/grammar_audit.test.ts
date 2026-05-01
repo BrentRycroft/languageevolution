@@ -81,7 +81,7 @@ describe("§gap-4 — classifier system", () => {
     const out = translateSentence(lang, "three dogs see");
     const surfaces = out.targetTokens.map((t) => t.targetSurface);
     const numIdx = surfaces.findIndex((_s, i) => out.targetTokens[i]!.englishLemma === "three");
-    const clfIdx = surfaces.findIndex((_s, i) => out.targetTokens[i]!.englishLemma === "CLF");
+    const clfIdx = surfaces.findIndex((_s, i) => out.targetTokens[i]!.englishLemma.startsWith("CLF"));
     const dogIdx = surfaces.findIndex((_s, i) => out.targetTokens[i]!.englishLemma === "dog");
     expect(numIdx).toBeGreaterThanOrEqual(0);
     expect(clfIdx).toBeGreaterThan(numIdx);

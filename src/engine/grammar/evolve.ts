@@ -39,6 +39,16 @@ function pickOther<T>(options: readonly T[], current: T, rng: Rng): T {
   return filtered[rng.int(filtered.length)]!;
 }
 
+const ALIGNMENTS: NonNullable<GrammarFeatures["alignment"]>[] = [
+  "nom-acc", "erg-abs", "tripartite", "split-S",
+];
+const HARMONIES: NonNullable<GrammarFeatures["harmony"]>[] = [
+  "none", "front-back", "rounding", "atr",
+];
+const EVIDENTIALS: NonNullable<GrammarFeatures["evidentialMarking"]>[] = [
+  "none", "direct-only", "three-way",
+];
+
 const DRIFT_RULES: readonly DriftRule[] = [
   {
     feature: "wordOrder",
@@ -58,6 +68,97 @@ const DRIFT_RULES: readonly DriftRule[] = [
       const shift = { feature: "wordOrder", from: g.wordOrder, to: pick };
       g.wordOrder = pick;
       return shift;
+    },
+  },
+  {
+    feature: "alignment",
+    probability: 0.04,
+    shift: (g, rng) => {
+      const current = g.alignment ?? "nom-acc";
+      const others = ALIGNMENTS.filter((a) => a !== current);
+      if (!g.hasCase && current !== "nom-acc") {
+        const next = "nom-acc";
+        g.alignment = next;
+        return { feature: "alignment", from: current, to: next };
+      }
+      if (g.hasCase && current === "nom-acc" && rng.chance(0.4)) {
+        const next: NonNullable<GrammarFeatures["alignment"]> = rng.chance(0.6) ? "erg-abs" : "split-S";
+        g.alignment = next;
+        return { feature: "alignment", from: current, to: next };
+      }
+      const next = others[rng.int(others.length)]!;
+      g.alignment = next;
+      return { feature: "alignment", from: current, to: next };
+    },
+  },
+  {
+    feature: "harmony",
+    probability: 0.03,
+    shift: (g, rng) => {
+      const current = g.harmony ?? "none";
+      if (current === "none" && !rng.chance(0.4)) return null;
+      const others = HARMONIES.filter((h) => h !== current);
+      const next = others[rng.int(others.length)]!;
+      g.harmony = next;
+      return { feature: "harmony", from: current, to: next };
+    },
+  },
+  {
+    feature: "evidentialMarking",
+    probability: 0.03,
+    shift: (g, rng) => {
+      const current = g.evidentialMarking ?? "none";
+      if (current === "none" && !rng.chance(0.3)) return null;
+      const others = EVIDENTIALS.filter((e) => e !== current);
+      const next = others[rng.int(others.length)]!;
+      g.evidentialMarking = next;
+      return { feature: "evidentialMarking", from: current, to: next };
+    },
+  },
+  {
+    feature: "classifierSystem",
+    probability: 0.025,
+    shift: (g) => {
+      const current = !!g.classifierSystem;
+      g.classifierSystem = !current;
+      return { feature: "classifierSystem", from: current, to: !current };
+    },
+  },
+  {
+    feature: "relativeClauseStrategy",
+    probability: 0.04,
+    shift: (g, rng) => {
+      const STRATEGIES: NonNullable<GrammarFeatures["relativeClauseStrategy"]>[] = [
+        "gap", "resumptive", "relativizer", "internal-headed",
+      ];
+      const current = g.relativeClauseStrategy ?? "relativizer";
+      const others = STRATEGIES.filter((s) => s !== current);
+      const next = others[rng.int(others.length)]!;
+      g.relativeClauseStrategy = next;
+      return { feature: "relativeClauseStrategy", from: current, to: next };
+    },
+  },
+  {
+    feature: "serialVerbConstructions",
+    probability: 0.025,
+    shift: (g) => {
+      const current = !!g.serialVerbConstructions;
+      g.serialVerbConstructions = !current;
+      return { feature: "serialVerbConstructions", from: current, to: !current };
+    },
+  },
+  {
+    feature: "politenessRegister",
+    probability: 0.02,
+    shift: (g, rng) => {
+      const REGISTERS: NonNullable<GrammarFeatures["politenessRegister"]>[] = [
+        "none", "binary", "tiered",
+      ];
+      const current = g.politenessRegister ?? "none";
+      const others = REGISTERS.filter((r) => r !== current);
+      const next = others[rng.int(others.length)]!;
+      g.politenessRegister = next;
+      return { feature: "politenessRegister", from: current, to: next };
     },
   },
   {

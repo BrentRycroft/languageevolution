@@ -195,6 +195,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
 
   const verbBase = verbTok.lemma;
   const evidential = inferEvidential(verbBase, tokens);
+  const honorific = inferHonorific(tokens);
   const predicate: VP = {
     kind: "VP",
     verb: {
@@ -207,6 +208,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
       mood,
       voice,
       evidential,
+      honorific,
     },
     object,
     pps,
@@ -636,6 +638,17 @@ function collectAdverbs(
     out.push({ lemma: tokens[i]!.lemma, baseForm: [] });
   }
   return out;
+}
+
+const HONORIFIC_TRIGGERS = new Set([
+  "please", "kindly", "sir", "madam", "ma'am", "lord", "lady", "honored", "respected",
+]);
+
+function inferHonorific(tokens: EnglishToken[]): boolean {
+  for (const t of tokens) {
+    if (HONORIFIC_TRIGGERS.has(t.lemma.toLowerCase())) return true;
+  }
+  return false;
 }
 
 const REPORTATIVE_LEMMAS = new Set(["say", "tell", "speak"]);
