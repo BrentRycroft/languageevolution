@@ -4,6 +4,7 @@ import { formToString } from "../phonology/ipa";
 import { formatForm, type DisplayScript } from "../phonology/display";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
+import { translateSentence } from "../translator/sentence";
 
 const NOUN_POOL = [
   "mother", "father", "child", "brother", "sister", "friend",
@@ -159,6 +160,37 @@ export interface NarrativeLine {
   text: string;
 }
 
+function usesDeepRouting(lang: Language): boolean {
+  const g = lang.grammar;
+  return !!(
+    g.alignment && g.alignment !== "nom-acc"
+    || g.harmony && g.harmony !== "none"
+    || g.classifierSystem
+    || (g.evidentialMarking && g.evidentialMarking !== "none")
+    || g.relativeClauseStrategy
+    || g.serialVerbConstructions
+    || (g.politenessRegister && g.politenessRegister !== "none")
+  );
+}
+
+function buildEnglishSentence(
+  pattern: SentencePattern,
+  subject: string,
+  verb: string,
+  object: string,
+  adjective: string | null,
+  time: string | null,
+): string {
+  let s = pattern.template;
+  s = s.replace("{S}", subject);
+  s = s.replace("{V}", verb);
+  s = s.replace("{O}", object);
+  if (adjective) s = s.replace("{adj}", adjective);
+  if (time) s = s.replace("{time}", time);
+  s = s.replace(/\.$/, "");
+  return s.trim();
+}
+
 function realizeSkeleton(
   lang: Language,
   skeleton: Skeleton,
@@ -179,6 +211,36 @@ function realizeSkeleton(
     pattern.needsTime && skeleton.timePhrase
       ? resolveMeaning(lang, skeleton.timePhrase, TIME_POOL)
       : null;
+
+  if (usesDeepRouting(lang)) {
+    const englishStr = buildEnglishSentence(
+      pattern,
+      subjectMeaning,
+      verbMeaning,
+      objectMeaning,
+      adjectiveMeaning,
+      timeMeaning,
+    );
+    const translated = translateSentence(lang, englishStr);
+    if (translated.targetTokens.length > 0) {
+      const text = translated.targetTokens
+        .map((t) => {
+          if (t.targetForm.length === 0) return t.targetSurface;
+          return script === "ipa"
+            ? formToString(t.targetForm)
+            : formatForm(t.targetForm, lang, script, t.englishLemma);
+        })
+        .join(" ");
+      const glossParts = translated.targetTokens
+        .map((t) => t.englishLemma)
+        .filter((l) => l && l !== "?");
+      const timePrefixGlossLocal = timeMeaning ? `[${timeMeaning}] ` : "";
+      return {
+        text,
+        gloss: `${timePrefixGlossLocal}[${glossParts.join("—")}]`,
+      };
+    }
+  }
 
   const sForm = lang.lexicon[subjectMeaning];
   const vForm = lang.lexicon[verbMeaning];

@@ -225,7 +225,8 @@ export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
     const relSentence = parseSyntax(rel.relative);
     if (relSentence) {
       relSentence.leadingWh = { lemma: rel.relLemma };
-      if (relSentence.subject.head.synthesized) {
+      const subjectGap = relSentence.subject.head.synthesized === true;
+      if (subjectGap) {
         const a = rel.antecedent;
         relSentence.subject = {
           kind: "NP",
@@ -240,6 +241,19 @@ export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
           adjectives: [],
           pps: [],
         };
+      }
+      const antecedentNP = findAntecedentNP(matrixSentences, rel.antecedent.lemma);
+      if (antecedentNP) {
+        const relizerLemma = rel.relLemma === "who" || rel.relLemma === "which" || rel.relLemma === "that"
+          ? rel.relLemma as "who" | "that" | "which"
+          : "that";
+        antecedentNP.relative = {
+          kind: "RC",
+          relativizer: relizerLemma,
+          predicate: relSentence.predicate,
+          subjectGap,
+        };
+        return matrixSentences;
       }
       return [...matrixSentences, relSentence];
     }
@@ -303,6 +317,20 @@ export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
     out.push(s);
   }
   return out;
+}
+
+function findAntecedentNP(sentences: Sentence[], lemma: string): NP | null {
+  for (const s of sentences) {
+    if (s.subject.head.lemma === lemma) return s.subject;
+    if (s.predicate.object?.head.lemma === lemma) return s.predicate.object;
+    for (const pp of s.predicate.pps) {
+      if (pp.np.head.lemma === lemma) return pp.np;
+    }
+    for (const pp of s.subject.pps) {
+      if (pp.np.head.lemma === lemma) return pp.np;
+    }
+  }
+  return null;
 }
 
 function extractRelativeClause(tokens: EnglishToken[]): {
