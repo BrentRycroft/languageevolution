@@ -101,6 +101,7 @@ interface SimStore {
   togglePlay: () => void;
   setSpeed: (s: number) => void;
   reset: () => void;
+  resetRatesToDefaults: () => void;
   updateConfig: (patch: Partial<SimulationConfig>) => void;
   updateModes: (patch: Partial<SimulationConfig["modes"]>) => void;
   updatePhonology: (patch: Partial<SimulationConfig["phonology"]>) => void;
@@ -377,6 +378,37 @@ export const useSimStore = create<SimStore>((set, get) => ({
     });
     tryAutosave([
       { config: nextConfig, state: init.state, generationsRun: init.state.generation },
+      { force: true },
+    ]);
+  },
+  resetRatesToDefaults: () => {
+    const { config } = get();
+    const fresh = defaultConfig();
+    const nextConfig: SimulationConfig = {
+      ...config,
+      phonology: { ...config.phonology, globalRate: fresh.phonology.globalRate },
+      tree: {
+        ...config.tree,
+        splitProbabilityPerGeneration: fresh.tree.splitProbabilityPerGeneration,
+        deathProbabilityPerGeneration: fresh.tree.deathProbabilityPerGeneration,
+        minGenerationsBetweenSplits: fresh.tree.minGenerationsBetweenSplits,
+        minGenerationsBeforeDeath: fresh.tree.minGenerationsBeforeDeath,
+      },
+      genesis: { ...config.genesis, globalRate: fresh.genesis.globalRate },
+      grammar: { ...fresh.grammar },
+      semantics: { ...fresh.semantics },
+      obsolescence: {
+        ...config.obsolescence,
+        ...fresh.obsolescence,
+      },
+      morphology: { ...fresh.morphology },
+      contact: { ...fresh.contact },
+      phonology_lawful: { ...fresh.phonology_lawful },
+      taboo: { ...fresh.taboo },
+    };
+    set({ config: nextConfig });
+    tryAutosave([
+      { config: nextConfig, state: get().state, generationsRun: get().state.generation },
       { force: true },
     ]);
   },
