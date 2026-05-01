@@ -25,6 +25,23 @@ function initialLexicalCapacity(lang: Language): number {
   return computeCapacity(lang, lang.birthGeneration);
 }
 
+function cloneSuppletion(
+  s: NonNullable<Language["suppletion"]>,
+): NonNullable<Language["suppletion"]> {
+  const out: NonNullable<Language["suppletion"]> = {};
+  for (const m of Object.keys(s)) {
+    const slots = s[m];
+    if (!slots) continue;
+    const cloned: NonNullable<Language["suppletion"]>[string] = {};
+    for (const cat of Object.keys(slots) as Array<keyof typeof slots>) {
+      const f = slots[cat];
+      if (f && f.length > 0) cloned[cat] = f.slice();
+    }
+    out[m] = cloned;
+  }
+  return out;
+}
+
 function seedRegister(
   lex: import("../types").Lexicon,
   rng: import("../rng").Rng,
@@ -75,7 +92,10 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     lexicalStress: config.seedLexicalStress
       ? { ...config.seedLexicalStress }
       : undefined,
-    culturalTier: 0,
+    culturalTier: config.seedCulturalTier ?? 0,
+    suppletion: config.seedSuppletion
+      ? cloneSuppletion(config.seedSuppletion)
+      : undefined,
   };
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);

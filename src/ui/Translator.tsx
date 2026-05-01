@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import {
@@ -18,7 +18,10 @@ export function Translator() {
   const state = useSimStore((s) => s.state);
   const script = useSimStore((s) => s.displayScript);
   const leaves = useMemo(() => leafIds(state.tree), [state.tree]);
-  const alive = leaves.filter((id) => !state.tree[id]!.language.extinct);
+  const alive = useMemo(
+    () => leaves.filter((id) => !state.tree[id]!.language.extinct),
+    [leaves, state.tree],
+  );
 
   const [mode, setMode] = useState<Mode>("sentence");
   const [langId, setLangId] = useState<string>(alive[0] ?? "");
@@ -27,6 +30,18 @@ export function Translator() {
   const [category, setCategory] = useState<MorphCategory | "">("");
   const [wordResult, setWordResult] = useState<TranslationResult | null>(null);
   const [sentenceResult, setSentenceResult] = useState<SentenceTranslation | null>(null);
+
+  useEffect(() => {
+    if (alive.length === 0) return;
+    if (!alive.includes(langId)) setLangId(alive[0]!);
+  }, [alive, langId]);
+
+  useEffect(() => {
+    if (alive.length === 0) return;
+    if (!alive.includes(langIdB)) {
+      setLangIdB(alive.find((id) => id !== langId) ?? alive[0]!);
+    }
+  }, [alive, langId, langIdB]);
 
   const lang = langId ? state.tree[langId]?.language : undefined;
   const langB = langIdB ? state.tree[langIdB]?.language : undefined;

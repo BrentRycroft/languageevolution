@@ -10,6 +10,7 @@ import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../ph
 import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
 import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/variants";
 import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
+import { prunePhonemes } from "../phonology/pruning";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
@@ -156,6 +157,18 @@ export function stepPhonology(
         generation,
         kind: "sound_change",
         description: `sound law: ${ruleId} applied exceptionlessly`,
+      });
+    }
+  }
+
+  if (rng.chance(0.04)) {
+    const merger = prunePhonemes(lang, rng);
+    if (merger) {
+      refreshInventory(lang);
+      pushEvent(lang, {
+        generation,
+        kind: "sound_change",
+        description: `phonemic merger: /${merger.from}/ → /${merger.to}/ (low-frequency phoneme dropped from inventory in ${merger.affectedWords} word${merger.affectedWords === 1 ? "" : "s"})`,
       });
     }
   }
