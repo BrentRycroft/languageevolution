@@ -106,8 +106,12 @@ export function stepDeath(
     : (() => {
         const overshoot = aliveLeaves.length - config.tree.maxLeaves;
         if (overshoot <= 0) return 1;
-        const scale = Math.max(2, config.tree.maxLeaves / 3);
-        return Math.min(60, Math.exp(overshoot / scale));
+        const scale = Math.max(1.5, config.tree.maxLeaves / 5);
+        const overCount = state.generationsOverCap ?? 0;
+        return Math.min(
+          400,
+          Math.exp(overshoot / scale) * (1 + overCount / 8),
+        );
       })()
 
   let myCloseness: number;

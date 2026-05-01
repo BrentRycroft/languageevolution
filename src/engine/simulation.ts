@@ -111,10 +111,16 @@ export function createSimulation(
     if (config.modes.tree) {
       stepCreolization(state, config, rng, nextGen);
     }
+    const aliveAfter = leafIds(state.tree).filter(
+      (id) => !state.tree[id]!.language.extinct,
+    ).length;
+    const overshoot = !config.tree.unlimitedLeaves && aliveAfter > config.tree.maxLeaves;
+    const nextOverCap = overshoot ? (state.generationsOverCap ?? 0) + 1 : 0;
     state = {
       ...state,
       generation: nextGen,
       rngState: rng.state(),
+      generationsOverCap: nextOverCap,
     };
   };
 
