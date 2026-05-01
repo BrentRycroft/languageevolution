@@ -6,7 +6,9 @@ import {
   maybeCliticize,
   maybeSuppletion,
   maybeSplitParadigm,
+  maybeVowelMutationIrregular,
 } from "../morphology/evolve";
+import { stepTypologyDrift } from "../grammar/typology_drift";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
 import { simplificationFactor, realismMultiplier } from "../phonology/rate";
 import { maybeReanalyse } from "../lexicon/reanalysis";
@@ -158,5 +160,15 @@ export function stepMorphology(
         meta: { meaning: sup.meaning, category: sup.category },
       });
     }
+    const ablaut = maybeVowelMutationIrregular(lang, rng, suppletionRate * 0.6);
+    if (ablaut) {
+      pushEvent(lang, {
+        generation,
+        kind: "grammar_shift",
+        description: `ablaut irregular: "${ablaut.meaning}" (${ablaut.category}) gains a vowel-mutated form`,
+        meta: { meaning: ablaut.meaning, category: ablaut.category },
+      });
+    }
   }
+  stepTypologyDrift(lang, generation);
 }

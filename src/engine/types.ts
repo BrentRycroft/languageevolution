@@ -139,6 +139,7 @@ export interface GrammarFeatures {
   genderCount: 0 | 2 | 3;
   synthesisIndex?: number;
   fusionIndex?: number;
+  morphologicalType?: "isolating" | "agglutinating" | "fusional" | "polysynthetic";
   articlePresence?: "none" | "free" | "enclitic" | "proclitic";
   caseStrategy?: "case" | "preposition" | "postposition" | "mixed";
   incorporates?: boolean;

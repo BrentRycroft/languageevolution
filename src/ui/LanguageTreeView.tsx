@@ -20,6 +20,8 @@ interface TooltipData {
   lexCount: number;
   borrowCount: number;
   samples: Array<{ meaning: string; form: string }>;
+  morphologicalType?: string;
+  culturalTier?: number;
   reconstructed?: Array<{ meaning: string; form: string; confidence: number }>;
   descendantCount?: number;
 }
@@ -83,6 +85,8 @@ function buildTooltip(
     lexCount,
     borrowCount,
     samples,
+    morphologicalType: lang.grammar.morphologicalType,
+    culturalTier: lang.culturalTier,
     reconstructed,
     descendantCount,
   };
@@ -334,6 +338,14 @@ function TreeNodeHover({
         <span title="lexicon size">📖 {data.lexCount}</span>
         {data.borrowCount > 0 && (
           <span title="loanwords">↪ {data.borrowCount}</span>
+        )}
+        {data.morphologicalType && (
+          <span title="morphological typology" style={{ color: "var(--accent)" }}>
+            ⛬ {data.morphologicalType}
+          </span>
+        )}
+        {typeof data.culturalTier === "number" && (
+          <span title="cultural tier">T{data.culturalTier}</span>
         )}
       </div>
       {data.samples.length > 0 && (

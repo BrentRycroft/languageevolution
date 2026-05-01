@@ -100,12 +100,104 @@ export function MapView() {
   }, [worldMap, ownership, state.tree]);
 
   const [hoverCell, setHoverCell] = useState<number | null>(null);
+  const [showBilingual, setShowBilingual] = useState(true);
+  const [showLoans, setShowLoans] = useState(true);
+  const [showAreal, setShowAreal] = useState(true);
+
+  const leafCentroids = useMemo(() => {
+    const out: Record<string, { x: number; y: number }> = {};
+    for (const id of Object.keys(state.tree)) {
+      const node = state.tree[id]!;
+      if (node.childrenIds.length > 0) continue;
+      if (node.language.extinct) continue;
+      const c = node.language.coords;
+      if (c) out[id] = { x: c.x, y: c.y };
+    }
+    return out;
+  }, [state.tree]);
+
+  const bilingualEdges = useMemo(() => {
+    if (!showBilingual) return [] as Array<{ aId: string; bId: string; w: number }>;
+    const seen = new Set<string>();
+    const out: Array<{ aId: string; bId: string; w: number }> = [];
+    for (const id of Object.keys(state.tree)) {
+      const lang = state.tree[id]!.language;
+      const links = lang.bilingualLinks;
+      if (!links) continue;
+      for (const otherId of Object.keys(links)) {
+        const k = id < otherId ? `${id}|${otherId}` : `${otherId}|${id}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const w = links[otherId]!;
+        if (w > 0.05 && leafCentroids[id] && leafCentroids[otherId]) {
+          out.push({ aId: id, bId: otherId, w });
+        }
+      }
+    }
+    return out;
+  }, [state.tree, showBilingual, leafCentroids]);
+
+  const recentLoans = useMemo(() => {
+    if (!showLoans) return [] as Array<{ donorId: string; recipientId: string; age: number }>;
+    const out: Array<{ donorId: string; recipientId: string; age: number }> = [];
+    const cap = state.generation;
+    for (const id of Object.keys(state.tree)) {
+      const lang = state.tree[id]!.language;
+      for (const e of lang.events) {
+        if (e.kind !== "borrow") continue;
+        const age = cap - e.generation;
+        if (age > 5) continue;
+        const donorId = e.meta?.donorId;
+        const recipientId = e.meta?.recipientId;
+        if (!donorId || !recipientId) continue;
+        if (!leafCentroids[donorId] || !leafCentroids[recipientId]) continue;
+        out.push({ donorId, recipientId, age });
+      }
+    }
+    return out;
+  }, [state.tree, state.generation, showLoans, leafCentroids]);
+
+  const arealWaves = useMemo(() => {
+    if (!showAreal) return [] as Array<{ x: number; y: number; age: number; donorId: string }>;
+    const pending = state.pendingArealRules ?? [];
+    return pending.slice(-12).map((w) => ({
+      x: w.donorCoords.x,
+      y: w.donorCoords.y,
+      age: state.generation - w.birthGeneration,
+      donorId: w.donorId,
+    }));
+  }, [state.pendingArealRules, state.generation, showAreal]);
 
   return (
     <div
       ref={containerRef}
       style={{ width: "100%", height: "100%", minHeight: 320, position: "relative" }}
     >
+      <div
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          zIndex: 5,
+          display: "flex",
+          gap: 6,
+          padding: 6,
+          background: "rgba(15,31,46,0.85)",
+          border: "1px solid var(--border)",
+          borderRadius: 4,
+          fontSize: 11,
+        }}
+      >
+        <label title="Show bilingual contact links">
+          <input type="checkbox" checked={showBilingual} onChange={(e) => setShowBilingual(e.target.checked)} /> bilingual
+        </label>
+        <label title="Show borrow events from the last 5 generations">
+          <input type="checkbox" checked={showLoans} onChange={(e) => setShowLoans(e.target.checked)} /> loans
+        </label>
+        <label title="Show pending areal sound-rule waves expanding from their donor">
+          <input type="checkbox" checked={showAreal} onChange={(e) => setShowAreal(e.target.checked)} /> areal
+        </label>
+      </div>
       <svg
         width={size.w}
         height={size.h}
@@ -141,6 +233,61 @@ export function MapView() {
             }
           />
         ))}
+        {bilingualEdges.length > 0 && (
+          <g pointerEvents="none">
+            {bilingualEdges.map((e, i) => {
+              const a = project(leafCentroids[e.aId]!.x, leafCentroids[e.aId]!.y);
+              const b = project(leafCentroids[e.bId]!.x, leafCentroids[e.bId]!.y);
+              return (
+                <line
+                  key={`bi-${i}`}
+                  x1={a.px} y1={a.py} x2={b.px} y2={b.py}
+                  stroke="rgba(124,196,255,0.55)"
+                  strokeWidth={Math.max(1, e.w * 4)}
+                  strokeDasharray="2 4"
+                />
+              );
+            })}
+          </g>
+        )}
+        {recentLoans.length > 0 && (
+          <g pointerEvents="none">
+            {recentLoans.map((l, i) => {
+              const a = project(leafCentroids[l.donorId]!.x, leafCentroids[l.donorId]!.y);
+              const b = project(leafCentroids[l.recipientId]!.x, leafCentroids[l.recipientId]!.y);
+              const fade = Math.max(0.15, 1 - l.age / 6);
+              return (
+                <g key={`loan-${i}`}>
+                  <line
+                    x1={a.px} y1={a.py} x2={b.px} y2={b.py}
+                    stroke={`rgba(255,204,102,${fade})`}
+                    strokeWidth={1.5}
+                    strokeDasharray="6 3"
+                  />
+                  <circle cx={b.px} cy={b.py} r={3} fill={`rgba(255,204,102,${fade})`} />
+                </g>
+              );
+            })}
+          </g>
+        )}
+        {arealWaves.length > 0 && (
+          <g pointerEvents="none">
+            {arealWaves.map((w, i) => {
+              const c = project(w.x, w.y);
+              const radius = Math.max(8, 12 + w.age * 6);
+              const opacity = Math.max(0.05, 0.5 - w.age * 0.04);
+              return (
+                <circle
+                  key={`wave-${i}`}
+                  cx={c.px} cy={c.py} r={radius}
+                  fill="none"
+                  stroke={`rgba(167,139,255,${opacity})`}
+                  strokeWidth={1.4}
+                />
+              );
+            })}
+          </g>
+        )}
         {}
         {labelsForAliveLeavesSmoothed(state.tree, worldMap, smoothedLabelRef.current).map(({ langId, lang, point }) => {
           const { px, py } = project(point.x, point.y);
