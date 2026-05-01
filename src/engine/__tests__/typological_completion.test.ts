@@ -163,13 +163,12 @@ describe("Phase 14 — completing Phase 12/13", () => {
     });
 
     it("classifier system can flip", () => {
-      const g = defaultGrammar();
-      g.classifierSystem = false;
+      const g: GrammarFeatures = { ...defaultGrammar(), classifierSystem: false };
       const rng = makeRng("drift-clf");
       let flipped = false;
       for (let i = 0; i < 1000; i++) {
         driftGrammar(g, rng);
-        if (g.classifierSystem === true) { flipped = true; break; }
+        if (g.classifierSystem) { flipped = true; break; }
       }
       expect(flipped, "classifier system should flip true in 1000 gens").toBe(true);
     });
