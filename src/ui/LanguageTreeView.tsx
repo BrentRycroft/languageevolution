@@ -7,6 +7,7 @@ import { ScriptPicker } from "./ScriptPicker";
 import { StemmaView } from "./StemmaView";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
+import { reconstructProtoLexicon, type ReconstructedForm } from "../engine/tree/reconstruction";
 
 type TreeMode = "phylogeny" | "stemma";
 
@@ -19,6 +20,8 @@ interface TooltipData {
   lexCount: number;
   borrowCount: number;
   samples: Array<{ meaning: string; form: string }>;
+  reconstructed?: Array<{ meaning: string; form: string; confidence: number }>;
+  descendantCount?: number;
 }
 
 interface NodeDatum {
@@ -30,6 +33,11 @@ interface NodeDatum {
   tooltip: TooltipData;
   children?: NodeDatum[];
 }
+
+const RECONSTRUCTION_TARGETS = [
+  "water", "fire", "mother", "father", "i", "you", "two", "see",
+  "go", "eat", "stone", "tree",
+];
 
 function buildTooltip(
   tree: LanguageTree,
@@ -52,6 +60,20 @@ function buildTooltip(
     if (f) samples.push({ meaning: m, form: formatForm(f, lang, script, m) });
     if (samples.length >= 3) break;
   }
+  const isInternal = node.childrenIds.length > 0;
+  let reconstructed: TooltipData["reconstructed"];
+  let descendantCount: number | undefined;
+  if (isInternal) {
+    const items = reconstructProtoLexicon(tree, id, RECONSTRUCTION_TARGETS);
+    items.sort((a, b) => b.confidence - a.confidence);
+    const top = items.slice(0, 5);
+    reconstructed = top.map((r: ReconstructedForm) => ({
+      meaning: r.meaning,
+      form: formatForm(r.form, lang, script, r.meaning),
+      confidence: r.confidence,
+    }));
+    descendantCount = top[0]?.totalDescendants;
+  }
   return {
     name: lang.name,
     extinct: !!lang.extinct,
@@ -61,6 +83,8 @@ function buildTooltip(
     lexCount,
     borrowCount,
     samples,
+    reconstructed,
+    descendantCount,
   };
 }
 
@@ -320,6 +344,21 @@ function TreeNodeHover({
               <span className="tree-node-hover-chip-form">{s.form}</span>
             </span>
           ))}
+        </div>
+      )}
+      {data.reconstructed && data.reconstructed.length > 0 && (
+        <div className="tree-node-hover-reconstruction">
+          <div className="tree-node-hover-reconstruction-header">
+            ⌬ reconstructed proto (from {data.descendantCount ?? "?"} descendants)
+          </div>
+          <div className="tree-node-hover-samples">
+            {data.reconstructed.map((r) => (
+              <span key={r.meaning} className="tree-node-hover-chip" title={`confidence ${(r.confidence * 100).toFixed(0)}%`}>
+                <span className="tree-node-hover-chip-meaning">*{r.meaning}</span>
+                <span className="tree-node-hover-chip-form">{r.form}</span>
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>

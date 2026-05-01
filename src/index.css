@@ -1456,6 +1456,17 @@ tr.grammar-diff td:last-child {
   font-size: var(--fs-1);
   color: var(--text);
 }
+.tree-node-hover-reconstruction {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--accent);
+}
+.tree-node-hover-reconstruction-header {
+  font-size: 10px;
+  color: var(--accent);
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
 
 .runs-list {
   display: flex;
