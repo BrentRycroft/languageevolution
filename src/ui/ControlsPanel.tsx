@@ -108,6 +108,8 @@ export function ControlsPanel() {
   const setGenesisEnabled = useSimStore((s) => s.setGenesisEnabled);
   const setSeed = useSimStore((s) => s.setSeed);
   const randomiseSeed = useSimStore((s) => s.randomiseSeed);
+  const resetRatesToDefaults = useSimStore((s) => s.resetRatesToDefaults);
+  const showConfirm = useSimStore((s) => s.showConfirm);
 
   const [seedEditorOpen, setSeedEditorOpen] = useState(false);
   const genesisSet = new Set(config.genesis.enabledRuleIds);
@@ -265,6 +267,25 @@ export function ControlsPanel() {
       </Section>
 
       <Section title="Rates" defaultOpen={false}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+          <button
+            type="button"
+            className="ghost"
+            onClick={async () => {
+              const ok = await showConfirm({
+                title: "Reset rates to default?",
+                message:
+                  "All evolution rates (phonology, tree, genesis, grammar, semantics, obsolescence, morphology, contact, taboo) will be reset to their literature-calibrated defaults for a 25-year generation. The simulation state and seed will be preserved.",
+                confirmLabel: "Reset rates",
+              });
+              if (ok) resetRatesToDefaults();
+            }}
+            title="Restore rates to literature-calibrated defaults for a 25-year generation"
+            style={{ fontSize: "var(--fs-1)" }}
+          >
+            ↺ Reset to defaults
+          </button>
+        </div>
         <Slider
           label="Global rate"
           value={config.phonology.globalRate}
