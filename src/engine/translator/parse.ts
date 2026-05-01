@@ -194,6 +194,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   const subjectNumber = subject.head.number;
 
   const verbBase = verbTok.lemma;
+  const evidential = inferEvidential(verbBase, tokens);
   const predicate: VP = {
     kind: "VP",
     verb: {
@@ -205,6 +206,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
       aspect,
       mood,
       voice,
+      evidential,
     },
     object,
     pps,
@@ -606,4 +608,24 @@ function collectAdverbs(
     out.push({ lemma: tokens[i]!.lemma, baseForm: [] });
   }
   return out;
+}
+
+const REPORTATIVE_LEMMAS = new Set(["say", "tell", "speak"]);
+const INFERRED_LEMMAS = new Set(["think", "know", "guess", "suppose", "seem"]);
+const DIRECT_LEMMAS = new Set(["see", "hear", "feel", "watch", "listen"]);
+
+function inferEvidential(
+  verbLemma: string,
+  tokens: EnglishToken[],
+): "direct" | "reportative" | "inferred" | undefined {
+  if (DIRECT_LEMMAS.has(verbLemma)) return "direct";
+  if (REPORTATIVE_LEMMAS.has(verbLemma)) return "reportative";
+  if (INFERRED_LEMMAS.has(verbLemma)) return "inferred";
+  for (const t of tokens) {
+    if (t.tag === "ADV") {
+      if (t.lemma === "apparently" || t.lemma === "evidently") return "inferred";
+      if (t.lemma === "reportedly" || t.lemma === "allegedly") return "reportative";
+    }
+  }
+  return undefined;
 }

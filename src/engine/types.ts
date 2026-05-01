@@ -148,6 +148,13 @@ export interface GrammarFeatures {
   moodMarking?: "declarative" | "subjunctive" | "imperative";
   interrogativeStrategy?: "particle" | "inversion" | "intonation";
   interrogativeParticle?: "initial" | "final";
+  alignment?: "nom-acc" | "erg-abs" | "tripartite" | "split-S";
+  harmony?: "none" | "front-back" | "rounding" | "atr";
+  evidentialMarking?: "none" | "direct-only" | "three-way";
+  classifierTable?: Record<string, string>;
+  relativeClauseStrategy?: "gap" | "resumptive" | "relativizer" | "internal-headed";
+  serialVerbConstructions?: boolean;
+  politenessRegister?: "none" | "binary" | "tiered";
 }
 
 export interface SimulationConfig {
