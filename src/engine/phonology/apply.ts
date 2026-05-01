@@ -152,10 +152,11 @@ export function applyChangesToLexicon(
   const optsWithOrder: ApplyOptions = opts._orderedChanges
     ? opts
     : { ...opts, _orderedChanges: sortByPriority(changes) };
+  let anyChanged = false;
   for (const m of meanings) {
     const sensitivity = soundChangeSensitivity(m);
     if (sensitivity < 1 && !rng.chance(sensitivity)) {
-      out[m] = lexicon[m]!.slice();
+      out[m] = lexicon[m]!;
       continue;
     }
     const next = applyChangesToWord(lexicon[m]!, changes, rng, optsWithOrder, m);
@@ -164,13 +165,17 @@ export function applyChangesToLexicon(
       const repaired = repairSyllabicity(next);
       if (repaired !== next && isFormLegal(m, repaired)) {
         out[m] = repaired;
+        anyChanged = true;
         continue;
       }
-      out[m] = lexicon[m]!.slice();
+      out[m] = lexicon[m]!;
       continue;
     }
+    if (next !== lexicon[m]) anyChanged = true;
     out[m] = next;
   }
+
+  if (!anyChanged) return out;
 
   const freq = opts.frequencyHints ?? {};
   const byForm = new Map<string, string[]>();
