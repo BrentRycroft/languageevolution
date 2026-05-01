@@ -242,6 +242,7 @@ export interface SimulationState {
   rootId: string;
   rngState: number;
   pendingArealRules?: PendingArealRule[];
+  generationsOverCap?: number;
 }
 
 export interface SavedRun {
