@@ -126,15 +126,19 @@ export function realiseSentence(
     }
   }
   if (s.leadingConj) {
-    const cf = closedClassForm(lang, s.leadingConj.lemma) ?? [];
-    if (cf.length > 0) {
-      out.push({
-        surface: cf.join(""),
-        form: cf,
-        english: s.leadingConj.lemma,
-        role: "DET",
-        resolution: "concept",
-      });
+    const isAnd = s.leadingConj.lemma === "and";
+    const dropForSVC = isAnd && !!lang.grammar.serialVerbConstructions;
+    if (!dropForSVC) {
+      const cf = closedClassForm(lang, s.leadingConj.lemma) ?? [];
+      if (cf.length > 0) {
+        out.push({
+          surface: cf.join(""),
+          form: cf,
+          english: s.leadingConj.lemma,
+          role: "DET",
+          resolution: "concept",
+        });
+      }
     }
   }
   const isQuestion = !!s.interrogative;
@@ -365,7 +369,78 @@ function realiseNP(
     }
     out.push(...realiseNP(np.coord.np, lang, ctx, role));
   }
+  if (np.relative) {
+    return attachRelativeClause(out, np, lang, ctx, role);
+  }
   return out;
+}
+
+function attachRelativeClause(
+  npTokens: RealisedToken[],
+  np: NP,
+  lang: Language,
+  ctx: NPCtx,
+  role: "S" | "O" | "PP-NP" | "POSS",
+): RealisedToken[] {
+  const rc = np.relative;
+  if (!rc) return npTokens;
+  const strategy = lang.grammar.relativeClauseStrategy ?? "relativizer";
+
+  const stripped: NP = { ...np, relative: undefined };
+  const fakeS: Sentence = {
+    kind: "S",
+    subject: stripped,
+    predicate: rc.predicate,
+    negated: false,
+  };
+  const relRaw = realiseSentenceInner(fakeS, lang, ctx);
+  const relTokens = rc.subjectGap && (strategy === "gap" || strategy === "relativizer")
+    ? relRaw.filter((t) => t.role !== "S")
+    : relRaw;
+  const relizerForm = closedClassForm(lang, rc.relativizer) ?? [];
+  const relizerTok: RealisedToken | null = relizerForm.length > 0
+    ? {
+        surface: relizerForm.join(""),
+        form: relizerForm,
+        english: rc.relativizer,
+        role: "DET",
+        resolution: "concept",
+      }
+    : null;
+
+  switch (strategy) {
+    case "internal-headed":
+      return relTokens;
+    case "relativizer": {
+      const merged = [...relTokens];
+      if (relizerTok) merged.push(relizerTok);
+      return [...merged, ...npTokens];
+    }
+    case "resumptive": {
+      const resumptive = closedClassForm(lang, role === "S" ? "they" : "them") ?? [];
+      const insertion: RealisedToken[] = resumptive.length > 0
+        ? [{ surface: resumptive.join(""), form: resumptive, english: "RESUMP", role: "PP-NP", resolution: "concept" }]
+        : [];
+      return [...npTokens, ...(relizerTok ? [relizerTok] : []), ...insertion, ...relTokens];
+    }
+    case "gap":
+    default:
+      return [...npTokens, ...(relizerTok ? [relizerTok] : []), ...relTokens];
+  }
+}
+
+function realiseSentenceInner(
+  s: Sentence,
+  lang: Language,
+  parentCtx: NPCtx,
+): RealisedToken[] {
+  void parentCtx;
+  return realiseSentence(s, lang, {
+    resolveOpen: (lemma) => {
+      const form = lang.lexicon[lemma];
+      return { form: form ?? null, resolution: form ? "direct" : "fallback" };
+    },
+  });
 }
 
 function realisePP(pp: PP, lang: Language, ctx: NPCtx): RealisedToken[] {
