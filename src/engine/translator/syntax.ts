@@ -15,12 +15,25 @@ export interface NounRef {
   isPronoun?: boolean;
   resolution?: LemmaResolution;
   synthesized?: boolean;
+  nounClass?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 }
 
-export type Aspect = "perfective" | "imperfective" | "progressive";
-export type Mood = "declarative" | "subjunctive" | "imperative";
+export type Aspect =
+  | "perfective"
+  | "imperfective"
+  | "progressive"
+  | "habitual"
+  | "perfect"
+  | "prospective";
+export type Mood =
+  | "declarative"
+  | "subjunctive"
+  | "imperative"
+  | "conditional"
+  | "optative";
 export type Voice = "active" | "passive";
 export type Degree = "positive" | "comparative" | "superlative";
+export type Evidential = "direct" | "reportative" | "inferred";
 
 export interface VerbRef {
   lemma: string;
@@ -32,6 +45,8 @@ export interface VerbRef {
   aspect?: Aspect;
   mood?: Mood;
   voice?: Voice;
+  evidential?: Evidential;
+  honorific?: boolean;
 }
 
 export interface AdjRef {
@@ -54,6 +69,14 @@ export interface NP {
   numeral?: { lemma: string };
   pps: PP[];
   coord?: { lemma: string; np: NP };
+  relative?: RelativeClause;
+}
+
+export interface RelativeClause {
+  kind: "RC";
+  relativizer: "who" | "that" | "which";
+  predicate: VP;
+  subjectGap: boolean;
 }
 
 export interface PP {

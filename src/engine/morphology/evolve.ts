@@ -3,6 +3,7 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargets } from "../semantics/grammaticalization";
 import { posOf } from "../lexicon/pos";
+import { harmonizeAffix } from "./harmony";
 
 export interface MorphShift {
   kind: "affix_erode" | "category_merge" | "grammaticalization";
@@ -215,7 +216,10 @@ export function inflect(
     if (override && override.length > 0) return override.slice();
   }
   if (!paradigm) return base;
-  const affix = pickAffixVariant(paradigm, base);
+  let affix = pickAffixVariant(paradigm, base);
+  if (lang?.grammar.harmony && lang.grammar.harmony !== "none") {
+    affix = harmonizeAffix(affix, base, lang.grammar.harmony);
+  }
   return paradigm.position === "prefix"
     ? [...affix, ...base]
     : [...base, ...affix];

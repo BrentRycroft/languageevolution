@@ -4,6 +4,7 @@ import type { MorphCategory } from "../morphology/types";
 import { closedClassForm } from "./closedClass";
 import type { NP, PP, Sentence, VP } from "./syntax";
 import { sliceOrder } from "./wordOrder";
+import { classifierMeaningFor } from "./classifiers";
 
 export interface RealisedToken {
   surface: string;
@@ -33,11 +34,16 @@ export function realiseSentence(
   const numPos = lang.grammar.numeralPosition ?? "pre";
   const negPos = lang.grammar.negationPosition ?? "pre-verb";
   const prodrop = !!lang.grammar.prodrop;
+  const alignment = lang.grammar.alignment ?? "nom-acc";
+  const obj = s.predicate.object;
+  const transitive = !!obj;
+  const subjectCaseSlot: import("../morphology/types").MorphCategory | null = alignmentSubjectCase(alignment, transitive);
+  const objectCaseSlot: import("../morphology/types").MorphCategory | null = alignmentObjectCase(alignment, transitive);
 
   const subject = realiseNP(s.subject, lang, {
     articlePresence, caseStrategy, adjPos, possPos, numPos,
+    subjectCaseSlot, objectCaseSlot,
   }, "S");
-  const obj = s.predicate.object;
   const canIncorporate =
     !!lang.grammar.incorporates &&
     !!obj &&
@@ -52,10 +58,11 @@ export function realiseSentence(
     ? []
     : realiseNP(obj, lang, {
         articlePresence, caseStrategy, adjPos, possPos, numPos,
+        subjectCaseSlot, objectCaseSlot,
       }, "O");
   const verbTokens = realiseVerb(s.predicate, lang, s.negated, negPos, incorporatedRoot);
   const predPpTokens = s.predicate.pps.flatMap((pp) =>
-    realisePP(pp, lang, { articlePresence, caseStrategy, adjPos, possPos, numPos }),
+    realisePP(pp, lang, { articlePresence, caseStrategy, adjPos, possPos, numPos, subjectCaseSlot, objectCaseSlot }),
   );
   const advTokens: RealisedToken[] = s.predicate.adverbs.flatMap((a) => {
     return [{
@@ -98,15 +105,24 @@ export function realiseSentence(
   };
   const out: RealisedToken[] = [];
   if (s.leadingWh) {
-    const wf = closedClassForm(lang, s.leadingWh.lemma) ?? [];
-    if (wf.length > 0) {
-      out.push({
-        surface: wf.join(""),
-        form: wf,
-        english: s.leadingWh.lemma,
-        role: "DET",
-        resolution: "concept",
-      });
+    const relStrategy = lang.grammar.relativeClauseStrategy ?? "relativizer";
+    if (relStrategy !== "internal-headed") {
+      const lemma =
+        relStrategy === "gap" && (s.leadingWh.lemma === "who" || s.leadingWh.lemma === "that" || s.leadingWh.lemma === "which")
+          ? null
+          : s.leadingWh.lemma;
+      if (lemma) {
+        const wf = closedClassForm(lang, lemma) ?? [];
+        if (wf.length > 0) {
+          out.push({
+            surface: wf.join(""),
+            form: wf,
+            english: lemma,
+            role: "DET",
+            resolution: "concept",
+          });
+        }
+      }
     }
   }
   if (s.leadingConj) {
@@ -141,7 +157,8 @@ export function realiseSentence(
   out.push(...advTokens);
 
   if (isQuestion && interStrategy === "particle") {
-    const qf = closedClassForm(lang, "Q") ?? [];
+    const qPdm = lang.morphology.paradigms["discourse.q"];
+    const qf = qPdm?.affix ?? closedClassForm(lang, "Q") ?? [];
     if (qf.length > 0) {
       const qTok: RealisedToken = {
         surface: qf.join(""),
@@ -167,6 +184,43 @@ interface NPCtx {
   adjPos: "pre" | "post";
   possPos: "pre" | "post";
   numPos: "pre" | "post";
+  subjectCaseSlot?: import("../morphology/types").MorphCategory | null;
+  objectCaseSlot?: import("../morphology/types").MorphCategory | null;
+}
+
+function alignmentSubjectCase(
+  alignment: NonNullable<Language["grammar"]["alignment"]>,
+  transitive: boolean,
+): import("../morphology/types").MorphCategory | null {
+  switch (alignment) {
+    case "erg-abs":
+      return transitive ? "noun.case.erg" : "noun.case.abs";
+    case "tripartite":
+      return transitive ? "noun.case.erg" : "noun.case.abs";
+    case "split-S":
+      return transitive ? "noun.case.erg" : null;
+    case "nom-acc":
+    default:
+      return null;
+  }
+}
+
+function alignmentObjectCase(
+  alignment: NonNullable<Language["grammar"]["alignment"]>,
+  transitive: boolean,
+): import("../morphology/types").MorphCategory | null {
+  if (!transitive) return null;
+  switch (alignment) {
+    case "erg-abs":
+      return "noun.case.abs";
+    case "tripartite":
+      return "noun.case.acc";
+    case "split-S":
+      return "noun.case.acc";
+    case "nom-acc":
+    default:
+      return "noun.case.acc";
+  }
 }
 
 function realiseNP(
@@ -181,10 +235,10 @@ function realiseNP(
     const p = lang.morphology.paradigms["noun.num.pl"];
     if (p) headForm = inflect(headForm, p, lang, meaning);
   }
-  const caseSlot: import("../morphology/types").MorphCategory | null =
-    role === "POSS" ? "noun.case.gen"
-    : np.head.case === "acc" ? "noun.case.acc"
-    : null;
+  let caseSlot: import("../morphology/types").MorphCategory | null = null;
+  if (role === "POSS") caseSlot = "noun.case.gen";
+  else if (role === "S") caseSlot = ctx.subjectCaseSlot ?? null;
+  else if (role === "O") caseSlot = ctx.objectCaseSlot ?? (np.head.case === "acc" ? "noun.case.acc" : null);
   if (caseSlot && lang.grammar.hasCase) {
     const p = lang.morphology.paradigms[caseSlot];
     if (p) headForm = inflect(headForm, p, lang, meaning);
@@ -258,14 +312,15 @@ function realiseNP(
             resolution: lex ? "direct" : "concept",
           });
           if (lang.grammar.classifierSystem) {
-            const cf = closedClassForm(lang, "CLF") ?? [];
-            if (cf.length > 0) {
+            const clfMeaning = classifierMeaningFor(np.head.lemma, lang.grammar.classifierTable);
+            const clfForm = lang.lexicon[clfMeaning] ?? closedClassForm(lang, "CLF") ?? [];
+            if (clfForm.length > 0) {
               out.push({
-                surface: cf.join(""),
-                form: cf,
-                english: "CLF",
+                surface: clfForm.join(""),
+                form: clfForm,
+                english: `CLF:${clfMeaning}`,
                 role: "NUM" as const,
-                resolution: "concept",
+                resolution: lang.lexicon[clfMeaning] ? "direct" : "concept",
               });
             }
           }
@@ -347,13 +402,38 @@ function realiseVerb(
   const aspectCat: MorphCategory | null =
     vp.verb.aspect === "perfective" ? "verb.aspect.pfv" :
     vp.verb.aspect === "imperfective" ? "verb.aspect.ipfv" :
-    vp.verb.aspect === "progressive" ? "verb.aspect.prog" : null;
+    vp.verb.aspect === "progressive" ? "verb.aspect.prog" :
+    vp.verb.aspect === "habitual" ? "verb.aspect.hab" :
+    vp.verb.aspect === "perfect" ? "verb.aspect.perf" :
+    vp.verb.aspect === "prospective" ? "verb.aspect.prosp" : null;
   if (aspectCat) stack.push(aspectCat);
   const moodCat: MorphCategory | null =
     vp.verb.mood === "subjunctive" ? "verb.mood.subj" :
-    vp.verb.mood === "imperative" ? "verb.mood.imp" : null;
+    vp.verb.mood === "imperative" ? "verb.mood.imp" :
+    vp.verb.mood === "conditional" ? "verb.mood.cond" :
+    vp.verb.mood === "optative" ? "verb.mood.opt" : null;
   if (moodCat) stack.push(moodCat);
   if (vp.verb.voice === "passive") stack.push("verb.voice.pass");
+
+  const evidMode = lang.grammar.evidentialMarking ?? "none";
+  if (evidMode !== "none" && vp.verb.evidential) {
+    const evidCat: MorphCategory | null =
+      vp.verb.evidential === "direct" ? "verb.evid.dir" :
+      vp.verb.evidential === "reportative" ? "verb.evid.rep" :
+      vp.verb.evidential === "inferred" ? "verb.evid.inf" : null;
+    if (evidCat && (evidMode === "three-way" || evidCat === "verb.evid.dir")) {
+      stack.push(evidCat);
+    }
+  }
+
+  if (vp.verb.honorific && lang.grammar.politenessRegister && lang.grammar.politenessRegister !== "none") {
+    stack.push("verb.honor.formal");
+  }
+
+  if (lang.grammar.classifierSystem) {
+    const matchPdm = lang.morphology.paradigms["verb.cls.match"];
+    if (matchPdm) stack.push("verb.cls.match");
+  }
 
   const ps = vp.verb.subjectPerson;
   const ns = vp.verb.subjectNumber;
