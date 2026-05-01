@@ -1087,24 +1087,26 @@ export const CATALOG: SoundChange[] = [
   },
 ];
 
+const FRONT_VOWEL_SET: ReadonlySet<string> = new Set([
+  "i", "y", "e", "ɛ", "æ", "ø", "œ", "ɪ",
+  "á", "é", "í", "à", "è", "ì", "â", "ê", "î", "ā", "ē", "ī", "ã", "ẽ", "ĩ",
+]);
+const BACK_VOWEL_SET: ReadonlySet<string> = new Set([
+  "u", "o", "ɔ", "ɒ", "ɑ", "a", "ɯ", "ʊ",
+  "ú", "ó", "ù", "ò", "û", "ô", "ū", "ō", "ũ", "õ",
+]);
+const VOWEL_DIACRITIC_RE = /[ːˈˌ˥˧˩]/;
+
 function vowelBackness(p: Phoneme): "front" | "back" | null {
   let base = p;
   while (
     base.length > 1 &&
-    /[ːˈˌ˥˧˩]/.test(base.charAt(base.length - 1))
+    VOWEL_DIACRITIC_RE.test(base.charAt(base.length - 1))
   ) {
     base = base.slice(0, -1);
   }
-  const front = new Set([
-    "i", "y", "e", "ɛ", "æ", "ø", "œ", "ɪ",
-    "á", "é", "í", "à", "è", "ì", "â", "ê", "î", "ā", "ē", "ī", "ã", "ẽ", "ĩ",
-  ]);
-  const back = new Set([
-    "u", "o", "ɔ", "ɒ", "ɑ", "a", "ɯ", "ʊ",
-    "ú", "ó", "ù", "ò", "û", "ô", "ū", "ō", "ũ", "õ",
-  ]);
-  if (front.has(base)) return "front";
-  if (back.has(base)) return "back";
+  if (FRONT_VOWEL_SET.has(base)) return "front";
+  if (BACK_VOWEL_SET.has(base)) return "back";
   return null;
 }
 

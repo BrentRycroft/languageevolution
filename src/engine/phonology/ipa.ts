@@ -35,18 +35,27 @@ export const CONSONANTS: ReadonlySet<Phoneme> = new Set([
   "ⁿp", "ⁿb", "ⁿt", "ⁿd", "ⁿk", "ⁿg", "ⁿj",
 ]);
 
+const IS_VOWEL_CACHE: Record<string, boolean> = Object.create(null);
+const TONE_MARKS_VOWEL = ["˥", "˧", "˩", "˧˥", "˥˩"];
+
 export function isVowel(p: Phoneme): boolean {
   if (VOWELS.has(p)) return true;
-  if (p.endsWith("ː") && VOWELS.has(p.slice(0, -1))) return true;
-  const toneMarks = ["˥", "˧", "˩", "˧˥", "˥˩"];
-  for (const m of toneMarks) {
-    if (p.endsWith(m)) {
-      const base = p.slice(0, -m.length);
-      if (VOWELS.has(base)) return true;
-      if (base.endsWith("ː") && VOWELS.has(base.slice(0, -1))) return true;
+  const cached = IS_VOWEL_CACHE[p];
+  if (cached !== undefined) return cached;
+  let result = false;
+  if (p.endsWith("ː") && VOWELS.has(p.slice(0, -1))) {
+    result = true;
+  } else {
+    for (const m of TONE_MARKS_VOWEL) {
+      if (p.endsWith(m)) {
+        const base = p.slice(0, -m.length);
+        if (VOWELS.has(base)) { result = true; break; }
+        if (base.endsWith("ː") && VOWELS.has(base.slice(0, -1))) { result = true; break; }
+      }
     }
   }
-  return false;
+  IS_VOWEL_CACHE[p] = result;
+  return result;
 }
 
 export function isConsonant(p: Phoneme): boolean {

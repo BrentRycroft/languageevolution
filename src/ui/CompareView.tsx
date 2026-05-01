@@ -97,8 +97,8 @@ export function CompareView() {
         <LexiconCompare langA={state.tree[pair[0]!]!.language} langB={state.tree[pair[1]!]!.language} />
       ) : mode === "narrative" ? (
         <NarrativeCompare
-          langA={state.tree[pair[0]!]!.language}
-          langB={state.tree[pair[1]!]!.language}
+          defaultLangAId={pair[0]!}
+          defaultLangBId={pair[1]!}
         />
       ) : (
         <CognateTrace
@@ -375,12 +375,28 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }) {
+function NarrativeCompare({
+  defaultLangAId,
+  defaultLangBId,
+}: {
+  defaultLangAId: string;
+  defaultLangBId: string;
+}) {
+  const tree = useSimStore((s) => s.state.tree);
   const script = useSimStore((s) => s.displayScript);
   const generation = useSimStore((s) => s.state.generation);
   const [seed, setSeed] = useState<string>(() => randomNarrativeSeed());
   const [lineCount, setLineCount] = useState(6);
   const [genre, setGenre] = useState<"skeleton" | DiscourseGenre>("myth");
+  const [langAId, setLangAId] = useState(defaultLangAId);
+  const [langBId, setLangBId] = useState(defaultLangBId);
+
+  const aliveLeaves = useMemo(
+    () => leafIds(tree).filter((id) => !tree[id]!.language.extinct),
+    [tree],
+  );
+  const langA = tree[langAId]?.language ?? tree[defaultLangAId]!.language;
+  const langB = tree[langBId]?.language ?? tree[defaultLangBId]!.language;
 
   const linesA = useMemo(
     () =>
@@ -414,6 +430,31 @@ function NarrativeCompare({ langA, langB }: { langA: Language; langB: Language }
   return (
     <div className="col-8">
       <div className="row-8 items-center flex-wrap">
+        <select
+          value={langAId}
+          onChange={(e) => setLangAId(e.target.value)}
+          aria-label="Language A"
+          title="Left-column language"
+        >
+          {aliveLeaves.map((id) => (
+            <option key={id} value={id}>
+              {tree[id]!.language.name}
+            </option>
+          ))}
+        </select>
+        <span className="t-muted">vs</span>
+        <select
+          value={langBId}
+          onChange={(e) => setLangBId(e.target.value)}
+          aria-label="Language B"
+          title="Right-column language"
+        >
+          {aliveLeaves.map((id) => (
+            <option key={id} value={id}>
+              {tree[id]!.language.name}
+            </option>
+          ))}
+        </select>
         <button
           className="primary"
           onClick={() => setSeed(randomNarrativeSeed())}

@@ -176,10 +176,21 @@ export type FeatureQuery =
 
 const HEIGHT_ORDER: Height[] = ["low", "mid-low", "mid", "mid-high", "high"];
 
+const FEATURES_CACHE: Record<string, FeatureBundle | null> = Object.create(null);
+const TONE_MARKS = ["˥", "˧", "˩", "˧˥", "˥˩"];
+
 export function featuresOf(p: Phoneme): FeatureBundle | undefined {
-  if (PHONE_FEATURES[p]) return PHONE_FEATURES[p];
-  const toneMarks = ["˥", "˧", "˩", "˧˥", "˥˩"];
-  for (const m of toneMarks) {
+  const direct = PHONE_FEATURES[p];
+  if (direct) return direct;
+  const cached = FEATURES_CACHE[p];
+  if (cached !== undefined) return cached === null ? undefined : cached;
+  const computed = computeFeatures(p);
+  FEATURES_CACHE[p] = computed ?? null;
+  return computed;
+}
+
+function computeFeatures(p: Phoneme): FeatureBundle | undefined {
+  for (const m of TONE_MARKS) {
     if (p.endsWith(m)) {
       const base = p.slice(0, -m.length);
       if (PHONE_FEATURES[base]) return PHONE_FEATURES[base];
@@ -218,16 +229,31 @@ export function featuresOf(p: Phoneme): FeatureBundle | undefined {
   return undefined;
 }
 
+const QUERY_KEYS_CACHE = new WeakMap<object, Array<[string, unknown]>>();
+
+function queryEntries(q: FeatureQuery): Array<[string, unknown]> {
+  const cached = QUERY_KEYS_CACHE.get(q as object);
+  if (cached) return cached;
+  const out: Array<[string, unknown]> = [];
+  for (const [k, v] of Object.entries(q)) {
+    if (k === "type") continue;
+    if (v === undefined) continue;
+    out.push([k, v]);
+  }
+  QUERY_KEYS_CACHE.set(q as object, out);
+  return out;
+}
+
 export function matchesQuery(p: Phoneme, q: FeatureQuery | undefined): boolean {
   if (!q) return true;
   const f = featuresOf(p);
   if (!f) return false;
   if (q.type && f.type !== q.type) return false;
+  const entries = queryEntries(q);
   const fRecord = f as unknown as Record<string, unknown>;
-  for (const [k, v] of Object.entries(q)) {
-    if (k === "type") continue;
-    if (v === undefined) continue;
-    if (fRecord[k] !== v) return false;
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i]!;
+    if (fRecord[e[0]] !== e[1]) return false;
   }
   return true;
 }

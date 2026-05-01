@@ -45,16 +45,30 @@ export function contextMatches(
   return true;
 }
 
+const EMPTY_SITES: readonly number[] = [];
+
 export function matchSites(rule: GeneratedRule, word: WordForm): number[] {
-  const out: number[] = [];
+  let out: number[] | null = null;
   for (let i = 0; i < word.length; i++) {
     const p = word[i]!;
     if (!(p in rule.outputMap)) continue;
     if (!matchesQuery(p, rule.from)) continue;
     if (!contextMatches(rule, word, i)) continue;
+    if (out === null) out = [];
     out.push(i);
   }
-  return out;
+  return out ?? (EMPTY_SITES as number[]);
+}
+
+export function hasMatch(rule: GeneratedRule, word: WordForm): boolean {
+  for (let i = 0; i < word.length; i++) {
+    const p = word[i]!;
+    if (!(p in rule.outputMap)) continue;
+    if (!matchesQuery(p, rule.from)) continue;
+    if (!contextMatches(rule, word, i)) continue;
+    return true;
+  }
+  return false;
 }
 
 export function applyGeneratedRule(
@@ -137,8 +151,7 @@ function familyToCategory(family: RuleFamily): SoundChange["category"] {
 
 export function hasAnyMatch(rule: GeneratedRule, lang: Language): boolean {
   for (const m of Object.keys(lang.lexicon)) {
-    const w = lang.lexicon[m]!;
-    if (matchSites(rule, w).length > 0) return true;
+    if (hasMatch(rule, lang.lexicon[m]!)) return true;
   }
   return false;
 }
@@ -146,7 +159,7 @@ export function hasAnyMatch(rule: GeneratedRule, lang: Language): boolean {
 export function countAffectedForms(rule: GeneratedRule, lang: Language): number {
   let n = 0;
   for (const m of Object.keys(lang.lexicon)) {
-    if (matchSites(rule, lang.lexicon[m]!).length > 0) n++;
+    if (hasMatch(rule, lang.lexicon[m]!)) n++;
   }
   return n;
 }
