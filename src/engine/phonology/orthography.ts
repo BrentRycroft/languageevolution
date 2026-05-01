@@ -18,6 +18,7 @@ export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "dʒ": "j",
   "ts": "ts",
   "dz": "dz",
+  "j": "y",
   "ɛ": "e",
   "ɔ": "o",
   "ə": "e",

@@ -79,6 +79,16 @@ describe("English-baseline romanization", () => {
     expect(romanize(["ð", "ɪ", "s"], fakeLang)).toBe("this");
   });
 
+  it("standalone /j/ renders as 'y' (yes, you, year)", () => {
+    expect(romanize(["j", "ɛ", "s"], fakeLang)).toBe("yes");
+    expect(romanize(["j", "uː"], fakeLang)).toBe("yoo");
+    expect(romanize(["j", "ɪ", "r"], fakeLang)).toBe("yir");
+  });
+
+  it("/dʒ/ still renders as 'j' (jump, jail)", () => {
+    expect(romanize(["dʒ", "ʌ", "m", "p"], fakeLang)).toBe("jump");
+  });
+
   it("language-specific orthography overrides default", () => {
     const langWithCustom = {
       orthography: { "ʌ": "uh" },
