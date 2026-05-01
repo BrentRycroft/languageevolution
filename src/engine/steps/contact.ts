@@ -5,6 +5,7 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { getWorldMap } from "../geo/map";
 import { bumpFrequency } from "../lexicon/frequencyDynamics";
+import { computeBilingualLinks } from "../contact/bilingual";
 
 const AREAL_PHONEME_PROBABILITY = 0.005;
 
@@ -31,6 +32,7 @@ export function stepContact(
   }
 
   const worldMap = getWorldMap(config.mapMode ?? "random", config.seed);
+  lang.bilingualLinks = computeBilingualLinks(lang, state.tree, worldMap);
   const loan = tryBorrow(
     lang,
     state.tree,

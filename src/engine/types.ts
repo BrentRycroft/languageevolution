@@ -108,12 +108,17 @@ export interface Language {
   substrateAccelerationRemaining?: number;
   recentLoanGens?: number[];
   variants?: Record<Meaning, FormVariant[]>;
+  bilingualLinks?: Record<string, number>;
+  speakerCount?: number;
+  socialNetworkClustering?: number;
 }
 
 export interface FormVariant {
   form: WordForm;
   weight: number;
   bornGeneration: number;
+  adoptionFraction?: number;
+  innovator?: "phonology" | "contact" | "drift" | "analogy" | "learner";
 }
 
 export interface LanguageNode {

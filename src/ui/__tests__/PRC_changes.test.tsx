@@ -3,9 +3,9 @@ import { defaultConfig } from "../../engine/config";
 import { useSimStore } from "../../state/store";
 
 describe("PR C — sidebar + dictionary refactor", () => {
-  it("default config: unlimitedLeaves is true (no hard cap)", () => {
+  it("default config: unlimitedLeaves is false (soft cap engages)", () => {
     const cfg = defaultConfig();
-    expect(cfg.tree.unlimitedLeaves).toBe(true);
+    expect(cfg.tree.unlimitedLeaves).toBe(false);
   });
 
   it("default config: maxLeaves is the soft-cap target (≥ 8)", () => {
