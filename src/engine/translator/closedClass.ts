@@ -40,7 +40,7 @@ function pickPhone(
   return inventory[hash % inventory.length]!;
 }
 
-function synthesise(lang: Language, lemma: ClosedClassLemma): WordForm {
+function synthesise(lang: Language, lemma: string): WordForm {
   const inv = lang.phonemeInventory;
   const vowels = inv.segmental.filter((p) =>
     /^[aeiouɑəɛɪɔʊʌæiː]/i.test(p),
@@ -88,5 +88,7 @@ export function closedClassForm(
   lang: Language,
   lemma: string,
 ): WordForm | undefined {
-  return closedClassTable(lang)[lemma];
+  const direct = closedClassTable(lang)[lemma];
+  if (direct) return direct;
+  return synthesise(lang, lemma);
 }

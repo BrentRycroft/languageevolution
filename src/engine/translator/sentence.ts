@@ -62,6 +62,12 @@ const AUX_VERBS = new Set([
 ]);
 const COPULAS = new Set(["am", "is", "are", "was", "were", "be"]);
 const NEGATORS = new Set(["not", "n't", "never"]);
+const INTERJECTIONS = new Set([
+  "yes", "no", "ok", "okay", "yeah", "nope",
+  "hi", "hello", "hey", "bye", "goodbye",
+  "wow", "oh", "ah", "ouch", "alas", "ugh", "uh", "um",
+  "thanks", "sorry", "please", "welcome",
+]);
 const BARE_NUMERALS = new Set([
   "zero", "one", "two", "three", "four", "five", "six", "seven",
   "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen",
@@ -293,6 +299,10 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       continue;
     }
     if (NEGATORS.has(w)) {
+      tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
+      continue;
+    }
+    if (INTERJECTIONS.has(w)) {
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
     }
@@ -574,6 +584,19 @@ function translateFragment(
           emitClosedClass("not", "PUNCT", "neg");
         } else if (WH_LEMMAS.has(tok.lemma)) {
           emitClosedClass(tok.lemma, "PUNCT", "wh");
+        } else if (INTERJECTIONS.has(tok.lemma)) {
+          const lex = lang.lexicon[tok.lemma];
+          const form = lex ?? closedClassForm(lang, tok.lemma) ?? [];
+          if (form.length > 0) {
+            targetTokens.push({
+              englishLemma: tok.lemma,
+              englishTag: "PUNCT",
+              targetForm: form,
+              targetSurface: form.join(""),
+              glossNote: "interj",
+              resolution: lex ? "direct" : "concept",
+            });
+          }
         }
         continue;
       case "AUX":
@@ -706,6 +729,22 @@ function translateViaTree(
       "",
     resolution: r.resolution ?? "concept",
   }));
+
+  for (const tok of englishTokens) {
+    if (tok.tag !== "PUNCT") continue;
+    if (!INTERJECTIONS.has(tok.lemma)) continue;
+    const lex = lang.lexicon[tok.lemma];
+    const form = lex ?? closedClassForm(lang, tok.lemma) ?? [];
+    if (form.length === 0) continue;
+    translated.unshift({
+      englishLemma: tok.lemma,
+      englishTag: "PUNCT",
+      targetForm: form,
+      targetSurface: form.join(""),
+      glossNote: "interj",
+      resolution: lex ? "direct" : "concept",
+    });
+  }
 
   const notes = missing.length === 0
     ? `Resolved every word via the dictionary.`
