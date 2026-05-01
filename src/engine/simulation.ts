@@ -13,6 +13,7 @@ import { stepContact } from "./steps/contact";
 import { stepTreeSplit, stepDeath, precomputeClosenessVector } from "./steps/tree";
 import { stepTaboo } from "./steps/taboo";
 import { stepLearner } from "./steps/learner";
+import { stepArealTypology } from "./steps/arealTypology";
 import { computeTierCandidate, lexicalCapacity, populationCap } from "./lexicon/tier";
 import { pushEvent } from "./steps/helpers";
 import { TIER_LABELS } from "./lexicon/concepts";
@@ -105,6 +106,7 @@ export function createSimulation(
       }
       if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
       stepContact(state, lang, config, rng, nextGen);
+      stepArealTypology(state, lang, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
       const stillLeaf = (state.tree[leafId]?.childrenIds.length ?? 0) === 0;
       if (config.modes.death && stillLeaf) stepDeath(state, lang, config, rng, closenessCache);
