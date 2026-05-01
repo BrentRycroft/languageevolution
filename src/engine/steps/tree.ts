@@ -103,7 +103,12 @@ export function stepDeath(
   if (age < config.tree.minGenerationsBeforeDeath) return;
   const pressure = config.tree.unlimitedLeaves
     ? 1
-    : 1 + Math.max(0, aliveLeaves.length - config.tree.maxLeaves) / Math.max(1, config.tree.maxLeaves / 3);
+    : (() => {
+        const overshoot = aliveLeaves.length - config.tree.maxLeaves;
+        if (overshoot <= 0) return 1;
+        const scale = Math.max(2, config.tree.maxLeaves / 3);
+        return Math.min(60, Math.exp(overshoot / scale));
+      })()
 
   let myCloseness: number;
   let meanCloseness: number;

@@ -32,7 +32,7 @@ export function defaultConfig(): SimulationConfig {
     tree: {
       splitProbabilityPerGeneration: 0.012,
       maxLeaves: 12,
-      unlimitedLeaves: true,
+      unlimitedLeaves: false,
       minGenerationsBetweenSplits: 12,
       deathProbabilityPerGeneration: 0.0035,
       minGenerationsBeforeDeath: 20,
