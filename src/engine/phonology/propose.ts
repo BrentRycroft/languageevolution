@@ -105,31 +105,86 @@ export function proposeOneRule(
   return null;
 }
 
+/**
+ * Lenition fallback step for consonantal push-chains. Maps each common stop /
+ * voiced-stop to its first lenited variant (stop → fricative). When a fortition
+ * rule e.g. b→p collides with the existing /p/ in the inventory, the existing
+ * /p/ pushes to its lenition target /f/ rather than merging.
+ */
+const LENITION_STEP: Record<Phoneme, Phoneme> = {
+  p: "f",
+  t: "θ",
+  k: "h",
+  b: "v",
+  d: "ð",
+  g: "ɣ",
+};
+
 export function proposePushChain(
   lang: Language,
   seed: GeneratedRule,
   generation: number,
 ): GeneratedRule | null {
-  if (seed.templateId !== "vowel_shift.single_raise") return null;
-  const entries = Object.entries(seed.outputMap);
-  if (entries.length !== 1) return null;
-  const [, target] = entries[0]!;
-  if (!lang.phonemeInventory.segmental.includes(target)) return null;
-  const pushed = shiftHeight(target, 1);
-  if (!pushed || pushed === target) return null;
-  if (seed.outputMap[pushed] !== undefined) return null;
-  return {
-    id: `${seed.id}.push`,
-    family: "vowel_shift",
-    templateId: "vowel_shift.push_chain",
-    description: `push-chain: /${target}/ → /${pushed}/ (avoids collision from ${seed.description})`,
-    from: { type: "vowel" },
-    context: { locus: "any" },
-    outputMap: { [target]: pushed },
-    birthGeneration: generation,
-    lastFireGeneration: generation,
-    strength: INITIAL_STRENGTH,
-  };
+  // Vowel raising chain (legacy): when X raises to Y and Y already exists,
+  // Y pushes one step further up the height ladder.
+  if (seed.templateId === "vowel_shift.single_raise") {
+    const entries = Object.entries(seed.outputMap);
+    if (entries.length !== 1) return null;
+    const [, target] = entries[0]!;
+    if (!lang.phonemeInventory.segmental.includes(target)) return null;
+    const pushed = shiftHeight(target, 1);
+    if (!pushed || pushed === target) return null;
+    if (seed.outputMap[pushed] !== undefined) return null;
+    if (lang.phonemeInventory.segmental.includes(pushed)) return null;
+    return {
+      id: `${seed.id}.push`,
+      family: "vowel_shift",
+      templateId: "vowel_shift.push_chain",
+      description: `push-chain: /${target}/ → /${pushed}/ (avoids collision from ${seed.description})`,
+      from: { type: "vowel" },
+      context: { locus: "any" },
+      outputMap: { [target]: pushed },
+      birthGeneration: generation,
+      lastFireGeneration: generation,
+      strength: INITIAL_STRENGTH,
+    };
+  }
+
+  // Consonantal lenition chain: when a seed remaps a voiced stop to a
+  // voiceless stop and the voiceless target was already in the inventory,
+  // chain the existing target to its lenition step (e.g. devoicing.bdg
+  // sends b→p; if /p/ existed, it now lenites to /f/).
+  if (seed.family === "fortition" || seed.family === "lenition") {
+    for (const target of new Set(Object.values(seed.outputMap))) {
+      if (!lang.phonemeInventory.segmental.includes(target)) continue;
+      // Only push if the target was a "victim" of the seed: something else
+      // is mapping into it. Otherwise it's not a collision.
+      const isVictim = Object.entries(seed.outputMap).some(
+        ([from, to]) => to === target && from !== target,
+      );
+      if (!isVictim) continue;
+      const pushed = LENITION_STEP[target];
+      if (!pushed || pushed === target) continue;
+      if (seed.outputMap[pushed] !== undefined) continue;
+      if (lang.phonemeInventory.segmental.includes(pushed)) continue;
+      const tFeatures = featuresOf(target);
+      if (!tFeatures || tFeatures.type !== "consonant") continue;
+      return {
+        id: `${seed.id}.push.${target}`,
+        family: "lenition",
+        templateId: "lenition.push_chain",
+        description: `push-chain: /${target}/ → /${pushed}/ (avoids collision from ${seed.description})`,
+        from: { type: "consonant" },
+        context: { locus: "any" },
+        outputMap: { [target]: pushed },
+        birthGeneration: generation,
+        lastFireGeneration: generation,
+        strength: INITIAL_STRENGTH,
+      };
+    }
+  }
+
+  return null;
 }
 
 export function ageAndRetire(
