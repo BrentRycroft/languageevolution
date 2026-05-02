@@ -6,6 +6,7 @@ import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
 import { CompareView } from "./CompareView";
+import { CognateExplorer } from "./CognateExplorer";
 import { MapView } from "./MapView";
 import { SoundLawsView } from "./SoundLawsView";
 import { Glossary } from "./Glossary";
@@ -305,6 +306,12 @@ export function App() {
           <div className="panel panel-single" role="tabpanel" id="tabpanel-compare" aria-labelledby="tab-compare">
             <h3>Compare</h3>
             <CompareView />
+          </div>
+        )}
+        {activeTab === "cognates" && (
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-cognates" aria-labelledby="tab-cognates">
+            <h3>Cognates</h3>
+            <CognateExplorer />
           </div>
         )}
         {activeTab === "stats" && (

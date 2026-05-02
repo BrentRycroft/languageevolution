@@ -15,6 +15,7 @@ export type TabId =
   | "events"
   | "translate"
   | "compare"
+  | "cognates"
   | "stats"
   | "glossary";
 
@@ -46,6 +47,11 @@ export const TABS: TabSpec[] = [
     id: "compare",
     label: "Compare",
     title: "Side-by-side comparison of two languages — lexicon, narrative, cognates",
+  },
+  {
+    id: "cognates",
+    label: "Cognates",
+    title: "Cognate-set explorer: every daughter's form for one meaning + MSA-reconstructed proto-form",
   },
   { id: "stats", label: "Stats", title: "Per-language stats dashboard" },
   { id: "glossary", label: "Glossary", title: "Reference for rule families, shift taxa, register" },

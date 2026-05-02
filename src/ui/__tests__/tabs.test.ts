@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { TABS } from "../tabs";
 
 describe("TABS — single source of truth for tab bar + keyboard shortcuts", () => {
-  it("contains 12 tabs", () => {
-    expect(TABS).toHaveLength(12);
+  it("contains 13 tabs", () => {
+    expect(TABS).toHaveLength(13);
   });
 
   it("each tab has a unique id", () => {
@@ -41,9 +41,10 @@ describe("TABS — single source of truth for tab bar + keyboard shortcuts", () 
     expect(TABS[6]?.id).toBe("laws");
   });
 
-  it("compare/stats/glossary need 10/11/12 (overflow from number row)", () => {
+  it("compare/cognates/stats/glossary need 10/11/12/13 (overflow from number row)", () => {
     expect(TABS[9]?.id).toBe("compare");
-    expect(TABS[10]?.id).toBe("stats");
-    expect(TABS[11]?.id).toBe("glossary");
+    expect(TABS[10]?.id).toBe("cognates");
+    expect(TABS[11]?.id).toBe("stats");
+    expect(TABS[12]?.id).toBe("glossary");
   });
 });
