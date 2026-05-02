@@ -3,6 +3,7 @@ import { leafIds, pickFirstSplitChildCount, splitLeaf } from "./tree/split";
 import { makeRng, type Rng } from "./rng";
 import { buildInitialState } from "./steps/init";
 import { stepPhonology, stepArealWaves } from "./steps/phonology";
+import { validateConfig, summarizeValidation } from "./configValidation";
 import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { stepSemantics } from "./steps/semantics";
@@ -35,8 +36,35 @@ export function createSimulation(
   config: SimulationConfig,
   _options: SimulationOptions = {},
 ): Simulation {
+  const issues = validateConfig(config);
+  if (issues.length > 0) {
+    const msg = summarizeValidation(issues);
+    if (msg) console.warn(msg);
+  }
   let state: SimulationState = buildInitialState(config);
 
+  /**
+   * Step ordering inside step():
+   *
+   *   1. (gen 0 only) splitLeaf the proto into N daughters via
+   *      pickFirstSplitChildCount.
+   *   2. For each leaf:
+   *      a. stepPhonology — apply active rules to the lexicon.
+   *      b. stepGenesis — coin / borrow / derive new words.
+   *         (Phonology runs before genesis on purpose: a word coined
+   *         this generation should not be eroded by phonology in the
+   *         same step. New words enter the next-generation lexicon.)
+   *      c. stepGrammar / stepMorphology — drift typology + paradigms.
+   *      d. stepSemantics — drift, recarve, bleach.
+   *      e. stepContact — borrowing from neighbors.
+   *      f. stepArealTypology — areal pressure recomputation.
+   *      g. stepTreeSplit — possibly split this leaf.
+   *      h. stepDeath (only if still a leaf, i.e. it didn't just split)
+   *         — soft-cap-aware death pressure (uses generationsOverCap).
+   *   3. stepArealWaves — propagate any waves that were enqueued.
+   *   4. stepCreolization — possibly merge contacting languages.
+   *   5. Recompute generationsOverCap for next gen's death pressure.
+   */
   const step = (): void => {
     const rng = makeRng(state.rngState);
     const nextGen = state.generation + 1;
