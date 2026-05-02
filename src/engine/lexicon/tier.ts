@@ -4,6 +4,41 @@ import type { Tier } from "./concepts";
 import { leafIds } from "../tree/leafIds";
 
 const AGE_PER_TIER_STEP = 1500;
+
+/**
+ * Number of consecutive tier-check ticks (each = 20 gens) the language must
+ * remain eligible for a higher tier before the transition fires. Provides
+ * hysteresis: a one-off speaker spike that fades away within ~40 gens does
+ * not trigger an upgrade. Two ticks ≈ 40-generation sustained eligibility.
+ */
+export const TIER_HYSTERESIS_TICKS = 2;
+
+/**
+ * Pure hysteresis transition rule: given prior tier, candidate tier
+ * (computed by computeTierCandidate), and current streak, returns the
+ * resulting tier and updated streak.
+ *
+ * - candidate > prior → streak grows; promote only when streak reaches
+ *   TIER_HYSTERESIS_TICKS (then resets to 0).
+ * - candidate <= prior → streak resets to 0; no promotion.
+ *
+ * Extracted as a pure function so it's directly testable; consumed by
+ * simulation.ts step().
+ */
+export function applyTierHysteresis(
+  priorTier: Tier,
+  candidate: Tier,
+  priorStreak: number,
+): { nextTier: Tier; nextStreak: number; promoted: boolean } {
+  if (candidate <= priorTier) {
+    return { nextTier: priorTier, nextStreak: 0, promoted: false };
+  }
+  const incremented = priorStreak + 1;
+  if (incremented >= TIER_HYSTERESIS_TICKS) {
+    return { nextTier: candidate, nextStreak: 0, promoted: true };
+  }
+  return { nextTier: priorTier, nextStreak: incremented, promoted: false };
+}
 const POP_TIER_FLOORS: ReadonlyArray<{ speakers: number; tier: Tier }> = [
   { speakers: 5_000, tier: 1 },
   { speakers: 80_000, tier: 2 },
