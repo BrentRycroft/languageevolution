@@ -6,6 +6,13 @@ on:
       - main
   workflow_dispatch:
 
+# Cancel queued / in-progress checks for the same PR (or branch) when a new
+# push lands. Without this, rapid commits stack runs against the limited
+# ubuntu-latest pool and "All GitHub-hosted runners are busy" pile-ups.
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
