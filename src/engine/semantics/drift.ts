@@ -8,6 +8,7 @@ import { isFormLegal } from "../phonology/wordShape";
 import { samePOS } from "../lexicon/pos";
 import { corenessResistance } from "../lexicon/coreness";
 import { CONCEPT_IDS, tierOf, type Tier } from "../lexicon/concepts";
+import { recordColexification } from "./colexification";
 import { BASIC_240 } from "../lexicon/basic240";
 
 const EXPANSION_IDS_BY_TIER: ReadonlyMap<Tier, readonly string[]> = (() => {
@@ -173,6 +174,11 @@ export function driftOneMeaning(
         delete lang.localNeighbors[m];
         delete lang.lastChangeGeneration[m];
         delete lang.lexicon[m];
+      } else {
+        // Both meanings now share the same form. Persist the relationship
+        // so the UI / reconstruction can surface "concept m is colexified
+        // with target in this language."
+        recordColexification(lang, m, target);
       }
       return {
         from: m,
