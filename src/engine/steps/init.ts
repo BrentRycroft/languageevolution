@@ -13,6 +13,7 @@ import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
+import { assignAllGenders } from "../morphology/gender";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
 import {
   getWorldMap,
@@ -100,6 +101,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   seedNativeProvenance(rootLang);
+  assignAllGenders(rootLang);
   const mapMode = config.mapMode ?? "random";
   const worldMap = getWorldMap(mapMode, config.seed);
   let originId: number | null =

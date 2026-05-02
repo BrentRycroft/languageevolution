@@ -54,8 +54,19 @@ export type MorphCategory =
 
 export type StemShape = "vowel-final" | "consonant-final";
 
+/**
+ * A `when` predicate selects an affix variant for a given stem.
+ *
+ * - `"vowel-final"` / `"consonant-final"` — match the last segment.
+ * - `"gender:N"` — match nouns/adjectives whose gender is N.
+ *
+ * For an MVP, the matcher checks gender first (if specified and provided),
+ * then falls back to stem-shape variants.
+ */
+export type ParadigmCondition = StemShape | `gender:${number}`;
+
 export interface ParadigmVariant {
-  when: StemShape;
+  when: ParadigmCondition;
   affix: Phoneme[];
 }
 

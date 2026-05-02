@@ -101,6 +101,12 @@ export interface Language {
     Meaning,
     Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
   >;
+  /**
+   * Per-noun gender assignment when grammar.genderCount > 0.
+   * Values are 0..(genderCount-1). Set lazily; missing entries get
+   * heuristically assigned the first time they are needed.
+   */
+  gender?: Record<Meaning, number>;
   derivationalSuffixes?: Array<{ affix: WordForm; tag: string }>;
   culturalTier?: 0 | 1 | 2 | 3;
   lexicalCapacity?: number;
