@@ -1,5 +1,6 @@
 import type { Language, SimulationConfig } from "../types";
 import { driftGrammar } from "../grammar/evolve";
+import { enforceTypologicalUniversals } from "../grammar/universals";
 import {
   maybeGrammaticalize,
   maybeMergeParadigms,
@@ -41,6 +42,16 @@ export function stepGrammar(
       generation,
       kind: "grammar_shift",
       description: `${s.feature}: ${String(s.from)} → ${String(s.to)}`,
+    });
+  }
+  // Soft typological-consistency repair: low-probability nudge of features
+  // that violate well-attested implicational universals.
+  const repairs = enforceTypologicalUniversals(lang, rng);
+  for (const r of repairs) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `${String(r.feature)} → ${String(r.to)} (consistency: ${r.reason})`,
     });
   }
   if (rng.chance(0.3)) {
