@@ -62,22 +62,30 @@ export function Translator() {
    * translate / translateBetween are deterministic for fixed lang+text, so
    * the memo is correct.
    */
-  const sentenceResult: SentenceTranslation | null = useMemo(() => {
-    if (mode !== "sentence" || !lang || !debouncedText.trim()) return null;
+  /**
+   * Multi-sentence: split input on terminal punctuation (. ! ?) and
+   * translate each piece independently. Each row gets its own
+   * SentenceTranslation so the panel can show them stacked, like
+   * Google Translate when you paste a paragraph.
+   */
+  const sentenceResults: SentenceTranslation[] = useMemo(() => {
+    if (mode !== "sentence" || !lang || !debouncedText.trim()) return [];
+    const trimmed = debouncedText.trim();
+    const pieces = splitSentences(trimmed);
     if (reverseDirection) {
-      // Target → English: parse user's input as target tokens, run
-      // glossToEnglish on the resulting TranslatedToken[].
-      const tokens = reverseParseToTokens(lang, debouncedText.trim());
-      return {
-        english: debouncedText.trim(),
-        englishTokens: [],
-        targetTokens: tokens,
-        arranged: tokens.map((t) => t.targetSurface),
-        missing: tokens.filter((t) => t.englishLemma === "?").map((t) => t.targetSurface),
-        notes: "",
-      };
+      return pieces.map((piece) => {
+        const tokens = reverseParseToTokens(lang, piece);
+        return {
+          english: piece,
+          englishTokens: [],
+          targetTokens: tokens,
+          arranged: tokens.map((t) => t.targetSurface),
+          missing: tokens.filter((t) => t.englishLemma === "?").map((t) => t.targetSurface),
+          notes: "",
+        };
+      });
     }
-    return translateSentence(lang, debouncedText.trim());
+    return pieces.map((piece) => translateSentence(lang, piece));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang?.id, state.generation, mode, debouncedText, reverseDirection]);
 
@@ -261,8 +269,17 @@ export function Translator() {
           </div>
         )}
 
-      {mode === "sentence" && sentenceResult && lang && (
-        <SentenceOutput result={sentenceResult} lang={lang} script={script} />
+      {mode === "sentence" && lang && sentenceResults.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {sentenceResults.map((result, i) => (
+            <SentenceOutput
+              key={i}
+              result={result}
+              lang={lang}
+              script={script}
+            />
+          ))}
+        </div>
       )}
 
       {wordResult && (mode === "word" || mode === "lang-to-lang") && (
@@ -305,6 +322,20 @@ export function Translator() {
       )}
     </div>
   );
+}
+
+/**
+ * Split a paragraph on terminal punctuation (. ! ?) so multi-sentence
+ * input renders as stacked rows like Google Translate. Trailing
+ * punctuation is dropped from each piece since translateSentence /
+ * tokeniseEnglish already handle their own punctuation. Empty pieces
+ * (consecutive punctuation, whitespace) are filtered.
+ */
+function splitSentences(text: string): string[] {
+  return text
+    .split(/[.!?]+/g)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }
 
 function SentenceOutput({
