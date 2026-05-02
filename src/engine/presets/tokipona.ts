@@ -163,6 +163,9 @@ export function presetTokipona(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    // Toki Pona is deliberately atavistic — small lexicon, no irregular
+    // morphology, no writing tradition. Tier 0 keeps it that way.
+    seedCulturalTier: 0,
     seedStressPattern: "initial",
     seedGrammar: {
       wordOrder: "SVO",

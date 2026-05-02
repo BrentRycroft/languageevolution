@@ -268,6 +268,26 @@ const MORPHOLOGY: Morphology = {
   },
 };
 
+/**
+ * Phase 20e-2: Proto-Bantu suppletion fragments.
+ *
+ * Bantu morphology is dominated by noun-class agreement (handled by the
+ * paradigm system, not suppletion), but the copula and a few high-
+ * frequency verbs do show stem alternation across tenses. These are
+ * conservative reconstructions; descendants will diverge.
+ */
+const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+  // *-li* perfect-stem of "be" — the copula has distinct stems for the
+  // present-progressive vs. anterior tenses across most Bantu daughters.
+  be: { "verb.tense.past": ["a˥", "l", "i"] },
+  // *-end-* "go" → past *-end-il-e* (long-form perfect)
+  go: { "verb.tense.past": ["e", "n", "d", "i", "l", "e"] },
+  // *-on-* "see" → *-on-il-e*
+  see: { "verb.tense.past": ["o", "n", "i", "l", "e"] },
+  // child class-1 / class-2 plural alternation: mwana / bana
+  child: { "noun.num.pl": ["b", "a˩", "n", "a"] },
+};
+
 export function presetBantu(): SimulationConfig {
   const base = defaultConfig();
   return {
@@ -276,6 +296,8 @@ export function presetBantu(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    seedSuppletion: SUPPLETION,
+    seedCulturalTier: 1,
     seedStressPattern: "penult",
     seedGrammar: {
       wordOrder: "SVO",
