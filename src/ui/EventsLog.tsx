@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSimStore } from "../state/store";
 import type { LanguageEvent } from "../engine/types";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import { CopyButton } from "./CopyButton";
 import { downloadAs, toCsv, slugForFile } from "./exportUtils";
+import { ListSearch } from "./ListSearch";
 
 const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   sound_change: "var(--accent)",
@@ -39,10 +40,23 @@ export function EventsLog() {
     (s) => s.config.yearsPerGeneration ?? YEARS_PER_GENERATION,
   );
 
-  const events = useMemo(
+  const allEvents = useMemo(
     () => (selected ? selected.events.slice().reverse() : []),
     [selected?.events, selected],
   );
+  const [filter, setFilter] = useState("");
+
+  const events = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return allEvents;
+    return allEvents.filter(
+      (e) =>
+        KIND_LABEL[e.kind].toLowerCase().includes(q) ||
+        e.kind.toLowerCase().includes(q) ||
+        e.description.toLowerCase().includes(q) ||
+        `g${e.generation}`.includes(q),
+    );
+  }, [allEvents, filter]);
 
   if (!selected) {
     return (
@@ -75,11 +89,23 @@ export function EventsLog() {
           display: "flex",
           alignItems: "center",
           gap: 6,
+          flexWrap: "wrap",
         }}
       >
-        <span style={{ flex: 1 }}>
-          {selected.name} · {events.length} events
+        <span>
+          {selected.name} ·{" "}
+          {filter.trim() ? `${events.length}/${allEvents.length}` : events.length}{" "}
+          events
         </span>
+        {allEvents.length > 0 && (
+          <ListSearch
+            value={filter}
+            onChange={setFilter}
+            placeholder="Filter events…"
+            label="Filter events by kind, description, or generation"
+            style={{ flex: 1, minWidth: 160 }}
+          />
+        )}
         {events.length > 0 && (
           <>
             <CopyButton text={copyText} title="Copy events as TSV" />

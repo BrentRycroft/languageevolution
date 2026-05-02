@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSimStore } from "../state/store";
 import type { GeneratedRule } from "../engine/phonology/generated";
+import { ListSearch } from "./ListSearch";
 
 function shortId(id: string): string {
   const parts = id.split(".");
@@ -60,14 +61,41 @@ export function SoundLawsView() {
 
   const active = lang.activeRules ?? [];
   const retired = lang.retiredRules ?? [];
+  const [filter, setFilter] = useState("");
+
+  const matchesFilter = (r: GeneratedRule): boolean => {
+    if (!filter.trim()) return true;
+    const q = filter.trim().toLowerCase();
+    return (
+      r.id.toLowerCase().includes(q) ||
+      r.family.toLowerCase().includes(q) ||
+      contextSummary(r).toLowerCase().includes(q) ||
+      ruleExamples(r).toLowerCase().includes(q)
+    );
+  };
+
+  const filteredActive = active.filter(matchesFilter);
+  const filteredRetired = retired.filter(matchesFilter);
+  const totalMatching = filteredActive.length + filteredRetired.length;
+  const totalAll = active.length + retired.length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <header style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+      <header style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
         <h4 style={{ margin: 0 }}>{lang.name}</h4>
         <span className="label-line">
           {active.length} active · {retired.length} retired · gen {generation}
         </span>
+        {totalAll > 0 && (
+          <ListSearch
+            value={filter}
+            onChange={setFilter}
+            placeholder="Filter rules…"
+            label="Filter rules by id, family, context, or example"
+            countLabel={filter.trim() ? `${totalMatching}/${totalAll}` : undefined}
+            style={{ flex: 1, minWidth: 180, maxWidth: 320 }}
+          />
+        )}
       </header>
 
       <section>
@@ -87,7 +115,7 @@ export function SoundLawsView() {
               </tr>
             </thead>
             <tbody>
-              {active
+              {filteredActive
                 .slice()
                 .sort((a, b) => b.strength - a.strength)
                 .map((r) => (
@@ -119,7 +147,7 @@ export function SoundLawsView() {
               </tr>
             </thead>
             <tbody>
-              {retired
+              {filteredRetired
                 .slice()
                 .reverse()
                 .slice(0, 20)
