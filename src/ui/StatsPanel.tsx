@@ -44,6 +44,20 @@ export function StatsPanel() {
         count++;
       }
     }
+    // Phase 20 additions: visible counts for synonyms, frozen
+    // orthography, and derivation chains.
+    const altCount = lang.altForms
+      ? Object.keys(lang.altForms).reduce(
+          (s, k) => s + (lang.altForms![k]?.length ?? 0),
+          0,
+        )
+      : 0;
+    const frozenSpellings = lang.lexicalSpelling
+      ? Object.keys(lang.lexicalSpelling).length
+      : 0;
+    const derivationChains = lang.wordOriginChain
+      ? Object.keys(lang.wordOriginChain).length
+      : 0;
     return {
       id,
       name: lang.name,
@@ -54,6 +68,9 @@ export function StatsPanel() {
       conservatism: lang.conservatism,
       tier: (lang.culturalTier ?? 0) as Tier,
       speakers: lang.speakers ?? 0,
+      altCount,
+      frozenSpellings,
+      derivationChains,
     };
   });
 
@@ -71,6 +88,18 @@ export function StatsPanel() {
             <th className="text-center">tier</th>
             <th className="text-right">age</th>
             <th className="text-right">words</th>
+            <th className="text-right" title="Alternate forms (synonyms / lexical doublets)">
+              alts
+            </th>
+            <th className="text-right" title="Frozen lexical spellings (Phase 20a)">
+              spell❄
+            </th>
+            <th
+              className="text-right"
+              title="Words coined via targeted derivation (e.g. freedom ← free + -dom)"
+            >
+              deriv
+            </th>
             <th className="text-right">δ</th>
           </tr>
         </thead>
@@ -100,6 +129,9 @@ export function StatsPanel() {
                   {formatElapsed(s.age, yearsPerGen)}
                 </td>
                 <td className="text-right">{s.words}</td>
+                <td className="text-right">{s.altCount || ""}</td>
+                <td className="text-right">{s.frozenSpellings || ""}</td>
+                <td className="text-right">{s.derivationChains || ""}</td>
                 <td className="text-right">{s.mean.toFixed(2)}</td>
               </tr>
             );
