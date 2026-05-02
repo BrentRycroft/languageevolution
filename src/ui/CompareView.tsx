@@ -6,6 +6,8 @@ import { formatForm } from "../engine/phonology/display";
 import type { Language, LanguageEvent, LanguageTree } from "../engine/types";
 import { diffActiveRules, diffOtRankings } from "../engine/analysis/ruleDiff";
 import { ScriptPicker } from "./ScriptPicker";
+import { CopyButton } from "./CopyButton";
+import { downloadAs, slugForFile } from "./exportUtils";
 import {
   generateNarrative,
   randomNarrativeSeed,
@@ -543,9 +545,33 @@ function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[]
           color: "var(--muted)",
           fontFamily: "var(--font-mono)",
           marginBottom: 8,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
         }}
       >
-        {lang.name} · word order {lang.grammar.wordOrder} · {Object.keys(lang.morphology.paradigms).length} paradigms
+        <span style={{ flex: 1 }}>
+          {lang.name} · word order {lang.grammar.wordOrder} · {Object.keys(lang.morphology.paradigms).length} paradigms
+        </span>
+        <CopyButton
+          text={() =>
+            lines.map((l) => `${l.text}\n${l.gloss}`).join("\n\n")
+          }
+          title="Copy narrative (target + English) to clipboard"
+        />
+        <button
+          type="button"
+          className="ghost"
+          onClick={() => {
+            const txt = lines.map((l) => `${l.text}\n${l.gloss}`).join("\n\n") + "\n";
+            downloadAs(`narrative-${slugForFile(lang.name)}.txt`, txt);
+          }}
+          title="Download narrative as text"
+          aria-label="Download narrative as text"
+          style={{ fontSize: 11, padding: "2px 8px" }}
+        >
+          TXT
+        </button>
       </div>
       {lines.map((line, i) => (
         <div key={`${line.gloss}-${i}`} className="mb-6">

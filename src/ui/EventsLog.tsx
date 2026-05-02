@@ -3,6 +3,8 @@ import { useSimStore } from "../state/store";
 import type { LanguageEvent } from "../engine/types";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
+import { CopyButton } from "./CopyButton";
+import { downloadAs, toCsv, slugForFile } from "./exportUtils";
 
 const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   sound_change: "var(--accent)",
@@ -50,10 +52,49 @@ export function EventsLog() {
     );
   }
 
+  const copyText = () =>
+    events
+      .map(
+        (e) =>
+          `g${e.generation}\t${KIND_LABEL[e.kind]}\t${e.description}`,
+      )
+      .join("\n");
+
+  const onExportCsv = () => {
+    const rows = events.map((e) => [e.generation, KIND_LABEL[e.kind], e.description]);
+    const csv = toCsv(["generation", "kind", "description"], rows);
+    downloadAs(`events-${slugForFile(selected.name)}-g${selected.events.at(-1)?.generation ?? 0}.csv`, csv, "text/csv;charset=utf-8");
+  };
+
   return (
     <div style={{ fontSize: 12 }}>
-      <div style={{ marginBottom: 6, color: "var(--muted)" }}>
-        {selected.name} · {events.length} events
+      <div
+        style={{
+          marginBottom: 6,
+          color: "var(--muted)",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <span style={{ flex: 1 }}>
+          {selected.name} · {events.length} events
+        </span>
+        {events.length > 0 && (
+          <>
+            <CopyButton text={copyText} title="Copy events as TSV" />
+            <button
+              type="button"
+              className="ghost"
+              onClick={onExportCsv}
+              title="Download events as CSV"
+              aria-label="Download events as CSV"
+              style={{ fontSize: 11, padding: "2px 8px" }}
+            >
+              CSV
+            </button>
+          </>
+        )}
       </div>
       {events.length === 0 && (
         <div className="t-muted">
