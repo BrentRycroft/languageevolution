@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { formToString } from "../engine/phonology/ipa";
+import { formatForm } from "../engine/phonology/display";
 import { leafIds } from "../engine/tree/split";
 import { useDebounced } from "./hooks/useDebounced";
 import { SearchIcon } from "./icons";
@@ -23,6 +24,7 @@ export function GlobalSearch({
   const selectLanguage = useSimStore((s) => s.selectLanguage);
   const selectMeaning = useSimStore((s) => s.selectMeaning);
   const setLexiconSearch = useSimStore((s) => s.setLexiconSearch);
+  const script = useSimStore((s) => s.displayScript);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(0);
@@ -40,20 +42,23 @@ export function GlobalSearch({
       const lex = node.language.lexicon;
       for (const m of Object.keys(lex)) {
         const form = lex[m]!;
+        // Always check IPA for matching (so a user typing IPA finds it),
+        // but display the form via the active script (so romanized users
+        // see romanized hits).
         const ipa = formToString(form).toLowerCase();
         if (m.toLowerCase().includes(q) || ipa.includes(q)) {
           out.push({
             langId: lid,
             langName: node.language.name,
             meaning: m,
-            form: formToString(form),
+            form: formatForm(form, node.language, script, m),
           });
           if (out.length >= MAX_HITS) return out;
         }
       }
     }
     return out;
-  }, [debounced, state]);
+  }, [debounced, state, script]);
 
   useEffect(() => {
     if (!open) return;
