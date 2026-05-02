@@ -15,6 +15,7 @@ import { AchievementToast } from "./Achievements";
 import { PersistenceToast } from "./PersistenceToast";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { UpdateBanner } from "./UpdateBanner";
+import { DebugOverlay } from "./DebugOverlay";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
 import { StatsPanel } from "./StatsPanel";
@@ -135,6 +136,7 @@ export function App() {
       <PersistenceToast />
       <ConfirmDialog />
       <UpdateBanner />
+      <DebugOverlay />
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       <header className="header">
         <button
