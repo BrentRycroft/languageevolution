@@ -34,6 +34,14 @@ export interface AbstractTemplate {
   };
   introducesEntity?: boolean;
   topicSubject?: boolean;
+  /**
+   * Sentence-level negation. When true, the composer emits a NEG token
+   * at the position dictated by lang.grammar.negationPosition (or
+   * defaulted to "pre-verb"). Past-tense English-style do-support is
+   * implicit in the surface form when both negated and tense=past
+   * are set on a tier-3 lang with a "do" entry.
+   */
+  negated?: boolean;
 }
 
 export interface SlotAssignment {
@@ -439,6 +447,50 @@ export function composeTargetSentence(
   const subjectIs3sg = topic ? subjectIs3sgFromTopic : true;
 
   const verbTokens: RoleToken[] = [];
+
+  // Do-support for past/present negation: when the template is negated
+  // and the language has both "do" and "not" in its lexicon, prefer
+  // "did/do + not + bare verb" over inline NEG. We inflect "do" via
+  // verbRoleToken so suppletion fires → past tense produces "did",
+  // present 3sg produces "does".
+  const negated = !!template.negated;
+  const auxNot = lang.lexicon["not"];
+  const doForm = lang.lexicon["do"];
+  let didDoSupport = false;
+  if (negated && auxNot && doForm) {
+    const auxTok = verbRoleToken(
+      lang,
+      "do",
+      {
+        tense,
+        person3sg: tense === "present" && subjectIs3sg,
+      },
+      script,
+    );
+    if (auxTok) {
+      didDoSupport = true;
+      // Re-tag as AUX with the correct English surface form so
+      // glossToEnglish renders "did"/"does"/"do" verbatim. Clear the
+      // glossNote so the past/3sg flag isn't propagated to other verbs
+      // (the main V is bare under do-support).
+      auxTok.token.englishTag = "AUX";
+      auxTok.token.englishLemma =
+        tense === "past" ? "did" : subjectIs3sg ? "does" : "do";
+      auxTok.token.glossNote = "";
+      verbTokens.push(auxTok);
+      verbTokens.push({
+        role: "ADV",
+        token: makeToken({
+          englishLemma: "not",
+          englishTag: "ADV",
+          glossNote: "negation",
+          targetForm: auxNot,
+          targetSurface: renderForm(auxNot, lang, script, "not"),
+        }),
+      });
+    }
+  }
+
   if (tense === "future") {
     const willForm = lang.lexicon["will"];
     if (willForm) {
@@ -454,16 +506,44 @@ export function composeTargetSentence(
       });
     }
   }
+
+  // Bare verb after do-support; inflected verb otherwise.
   const vTok = verbRoleToken(
     lang,
     slots.verb,
     {
-      tense,
-      person3sg: tense === "present" && subjectIs3sg,
+      tense: didDoSupport ? "present" : tense,
+      person3sg:
+        !didDoSupport && tense === "present" && subjectIs3sg,
     },
     script,
   );
   if (vTok) verbTokens.push(vTok);
+
+  // Inline NEG for languages without do-support: emit "not" at the
+  // position dictated by lang.grammar.negationPosition (default
+  // "pre-verb"). Skip when do-support already emitted a NEG.
+  if (negated && !didDoSupport && auxNot) {
+    const neg: RoleToken = {
+      role: "ADV",
+      token: makeToken({
+        englishLemma: "not",
+        englishTag: "ADV",
+        glossNote: "negation",
+        targetForm: auxNot,
+        targetSurface: renderForm(auxNot, lang, script, "not"),
+      }),
+    };
+    const negPos = lang.grammar.negationPosition ?? "pre-verb";
+    if (negPos === "post-verb") {
+      verbTokens.push(neg);
+    } else if (negPos === "pre-verb") {
+      verbTokens.unshift(neg);
+    } else {
+      // clause-final or unknown — append after verb
+      verbTokens.push(neg);
+    }
+  }
 
   const adjOnSubject = template.shape === "adj_subject";
   const adjOnObject = template.shape === "transitive_adj" || template.shape === "long_ago_trans_adj";
@@ -512,9 +592,13 @@ export function composeTargetSentence(
 
   const flatTokens = targetOrdered.map((rt) => rt.token);
   const englishTokens = englishOrdered.map((rt) => rt.token);
+  // Under do-support the main verb is bare ("did not see"), so don't
+  // pass past tense to glossToEnglish (would otherwise past-inflect the
+  // bare verb back to "saw"). Same logic applies to 3sg agreement.
   const english = glossToEnglish(englishTokens, {
-    guessTense: tense === "past" ? "past" : "present",
-    subjectIs3sg: tense === "future" ? false : subjectIs3sg,
+    guessTense: didDoSupport ? "present" : tense === "past" ? "past" : "present",
+    subjectIs3sg:
+      didDoSupport || tense === "future" ? false : subjectIs3sg,
     preserveOrder: true,
   });
 

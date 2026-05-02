@@ -140,8 +140,23 @@ export function generateDiscourseNarrative(
   const ctx = makeDiscourse(genre);
   const out: DiscourseLine[] = [];
 
+  // Per-genre negation rate: dialogue 30%, daily 25%, legend 15%, myth 10%.
+  const negationRate =
+    genre === "dialogue" ? 0.3 :
+    genre === "daily" ? 0.25 :
+    genre === "legend" ? 0.15 :
+    0.1;
+  // Coordination ("X and Y") rate per gen: 15% across the board.
+  const coordRate = 0.15;
+  const andForm = lang.lexicon["and"];
+
   for (let i = 0; i < lines; i++) {
-    const template = pickTemplate(genre, ctx, rng);
+    const baseTemplate = pickTemplate(genre, ctx, rng);
+    // Negation: ~negationRate of templates flip to negated.
+    const template: AbstractTemplate = rng.chance(negationRate)
+      ? { ...baseTemplate, negated: true }
+      : baseTemplate;
+
     const slots = fillSlots(template, lang, rng);
 
     if (template.needs.subject && slots.subject) {
@@ -160,10 +175,51 @@ export function generateDiscourseNarrative(
       continue;
     }
 
+    // Coordination: with coordRate probability, pick a second template +
+    // slots and join them with "and" (target form). Only fires when the
+    // language has "and" in its lexicon and both pieces composed cleanly.
+    let finalEnglish = composed.english;
+    let finalSurface = composed.surface;
+    let finalGloss = morphologicalGloss(composed.tokens);
+    if (andForm && rng.chance(coordRate)) {
+      const tpl2 = pickTemplate(genre, ctx, rng);
+      const slots2 = fillSlots(tpl2, lang, rng);
+      const composed2 = composeTargetSentence(lang, tpl2, slots2, ctx, script);
+      if (composed2.tokens.length > 0) {
+        const andSurface = composed2.tokens[0]!.targetSurface
+          ? composed.surface +
+            " " +
+            (lang.lexicon["and"]
+              ? composed2.tokens[0]!.targetSurface
+                ? ""
+                : ""
+              : "") +
+            ""
+          : "";
+        void andSurface;
+        // Use English "and" between the captions and the target-language
+        // "and" between the surfaces.
+        const andTargetRendered = lang.lexicon["and"]
+          ? composed2.surface
+            ? composed.surface +
+              " " +
+              (lang.lexicon["and"] ? "" : "") +
+              ""
+            : ""
+          : "";
+        void andTargetRendered;
+        finalEnglish = `${composed.english} and ${composed2.english}`;
+        finalSurface = composed2.surface
+          ? `${composed.surface} ${andForm.join("")} ${composed2.surface}`
+          : composed.surface;
+        finalGloss = `${morphologicalGloss(composed.tokens)} — and — ${morphologicalGloss(composed2.tokens)}`;
+      }
+    }
+
     out.push({
-      english: composed.english,
-      text: composed.surface,
-      gloss: morphologicalGloss(composed.tokens),
+      english: finalEnglish,
+      text: finalSurface,
+      gloss: finalGloss,
     });
     endTurn(ctx);
   }
