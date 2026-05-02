@@ -30,6 +30,12 @@ import { tickTerritory } from "./geo/territory";
 export interface Simulation {
   getState: () => SimulationState;
   getConfig: () => SimulationConfig;
+  /**
+   * Live-update the rate config without resetting state. Used by the
+   * pause-and-adjust path in the store: structural fields (seed*, preset,
+   * mapMode, yearsPerGeneration) are excluded by the caller.
+   */
+  setLiveConfig: (config: SimulationConfig) => void;
   step: () => void;
   reset: () => void;
   restoreState: (snapshot: SimulationState) => void;
@@ -38,9 +44,10 @@ export interface Simulation {
 export interface SimulationOptions {}
 
 export function createSimulation(
-  config: SimulationConfig,
+  initialConfig: SimulationConfig,
   _options: SimulationOptions = {},
 ): Simulation {
+  let config = initialConfig;
   const issues = validateConfig(config);
   if (issues.length > 0) {
     const msg = summarizeValidation(issues);
@@ -173,6 +180,9 @@ export function createSimulation(
   return {
     getState: () => state,
     getConfig: () => config,
+    setLiveConfig: (next) => {
+      config = next;
+    },
     step,
     reset: () => {
       state = buildInitialState(config);
