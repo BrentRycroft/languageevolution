@@ -272,6 +272,14 @@ function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Languag
         <GrammarRows lang={lang} other={otherLang} />
       </Section>
 
+      <Section title="Paradigms">
+        <ParadigmDiff lang={lang} other={otherLang} />
+      </Section>
+
+      <Section title="Phoneme inventory">
+        <InventoryDiff lang={lang} other={otherLang} />
+      </Section>
+
       <Section title="Lexicon">
         <div className="compare-lex">
           {meanings.slice(0, 80).map((m) => {
@@ -308,30 +316,153 @@ function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Languag
 
 function GrammarRows({ lang, other }: { lang: Language; other: Language }) {
   const stressOf = (l: Language) => l.stressPattern ?? "penult";
-  const rows: Array<[string, string, string]> = [
+  const fmt = (v: unknown): string => {
+    if (v === undefined || v === null) return "—";
+    if (typeof v === "boolean") return v ? "yes" : "no";
+    return String(v);
+  };
+  const rows: Array<[string, unknown, unknown]> = [
     ["order", lang.grammar.wordOrder, other.grammar.wordOrder],
     ["affix", lang.grammar.affixPosition, other.grammar.affixPosition],
     ["plural", lang.grammar.pluralMarking, other.grammar.pluralMarking],
     ["tense", lang.grammar.tenseMarking, other.grammar.tenseMarking],
-    ["case", lang.grammar.hasCase ? "yes" : "no", other.grammar.hasCase ? "yes" : "no"],
-    [
-      "gender",
-      String(lang.grammar.genderCount),
-      String(other.grammar.genderCount),
-    ],
+    ["case", lang.grammar.hasCase, other.grammar.hasCase],
+    ["case strategy", lang.grammar.caseStrategy, other.grammar.caseStrategy],
+    ["alignment", lang.grammar.alignment, other.grammar.alignment],
+    ["gender", lang.grammar.genderCount, other.grammar.genderCount],
+    ["article", lang.grammar.articlePresence, other.grammar.articlePresence],
+    ["adjective", lang.grammar.adjectivePosition, other.grammar.adjectivePosition],
+    ["possessor", lang.grammar.possessorPosition, other.grammar.possessorPosition],
+    ["numeral", lang.grammar.numeralPosition, other.grammar.numeralPosition],
+    ["negation", lang.grammar.negationPosition, other.grammar.negationPosition],
+    ["aspect", lang.grammar.aspectMarking, other.grammar.aspectMarking],
+    ["voice", lang.grammar.voice, other.grammar.voice],
+    ["mood", lang.grammar.moodMarking, other.grammar.moodMarking],
+    ["interrogative", lang.grammar.interrogativeStrategy, other.grammar.interrogativeStrategy],
+    ["pro-drop", lang.grammar.prodrop, other.grammar.prodrop],
+    ["harmony", lang.grammar.harmony, other.grammar.harmony],
+    ["evidential", lang.grammar.evidentialMarking, other.grammar.evidentialMarking],
+    ["classifiers", lang.grammar.classifierSystem, other.grammar.classifierSystem],
+    ["relative cl.", lang.grammar.relativeClauseStrategy, other.grammar.relativeClauseStrategy],
+    ["serial verbs", lang.grammar.serialVerbConstructions, other.grammar.serialVerbConstructions],
+    ["politeness", lang.grammar.politenessRegister, other.grammar.politenessRegister],
+    ["morph type", lang.grammar.morphologicalType, other.grammar.morphologicalType],
+    ["synthesis idx", lang.grammar.synthesisIndex?.toFixed?.(2), other.grammar.synthesisIndex?.toFixed?.(2)],
+    ["fusion idx", lang.grammar.fusionIndex?.toFixed?.(2), other.grammar.fusionIndex?.toFixed?.(2)],
     ["stress", stressOf(lang), stressOf(other)],
   ];
   return (
     <table style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: "var(--fs-1)" }}>
       <tbody>
-        {rows.map(([k, v, v2]) => (
-          <tr key={k} className={v !== v2 ? "grammar-diff" : ""}>
-            <td style={{ color: "var(--muted)", padding: "2px 6px" }}>{k}</td>
-            <td style={{ padding: "2px 6px" }}>{v}</td>
-          </tr>
-        ))}
+        {rows.map(([k, v, v2]) => {
+          const fa = fmt(v);
+          const fb = fmt(v2);
+          const diff = fa !== fb;
+          // Only show rows that have at least one non-"—" value, to keep
+          // the table tight when both languages haven't initialised the
+          // optional feature.
+          if (fa === "—" && fb === "—") return null;
+          return (
+            <tr key={k} className={diff ? "grammar-diff" : ""}>
+              <td style={{ color: "var(--muted)", padding: "2px 6px" }}>{k}</td>
+              <td style={{ padding: "2px 6px" }}>{fa}</td>
+              <td
+                style={{
+                  padding: "2px 6px",
+                  color: diff ? "var(--accent-2)" : "var(--text)",
+                }}
+              >
+                {fb}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
+  );
+}
+
+function ParadigmDiff({ lang, other }: { lang: Language; other: Language }) {
+  const allCats = new Set<string>();
+  for (const c of Object.keys(lang.morphology.paradigms)) allCats.add(c);
+  for (const c of Object.keys(other.morphology.paradigms)) allCats.add(c);
+  const cats = Array.from(allCats).sort();
+  if (cats.length === 0) {
+    return (
+      <div style={{ color: "var(--muted)", fontSize: "var(--fs-1)", padding: "2px 6px" }}>
+        No paradigms in either language.
+      </div>
+    );
+  }
+  const fmtAffix = (l: Language, c: string): string => {
+    const p = l.morphology.paradigms[c as keyof typeof l.morphology.paradigms];
+    if (!p) return "—";
+    return `/${p.affix.join("")}/ (${p.position})`;
+  };
+  return (
+    <table style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: "var(--fs-1)" }}>
+      <tbody>
+        {cats.map((c) => {
+          const a = fmtAffix(lang, c);
+          const b = fmtAffix(other, c);
+          const diff = a !== b;
+          return (
+            <tr key={c} className={diff ? "grammar-diff" : ""}>
+              <td style={{ color: "var(--muted)", padding: "2px 6px" }}>{c}</td>
+              <td style={{ padding: "2px 6px" }}>{a}</td>
+              <td
+                style={{
+                  padding: "2px 6px",
+                  color: diff ? "var(--accent-2)" : "var(--text)",
+                }}
+              >
+                {b}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function InventoryDiff({ lang, other }: { lang: Language; other: Language }) {
+  const a = new Set(lang.phonemeInventory.segmental);
+  const b = new Set(other.phonemeInventory.segmental);
+  const all = Array.from(new Set([...a, ...b])).sort();
+  const onlyA: string[] = [];
+  const onlyB: string[] = [];
+  const both: string[] = [];
+  for (const p of all) {
+    if (a.has(p) && b.has(p)) both.push(p);
+    else if (a.has(p)) onlyA.push(p);
+    else onlyB.push(p);
+  }
+  const Pill = ({ label, items, color }: { label: string; items: string[]; color: string }) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <span className="t-muted" style={{ fontSize: 11 }}>
+        {label} ({items.length})
+      </span>
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 12,
+          color,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 4,
+        }}
+      >
+        {items.length === 0 ? <span className="t-muted">—</span> : items.join(" ")}
+      </div>
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <Pill label={`only in ${lang.name}`} items={onlyA} color="var(--accent)" />
+      <Pill label="shared" items={both} color="var(--text)" />
+      <Pill label={`only in ${other.name}`} items={onlyB} color="var(--accent-2)" />
+    </div>
   );
 }
 

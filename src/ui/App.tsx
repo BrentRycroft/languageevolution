@@ -6,6 +6,8 @@ import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
 import { CompareView } from "./CompareView";
+import { CognateExplorer } from "./CognateExplorer";
+import { PhonologySandbox } from "./PhonologySandbox";
 import { MapView } from "./MapView";
 import { SoundLawsView } from "./SoundLawsView";
 import { Glossary } from "./Glossary";
@@ -13,6 +15,7 @@ import { AchievementToast } from "./Achievements";
 import { PersistenceToast } from "./PersistenceToast";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { UpdateBanner } from "./UpdateBanner";
+import { DebugOverlay } from "./DebugOverlay";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
 import { StatsPanel } from "./StatsPanel";
@@ -133,6 +136,7 @@ export function App() {
       <PersistenceToast />
       <ConfirmDialog />
       <UpdateBanner />
+      <DebugOverlay />
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       <header className="header">
         <button
@@ -305,6 +309,18 @@ export function App() {
           <div className="panel panel-single" role="tabpanel" id="tabpanel-compare" aria-labelledby="tab-compare">
             <h3>Compare</h3>
             <CompareView />
+          </div>
+        )}
+        {activeTab === "cognates" && (
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-cognates" aria-labelledby="tab-cognates">
+            <h3>Cognates</h3>
+            <CognateExplorer />
+          </div>
+        )}
+        {activeTab === "sandbox" && (
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-sandbox" aria-labelledby="tab-sandbox">
+            <h3>Phonology sandbox</h3>
+            <PhonologySandbox />
           </div>
         )}
         {activeTab === "stats" && (
