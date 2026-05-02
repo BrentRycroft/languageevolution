@@ -109,6 +109,15 @@ export interface Language {
   gender?: Record<Meaning, number>;
   derivationalSuffixes?: Array<{ affix: WordForm; tag: string }>;
   culturalTier?: 0 | 1 | 2 | 3;
+  /**
+   * Hysteresis counter for tier transitions. Increments on every tier-check
+   * tick (every 20 gens) where the language is eligible for a higher tier,
+   * and resets to 0 when eligibility drops. The transition only fires once
+   * the streak reaches the hysteresis threshold (see TIER_HYSTERESIS_TICKS
+   * in lexicon/tier.ts), preventing one-off speaker-count spikes from
+   * causing premature tier promotions.
+   */
+  tierEligibilityStreak?: number;
   lexicalCapacity?: number;
   colexifiedAs?: Record<Meaning, Meaning[]>;
   substrateAccelerationRemaining?: number;

@@ -15,7 +15,12 @@ import { stepTreeSplit, stepDeath, precomputeClosenessVector } from "./steps/tre
 import { stepTaboo } from "./steps/taboo";
 import { stepLearner } from "./steps/learner";
 import { stepArealTypology } from "./steps/arealTypology";
-import { computeTierCandidate, lexicalCapacity, populationCap } from "./lexicon/tier";
+import {
+  computeTierCandidate,
+  lexicalCapacity,
+  populationCap,
+  applyTierHysteresis,
+} from "./lexicon/tier";
 import { pushEvent } from "./steps/helpers";
 import { TIER_LABELS } from "./lexicon/concepts";
 import { applyKinshipSimplification } from "./semantics/recarve";
@@ -97,7 +102,16 @@ export function createSimulation(
       tickTerritory(lang, state.tree, worldMap, rng);
       if (nextGen % 20 === 0) {
         const priorTier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
-        const nextTier = computeTierCandidate(lang, state.tree, nextGen, rng);
+        const candidate = computeTierCandidate(lang, state.tree, nextGen, rng);
+        // Hysteresis: don't promote until eligibility has held for
+        // TIER_HYSTERESIS_TICKS consecutive ticks. Prevents one-off speaker
+        // spikes from causing premature transitions.
+        const { nextTier, nextStreak } = applyTierHysteresis(
+          priorTier,
+          candidate,
+          lang.tierEligibilityStreak ?? 0,
+        );
+        lang.tierEligibilityStreak = nextStreak;
         if (nextTier > priorTier) {
           lang.culturalTier = nextTier;
           pushEvent(lang, {
