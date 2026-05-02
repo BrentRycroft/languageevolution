@@ -57,6 +57,14 @@
 
   --focus-ring: 2px solid var(--accent);
 
+  /* Z-index scale — assign to anything that overlays content. */
+  --z-overlay: 5;       /* in-panel overlays (e.g. map controls) */
+  --z-banner: 10;       /* in-page banners (onboarding, notices) */
+  --z-dropdown: 50;     /* selects + autocomplete dropdowns */
+  --z-modal: 100;       /* full modal dialogs */
+  --z-modal-elevated: 200; /* nested editors above a modal */
+  --z-toast: 1000;      /* toasts that should win over everything */
+
   color-scheme: dark;
 }
 

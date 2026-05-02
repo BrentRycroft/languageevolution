@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CloseIcon } from "./icons";
 import { useSimStore } from "../state/store";
+import { Z } from "./zIndex";
 
 const DISMISSED_KEY = "lev.onboarding.dismissed.v2";
 
@@ -36,7 +37,7 @@ export function WelcomeBanner() {
         top: 16,
         left: 16,
         right: 16,
-        zIndex: 10,
+        zIndex: Z.banner,
         padding: 14,
         background: "var(--panel-2)",
         border: "1px solid var(--border)",

@@ -3,6 +3,7 @@ import { useSimStore } from "../state/store";
 import { formToString } from "../engine/phonology/ipa";
 import { formatForm } from "../engine/phonology/display";
 import { CloseIcon } from "./icons";
+import { Z } from "./zIndex";
 import { speakForm, ttsAvailable } from "./audio";
 import { ScriptPicker } from "./ScriptPicker";
 
@@ -85,7 +86,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.35)",
-        zIndex: 200,
+        zIndex: Z.modalElevated,
         display: "flex",
         alignItems: "stretch",
         justifyContent: "flex-end",

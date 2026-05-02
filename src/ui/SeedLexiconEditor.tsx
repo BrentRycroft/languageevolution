@@ -3,6 +3,7 @@ import { useSimStore } from "../state/store";
 import { formToString, isVowel, isConsonant, textToIpa } from "../engine/phonology/ipa";
 import { toneOf, stripTone } from "../engine/phonology/tone";
 import type { Lexicon, WordForm } from "../engine/types";
+import { Z } from "./zIndex";
 
 function phonemeIsKnown(p: string): boolean {
   const stripped = stripTone(p);
@@ -87,7 +88,7 @@ export function SeedLexiconEditor({ onClose }: { onClose: () => void }) {
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.6)",
-        zIndex: 200,
+        zIndex: Z.modalElevated,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
