@@ -117,6 +117,22 @@ function fillSlots(
   return slots;
 }
 
+/**
+ * Map discourse genre to the register the composer should bias alt-form
+ * selection toward. Myth + legend prefer high-register synonyms (steed,
+ * kin, art); daily + dialogue prefer low (horse, family, made).
+ */
+function genreRegisterFor(genre: DiscourseGenre): "high" | "low" | "neutral" {
+  switch (genre) {
+    case "myth":
+    case "legend":
+      return "high";
+    case "daily":
+    case "dialogue":
+      return "low";
+  }
+}
+
 function morphologicalGloss(tokens: { englishLemma: string; glossNote: string }[]): string {
   return tokens
     .map((t) => (t.glossNote ? `${t.englishLemma}.${t.glossNote.replace(/,/g, ".")}` : t.englishLemma))
@@ -169,7 +185,11 @@ export function generateDiscourseNarrative(
       if (!template.needs.subject && wasNew) ctx.topic = ctx.entities.get(objMeaning)!;
     }
 
-    const composed = composeTargetSentence(lang, template, slots, ctx, script);
+    const composed = composeTargetSentence(lang, template, slots, ctx, script, {
+      rng,
+      pickAltProbability: 0.1,
+      genreRegister: genreRegisterFor(genre),
+    });
     if (composed.tokens.length === 0) {
       endTurn(ctx);
       continue;
@@ -184,7 +204,11 @@ export function generateDiscourseNarrative(
     if (andForm && rng.chance(coordRate)) {
       const tpl2 = pickTemplate(genre, ctx, rng);
       const slots2 = fillSlots(tpl2, lang, rng);
-      const composed2 = composeTargetSentence(lang, tpl2, slots2, ctx, script);
+      const composed2 = composeTargetSentence(lang, tpl2, slots2, ctx, script, {
+        rng,
+        pickAltProbability: 0.1,
+        genreRegister: genreRegisterFor(genre),
+      });
       if (composed2.tokens.length > 0) {
         const andSurface = composed2.tokens[0]!.targetSurface
           ? composed.surface +

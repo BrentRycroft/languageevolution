@@ -59,6 +59,19 @@ export interface ComposedSentence {
   english: string;
 }
 
+/**
+ * Optional knobs for composeTargetSentence. When `pickAltProbability` >0
+ * and `rng` is provided, the composer rolls per-slot and may substitute
+ * the primary lexicon form with a Phase-20d altForms entry. `genreRegister`
+ * biases the alt selection: "high"-genre prefers high-register alts,
+ * "low" prefers low. "neutral" uses uniform.
+ */
+export interface ComposeOptions {
+  rng?: { next: () => number; chance: (p: number) => boolean; int: (n: number) => number };
+  pickAltProbability?: number;
+  genreRegister?: "high" | "low" | "neutral";
+}
+
 interface RoleToken {
   role: "DET" | "ADJ" | "S" | "V" | "O" | "PRON" | "PREP" | "TIME" | "ADV";
   token: TranslatedToken;
@@ -94,6 +107,36 @@ function makeToken(opts: {
     targetSurface: opts.targetSurface,
     resolution: "direct",
   };
+}
+
+/**
+ * If the language has altForms for `meaning` and the composer is given
+ * a non-zero pickAltProbability, return a random alt's form (biased by
+ * genre register). Otherwise return the primary form unchanged.
+ */
+function pickFormWithAlts(
+  lang: Language,
+  meaning: Meaning,
+  options: ComposeOptions,
+): WordForm | null {
+  const primary = lang.lexicon[meaning];
+  if (!primary) return null;
+  const alts = lang.altForms?.[meaning] ?? [];
+  if (alts.length === 0) return primary;
+  const { rng, pickAltProbability = 0, genreRegister = "neutral" } = options;
+  if (!rng || pickAltProbability <= 0) return primary;
+  if (!rng.chance(pickAltProbability)) return primary;
+  // Bias by register: high-register genre prefers high-register alts; low
+  // prefers low. With no register-tag info, pick uniformly.
+  const registers = lang.altRegister?.[meaning] ?? [];
+  const matching = alts.filter(
+    (_, i) =>
+      registers[i] === genreRegister ||
+      genreRegister === "neutral" ||
+      registers[i] === undefined,
+  );
+  const pool = matching.length > 0 ? matching : alts;
+  return pool[rng.int(pool.length)] ?? primary;
 }
 
 function inflectNoun(
@@ -180,8 +223,9 @@ function nounRoleToken(
   role: "S" | "O",
   opts: { plural: boolean; objectCase: boolean },
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken | null {
-  const base = lang.lexicon[meaning];
+  const base = pickFormWithAlts(lang, meaning, composeOptions);
   if (!base) return null;
   const { form, glossNote } = inflectNoun(lang, meaning, base, opts);
   return {
@@ -201,8 +245,9 @@ function verbRoleToken(
   meaning: Meaning,
   opts: { tense: "past" | "present" | "future"; person3sg: boolean },
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken | null {
-  const base = lang.lexicon[meaning];
+  const base = pickFormWithAlts(lang, meaning, composeOptions);
   if (!base) return null;
   const { form, glossNote } = inflectVerb(lang, meaning, base, opts);
   return {
@@ -221,8 +266,9 @@ function adjectiveRoleToken(
   lang: Language,
   meaning: Meaning,
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken | null {
-  const form = lang.lexicon[meaning];
+  const form = pickFormWithAlts(lang, meaning, composeOptions);
   if (!form) return null;
   return {
     role: "ADJ",
@@ -337,6 +383,7 @@ function buildSubjectGroup(
   topic: boolean,
   adj: Meaning | undefined,
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken[] {
   const out: RoleToken[] = [];
   if (topic) {
@@ -351,13 +398,20 @@ function buildSubjectGroup(
   if (det) out.push(det);
   const adjPos = lang.grammar.adjectivePosition ?? "pre";
   if (adj && adjPos === "pre") {
-    const adjTok = adjectiveRoleToken(lang, adj, script);
+    const adjTok = adjectiveRoleToken(lang, adj, script, composeOptions);
     if (adjTok) out.push(adjTok);
   }
-  const subj = nounRoleToken(lang, meaning, "S", { plural: false, objectCase: false }, script);
+  const subj = nounRoleToken(
+    lang,
+    meaning,
+    "S",
+    { plural: false, objectCase: false },
+    script,
+    composeOptions,
+  );
   if (subj) out.push(subj);
   if (adj && adjPos === "post") {
-    const adjTok = adjectiveRoleToken(lang, adj, script);
+    const adjTok = adjectiveRoleToken(lang, adj, script, composeOptions);
     if (adjTok) out.push(adjTok);
   }
   return out;
@@ -368,19 +422,27 @@ function buildObjectGroup(
   meaning: Meaning,
   adj: Meaning | undefined,
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken[] {
   const out: RoleToken[] = [];
   const det = articleRoleToken(lang, script);
   if (det) out.push(det);
   const adjPos = lang.grammar.adjectivePosition ?? "pre";
   if (adj && adjPos === "pre") {
-    const adjTok = adjectiveRoleToken(lang, adj, script);
+    const adjTok = adjectiveRoleToken(lang, adj, script, composeOptions);
     if (adjTok) out.push(adjTok);
   }
-  const obj = nounRoleToken(lang, meaning, "O", { plural: false, objectCase: true }, script);
+  const obj = nounRoleToken(
+    lang,
+    meaning,
+    "O",
+    { plural: false, objectCase: true },
+    script,
+    composeOptions,
+  );
   if (obj) out.push(obj);
   if (adj && adjPos === "post") {
-    const adjTok = adjectiveRoleToken(lang, adj, script);
+    const adjTok = adjectiveRoleToken(lang, adj, script, composeOptions);
     if (adjTok) out.push(adjTok);
   }
   return out;
@@ -425,6 +487,7 @@ export function composeTargetSentence(
   slots: SlotAssignment,
   ctx: DiscourseContext,
   script: DisplayScript = "ipa",
+  options: ComposeOptions = {},
 ): ComposedSentence {
   const tense = template.tense;
   const openerTokens: RoleToken[] = [];
@@ -517,6 +580,7 @@ export function composeTargetSentence(
         !didDoSupport && tense === "present" && subjectIs3sg,
     },
     script,
+    options,
   );
   if (vTok) verbTokens.push(vTok);
 
@@ -555,6 +619,7 @@ export function composeTargetSentence(
     topic,
     adjOnSubject ? slots.adjective : undefined,
     script,
+    options,
   );
 
   let objectGroup: RoleToken[] = [];
@@ -565,6 +630,7 @@ export function composeTargetSentence(
       slots.object,
       adjOnObject ? slots.adjective : undefined,
       script,
+      options,
     );
   } else if (template.needs.place && slots.place) {
     objectGroup = placeRoleTokens(lang, slots.place, script);
