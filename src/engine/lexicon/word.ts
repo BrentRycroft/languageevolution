@@ -261,3 +261,116 @@ export function syncWordsFromLexicon(
     });
   }
 }
+
+/**
+ * Result of a sound-change-driven word reconciliation pass. Each entry
+ * records a merger event ("child" + "shall" → one word with both
+ * meanings) so the engine can push a LanguageEvent for it.
+ */
+export interface WordMergerEvent {
+  formKey: string;
+  /** The two-or-more meanings now sharing this form. */
+  mergedMeanings: Meaning[];
+  /** Which meanings were already on the surviving word (no surprise). */
+  preExistingMeanings: Meaning[];
+  /** Which meanings were absorbed *into* this word from another entry. */
+  newlyAbsorbed: Meaning[];
+}
+
+/**
+ * Reconcile `lang.words` against the post-phonology `lang.lexicon`.
+ *
+ * After each generation's sound-change pass, two distinct words may have
+ * drifted into the same surface form (the canonical "child / shall →
+ * one word with two meanings" case). This helper:
+ *   1. Refreshes each Word's form to match the new lang.lexicon[primary
+ *      sense's meaning]; drops senses whose meanings were deleted.
+ *   2. If a polysemous Word's senses now point at *different* forms,
+ *      splits the word so each surviving form is its own entry.
+ *   3. Groups the resulting entries by formKey; any group of size ≥2 is
+ *      merged into the earliest-born entry, with newly absorbed senses
+ *      tagged origin "sound-change-merger".
+ *
+ * Returns the list of merger events for the caller to log via pushEvent.
+ * Idempotent: a second call on a fully-synced language emits no events.
+ */
+export function syncWordsAfterPhonology(
+  lang: Language,
+  _generation: number,
+): WordMergerEvent[] {
+  if (!lang.words || lang.words.length === 0) return [];
+
+  // Step 1+2: refresh each word's form against the current lexicon.
+  // If a word's senses now point at multiple distinct forms, split it.
+  const next: Word[] = [];
+  for (const word of lang.words) {
+    // Group this word's senses by their post-phonology form. Each group
+    // with senses sharing a form becomes one Word.
+    const buckets = new Map<string, { form: WordForm; senses: WordSense[] }>();
+    for (const sense of word.senses) {
+      const lexForm = lang.lexicon[sense.meaning];
+      if (!lexForm || lexForm.length === 0) continue; // meaning was deleted
+      const key = formKeyOf(lexForm);
+      const bucket = buckets.get(key);
+      if (bucket) {
+        bucket.senses.push(sense);
+      } else {
+        buckets.set(key, { form: lexForm.slice(), senses: [sense] });
+      }
+    }
+    if (buckets.size === 0) continue; // every sense's meaning was deleted
+    for (const { form, senses } of buckets.values()) {
+      // The primary stays attached to the first surviving sense whose
+      // meaning was the original primary; otherwise default to 0.
+      const oldPrimaryMeaning = word.senses[word.primarySenseIndex]?.meaning;
+      const newPrimary = senses.findIndex((s) => s.meaning === oldPrimaryMeaning);
+      next.push({
+        form,
+        formKey: formKeyOf(form),
+        senses,
+        primarySenseIndex: newPrimary >= 0 ? newPrimary : 0,
+        bornGeneration: word.bornGeneration,
+        origin: word.origin,
+      });
+    }
+  }
+
+  // Step 3: group by formKey; merge collisions.
+  const events: WordMergerEvent[] = [];
+  const byKey = new Map<string, Word[]>();
+  for (const w of next) {
+    const list = byKey.get(w.formKey);
+    if (list) list.push(w);
+    else byKey.set(w.formKey, [w]);
+  }
+  const merged: Word[] = [];
+  for (const [, list] of byKey) {
+    if (list.length === 1) {
+      merged.push(list[0]!);
+      continue;
+    }
+    // Pick the earliest-born word as the anchor; the others fold in.
+    list.sort((a, b) => a.bornGeneration - b.bornGeneration);
+    const anchor = list[0]!;
+    const preExistingMeanings = anchor.senses.map((s) => s.meaning);
+    const absorbed: Meaning[] = [];
+    for (let i = 1; i < list.length; i++) {
+      for (const s of list[i]!.senses) {
+        if (anchor.senses.some((a) => a.meaning === s.meaning)) continue;
+        anchor.senses.push({ ...s, origin: "sound-change-merger" });
+        absorbed.push(s.meaning);
+      }
+    }
+    if (absorbed.length > 0) {
+      events.push({
+        formKey: anchor.formKey,
+        mergedMeanings: anchor.senses.map((s) => s.meaning),
+        preExistingMeanings,
+        newlyAbsorbed: absorbed,
+      });
+    }
+    merged.push(anchor);
+  }
+  lang.words = merged;
+  return events;
+}

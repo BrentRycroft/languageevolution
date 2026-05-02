@@ -12,6 +12,7 @@ import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/v
 import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
 import { prunePhonemes } from "../phonology/pruning";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
+import { syncWordsAfterPhonology } from "../lexicon/word";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
@@ -147,6 +148,23 @@ export function stepPhonology(
       kind: "sound_change",
       description: `${mutated} form${mutated === 1 ? "" : "s"} shifted (×${mult.toFixed(2)})`,
     });
+  }
+
+  // Phase 21d: reconcile lang.words against the post-phonology lexicon.
+  // When two distinct words drift into the same surface form (the "child
+  // / shall → one word" case), this folds them into a single Word with
+  // both meanings and emits a merger event for the timeline.
+  if (lang.words) {
+    const mergers = syncWordsAfterPhonology(lang, generation);
+    for (const ev of mergers) {
+      const absorbed = ev.newlyAbsorbed.map((m) => `"${m}"`).join(", ");
+      const survivors = ev.preExistingMeanings.map((m) => `"${m}"`).join(", ");
+      pushEvent(lang, {
+        generation,
+        kind: "sound_change",
+        description: `merger: /${ev.formKey}/ — ${absorbed} fell together with ${survivors}, now one word with multiple meanings`,
+      });
+    }
   }
 
   if (rng.chance(config.phonology_lawful.regularChangeProbability)) {
