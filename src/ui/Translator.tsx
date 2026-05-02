@@ -12,6 +12,7 @@ import { glossToEnglish } from "../engine/translator/glossToEnglish";
 import { formatForm } from "../engine/phonology/display";
 import type { MorphCategory } from "../engine/morphology/types";
 import { ScriptPicker } from "./ScriptPicker";
+import { useDebounced } from "./hooks/useDebounced";
 
 type Mode = "sentence" | "word" | "lang-to-lang" | "cognates" | "etymology";
 
@@ -29,8 +30,7 @@ export function Translator() {
   const [langIdB, setLangIdB] = useState<string>(alive[1] ?? alive[0] ?? "");
   const [text, setText] = useState("");
   const [category, setCategory] = useState<MorphCategory | "">("");
-  const [wordResult, setWordResult] = useState<TranslationResult | null>(null);
-  const [sentenceResult, setSentenceResult] = useState<SentenceTranslation | null>(null);
+  const debouncedText = useDebounced(text, 250);
 
   useEffect(() => {
     if (alive.length === 0) return;
@@ -50,23 +50,48 @@ export function Translator() {
     ? (Object.keys(lang.morphology.paradigms) as MorphCategory[])
     : [];
 
-  const run = () => {
-    if (!lang || !text.trim()) return;
-    setSentenceResult(null);
-    setWordResult(null);
-    if (mode === "sentence") {
-      setSentenceResult(translateSentence(lang, text.trim()));
-      return;
-    }
-    if (mode === "lang-to-lang" && langB) {
-      setWordResult(translateBetween(lang, langB, text.trim()));
-      return;
+  /**
+   * As-you-type translation results, recomputed on debounced input change.
+   * Memoised by [lang.id, generation, lang-to-lang lang.id, mode, debouncedText, category]
+   * so identical input doesn't re-run the engine pipeline. translateSentence /
+   * translate / translateBetween are deterministic for fixed lang+text, so
+   * the memo is correct.
+   */
+  const sentenceResult: SentenceTranslation | null = useMemo(() => {
+    if (mode !== "sentence" || !lang || !debouncedText.trim()) return null;
+    return translateSentence(lang, debouncedText.trim());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang?.id, state.generation, mode, debouncedText]);
+
+  const wordResult: TranslationResult | null = useMemo(() => {
+    if (mode === "sentence") return null;
+    if (!lang || !debouncedText.trim()) return null;
+    if (mode === "lang-to-lang") {
+      if (!langB) return null;
+      return translateBetween(lang, langB, debouncedText.trim());
     }
     if (mode === "word") {
       const opts = category ? { inflect: category } : {};
-      setWordResult(translate(lang, text, opts));
+      return translate(lang, debouncedText.trim(), opts);
     }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    lang?.id,
+    langB?.id,
+    state.generation,
+    mode,
+    debouncedText,
+    category,
+  ]);
+
+  // Legacy callers used `run()` (Enter / button click) — keep as a no-op
+  // so existing call sites still compile, but the result is now driven by
+  // debounced text changes automatically.
+  const run = () => {
+    /* deprecated: results are recomputed automatically via useMemo */
   };
+  void run;
 
   return (
     <div style={{ fontSize: 13, maxWidth: 760 }}>
@@ -77,8 +102,6 @@ export function Translator() {
             className={mode === m ? "primary" : ""}
             onClick={() => {
               setMode(m);
-              setWordResult(null);
-              setSentenceResult(null);
             }}
           >
             {label(m)}
@@ -95,8 +118,6 @@ export function Translator() {
           value={langId}
           onChange={(e) => {
             setLangId(e.target.value);
-            setWordResult(null);
-            setSentenceResult(null);
           }}
         >
           {alive.map((id) => (
@@ -189,13 +210,20 @@ export function Translator() {
         </div>
       )}
 
-      {(mode === "sentence" || mode === "word" || mode === "lang-to-lang") && (
-        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-          <button className="primary" onClick={run}>
-            Translate
-          </button>
-        </div>
-      )}
+      {(mode === "sentence" || mode === "word" || mode === "lang-to-lang") &&
+        text.trim() !== debouncedText.trim() && (
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              marginTop: 6,
+              fontSize: 11,
+              color: "var(--muted)",
+            }}
+          >
+            translating…
+          </div>
+        )}
 
       {mode === "sentence" && sentenceResult && lang && (
         <SentenceOutput result={sentenceResult} lang={lang} script={script} />
