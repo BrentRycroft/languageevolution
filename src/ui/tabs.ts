@@ -16,6 +16,7 @@ export type TabId =
   | "translate"
   | "compare"
   | "cognates"
+  | "sandbox"
   | "stats"
   | "glossary";
 
@@ -52,6 +53,11 @@ export const TABS: TabSpec[] = [
     id: "cognates",
     label: "Cognates",
     title: "Cognate-set explorer: every daughter's form for one meaning + MSA-reconstructed proto-form",
+  },
+  {
+    id: "sandbox",
+    label: "Sandbox",
+    title: "Phonology sandbox: pick rules and apply them to a chosen word, deterministically",
   },
   { id: "stats", label: "Stats", title: "Per-language stats dashboard" },
   { id: "glossary", label: "Glossary", title: "Reference for rule families, shift taxa, register" },
