@@ -436,6 +436,25 @@ function SentenceOutput({
       >
         ← {glossToEnglish(result.targetTokens) || "(empty)"}
       </div>
+      {(() => {
+        // Phase 21e: surface disambiguation alternates as a one-line
+        // footer when any token came from a polysemous form. The
+        // "↔ X" annotations already appear inline on each token; this
+        // footer summarises them for at-a-glance UX.
+        const ambiguous = result.targetTokens
+          .filter((t) => /^↔ /.test(t.glossNote))
+          .map((t) => `${t.englishLemma} ${t.glossNote}`);
+        if (ambiguous.length === 0) return null;
+        return (
+          <div
+            className="footer-note"
+            style={{ marginTop: 4, color: "var(--muted)" }}
+            title="A homophone was disambiguated by sentence context. Click a token for the alternate sense."
+          >
+            ↔ disambiguated: {ambiguous.join(" · ")}
+          </div>
+        );
+      })()}
       {result.missing.length > 0 && (
         <div className="footer-note warn">
           Unresolved: {result.missing.join(", ")}

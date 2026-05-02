@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { ControlsPanel } from "./ControlsPanel";
 import { DictionaryView } from "./DictionaryView";
+import { WordMapView } from "./WordMapView";
 import { GrammarView } from "./GrammarView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
@@ -265,6 +266,12 @@ export function App() {
           <div className="panel panel-single" role="tabpanel" id="tabpanel-dictionary" aria-labelledby="tab-dictionary">
             <h3>Dictionary</h3>
             <DictionaryView />
+          </div>
+        )}
+        {activeTab === "wordmap" && (
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-wordmap" aria-labelledby="tab-wordmap">
+            <h3>Words</h3>
+            <WordMapView />
           </div>
         )}
         {activeTab === "timeline" && (

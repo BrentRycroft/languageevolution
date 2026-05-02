@@ -356,8 +356,9 @@ export function LexiconView() {
                     const form = currentCells.get(key) ?? "";
                     const isChanged = justChangedRef.current.has(key);
                     const isSelected = selectedLangId === lid && selectedMeaning === meaning;
-                    const origin = state.tree[lid]!.language.wordOrigin?.[meaning];
-                    const chain = state.tree[lid]!.language.wordOriginChain?.[meaning];
+                    const lang = state.tree[lid]!.language;
+                    const origin = lang.wordOrigin?.[meaning];
+                    const chain = lang.wordOriginChain?.[meaning];
                     const glyph = originGlyph(origin);
                     // Build a chain hint like "← free + -dom" for derivation
                     // chains recorded by Phase 20f-2's targetedDerivation.
@@ -365,6 +366,18 @@ export function LexiconView() {
                       chain && chain.from && chain.via
                         ? ` ← ${chain.from} + ${chain.via}`
                         : "";
+                    // Phase 21e: polysemy badge — when this meaning's form
+                    // is shared with other meanings, show "×N" with a tooltip.
+                    const formStr = lang.lexicon[meaning];
+                    const polysemyMatches = formStr && lang.words
+                      ? lang.words.find((w) => w.formKey === formStr.join(""))
+                      : undefined;
+                    const otherSenses =
+                      polysemyMatches && polysemyMatches.senses.length >= 2
+                        ? polysemyMatches.senses
+                            .map((s) => s.meaning)
+                            .filter((m) => m !== meaning)
+                        : [];
                     return (
                       <td
                         key={lid}
@@ -380,11 +393,24 @@ export function LexiconView() {
                         onDoubleClick={() => {
                           if (form) setInspect({ langId: lid, meaning });
                         }}
-                        title={`${originTitle(origin)}${chainHint} — right-click or double-tap to inspect history`}
+                        title={`${originTitle(origin)}${chainHint}${
+                          otherSenses.length > 0
+                            ? ` — also: ${otherSenses.join(", ")}`
+                            : ""
+                        } — right-click or double-tap to inspect history`}
                       >
                         {form}
                         {glyph && (
                           <span className="origin-glyph" aria-hidden>{glyph}</span>
+                        )}
+                        {otherSenses.length > 0 && (
+                          <span
+                            className="origin-glyph"
+                            style={{ color: "var(--accent, #b08)" }}
+                            aria-label={`also means ${otherSenses.join(", ")}`}
+                          >
+                            ↔{otherSenses.length}
+                          </span>
                         )}
                       </td>
                     );

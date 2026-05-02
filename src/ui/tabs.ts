@@ -18,6 +18,7 @@ export type TabId =
   | "cognates"
   | "sandbox"
   | "stats"
+  | "wordmap"
   | "glossary";
 
 export interface TabSpec {
@@ -60,5 +61,10 @@ export const TABS: TabSpec[] = [
     title: "Phonology sandbox: pick rules and apply them to a chosen word, deterministically",
   },
   { id: "stats", label: "Stats", title: "Per-language stats dashboard" },
+  {
+    id: "wordmap",
+    label: "Words",
+    title: "Word-centric view: each word and the meaning(s) it carries (Phase 21)",
+  },
   { id: "glossary", label: "Glossary", title: "Reference for rule families, shift taxa, register" },
 ];

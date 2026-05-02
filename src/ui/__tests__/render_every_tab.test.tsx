@@ -18,6 +18,7 @@ import { PhonemeInventoryView } from "../PhonemeInventoryView";
 import { ActivityHeatmap } from "../ActivityHeatmap";
 import { GlobalSearch } from "../GlobalSearch";
 import { StatsPanel } from "../StatsPanel";
+import { WordMapView } from "../WordMapView";
 import { WelcomeBanner } from "../Onboarding";
 import { PresetPicker } from "../PresetPicker";
 import { ScriptPicker } from "../ScriptPicker";
@@ -67,6 +68,7 @@ describe("UI render harness — every tab and every standalone component", () =>
     ["ActivityHeatmap", () => <ActivityHeatmap />],
     ["GlobalSearch", () => <GlobalSearch onJumpToLexicon={() => undefined} />],
     ["StatsPanel", () => <StatsPanel />],
+    ["WordMapView", () => <WordMapView />],
     ["WelcomeBanner", () => <WelcomeBanner />],
     ["PresetPicker", () => <PresetPicker />],
     ["ScriptPicker", () => <ScriptPicker />],
