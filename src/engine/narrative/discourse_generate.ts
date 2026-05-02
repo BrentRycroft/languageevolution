@@ -24,6 +24,15 @@ import {
   type AbstractTemplate,
   type SlotAssignment,
 } from "./composer";
+import {
+  subjectPool,
+  objectPool,
+  verbPool,
+  adjectivePool,
+  timePool,
+  placePool,
+  pickWeighted,
+} from "./pools";
 
 export interface DiscourseLine {
   english: string;
@@ -47,20 +56,64 @@ function pickTemplate(
   return rng.next() < 0.6 ? pick(continuing, rng) : pick(introducing, rng);
 }
 
-function fillSlots(template: AbstractTemplate, rng: Rng): SlotAssignment {
-  const verbPool = template.needs.object
+/**
+ * Slot filler — picks from the language's actual lexicon (frequency-
+ * weighted) when it's rich enough, falls back to the small genre pools
+ * when the language is sparse. Sparse-language fallback ensures narratives
+ * still render for fresh proto-languages with <50 words.
+ */
+function fillSlots(
+  template: AbstractTemplate,
+  lang: Language,
+  rng: Rng,
+): SlotAssignment {
+  const subjectsLex = subjectPool(lang);
+  const objectsLex = objectPool(lang);
+  const verbsLex = verbPool(lang);
+  const adjsLex = adjectivePool(lang);
+  const timesLex = timePool(lang);
+  const placesLex = placePool(lang);
+
+  // Need at least ~6 entries to weight-sample meaningfully; otherwise fall
+  // back to the legacy hand-picked pool.
+  const subjects = subjectsLex.length >= 6 ? subjectsLex : SUBJECT_NOUN_POOL.slice();
+  const objects = objectsLex.length >= 6 ? objectsLex : OBJECT_NOUN_POOL.slice();
+  const adjs = adjsLex.length >= 4 ? adjsLex : ADJECTIVE_POOL.slice();
+  const times = timesLex.length >= 2 ? timesLex : TIME_POOL.slice();
+  const places = placesLex.length >= 2 ? placesLex : PLACE_POOL.slice();
+
+  // For verbs, transitive vs intransitive split is hard to derive from POS
+  // alone; keep the legacy hand-picked verb pool as the source of truth
+  // for the trans/intrans distinction, but extend with all lexicon verbs
+  // as a last-resort fallback.
+  const verbPoolForTemplate = template.needs.object
     ? TRANSITIVE_VERB_POOL
     : INTRANSITIVE_VERB_POOL.length > 0
       ? INTRANSITIVE_VERB_POOL
       : VERB_POOL;
+  const verbs =
+    verbPoolForTemplate.length > 0 ? verbPoolForTemplate.slice() : verbsLex;
+
   const slots: SlotAssignment = {
-    verb: pick(verbPool, rng),
+    verb: pickWeighted(lang, verbs, rng) ?? pick(verbs, rng),
   };
-  if (template.needs.subject) slots.subject = pick(SUBJECT_NOUN_POOL, rng);
-  if (template.needs.object) slots.object = pick(OBJECT_NOUN_POOL, rng);
-  if (template.needs.adjective) slots.adjective = pick(ADJECTIVE_POOL, rng);
-  if (template.needs.time) slots.time = pick(TIME_POOL, rng);
-  if (template.needs.place) slots.place = pick(PLACE_POOL, rng);
+  if (template.needs.subject) {
+    slots.subject =
+      pickWeighted(lang, subjects, rng) ?? pick(subjects, rng);
+  }
+  if (template.needs.object) {
+    slots.object =
+      pickWeighted(lang, objects, rng) ?? pick(objects, rng);
+  }
+  if (template.needs.adjective) {
+    slots.adjective = pickWeighted(lang, adjs, rng) ?? pick(adjs, rng);
+  }
+  if (template.needs.time) {
+    slots.time = pickWeighted(lang, times, rng) ?? pick(times, rng);
+  }
+  if (template.needs.place) {
+    slots.place = pickWeighted(lang, places, rng) ?? pick(places, rng);
+  }
   return slots;
 }
 
@@ -89,7 +142,7 @@ export function generateDiscourseNarrative(
 
   for (let i = 0; i < lines; i++) {
     const template = pickTemplate(genre, ctx, rng);
-    const slots = fillSlots(template, rng);
+    const slots = fillSlots(template, lang, rng);
 
     if (template.needs.subject && slots.subject) {
       mention(ctx, slots.subject as Meaning);
