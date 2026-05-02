@@ -97,7 +97,16 @@ export function App() {
     clearShareFromLocation();
   }, []);
 
-  useKeyboardShortcuts({ playing, togglePlay, step, stepN, reset, setActiveTab });
+  const requestGlobalSearchOpen = useSimStore((s) => s.requestGlobalSearchOpen);
+  useKeyboardShortcuts({
+    playing,
+    togglePlay,
+    step,
+    stepN,
+    reset,
+    setActiveTab,
+    openGlobalSearch: requestGlobalSearchOpen,
+  });
 
   useEffect(() => {
     if (!playing) {

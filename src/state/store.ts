@@ -107,6 +107,12 @@ interface SimStore {
   lexiconSort: "alpha" | "cluster" | "frequency" | "last-changed";
   lexiconGroupByCluster: boolean;
   displayScript: "ipa" | "roman" | "both";
+  /**
+   * Counter that increments each time something requests the global search
+   * dialog be opened (e.g. ⌘/Ctrl-K). GlobalSearch subscribes and reacts on
+   * change.
+   */
+  globalSearchOpenTick: number;
   theme: "dark" | "light" | "system";
   timelineMode: "meanings" | "cognates" | "rules";
   timelineScrubGeneration: number | null;
@@ -146,6 +152,8 @@ interface SimStore {
   toggleCompareLang: (id: string) => void;
   clearCompareLangs: () => void;
   setLexiconSearch: (q: string) => void;
+  /** Increment globalSearchOpenTick to ask GlobalSearch to open + focus. */
+  requestGlobalSearchOpen: () => void;
   setLexiconSort: (sort: "alpha" | "cluster" | "frequency" | "last-changed") => void;
   setLexiconGroupByCluster: (group: boolean) => void;
   setDisplayScript: (s: "ipa" | "roman" | "both") => void;
@@ -303,6 +311,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
   lexiconSort: "alpha",
   lexiconGroupByCluster: false,
   displayScript: "ipa",
+  globalSearchOpenTick: 0,
   theme: "dark",
   timelineMode: "meanings",
   timelineScrubGeneration: null,
@@ -438,6 +447,38 @@ export const useSimStore = create<SimStore>((set, get) => ({
   updateConfig: (patch) => {
     const { config } = get();
     const next = { ...config, ...patch };
+    // Structural fields require a sim reset because they're baked into the
+    // proto language at init time. Rate knobs (probabilities, weights, mode
+    // toggles) are read each step and can change live without resetting.
+    const STRUCTURAL_FIELDS: ReadonlyArray<keyof SimulationConfig> = [
+      "seed",
+      "seedLexicon",
+      "seedFrequencyHints",
+      "seedMorphology",
+      "seedSuppletion",
+      "seedCulturalTier",
+      "seedStressPattern",
+      "seedGrammar",
+      "preset",
+      "mapMode",
+      "originCellId",
+      "yearsPerGeneration",
+    ];
+    const isStructural = (Object.keys(patch) as Array<keyof SimulationConfig>).some(
+      (k) => STRUCTURAL_FIELDS.includes(k),
+    );
+    if (!isStructural) {
+      // Pause-and-adjust: swap config in place via the sim's setLiveConfig
+      // so step() picks up new rates. State + history retained.
+      const { sim } = get();
+      sim.setLiveConfig(next);
+      set({ config: next });
+      tryAutosave([
+        { config: next, state: get().state, generationsRun: get().state.generation },
+        { force: true },
+      ]);
+      return;
+    }
     const init = initFromConfig(next);
     set({
       config: next,
@@ -516,6 +557,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
     }),
   clearCompareLangs: () => set({ compareLangIds: [] }),
   setLexiconSearch: (q) => set({ lexiconSearch: q }),
+  requestGlobalSearchOpen: () =>
+    set((s) => ({ globalSearchOpenTick: s.globalSearchOpenTick + 1 })),
   setLexiconSort: (lexiconSort) => set({ lexiconSort }),
   setLexiconGroupByCluster: (lexiconGroupByCluster) => set({ lexiconGroupByCluster }),
   setDisplayScript: (s) => set({ displayScript: s }),

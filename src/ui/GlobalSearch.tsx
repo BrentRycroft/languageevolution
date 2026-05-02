@@ -25,11 +25,21 @@ export function GlobalSearch({
   const selectMeaning = useSimStore((s) => s.selectMeaning);
   const setLexiconSearch = useSimStore((s) => s.setLexiconSearch);
   const script = useSimStore((s) => s.displayScript);
+  const openTick = useSimStore((s) => s.globalSearchOpenTick);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(0);
   const debounced = useDebounced(query, 120);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // External request to open + focus (e.g. ⌘/Ctrl-K).
+  useEffect(() => {
+    if (openTick === 0) return;
+    setOpen(true);
+    setQuery("");
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [openTick]);
 
   const hits = useMemo<Hit[]>(() => {
     const q = debounced.trim().toLowerCase();
@@ -103,6 +113,7 @@ export function GlobalSearch({
         <SearchIcon size={14} />
       </span>
       <input
+        ref={inputRef}
         type="search"
         value={query}
         onChange={(e) => {
