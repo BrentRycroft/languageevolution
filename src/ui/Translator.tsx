@@ -6,7 +6,11 @@ import {
   translateBetween,
   type TranslationResult,
 } from "../engine/translator/translate";
-import { translateSentence, type SentenceTranslation } from "../engine/translator/sentence";
+import {
+  translateSentence,
+  reverseParseToTokens,
+  type SentenceTranslation,
+} from "../engine/translator/sentence";
 import { findCognates, traceEtymology } from "../engine/translator/cognates";
 import { glossToEnglish } from "../engine/translator/glossToEnglish";
 import { formatForm } from "../engine/phonology/display";
@@ -30,6 +34,7 @@ export function Translator() {
   const [langIdB, setLangIdB] = useState<string>(alive[1] ?? alive[0] ?? "");
   const [text, setText] = useState("");
   const [category, setCategory] = useState<MorphCategory | "">("");
+  const [reverseDirection, setReverseDirection] = useState(false);
   const debouncedText = useDebounced(text, 250);
 
   useEffect(() => {
@@ -59,9 +64,22 @@ export function Translator() {
    */
   const sentenceResult: SentenceTranslation | null = useMemo(() => {
     if (mode !== "sentence" || !lang || !debouncedText.trim()) return null;
+    if (reverseDirection) {
+      // Target → English: parse user's input as target tokens, run
+      // glossToEnglish on the resulting TranslatedToken[].
+      const tokens = reverseParseToTokens(lang, debouncedText.trim());
+      return {
+        english: debouncedText.trim(),
+        englishTokens: [],
+        targetTokens: tokens,
+        arranged: tokens.map((t) => t.targetSurface),
+        missing: tokens.filter((t) => t.englishLemma === "?").map((t) => t.targetSurface),
+        notes: "",
+      };
+    }
     return translateSentence(lang, debouncedText.trim());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang?.id, state.generation, mode, debouncedText]);
+  }, [lang?.id, state.generation, mode, debouncedText, reverseDirection]);
 
   const wordResult: TranslationResult | null = useMemo(() => {
     if (mode === "sentence") return null;
@@ -107,6 +125,24 @@ export function Translator() {
             {label(m)}
           </button>
         ))}
+        {mode === "sentence" && (
+          <button
+            type="button"
+            onClick={() => setReverseDirection((v) => !v)}
+            title={
+              reverseDirection
+                ? "Reverse mode: type the target language, see English"
+                : "English → target. Click to flip."
+            }
+            aria-label={
+              reverseDirection ? "Switch to English to target" : "Switch to target to English"
+            }
+            className={reverseDirection ? "active" : ""}
+            style={{ fontSize: 11 }}
+          >
+            {reverseDirection ? "← English" : "↕ Reverse"}
+          </button>
+        )}
         <span className="ml-auto">
           <ScriptPicker />
         </span>
