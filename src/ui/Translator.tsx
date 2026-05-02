@@ -310,6 +310,39 @@ export function Translator() {
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
             source: {wordResult.source} — {wordResult.notes}
           </div>
+          {(() => {
+            const targetLang = mode === "lang-to-lang" ? langB : lang;
+            const meaning = text.trim().toLowerCase();
+            const alts = targetLang?.altForms?.[meaning] ?? [];
+            if (!targetLang || alts.length === 0) return null;
+            const altSurfaces = alts.map((alt) =>
+              formatForm(alt, targetLang, script, meaning),
+            );
+            return (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--muted)",
+                  marginTop: 4,
+                  fontFamily: "'SF Mono', Menlo, monospace",
+                }}
+                title="Alternative forms (lexical doublets / synonyms)"
+              >
+                also: {altSurfaces.join(", ")}
+              </div>
+            );
+          })()}
+          {lang && lang.wordOriginChain?.[text.trim().toLowerCase()] && (
+            <div
+              style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}
+              title="Derivation chain"
+            >
+              ←{" "}
+              {lang.wordOriginChain[text.trim().toLowerCase()]?.from}{" "}
+              {"+ "}
+              {lang.wordOriginChain[text.trim().toLowerCase()]?.via}
+            </div>
+          )}
         </div>
       )}
 
