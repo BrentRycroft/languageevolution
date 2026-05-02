@@ -2,7 +2,8 @@ import type { Language, Meaning, WordForm } from "../types";
 import type { TranslatedToken } from "../translator/sentence";
 import type { EnglishTag } from "../translator/tokens";
 import type { DiscourseContext } from "./discourse";
-import { inflect } from "../morphology/evolve";
+import { inflect, inflectCascade } from "../morphology/evolve";
+import type { MorphCategory } from "../morphology/types";
 import { formToString } from "../phonology/ipa";
 import { formatForm, type DisplayScript } from "../phonology/display";
 import { glossToEnglish } from "../translator/glossToEnglish";
@@ -118,27 +119,12 @@ function inflectVerb(
   form: WordForm,
   opts: { tense: "past" | "present" | "future"; person3sg: boolean },
 ): { form: WordForm; glossNote: string } {
-  let out = form;
-  const notes: string[] = [];
-  if (opts.tense === "past") {
-    const p = lang.morphology.paradigms["verb.tense.past"];
-    if (p) {
-      out = inflect(out, p, lang, meaning);
-      notes.push("tense.past");
-    }
-  } else if (opts.tense === "future") {
-    const p = lang.morphology.paradigms["verb.tense.fut"];
-    if (p) {
-      out = inflect(out, p, lang, meaning);
-      notes.push("tense.fut");
-    }
-  } else if (opts.person3sg) {
-    const p = lang.morphology.paradigms["verb.person.3sg"];
-    if (p) {
-      out = inflect(out, p, lang, meaning);
-      notes.push("person.3sg");
-    }
-  }
+  const order: MorphCategory[] = [];
+  if (opts.tense === "past") order.push("verb.tense.past");
+  else if (opts.tense === "future") order.push("verb.tense.fut");
+  if (opts.person3sg) order.push("verb.person.3sg");
+  const { form: out, applied } = inflectCascade(form, order, lang, meaning);
+  const notes = applied.map((c) => c.replace(/^verb\./, ""));
   return { form: out, glossNote: notes.join(",") };
 }
 

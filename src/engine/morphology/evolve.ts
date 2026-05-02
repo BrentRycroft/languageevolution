@@ -225,6 +225,50 @@ export function inflect(
     : [...base, ...affix];
 }
 
+export interface CascadeResult {
+  form: WordForm;
+  applied: MorphCategory[];
+}
+
+export function inflectCascade(
+  base: WordForm,
+  categories: readonly MorphCategory[],
+  lang: Language,
+  meaning: string,
+): CascadeResult {
+  const available = categories.filter((c) => !!lang.morphology.paradigms[c]);
+  const synth = lang.grammar.synthesisIndex ?? 2.0;
+  const cap = Math.max(1, Math.round(synth));
+  const slice = available.slice(0, cap);
+
+  let form = base;
+  const fusion = lang.grammar.fusionIndex ?? 0.5;
+  const applied: MorphCategory[] = [];
+
+  for (const cat of slice) {
+    const p = lang.morphology.paradigms[cat]!;
+    const before = form;
+    form = inflect(before, p, lang, meaning);
+    applied.push(cat);
+
+    if (fusion >= 0.7 && p.position === "suffix") {
+      while (
+        form.length >= 2 &&
+        form[form.length - p.affix.length - 1] === p.affix[0]
+      ) {
+        form.splice(form.length - p.affix.length, 0);
+        break;
+      }
+      const seam = before.length;
+      if (seam > 0 && seam < form.length && form[seam - 1] === form[seam]) {
+        form.splice(seam, 1);
+      }
+    }
+  }
+
+  return { form, applied };
+}
+
 function pickAffixVariant(paradigm: Paradigm, base: WordForm): WordForm {
   const variants = paradigm.variants;
   if (!variants || variants.length === 0) return paradigm.affix;
