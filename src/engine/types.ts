@@ -153,6 +153,15 @@ export interface Language {
    * causing premature tier promotions.
    */
   tierEligibilityStreak?: number;
+  /**
+   * Generation deadline for the abstract-vocabulary catch-up window.
+   * Set when a language crosses into tier 2 (literacy / abstract noun
+   * morphology unlocks): the genesis driver bumps targetedDerivation
+   * probability from 0.4 to 0.85 until `state.generation >= this`,
+   * producing a realistic "abstracts pour into the lexicon shortly
+   * after literacy" effect. Cleared once expired.
+   */
+  vocabularyCatchUpUntil?: number;
   lexicalCapacity?: number;
   colexifiedAs?: Record<Meaning, Meaning[]>;
   /**

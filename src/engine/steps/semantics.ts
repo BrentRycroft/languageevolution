@@ -6,6 +6,7 @@ import { pushEvent } from "./helpers";
 import { realismMultiplier } from "../phonology/rate";
 import { bumpFrequency } from "../lexicon/frequencyDynamics";
 import { stepSemanticBleaching } from "../semantics/bleaching";
+import { pruneAlts } from "../lexicon/altForms";
 
 export function stepSemantics(
   lang: Language,
@@ -38,6 +39,11 @@ export function stepSemantics(
         : `bleaching: "${bleach.meaning}" frequency dropping (now ${bleach.newFrequency.toFixed(2)}; grammaticalised)`,
     });
   }
+  // Phase 20d altForms decay: per generation, with low probability the
+  // trailing (least-frequent) alt of a meaning is dropped. Frequency-
+  // protected, so high-freq doublets persist while rare ones fade.
+  pruneAlts(lang, 0.02 * lang.conservatism, rng);
+
   const recarveRate =
     (config.semantics.recarveProbabilityPerGeneration ?? 0) * lang.conservatism;
   if (recarveRate > 0) {

@@ -20,7 +20,11 @@ export type TemplateShape =
   | "long_ago_trans_adj"
   | "topic_trans"
   | "topic_intrans"
-  | "topic_time_intrans";
+  | "topic_time_intrans"
+  | "instrument_adjunct"
+  | "benefactive"
+  | "motion_source"
+  | "motion_goal";
 
 export interface AbstractTemplate {
   shape: TemplateShape;
@@ -42,6 +46,12 @@ export interface AbstractTemplate {
    * are set on a tier-3 lang with a "do" entry.
    */
   negated?: boolean;
+  /**
+   * Verb aspect. "perfect" emits an AUX token for "have"/"has"/"had" before
+   * the main verb, with the main verb glossed `verb.aspect.perf` so
+   * glossToEnglish renders the past participle. Defaults to "simple".
+   */
+  aspect?: "simple" | "perfect";
 }
 
 export interface SlotAssignment {
@@ -356,6 +366,69 @@ function timePrefixRoleTokens(
   return out;
 }
 
+/**
+ * Build a PP-like adjunct sequence: ADP + (DET) + N. The ADP form is taken
+ * from the language's lexicon under the requested lemma (with a small
+ * fallback chain for proto-languages missing the exact entry). When the
+ * language uses postpositions, the adposition is emitted *after* the noun.
+ * Used by instrument / benefactive / motion-source / motion-goal shapes.
+ */
+function adjunctRoleTokens(
+  lang: Language,
+  prepLemma: string,
+  fallbackLemmas: readonly string[],
+  meaning: Meaning,
+  script: DisplayScript,
+): RoleToken[] {
+  const out: RoleToken[] = [];
+  let prepForm = lang.lexicon[prepLemma];
+  let prepUsedLemma = prepLemma;
+  if (!prepForm) {
+    for (const fb of fallbackLemmas) {
+      if (lang.lexicon[fb]) {
+        prepForm = lang.lexicon[fb];
+        prepUsedLemma = fb;
+        break;
+      }
+    }
+  }
+  const nounForm = lang.lexicon[meaning];
+  if (!nounForm) return out;
+  const prepTok: RoleToken | null = prepForm
+    ? {
+        role: "PREP",
+        token: makeToken({
+          englishLemma: prepLemma,
+          englishTag: "PREP",
+          glossNote: "",
+          targetForm: prepForm,
+          targetSurface: renderForm(prepForm, lang, script, prepUsedLemma),
+        }),
+      }
+    : null;
+  const nounTok: RoleToken = {
+    role: "O",
+    token: makeToken({
+      englishLemma: meaning,
+      englishTag: "N",
+      glossNote: "",
+      targetForm: nounForm,
+      targetSurface: renderForm(nounForm, lang, script, meaning),
+    }),
+  };
+  const det = articleRoleToken(lang, script);
+  if (lang.grammar.caseStrategy === "postposition") {
+    if (det) out.push(det);
+    out.push(nounTok);
+    if (prepTok) out.push(prepTok);
+  } else {
+    if (prepTok) out.push(prepTok);
+    if (det) out.push(det);
+    out.push(nounTok);
+  }
+  return out;
+}
+
 function longAgoRoleToken(lang: Language, script: DisplayScript): RoleToken | null {
   const cand = ["long-ago", "before", "ancient", "past"];
   for (const m of cand) {
@@ -570,19 +643,52 @@ export function composeTargetSentence(
     }
   }
 
-  // Bare verb after do-support; inflected verb otherwise.
+  // Perfect aspect: emit AUX "have/has/had" before the main verb, mark
+  // the main V with glossNote `verb.aspect.perf` so glossToEnglish renders
+  // its English caption as the past participle ("had seen", "has gone").
+  // Skipped under do-support and under future (those auxiliaries don't
+  // chain with perfect in the simulator's surface English).
+  const wantsPerfect = template.aspect === "perfect" && !didDoSupport && tense !== "future";
+  let perfectAux: RoleToken | null = null;
+  if (wantsPerfect) {
+    const haveForm = lang.lexicon["have"];
+    if (haveForm) {
+      const auxLemma = tense === "past" ? "had" : subjectIs3sg ? "has" : "have";
+      perfectAux = {
+        role: "V",
+        token: makeToken({
+          englishLemma: auxLemma,
+          englishTag: "AUX",
+          glossNote: "aspect.perf",
+          targetForm: haveForm,
+          targetSurface: renderForm(haveForm, lang, script, "have"),
+        }),
+      };
+      verbTokens.push(perfectAux);
+    }
+  }
+
+  // Bare verb after do-support OR perfect aspect; inflected verb otherwise.
   const vTok = verbRoleToken(
     lang,
     slots.verb,
     {
-      tense: didDoSupport ? "present" : tense,
+      tense: didDoSupport || perfectAux ? "present" : tense,
       person3sg:
-        !didDoSupport && tense === "present" && subjectIs3sg,
+        !didDoSupport && !perfectAux && tense === "present" && subjectIs3sg,
     },
     script,
     options,
   );
-  if (vTok) verbTokens.push(vTok);
+  if (vTok) {
+    if (perfectAux) {
+      // Tag the main V so glossToEnglish renders the past participle.
+      vTok.token.glossNote = vTok.token.glossNote
+        ? `${vTok.token.glossNote},aspect.perf`
+        : "aspect.perf";
+    }
+    verbTokens.push(vTok);
+  }
 
   // Inline NEG for languages without do-support: emit "not" at the
   // position dictated by lang.grammar.negationPosition (default
@@ -624,6 +730,12 @@ export function composeTargetSentence(
 
   let objectGroup: RoleToken[] = [];
   const usesObject = template.needs.object;
+  // For motion_source / motion_goal, the place slot is a directional
+  // PP rather than a generic locative — skip the default placeRoleTokens
+  // (which emits "at/in/on") so we don't double-emit a preposition. The
+  // adjunct PP is built below.
+  const usesDirectional =
+    template.shape === "motion_source" || template.shape === "motion_goal";
   if (usesObject && slots.object) {
     objectGroup = buildObjectGroup(
       lang,
@@ -632,23 +744,41 @@ export function composeTargetSentence(
       script,
       options,
     );
-  } else if (template.needs.place && slots.place) {
+  } else if (template.needs.place && slots.place && !usesDirectional) {
     objectGroup = placeRoleTokens(lang, slots.place, script);
   }
 
+  // Phase 20-closeout adjunct PPs. Each adjunct shape attaches a PP
+  // ("with N", "for N", "from N", "to N") to its base sentence (transitive
+  // for instrument/benefactive, intransitive for motion). The PP appends
+  // after the SVO/SV arrangement so it reads sentence-finally regardless
+  // of word order, matching how PPs naturally tail a clause in most
+  // language types.
+  let adjunctGroup: RoleToken[] = [];
+  if (template.shape === "instrument_adjunct" && slots.place) {
+    adjunctGroup = adjunctRoleTokens(lang, "with", ["by"], slots.place, script);
+  } else if (template.shape === "benefactive" && slots.place) {
+    adjunctGroup = adjunctRoleTokens(lang, "for", ["to"], slots.place, script);
+  } else if (template.shape === "motion_source" && slots.place) {
+    adjunctGroup = adjunctRoleTokens(lang, "from", ["of", "at"], slots.place, script);
+  } else if (template.shape === "motion_goal" && slots.place) {
+    adjunctGroup = adjunctRoleTokens(lang, "to", ["at", "in"], slots.place, script);
+  }
+
   let arranged: RoleToken[];
-  if (usesObject || (template.needs.place && slots.place)) {
+  if (usesObject || (template.needs.place && slots.place && !usesDirectional)) {
     arranged = arrangeSVO(lang.grammar.wordOrder, subjectGroup, verbTokens, objectGroup);
   } else {
     arranged = arrangeSV(lang.grammar.wordOrder, subjectGroup, verbTokens);
   }
 
-  const targetOrdered: RoleToken[] = [...openerTokens, ...arranged];
+  const targetOrdered: RoleToken[] = [...openerTokens, ...arranged, ...adjunctGroup];
   const englishOrdered: RoleToken[] = [
     ...openerTokens,
     ...subjectGroup,
     ...verbTokens,
     ...objectGroup,
+    ...adjunctGroup,
   ];
 
   const targetSurface = targetOrdered
@@ -664,8 +794,9 @@ export function composeTargetSentence(
   const english = glossToEnglish(englishTokens, {
     guessTense: didDoSupport ? "present" : tense === "past" ? "past" : "present",
     subjectIs3sg:
-      didDoSupport || tense === "future" ? false : subjectIs3sg,
+      didDoSupport || tense === "future" || perfectAux ? false : subjectIs3sg,
     preserveOrder: true,
+    guessAspect: perfectAux ? "perfect" : undefined,
   });
 
   return {

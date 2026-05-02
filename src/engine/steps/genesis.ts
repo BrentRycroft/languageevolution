@@ -31,13 +31,29 @@ export function stepGenesis(
   const gateProb = atCapacity
     ? 0.25 * lang.conservatism
     : Math.min(1, 0.5 + 0.5 * lang.conservatism);
+  // Clear an expired catch-up window so it doesn't linger across gens.
+  // Hoisted above the gateProb early-return so the flag is cleaned up
+  // even on generations when the genesis loop is skipped.
+  if (
+    lang.vocabularyCatchUpUntil !== undefined &&
+    generation >= lang.vocabularyCatchUpUntil
+  ) {
+    delete lang.vocabularyCatchUpUntil;
+  }
   if (!rng.chance(gateProb)) return;
   const need = lexicalNeed(lang, state.tree);
+  // Catch-up active iff the deadline is still in the future (the deletion
+  // above handles cleanup; this is just the read-side flag).
+  const catchUpActive =
+    lang.vocabularyCatchUpUntil !== undefined &&
+    generation < lang.vocabularyCatchUpUntil;
+  const targetedProb = catchUpActive ? 0.85 : 0.4;
   for (let i = 0; i < target; i++) {
-    // Targeted derivation pass: with 40% probability, look for a
-    // derivable abstract whose root is present + suffix-bucket exists.
-    // Coining "freedom" via "free + -dom" (Phase 20f).
-    if (rng.chance(0.4)) {
+    // Targeted derivation pass: prefer composing abstracts from
+    // existing roots when the language has the morphology. Probability
+    // jumps to 0.85 during a tier-2 catch-up window (Phase 20f-3) so
+    // the literacy transition surfaces a burst of new abstracts.
+    if (rng.chance(targetedProb)) {
       const derived = tryTargetedDerivation(lang, rng);
       if (derived) {
         if (isFormLegal(derived.meaning, derived.form)) {
