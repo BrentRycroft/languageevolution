@@ -2,6 +2,7 @@ import type { Language, Meaning } from "../types";
 import type { Rng } from "../rng";
 import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { isFormLegal } from "../phonology/wordShape";
+import { recordOneSidedColexification } from "./colexification";
 
 export type RecarveEventKind = "merge" | "split";
 
@@ -56,10 +57,7 @@ function tryMerge(lang: Language, rng: Rng): RecarveEvent | null {
   delete lang.lastChangeGeneration[loser];
   if (lang.registerOf) delete lang.registerOf[loser];
   if (lang.suppletion) delete lang.suppletion[loser];
-  if (!lang.colexifiedAs) lang.colexifiedAs = {};
-  const bag = lang.colexifiedAs[winner] ?? [];
-  bag.push(loser);
-  lang.colexifiedAs[winner] = bag;
+  recordOneSidedColexification(lang, winner, loser);
   return { kind: "merge", winner, loser };
 }
 
@@ -92,10 +90,7 @@ export function applyKinshipSimplification(
     delete lang.lastChangeGeneration[loser];
     if (lang.registerOf) delete lang.registerOf[loser];
     if (lang.suppletion) delete lang.suppletion[loser];
-    if (!lang.colexifiedAs) lang.colexifiedAs = {};
-    const bag = lang.colexifiedAs[winner] ?? [];
-    bag.push(loser);
-    lang.colexifiedAs[winner] = bag;
+    recordOneSidedColexification(lang, winner, loser);
     out.push({ kind: "merge", winner, loser });
   }
   return out;
