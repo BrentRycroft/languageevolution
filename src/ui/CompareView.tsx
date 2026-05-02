@@ -486,7 +486,7 @@ function NarrativeCompare({
         <span className="label-line" style={{ marginLeft: 4 }}>
           {genre === "skeleton"
             ? "Same skeleton in both columns — only the realised forms differ."
-            : "Same English plot in both columns — each language renders it through its own grammar."}
+            : "Sentences composed natively in each language; English caption is derived from the target tokens."}
         </span>
       </div>
       <div className="row-12 flex-wrap items-start">
