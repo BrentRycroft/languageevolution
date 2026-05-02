@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
+import { Z } from "./zIndex";
 import { getWorldMap, type MapCell, type WorldMap } from "../engine/geo/map";
 import { fnv1a } from "../engine/rng";
 import { formatForm } from "../engine/phonology/display";
@@ -180,7 +181,7 @@ export function MapView() {
           position: "absolute",
           top: 8,
           right: 8,
-          zIndex: 5,
+          zIndex: Z.overlay,
           display: "flex",
           gap: 6,
           padding: 6,

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
+import { Z } from "./zIndex";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 
 export function SelectedLanguageBar() {
@@ -84,7 +85,7 @@ export function SelectedLanguageBar() {
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 6,
-            zIndex: 50,
+            zIndex: Z.dropdown,
             minWidth: 200,
             maxHeight: 320,
             overflow: "auto",

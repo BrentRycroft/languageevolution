@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { CloseIcon } from "./icons";
+import { Z } from "./zIndex";
 
 interface Props {
   onClose: () => void;
@@ -23,7 +24,7 @@ export function AboutModal({ onClose }: Props) {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 100,
+        zIndex: Z.modal,
         background: "rgba(0, 0, 0, 0.55)",
         display: "flex",
         alignItems: "center",

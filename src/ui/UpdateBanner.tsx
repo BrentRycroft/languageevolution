@@ -1,4 +1,5 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
+import { Z } from "./zIndex";
 
 export function UpdateBanner() {
   const {
@@ -26,7 +27,7 @@ export function UpdateBanner() {
         bottom: 16,
         left: "50%",
         transform: "translateX(-50%)",
-        zIndex: 1000,
+        zIndex: Z.toast,
         display: "flex",
         gap: 10,
         alignItems: "center",
