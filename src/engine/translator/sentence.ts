@@ -4,6 +4,7 @@ import { posOf } from "../lexicon/pos";
 import { closedClassForm } from "./closedClass";
 import { parseSyntaxAll } from "./parse";
 import { realiseSentence } from "./realise";
+import { disambiguateSense } from "../lexicon/word";
 
 export type { EnglishTag, EnglishToken } from "./tokens";
 import type { EnglishTag, EnglishToken } from "./tokens";
@@ -543,33 +544,55 @@ function resolveLemma(
 }
 
 /**
- * Build a reverse index from `formString` → `meaning` for the given
- * language. `formString` is the IPA-joined phoneme sequence (no
- * separators) — same shape `formToString` produces in IPA mode plus a
- * romanized variant. Useful for the Translator's reverse direction
- * (target → English) so a user typing "kæt" or "cat" finds "cat".
+ * Build a multi-meaning reverse index from `formString` → `Meaning[]`
+ * for the given language. `formString` is the IPA-joined phoneme
+ * sequence (no separators) — same shape `formToString` produces in IPA
+ * mode plus a lowercased ASCII variant. Phase 21b: a single form may
+ * carry multiple senses (homonymy / polysemy, e.g. "bank"); the index
+ * holds all candidates, and disambiguation happens at lookup time.
  */
-export function buildReverseIndex(lang: Language): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const m of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[m];
-    if (!form || form.length === 0) continue;
-    // IPA join: each phoneme concatenated.
-    const ipa = form.join("");
-    if (!out.has(ipa)) out.set(ipa, m);
-    // Lowercased ASCII fallback so users typing "cat" without diacritics
-    // also find a hit (best-effort).
-    const ascii = ipa.toLowerCase();
-    if (!out.has(ascii)) out.set(ascii, m);
+export function buildReverseIndex(lang: Language): Map<string, Meaning[]> {
+  const out = new Map<string, Meaning[]>();
+  const push = (key: string, meaning: Meaning): void => {
+    const list = out.get(key);
+    if (list) {
+      if (!list.includes(meaning)) list.push(meaning);
+    } else {
+      out.set(key, [meaning]);
+    }
+  };
+  // Prefer the form-centric `words` table when present — it natively
+  // groups multi-sense entries. Fall back to the meaning-keyed lexicon
+  // for pre-Phase-21 saves with no `words`.
+  if (lang.words && lang.words.length > 0) {
+    for (const w of lang.words) {
+      const ipa = w.formKey;
+      const ascii = ipa.toLowerCase();
+      for (const s of w.senses) {
+        push(ipa, s.meaning);
+        if (ascii !== ipa) push(ascii, s.meaning);
+      }
+    }
+  } else {
+    for (const m of Object.keys(lang.lexicon)) {
+      const form = lang.lexicon[m];
+      if (!form || form.length === 0) continue;
+      const ipa = form.join("");
+      push(ipa, m);
+      const ascii = ipa.toLowerCase();
+      if (ascii !== ipa) push(ascii, m);
+    }
   }
-  // Include alts: typing the borrowed alt should still resolve.
+  // Include altForms (Phase 20d doublets): typing the borrowed alt
+  // resolves to its meaning. Alts are still per-meaning, so always
+  // single-sense entries on the form key.
   if (lang.altForms) {
     for (const m of Object.keys(lang.altForms)) {
       for (const alt of lang.altForms[m] ?? []) {
         const ipa = alt.join("");
-        if (!out.has(ipa)) out.set(ipa, m);
+        push(ipa, m);
         const ascii = ipa.toLowerCase();
-        if (!out.has(ascii)) out.set(ascii, m);
+        if (ascii !== ipa) push(ascii, m);
       }
     }
   }
@@ -580,27 +603,57 @@ export function buildReverseIndex(lang: Language): Map<string, string> {
  * Reverse parse: take a string of target-language tokens (whitespace-
  * separated), match each against the reverse index, and produce a flat
  * list of `TranslatedToken` ready for glossToEnglish. Unmatched tokens
- * yield a fallback token tagged "?".
+ * yield a fallback token tagged "?". When a form carries multiple
+ * meanings (homonymy), `disambiguateSense` picks one based on the
+ * surrounding tokens' resolved meanings as sentential context.
  */
 export function reverseParseToTokens(
   lang: Language,
   text: string,
 ): TranslatedToken[] {
   const index = buildReverseIndex(lang);
+  const rawTokens = text.trim().split(/\s+/).filter((r) => r.length > 0);
+  // First pass: collect candidate-lists per token (no decision yet).
+  const candidates: Array<{ raw: string; choices: Meaning[] }> = rawTokens.map(
+    (raw) => {
+      const choices =
+        index.get(raw) ?? index.get(raw.toLowerCase()) ?? [];
+      return { raw, choices };
+    },
+  );
+  // Second pass: disambiguate each token using the OTHER tokens'
+  // unambiguous meanings as sentential context. (Single-meaning tokens
+  // contribute their only meaning; multi-meaning tokens skip until we
+  // reach them.)
+  const contextLemmas: Meaning[] = candidates
+    .filter((c) => c.choices.length === 1)
+    .map((c) => c.choices[0]!);
   const tokens: TranslatedToken[] = [];
-  for (const raw of text.trim().split(/\s+/)) {
-    if (!raw) continue;
+  for (const { raw, choices } of candidates) {
+    if (choices.length === 0) {
+      tokens.push({
+        englishLemma: "?",
+        englishTag: "N",
+        targetForm: [],
+        targetSurface: raw,
+        glossNote: "",
+        resolution: "fallback",
+      });
+      continue;
+    }
     const meaning =
-      index.get(raw) ??
-      index.get(raw.toLowerCase()) ??
-      "?";
+      choices.length === 1
+        ? choices[0]!
+        : disambiguateSense(lang, choices, { contextLemmas });
+    const otherSenses = choices.filter((c) => c !== meaning);
     tokens.push({
       englishLemma: meaning,
       englishTag: "N",
       targetForm: lang.lexicon[meaning] ?? [],
       targetSurface: raw,
-      glossNote: "",
-      resolution: meaning === "?" ? "fallback" : "direct",
+      glossNote:
+        otherSenses.length > 0 ? `↔ ${otherSenses.join("/")}` : "",
+      resolution: "direct",
     });
   }
   return tokens;

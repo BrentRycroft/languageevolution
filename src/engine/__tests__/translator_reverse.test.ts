@@ -17,7 +17,8 @@ describe("translator reverse direction", () => {
     const index = buildReverseIndex(lang);
     // English's "cat" is /kæt/.
     const catIpa = lang.lexicon.cat!.join("");
-    expect(index.get(catIpa)).toBe("cat");
+    // Phase 21b: index returns Meaning[]; "cat" is the sole sense.
+    expect(index.get(catIpa)).toEqual(["cat"]);
   });
 
   it("buildReverseIndex includes a lowercased fallback", () => {
@@ -26,7 +27,7 @@ describe("translator reverse direction", () => {
     // Most English IPA is already lowercase, but a few use uppercase
     // diacritics. Spot check via lookup case.
     const watIpa = lang.lexicon.water!.join("");
-    expect(index.get(watIpa.toLowerCase())).toBe("water");
+    expect(index.get(watIpa.toLowerCase())).toEqual(["water"]);
   });
 
   it("reverseParseToTokens splits whitespace and resolves each token", () => {
@@ -58,6 +59,6 @@ describe("translator reverse direction", () => {
     if (!lang.altForms.horse) lang.altForms.horse = [];
     lang.altForms.horse.push(["s", "t", "iː", "d"]);
     const index = buildReverseIndex(lang);
-    expect(index.get("stiːd")).toBe("horse");
+    expect(index.get("stiːd")).toEqual(["horse"]);
   });
 });

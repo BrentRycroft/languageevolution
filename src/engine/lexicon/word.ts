@@ -460,3 +460,82 @@ export function tryCommitCoinage(
   });
   return { committed: true, viaPolysemy: true };
 }
+
+/**
+ * Phase 21b: pick the most likely sense from a candidate list. Used when
+ * the translator's reverse pipeline finds that an input form maps to
+ * multiple meanings (homonyms / polysemy). Disambiguation strategy, in
+ * priority order:
+ *   1. Discourse topic match — if a candidate is the current
+ *      discourseTopic, prefer it.
+ *   2. Sentential context — score each candidate by semantic overlap
+ *      with `contextLemmas` (the other resolved meanings in the same
+ *      sentence). Higher overlap wins.
+ *   3. Frequency hint — fallback to the candidate with the highest
+ *      `lang.wordFrequencyHints[meaning]`.
+ *   4. Alphabetic — deterministic tiebreaker.
+ */
+export function disambiguateSense(
+  lang: Language,
+  candidates: Meaning[],
+  opts: {
+    contextLemmas?: readonly Meaning[];
+    discourseTopic?: Meaning;
+  } = {},
+): Meaning {
+  if (candidates.length === 0) {
+    throw new Error("disambiguateSense called with empty candidate list");
+  }
+  if (candidates.length === 1) return candidates[0]!;
+
+  // 1. Discourse-topic match.
+  if (opts.discourseTopic && candidates.includes(opts.discourseTopic)) {
+    return opts.discourseTopic;
+  }
+
+  // 2. Sentential-context scoring.
+  const ctx = opts.contextLemmas ?? [];
+  if (ctx.length > 0) {
+    let bestScore = 0;
+    let best: Meaning | null = null;
+    for (const c of candidates) {
+      const neighbors = new Set<Meaning>([
+        ...neighborsOf(c),
+        ...(lang.localNeighbors?.[c] ?? []),
+      ]);
+      let score = 0;
+      for (const ctxLemma of ctx) {
+        if (ctxLemma === c) continue;
+        if (neighbors.has(ctxLemma)) score += 2;
+        else {
+          const ctxNeighbors = new Set<Meaning>([
+            ...neighborsOf(ctxLemma),
+            ...(lang.localNeighbors?.[ctxLemma] ?? []),
+          ]);
+          if (ctxNeighbors.has(c)) score += 1;
+        }
+      }
+      // Tiny frequency bonus to break true ties.
+      score += (lang.wordFrequencyHints?.[c] ?? 0.4) * 0.1;
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    if (best) return best;
+  }
+
+  // 3. Frequency fallback. When multiple candidates tie on frequency
+  //    (the common case for newly-coined words at default 0.4), fall
+  //    through to alphabetic tiebreak instead of letting iteration
+  //    order decide.
+  let bestFreq = -1;
+  for (const c of candidates) {
+    const f = lang.wordFrequencyHints?.[c] ?? 0.4;
+    if (f > bestFreq) bestFreq = f;
+  }
+  const tied = candidates.filter(
+    (c) => (lang.wordFrequencyHints?.[c] ?? 0.4) === bestFreq,
+  );
+  return tied.slice().sort()[0]!;
+}

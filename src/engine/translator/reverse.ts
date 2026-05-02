@@ -1,12 +1,19 @@
 import type { Language, Meaning } from "../types";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassTable } from "./closedClass";
+import { disambiguateSense } from "../lexicon/word";
 
 export interface ReverseToken {
   target: string;
   lemma: string | null;
   paradigm?: MorphCategory;
   kind: "open" | "closed" | "missing";
+  /**
+   * Phase 21b: when the surface form maps to multiple senses (homonymy
+   * / polysemy), the disambiguator picks one for `lemma` and lists the
+   * remaining candidates here so the UI can show "did you mean…?".
+   */
+  alternateLemmas?: Meaning[];
 }
 
 export interface ReverseTranslation {
@@ -17,7 +24,7 @@ export interface ReverseTranslation {
 }
 
 interface ReverseLexEntry {
-  lemma: Meaning;
+  lemmas: Meaning[]; // Phase 21b: multi-meaning support
   source: "open" | "closed";
 }
 
@@ -27,12 +34,28 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
   const cached = cache.get(lang);
   if (cached) return cached;
   const map = new Map<string, ReverseLexEntry>();
-  const openLemmas = Object.keys(lang.lexicon).sort();
-  for (const lemma of openLemmas) {
-    const surface = lang.lexicon[lemma]!.join("");
-    if (!surface) continue;
-    if (!map.has(surface)) {
-      map.set(surface, { lemma, source: "open" });
+  const append = (surface: string, lemma: Meaning, source: "open" | "closed"): void => {
+    const existing = map.get(surface);
+    if (existing) {
+      if (!existing.lemmas.includes(lemma)) existing.lemmas.push(lemma);
+    } else {
+      map.set(surface, { lemmas: [lemma], source });
+    }
+  };
+  // Prefer the form-centric `words` table when present (Phase 21).
+  if (lang.words && lang.words.length > 0) {
+    for (const w of lang.words) {
+      if (!w.formKey) continue;
+      for (const s of w.senses) {
+        append(w.formKey, s.meaning, "open");
+      }
+    }
+  } else {
+    const openLemmas = Object.keys(lang.lexicon).sort();
+    for (const lemma of openLemmas) {
+      const surface = lang.lexicon[lemma]!.join("");
+      if (!surface) continue;
+      append(surface, lemma, "open");
     }
   }
   const cct = closedClassTable(lang);
@@ -40,17 +63,27 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
   for (const lemma of closedLemmas) {
     const surface = cct[lemma]!.join("");
     if (!surface) continue;
-    if (!map.has(surface)) {
-      map.set(surface, { lemma, source: "closed" });
-    }
+    // Closed-class forms are not multi-meaning; only seed if open
+    // didn't claim this surface already.
+    if (!map.has(surface)) append(surface, lemma, "closed");
   }
   cache.set(lang, map);
   return map;
 }
 
+function pickLemma(
+  lang: Language,
+  entry: ReverseLexEntry,
+  contextLemmas: readonly Meaning[],
+): Meaning {
+  if (entry.lemmas.length === 1) return entry.lemmas[0]!;
+  return disambiguateSense(lang, entry.lemmas, { contextLemmas });
+}
+
 export function reverseLookupForm(
   lang: Language,
   surface: string,
+  contextLemmas: readonly Meaning[] = [],
 ): ReverseToken {
   if (!surface) return { target: surface, lemma: null, kind: "missing" };
   const quoted = surface.match(/^[“"]([^"”]+)[”"]$/u);
@@ -60,24 +93,45 @@ export function reverseLookupForm(
   const lex = buildReverseLex(lang);
   const direct = lex.get(surface);
   if (direct) {
-    return { target: surface, lemma: direct.lemma, kind: direct.source };
+    const picked = pickLemma(lang, direct, contextLemmas);
+    const alternates = direct.lemmas.filter((l) => l !== picked);
+    return {
+      target: surface,
+      lemma: picked,
+      kind: direct.source,
+      ...(alternates.length > 0 ? { alternateLemmas: alternates } : {}),
+    };
   }
   const paradigms = Object.entries(lang.morphology.paradigms).filter(
     ([, p]) => !!p,
   ) as [MorphCategory, NonNullable<typeof lang.morphology.paradigms[MorphCategory]>][];
   paradigms.sort((a, b) => (b[1].affix.length - a[1].affix.length));
+  const reportHit = (
+    hit: ReverseLexEntry,
+    paradigm: MorphCategory,
+  ): ReverseToken => {
+    const picked = pickLemma(lang, hit, contextLemmas);
+    const alternates = hit.lemmas.filter((l) => l !== picked);
+    return {
+      target: surface,
+      lemma: picked,
+      paradigm,
+      kind: hit.source,
+      ...(alternates.length > 0 ? { alternateLemmas: alternates } : {}),
+    };
+  };
   for (const [cat, p] of paradigms) {
     const affix = p.affix.join("");
     if (!affix) continue;
     if (p.position === "suffix" && surface.endsWith(affix) && surface.length > affix.length) {
       const stem = surface.slice(0, surface.length - affix.length);
       const hit = lex.get(stem);
-      if (hit) return { target: surface, lemma: hit.lemma, paradigm: cat, kind: hit.source };
+      if (hit) return reportHit(hit, cat);
     }
     if (p.position === "prefix" && surface.startsWith(affix) && surface.length > affix.length) {
       const stem = surface.slice(affix.length);
       const hit = lex.get(stem);
-      if (hit) return { target: surface, lemma: hit.lemma, paradigm: cat, kind: hit.source };
+      if (hit) return reportHit(hit, cat);
     }
   }
   for (const [cat1, p1] of paradigms) {
@@ -91,7 +145,7 @@ export function reverseLookupForm(
       if (!a2 || !inner.endsWith(a2) || inner.length <= a2.length) continue;
       const stem = inner.slice(0, inner.length - a2.length);
       const hit = lex.get(stem);
-      if (hit) return { target: surface, lemma: hit.lemma, paradigm: cat1, kind: hit.source };
+      if (hit) return reportHit(hit, cat1);
     }
   }
   for (const [, pPre] of paradigms) {
@@ -106,7 +160,7 @@ export function reverseLookupForm(
       if (!aSuf || !afterPre.endsWith(aSuf) || afterPre.length <= aSuf.length) continue;
       const stem = afterPre.slice(0, afterPre.length - aSuf.length);
       const hit = lex.get(stem);
-      if (hit) return { target: surface, lemma: hit.lemma, paradigm: catSuf, kind: hit.source };
+      if (hit) return reportHit(hit, catSuf);
     }
   }
   return { target: surface, lemma: null, kind: "missing" };
@@ -117,7 +171,18 @@ export function reverseTranslate(
   target: string,
 ): ReverseTranslation {
   const targetTokens = target.split(/\s+/).filter((t) => t.length > 0);
-  const tokens: ReverseToken[] = targetTokens.map((t) => reverseLookupForm(lang, t));
+  // Two-pass: first do an unambiguous-only pass to gather context, then
+  // disambiguate multi-sense forms against that context. Keeps the
+  // sentence-level disambiguation deterministic and order-independent.
+  const lex = buildReverseLex(lang);
+  const contextLemmas: Meaning[] = [];
+  for (const t of targetTokens) {
+    const hit = lex.get(t);
+    if (hit && hit.lemmas.length === 1) contextLemmas.push(hit.lemmas[0]!);
+  }
+  const tokens: ReverseToken[] = targetTokens.map((t) =>
+    reverseLookupForm(lang, t, contextLemmas),
+  );
   const english = tokens
     .map((t) => t.lemma ?? `?${t.target}`)
     .join(" ");
