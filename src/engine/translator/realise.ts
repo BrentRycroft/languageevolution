@@ -1,5 +1,5 @@
 import type { Language, WordForm } from "../types";
-import { inflect } from "../morphology/evolve";
+import { inflect, inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassForm } from "./closedClass";
 import type { NP, PP, Sentence, VP } from "./syntax";
@@ -540,30 +540,7 @@ function realiseVerb(
     }
   }
 
-  const synth = lang.grammar.synthesisIndex ?? 2.0;
-  const cap = Math.max(1, Math.round(synth));
-  const applied = stack.slice(0, cap);
-
-  const fusion = lang.grammar.fusionIndex ?? 0.5;
-  for (const cat of applied) {
-    const p = lang.morphology.paradigms[cat];
-    if (!p) continue;
-    const before = form;
-    form = inflect(before, p, lang, meaning);
-    if (fusion >= 0.7 && p.position === "suffix") {
-      while (
-        form.length >= 2 &&
-        form[form.length - p.affix.length - 1] === p.affix[0]
-      ) {
-        form.splice(form.length - p.affix.length, 0);
-        break;
-      }
-      const seam = before.length;
-      if (seam > 0 && seam < form.length && form[seam - 1] === form[seam]) {
-        form.splice(seam, 1);
-      }
-    }
-  }
+  form = inflectCascade(form, stack, lang, meaning).form;
 
   if (negated) {
     if (isZeroCopula) {

@@ -2,7 +2,7 @@ import type { Language, Meaning, WordForm } from "../types";
 import { makeRng, type Rng } from "../rng";
 import { formToString } from "../phonology/ipa";
 import { formatForm, type DisplayScript } from "../phonology/display";
-import { inflect } from "../morphology/evolve";
+import { inflect, inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { translateSentence } from "../translator/sentence";
 
@@ -131,11 +131,7 @@ function inflectVerb(form: WordForm, lang: Language, meaning: string): WordForm 
     "verb.aspect.pfv",
     "verb.person.3sg",
   ];
-  for (const cat of order) {
-    const p = lang.morphology.paradigms[cat];
-    if (p) return inflect(form, p, lang, meaning);
-  }
-  return form;
+  return inflectCascade(form, order, lang, meaning).form;
 }
 
 function arrange(
