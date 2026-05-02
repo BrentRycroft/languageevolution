@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useSimStore } from "../state/store";
 import type { LanguageEvent } from "../engine/types";
 import { formatElapsed } from "../engine/time";
@@ -28,11 +29,17 @@ const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
 };
 
 export function EventsLog() {
-  const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);
-  const selected = selectedLangId ? state.tree[selectedLangId]?.language : undefined;
+  const selected = useSimStore((s) =>
+    selectedLangId ? s.state.tree[selectedLangId]?.language : undefined,
+  );
   const yearsPerGen = useSimStore(
     (s) => s.config.yearsPerGeneration ?? YEARS_PER_GENERATION,
+  );
+
+  const events = useMemo(
+    () => (selected ? selected.events.slice().reverse() : []),
+    [selected?.events, selected],
   );
 
   if (!selected) {
@@ -42,8 +49,6 @@ export function EventsLog() {
       </div>
     );
   }
-
-  const events = selected.events.slice().reverse();
 
   return (
     <div style={{ fontSize: 12 }}>
