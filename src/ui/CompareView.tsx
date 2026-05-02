@@ -623,8 +623,20 @@ function NarrativeCompare({
         </span>
       </div>
       <div className="row-12 flex-wrap items-start">
-        <NarrativePane lang={langA} lines={linesA} />
-        <NarrativePane lang={langB} lines={linesB} />
+        <NarrativePane
+          lang={langA}
+          lines={linesA}
+          genre={genre}
+          seed={seed}
+          generation={generation}
+        />
+        <NarrativePane
+          lang={langB}
+          lines={linesB}
+          genre={genre}
+          seed={seed}
+          generation={generation}
+        />
       </div>
     </div>
   );
@@ -641,7 +653,54 @@ function discourseToNarrativeLines(
   return out.map((l) => ({ text: l.text, gloss: l.english }));
 }
 
-function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[] }) {
+/**
+ * Render a narrative pane as Markdown with header metadata + per-line
+ * blocks formatted as **target** / *English gloss*.
+ */
+export function narrativeToMarkdown(args: {
+  lang: Language;
+  lines: NarrativeLine[];
+  genre: "skeleton" | DiscourseGenre;
+  seed: string;
+  generation: number;
+}): string {
+  const { lang, lines, genre, seed, generation } = args;
+  const head = [
+    `# ${lang.name}`,
+    "",
+    `- generation: ${generation}`,
+    `- genre: ${genre}`,
+    `- seed: ${seed}`,
+    `- word order: ${lang.grammar.wordOrder}`,
+    `- paradigms: ${Object.keys(lang.morphology.paradigms).length}`,
+    `- tier: ${lang.culturalTier ?? 0}`,
+    "",
+    "---",
+    "",
+  ];
+  const body: string[] = [];
+  for (const l of lines) {
+    body.push(`**${l.text}**`);
+    body.push("");
+    body.push(`*${l.gloss}*`);
+    body.push("");
+  }
+  return head.concat(body).join("\n");
+}
+
+function NarrativePane({
+  lang,
+  lines,
+  genre,
+  seed,
+  generation,
+}: {
+  lang: Language;
+  lines: NarrativeLine[];
+  genre: "skeleton" | DiscourseGenre;
+  seed: string;
+  generation: number;
+}) {
   if (lines.length === 0) {
     return (
       <div
@@ -702,6 +761,19 @@ function NarrativePane({ lang, lines }: { lang: Language; lines: NarrativeLine[]
           style={{ fontSize: 11, padding: "2px 8px" }}
         >
           TXT
+        </button>
+        <button
+          type="button"
+          className="ghost"
+          onClick={() => {
+            const md = narrativeToMarkdown({ lang, lines, genre, seed, generation });
+            downloadAs(`narrative-${slugForFile(lang.name)}.md`, md, "text/markdown;charset=utf-8");
+          }}
+          title="Download narrative as Markdown with metadata"
+          aria-label="Download narrative as Markdown"
+          style={{ fontSize: 11, padding: "2px 8px" }}
+        >
+          MD
         </button>
       </div>
       {lines.map((line, i) => (
