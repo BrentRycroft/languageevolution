@@ -185,6 +185,66 @@ export interface Language {
   bilingualLinks?: Record<string, number>;
   speakerCount?: number;
   socialNetworkClustering?: number;
+  /**
+   * Phase 21: form-centric primary lexicon. Each entry binds one phonemic
+   * form to one or more meanings (senses). Populated by every coinage,
+   * borrowing, polysemous-drift, and sound-change-merger event. The
+   * existing meaning-keyed `lexicon` field is a derived view: synced
+   * from `words` via `syncLexiconFromWords()` after any mutation.
+   *
+   * Optional + lazily populated for backwards compat: pre-Phase-21 saves
+   * have undefined `words` and the migrator builds it from `lexicon`.
+   * When undefined, callers should treat `lexicon` as the source of truth.
+   */
+  words?: Word[];
+}
+
+/**
+ * One sense of a polysemous word. A word like English "bank" carries
+ * multiple senses ("financial-institution", "river-edge"); each is a
+ * `WordSense` attached to the same `Word.form`.
+ */
+export interface WordSense {
+  meaning: Meaning;
+  /**
+   * Dominance of this sense within the word. Mirrors
+   * `wordFrequencyHints[meaning]` but is per-sense so the most common
+   * sense surfaces first in disambiguation.
+   */
+  weight: number;
+  register?: "high" | "low" | "neutral";
+  bornGeneration: number;
+  /**
+   * Origin tag for this specific sense. The first sense's origin is
+   * usually the word's coinage tag ("compound", "derivation", "borrow"),
+   * while later senses tagged "polysemy", "sound-change-merger", or
+   * "borrow" record how they joined the word.
+   */
+  origin?: string;
+}
+
+/**
+ * A word in the language: one phonemic form bound to one or more senses.
+ * Mirrors the real-world fact that a single word like English *bank* can
+ * carry multiple meanings (financial institution / river edge).
+ */
+export interface Word {
+  form: WordForm;
+  /**
+   * Stable join key derived from the form via `formKeyOf` (delegates to
+   * `formToString` from phonology/ipa.ts). Used as the index key in
+   * lookup maps; cached on the entry to avoid repeated computation.
+   */
+  formKey: string;
+  senses: WordSense[];
+  /**
+   * Index into `senses` of the dominant sense. Used by the meaning-keyed
+   * `lexicon` view to decide which form to surface for `lexicon[m]` when
+   * `m` is shared. Default 0; promoted on frequency change.
+   */
+  primarySenseIndex: number;
+  bornGeneration: number;
+  origin?: string;
 }
 
 export interface FormVariant {
@@ -328,7 +388,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 5;
+  version: 6;
   id: string;
   label: string;
   createdAt: number;
