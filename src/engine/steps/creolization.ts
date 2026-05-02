@@ -55,12 +55,29 @@ export function stepCreolization(
 
   substrate.grammar = {
     ...substrate.grammar,
+    wordOrder: "SVO",
     hasCase: false,
     caseStrategy: "preposition",
     articlePresence: "free",
     synthesisIndex: 1.0,
     fusionIndex: 0.1,
+    genderCount: 0,
+    alignment: "nom-acc",
   };
+
+  // Creolization regularizes irregular morphology — drop suppletion entirely.
+  if (substrate.suppletion) {
+    delete substrate.suppletion;
+  }
+  // Drop gender assignments (gender is gone from the grammar).
+  if (substrate.gender) {
+    delete substrate.gender;
+  }
+  // Drop tone (creoles consistently lose lexical tone from tonal substrates).
+  if (substrate.phonemeInventory.usesTones) {
+    substrate.phonemeInventory.usesTones = false;
+    substrate.phonemeInventory.tones = [];
+  }
 
   let borrowed = 0;
   const lexifierMeanings = Object.keys(lexifier.lexicon);
@@ -74,7 +91,7 @@ export function stepCreolization(
   pushEvent(substrate, {
     generation,
     kind: "borrow",
-    description: `creolization with ${lexifier.name}: morphology pruned ${before}→${after} paradigms, ${borrowed} loanwords absorbed`,
+    description: `creolization with ${lexifier.name}: word order → SVO; morphology pruned ${before}→${after} paradigms; suppletion + gender + tone dropped; ${borrowed} loanwords absorbed`,
   });
   pushEvent(lexifier, {
     generation,
