@@ -65,27 +65,102 @@ function pickCentreForm(forms: WordForm[]): WordForm {
   return best;
 }
 
+/**
+ * Needleman-Wunsch alignment of `query` against `reference`. Returns an
+ * array of [refSegment | null, querySegment | null] pairs where null marks
+ * a gap. Used by MSA-style consensus to handle insertions and deletions.
+ */
+const GAP = "_";
+function alignToReference(
+  reference: WordForm,
+  query: WordForm,
+): Array<[string | null, string | null]> {
+  const m = reference.length;
+  const n = query.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () =>
+    new Array<number>(n + 1).fill(0),
+  );
+  for (let i = 0; i <= m; i++) dp[i]![0] = i;
+  for (let j = 0; j <= n; j++) dp[0]![j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = reference[i - 1] === query[j - 1] ? 0 : 1;
+      dp[i]![j] = Math.min(
+        dp[i - 1]![j]! + 1,
+        dp[i]![j - 1]! + 1,
+        dp[i - 1]![j - 1]! + cost,
+      );
+    }
+  }
+  // Backtrack.
+  const out: Array<[string | null, string | null]> = [];
+  let i = m;
+  let j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && dp[i]![j]! === dp[i - 1]![j - 1]! + (reference[i - 1] === query[j - 1] ? 0 : 1)) {
+      out.push([reference[i - 1]!, query[j - 1]!]);
+      i--;
+      j--;
+    } else if (i > 0 && dp[i]![j]! === dp[i - 1]![j]! + 1) {
+      out.push([reference[i - 1]!, null]);
+      i--;
+    } else {
+      out.push([null, query[j - 1]!]);
+      j--;
+    }
+  }
+  out.reverse();
+  return out;
+}
+
+/**
+ * MSA-style consensus reconstruction. Each form is aligned to the centre
+ * via Needleman-Wunsch. For each alignment column (anchored on a centre
+ * position OR an insertion), tally the segments including gaps. The
+ * column's plurality choice wins; columns where gaps dominate are dropped.
+ *
+ * This handles insertions and deletions, so a 5-phoneme form and a
+ * 6-phoneme form no longer pretend the 6th position doesn't exist.
+ */
 function consensusByPosition(forms: WordForm[]): WordForm {
   if (forms.length === 0) return [];
   const centre = pickCentreForm(forms);
-  const length = centre.length;
-  const out: WordForm = [];
-  for (let i = 0; i < length; i++) {
-    const tally = new Map<string, number>();
-    for (const f of forms) {
-      if (i >= f.length) continue;
-      const p = f[i]!;
-      tally.set(p, (tally.get(p) ?? 0) + 1);
+
+  // Map: column-key (centre index, or insertion marker) → tally of segments.
+  // For each form's alignment, walk left-to-right tracking which centre
+  // index we're at; gaps in the centre create insertion-column keys.
+  const columns: Array<Map<string, number>> = [];
+  for (let k = 0; k < centre.length; k++) columns.push(new Map());
+
+  for (const f of forms) {
+    const aligned = alignToReference(centre, f);
+    let col = 0;
+    for (const [refSeg, qSeg] of aligned) {
+      if (refSeg !== null) {
+        // Anchored column at centre index `col`.
+        const tally = columns[col]!;
+        const seg = qSeg ?? GAP;
+        tally.set(seg, (tally.get(seg) ?? 0) + 1);
+        col++;
+      }
+      // refSeg === null is an insertion in this query relative to centre;
+      // we drop it for now (could be added as inter-column anchors in a
+      // richer implementation).
     }
-    let bestPhoneme = centre[i]!;
-    let bestCount = tally.get(bestPhoneme) ?? 0;
-    for (const [p, c] of tally) {
-      if (c > bestCount) {
-        bestCount = c;
-        bestPhoneme = p;
+  }
+
+  const out: WordForm = [];
+  for (let k = 0; k < columns.length; k++) {
+    const tally = columns[k]!;
+    let best: string = centre[k]!;
+    let bestCount = tally.get(best) ?? 0;
+    for (const [seg, count] of tally) {
+      if (count > bestCount) {
+        bestCount = count;
+        best = seg;
       }
     }
-    out.push(bestPhoneme);
+    if (best !== GAP) out.push(best);
   }
   return out;
 }
