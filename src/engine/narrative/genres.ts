@@ -11,6 +11,8 @@ const MYTH_TEMPLATES: AbstractTemplate[] = [
   { shape: "place_intrans",      tense: "past",   needs: { subject: true,  object: false, adjective: false, time: false, place: true  }, introducesEntity: true },
   { shape: "long_ago_trans_adj", tense: "past",   needs: { subject: true,  object: true,  adjective: true,  time: false, place: false }, introducesEntity: true },
   { shape: "transitive",         tense: "future", needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "instrument_adjunct", tense: "past",   needs: { subject: true,  object: true,  adjective: false, time: false, place: true  }, introducesEntity: true },
+  { shape: "motion_goal",        tense: "past",   needs: { subject: true,  object: false, adjective: false, time: false, place: true  }, introducesEntity: true },
 ];
 
 const LEGEND_TEMPLATES: AbstractTemplate[] = [
@@ -20,6 +22,7 @@ const LEGEND_TEMPLATES: AbstractTemplate[] = [
   { shape: "place_intrans",  tense: "past",   needs: { subject: true,  object: false, adjective: false, time: false, place: true  }, introducesEntity: true },
   { shape: "adj_subject",    tense: "past",   needs: { subject: true,  object: false, adjective: true,  time: false, place: false }, introducesEntity: true },
   { shape: "topic_intrans",  tense: "past",   needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true },
+  { shape: "motion_source",  tense: "past",   needs: { subject: true,  object: false, adjective: false, time: false, place: true  }, introducesEntity: true },
 ];
 
 const DAILY_TEMPLATES: AbstractTemplate[] = [
@@ -29,6 +32,7 @@ const DAILY_TEMPLATES: AbstractTemplate[] = [
   { shape: "topic_trans",         tense: "present", needs: { subject: false, object: true,  adjective: false, time: false, place: false }, topicSubject: true },
   { shape: "place_intrans",       tense: "present", needs: { subject: true,  object: false, adjective: false, time: false, place: true  }, introducesEntity: true },
   { shape: "intransitive",        tense: "future",  needs: { subject: true,  object: false, adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "benefactive",         tense: "present", needs: { subject: true,  object: true,  adjective: false, time: false, place: true  }, introducesEntity: true },
 ];
 
 const DIALOGUE_TEMPLATES: AbstractTemplate[] = [

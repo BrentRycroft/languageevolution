@@ -164,14 +164,32 @@ export function generateDiscourseNarrative(
     0.1;
   // Coordination ("X and Y") rate per gen: 15% across the board.
   const coordRate = 0.15;
+  // Perfect-aspect rate: applied only to non-future templates when the
+  // language has a "have" entry. Slightly higher in legend/myth to give
+  // the formal "had seen" / "have come" feel; lower in casual genres.
+  const perfectRate =
+    genre === "myth" || genre === "legend" ? 0.18 :
+    genre === "dialogue" ? 0.08 :
+    0.05;
   const andForm = lang.lexicon["and"];
+  const haveForm = lang.lexicon["have"];
 
   for (let i = 0; i < lines; i++) {
     const baseTemplate = pickTemplate(genre, ctx, rng);
     // Negation: ~negationRate of templates flip to negated.
-    const template: AbstractTemplate = rng.chance(negationRate)
+    let template: AbstractTemplate = rng.chance(negationRate)
       ? { ...baseTemplate, negated: true }
       : baseTemplate;
+    // Perfect aspect: occasional flip on past/present templates when the
+    // language has the "have" auxiliary in its lexicon.
+    if (
+      haveForm &&
+      template.tense !== "future" &&
+      !template.negated &&
+      rng.chance(perfectRate)
+    ) {
+      template = { ...template, aspect: "perfect" };
+    }
 
     const slots = fillSlots(template, lang, rng);
 

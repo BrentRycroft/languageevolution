@@ -136,6 +136,18 @@ export function createSimulation(
               });
             }
           }
+          // Phase 20f catch-up: crossing into tier 2 unlocks abstract-noun
+          // morphology, so the genesis driver gets a boost-window for
+          // coining DERIVATION_TARGETS abstracts (freedom, kingdom,
+          // happiness, friendship, etc.) from existing roots.
+          if (priorTier < 2 && nextTier >= 2) {
+            lang.vocabularyCatchUpUntil = nextGen + 30;
+            pushEvent(lang, {
+              generation: nextGen,
+              kind: "grammar_shift",
+              description: `abstract-vocabulary catch-up window opened (next 30 gens)`,
+            });
+          }
         }
         lang.lexicalCapacity = lexicalCapacity(lang, nextGen);
       }

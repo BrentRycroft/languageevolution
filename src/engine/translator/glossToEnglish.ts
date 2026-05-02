@@ -60,6 +60,55 @@ const IRREGULAR_3SG: Record<string, string> = {
   say: "says",
 };
 
+/**
+ * Past participles for irregular verbs we coin in narratives. Most regular
+ * verbs share the simple past form for their participle (walked / walked),
+ * so we fall back to pastOf() for anything not in this table.
+ */
+const IRREGULAR_PARTICIPLE: Record<string, string> = {
+  be: "been",
+  have: "had",
+  do: "done",
+  go: "gone",
+  see: "seen",
+  give: "given",
+  take: "taken",
+  know: "known",
+  come: "come",
+  eat: "eaten",
+  drink: "drunk",
+  sing: "sung",
+  run: "run",
+  fall: "fallen",
+  rise: "risen",
+  break: "broken",
+  speak: "spoken",
+  write: "written",
+  ride: "ridden",
+  drive: "driven",
+  forget: "forgotten",
+  hold: "held",
+  fight: "fought",
+  bring: "brought",
+  buy: "bought",
+  catch: "caught",
+  teach: "taught",
+  think: "thought",
+  feel: "felt",
+  sleep: "slept",
+  hear: "heard",
+  stand: "stood",
+  find: "found",
+  make: "made",
+  say: "said",
+  cut: "cut",
+  put: "put",
+  read: "read",
+  let: "let",
+  set: "set",
+  hit: "hit",
+};
+
 const COUNTABLE_NONPLURAL = new Set(["water", "fire", "rain", "snow", "milk", "blood", "wind"]);
 
 function endsWithSibilant(s: string): boolean {
@@ -83,6 +132,11 @@ function pastOf(lemma: string): string {
   if (lemma.endsWith("e")) return lemma + "d";
   if (endsWithConsonantY(lemma)) return lemma.slice(0, -1) + "ied";
   return lemma + "ed";
+}
+
+function pastParticipleOf(lemma: string): string {
+  if (IRREGULAR_PARTICIPLE[lemma]) return IRREGULAR_PARTICIPLE[lemma];
+  return pastOf(lemma);
 }
 
 function progressiveOf(lemma: string): string {
@@ -134,13 +188,17 @@ function looksLikeProgressive(gloss: string): boolean {
   return /prog\b|aspect\.prog|ipfv/.test(gloss);
 }
 
+function looksLikePerfect(gloss: string): boolean {
+  return /aspect\.perf\b|\bperf\b/.test(gloss);
+}
+
 function looksLike3sg(gloss: string): boolean {
   return /3sg\b|person\.3sg/.test(gloss);
 }
 
 export interface ReverseOptions {
   guessTense?: "present" | "past";
-  guessAspect?: "progressive" | "perfective" | "imperfective";
+  guessAspect?: "progressive" | "perfective" | "imperfective" | "perfect";
   subjectIs3sg?: boolean;
   preserveOrder?: boolean;
 }
@@ -154,10 +212,12 @@ export function glossToEnglish(
 
   let pastFlag = opts.guessTense === "past";
   let progressiveFlag = opts.guessAspect === "progressive";
+  let perfectFlag = opts.guessAspect === "perfect";
   let third = opts.subjectIs3sg ?? false;
   for (const t of filtered) {
     if (looksLikePast(t.glossNote)) pastFlag = true;
     if (looksLikeProgressive(t.glossNote)) progressiveFlag = true;
+    if (looksLikePerfect(t.glossNote)) perfectFlag = true;
     if (looksLike3sg(t.glossNote)) third = true;
   }
 
@@ -181,7 +241,11 @@ export function glossToEnglish(
     if (t.englishTag === "N" || t.englishTag === "PRON") {
       if (looksLikeNounPlural(t.glossNote)) lemma = pluralOf(lemma);
     } else if (t.englishTag === "V") {
-      if (pastFlag) {
+      if (perfectFlag || looksLikePerfect(t.glossNote)) {
+        // Perfect aspect: AUX "have/has/had" already in the token stream;
+        // the V itself becomes a past participle ("seen", "gone").
+        lemma = pastParticipleOf(lemma);
+      } else if (pastFlag) {
         lemma = pastOf(lemma);
       } else if (progressiveFlag) {
         lemma = progressiveOf(lemma);
