@@ -1,19 +1,67 @@
 import type { SavedRun, SimulationConfig } from "../engine/types";
 import { defaultConfig } from "../engine/config";
 
+/**
+ * Bump LATEST_SAVE_VERSION when adding a breaking change. Each bump must:
+ *  1. add an entry in MIGRATIONS keyed by the OLD version that transforms
+ *     a vN payload into a vN+1 payload.
+ *  2. add a regression test in migrate.test.ts that loads a vN fixture and
+ *     confirms it migrates correctly.
+ *
+ * The flatten-with-defaults coda at the end ensures any newly-added fields
+ * get default values without needing an explicit migration. Migrations
+ * therefore only need to handle field renames, type changes, or removals.
+ */
 export const LATEST_SAVE_VERSION = 5;
+
+type RawObj = Record<string, unknown>;
+
+/**
+ * Per-version upgrade functions. Each takes a payload at version N and returns
+ * a payload at version N+1. Run in sequence from the saved version to
+ * LATEST_SAVE_VERSION before final coercion.
+ *
+ * Currently no breaking changes between v1..v6, so all migrations are
+ * identity. The infrastructure exists so the next breaking change has a
+ * clear place to land.
+ */
+const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
+  1: (raw) => ({ ...raw, version: 2 }),
+  2: (raw) => ({ ...raw, version: 3 }),
+  3: (raw) => ({ ...raw, version: 4 }),
+  4: (raw) => ({ ...raw, version: 5 }),
+};
 
 export function migrateSavedRun(raw: unknown): SavedRun | null {
   if (!raw || typeof raw !== "object") return null;
-  const obj = raw as Record<string, unknown>;
-  const version = typeof obj.version === "number" ? obj.version : 1;
+  let obj = raw as RawObj;
+  let version = typeof obj.version === "number" ? obj.version : 1;
   if (version > LATEST_SAVE_VERSION) return null;
   if (!obj.config || typeof obj.config !== "object") return null;
 
+  // Apply per-version migrations in sequence.
+  while (version < LATEST_SAVE_VERSION) {
+    const step = MIGRATIONS[version];
+    if (!step) {
+      // Missing migration step — refuse rather than silently corrupt.
+      return null;
+    }
+    obj = step(obj);
+    version = typeof obj.version === "number" ? obj.version : version + 1;
+  }
+
+  return coerceLatest(obj);
+}
+
+/**
+ * Final coercion: merge against current defaults so newly-added optional
+ * fields get sensible values without needing a per-version migration.
+ */
+function coerceLatest(obj: RawObj): SavedRun | null {
   const defaults = defaultConfig();
-  const oldConfig = obj.config as Record<string, unknown>;
-  const oldModes = (oldConfig.modes as Record<string, unknown>) ?? {};
-  const oldTree = (oldConfig.tree as Record<string, unknown>) ?? {};
+  const oldConfig = obj.config as RawObj;
+  const oldModes = (oldConfig.modes as RawObj) ?? {};
+  const oldTree = (oldConfig.tree as RawObj) ?? {};
   const mergedConfig: SimulationConfig = {
     ...defaults,
     ...oldConfig,
@@ -73,7 +121,7 @@ export function migrateSavedRun(raw: unknown): SavedRun | null {
       typeof oldConfig.useWorker === "boolean" ? (oldConfig.useWorker as boolean) : false,
   };
   return {
-    version: 5,
+    version: LATEST_SAVE_VERSION,
     id: String(obj.id ?? ""),
     label: String(obj.label ?? "unlabeled"),
     createdAt: typeof obj.createdAt === "number" ? obj.createdAt : Date.now(),
