@@ -116,6 +116,10 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   n: { type: "consonant", place: "alveolar", manner: "nasal", voice: true },
   "ɲ": { type: "consonant", place: "palatal", manner: "nasal", voice: true },
   "ŋ": { type: "consonant", place: "velar", manner: "nasal", voice: true },
+  // Prenasalised velar stop, Proto-Germanic spelling /ⁿg/. Behaves featurally
+  // like a velar stop with a leading nasal release. Single-codepoint
+  // representation U+207F U+0067 (modifier-N + g).
+  "ⁿg": { type: "consonant", place: "velar", manner: "stop", voice: true },
   "ɳ": { type: "consonant", place: "retroflex", manner: "nasal", voice: true },
   "m̩": { type: "consonant", place: "labial", manner: "nasal", voice: true },
   "n̩": { type: "consonant", place: "alveolar", manner: "nasal", voice: true },
@@ -146,6 +150,7 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   e: { type: "vowel", height: "mid-high", backness: "front", round: false },
   "ø": { type: "vowel", height: "mid-high", backness: "front", round: true },
   "ə": { type: "vowel", height: "mid", backness: "central", round: false },
+  "ʌ": { type: "vowel", height: "mid-low", backness: "back", round: false },
   o: { type: "vowel", height: "mid-high", backness: "back", round: true },
   "ɛ": { type: "vowel", height: "mid-low", backness: "front", round: false },
   "œ": { type: "vowel", height: "mid-low", backness: "front", round: true },
@@ -168,6 +173,15 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   "ō": { type: "vowel", height: "mid-high", backness: "back", round: true, long: true },
   "ū": { type: "vowel", height: "high", backness: "back", round: true, long: true },
   "ḗ": { type: "vowel", height: "mid-high", backness: "front", round: false, long: true },
+  // Nasal vowels (Phase 20e). Used by Proto-Germanic and Romance presets
+  // for historical nasalisation. Stored as single codepoints (precomposed
+  // tilde) so both `formToString` and lookup work without combining-mark
+  // sequences.
+  "ã": { type: "vowel", height: "low", backness: "central", round: false, nasal: true },
+  "ẽ": { type: "vowel", height: "mid-high", backness: "front", round: false, nasal: true },
+  "ĩ": { type: "vowel", height: "high", backness: "front", round: false, nasal: true },
+  "õ": { type: "vowel", height: "mid-high", backness: "back", round: true, nasal: true },
+  "ũ": { type: "vowel", height: "high", backness: "back", round: true, nasal: true },
 };
 
 export type FeatureQuery =
