@@ -542,6 +542,70 @@ function resolveLemma(
   return { form: null, resolution: "fallback", glossNote: "?" };
 }
 
+/**
+ * Build a reverse index from `formString` → `meaning` for the given
+ * language. `formString` is the IPA-joined phoneme sequence (no
+ * separators) — same shape `formToString` produces in IPA mode plus a
+ * romanized variant. Useful for the Translator's reverse direction
+ * (target → English) so a user typing "kæt" or "cat" finds "cat".
+ */
+export function buildReverseIndex(lang: Language): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const m of Object.keys(lang.lexicon)) {
+    const form = lang.lexicon[m];
+    if (!form || form.length === 0) continue;
+    // IPA join: each phoneme concatenated.
+    const ipa = form.join("");
+    if (!out.has(ipa)) out.set(ipa, m);
+    // Lowercased ASCII fallback so users typing "cat" without diacritics
+    // also find a hit (best-effort).
+    const ascii = ipa.toLowerCase();
+    if (!out.has(ascii)) out.set(ascii, m);
+  }
+  // Include alts: typing the borrowed alt should still resolve.
+  if (lang.altForms) {
+    for (const m of Object.keys(lang.altForms)) {
+      for (const alt of lang.altForms[m] ?? []) {
+        const ipa = alt.join("");
+        if (!out.has(ipa)) out.set(ipa, m);
+        const ascii = ipa.toLowerCase();
+        if (!out.has(ascii)) out.set(ascii, m);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Reverse parse: take a string of target-language tokens (whitespace-
+ * separated), match each against the reverse index, and produce a flat
+ * list of `TranslatedToken` ready for glossToEnglish. Unmatched tokens
+ * yield a fallback token tagged "?".
+ */
+export function reverseParseToTokens(
+  lang: Language,
+  text: string,
+): TranslatedToken[] {
+  const index = buildReverseIndex(lang);
+  const tokens: TranslatedToken[] = [];
+  for (const raw of text.trim().split(/\s+/)) {
+    if (!raw) continue;
+    const meaning =
+      index.get(raw) ??
+      index.get(raw.toLowerCase()) ??
+      "?";
+    tokens.push({
+      englishLemma: meaning,
+      englishTag: "N",
+      targetForm: lang.lexicon[meaning] ?? [],
+      targetSurface: raw,
+      glossNote: "",
+      resolution: meaning === "?" ? "fallback" : "direct",
+    });
+  }
+  return tokens;
+}
+
 export function translateSentence(lang: Language, english: string): SentenceTranslation {
   const englishTokens = tokeniseEnglish(english);
 

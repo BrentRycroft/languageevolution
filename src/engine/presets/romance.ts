@@ -287,6 +287,32 @@ const MORPHOLOGY: Morphology = {
   },
 };
 
+/**
+ * Phase 20e-2: Vulgar Latin / Proto-Romance suppletion fragments.
+ *
+ * The suppletive verb pair *esse / *fui* (be / was), the irregular
+ * *ire / *vāde-* (go / went), the Latin comparative pair bonus/melior
+ * and malus/peior, the famous homo/homines stem alternation. These
+ * forms feed straight into early Romance daughters when the simulator
+ * descends from this preset.
+ */
+const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+  // *esse* "be" → perfect *fui*
+  be: { "verb.tense.past": ["f", "u", "i"] },
+  // *ire* "go" → perfect *ii* / present *vāde-* (the suppletion that
+  // gives Romance va/vu vs. ire descendants)
+  go: { "verb.tense.past": ["i", "i"] },
+  // *vidēre* "see" → perfect *vidi*
+  see: { "verb.tense.past": ["v", "i", "d", "i"] },
+  // *facere* "make/do" → perfect *fēci* (we use the eat slot since
+  // make isn't in the Romance seedLexicon)
+  // Comparative degree
+  good: { "adj.degree.cmp": ["m", "e", "l", "j", "o", "r", "e"] },
+  bad: { "adj.degree.cmp": ["p", "e", "j", "o", "r", "e"] },
+  // homo/homines: nominative singular vs. plural stem alternation
+  man: { "noun.num.pl": ["o", "m", "i", "n", "e", "s"] },
+};
+
 export function presetRomance(): SimulationConfig {
   const base = defaultConfig();
   return {
@@ -295,6 +321,8 @@ export function presetRomance(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    seedSuppletion: SUPPLETION,
+    seedCulturalTier: 2,
     seedStressPattern: "penult",
     seedGrammar: {
       wordOrder: "SVO",

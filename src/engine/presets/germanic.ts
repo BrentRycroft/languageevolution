@@ -281,6 +281,34 @@ const MORPHOLOGY: Morphology = {
   },
 };
 
+/**
+ * Phase 20e-2: Common-Germanic suppletion / strong verbs.
+ *
+ * Pre-Old-English ablaut classes I-VII and umlaut plurals. The phonemic
+ * forms here use Proto-Germanic-style reconstructed shapes (Ringe et al.).
+ * Some are simplified for the simulator's inventory.
+ */
+const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+  // Class III: drink/drank/drunk — *drinkaną
+  drink: { "verb.tense.past": ["d", "r", "a", "n", "k"] },
+  swim: { "verb.tense.past": ["s", "w", "a", "m"] },
+  // Class IV: bear/bore — *beraną
+  bear: { "verb.tense.past": ["b", "e", "r", "a"] },
+  // Class V: see/saw — *sehwaną
+  see: { "verb.tense.past": ["s", "a", "xʷ"] },
+  eat: { "verb.tense.past": ["e", "t"] },
+  // Class VII: come/came — *kweman/*kwamaną
+  come: { "verb.tense.past": ["kʷ", "a", "m"] },
+  run: { "verb.tense.past": ["r", "a", "n", "n"] },
+  // Athematic / suppletive: be (was), go (went-equivalent eode)
+  be: { "verb.tense.past": ["w", "a", "s"] },
+  go: { "verb.tense.past": ["i", "d", "ð"] },
+  // Umlaut plurals (i-mutation): foot/feet, mouse/mice, man/men, woman/women, tooth/teeth
+  foot: { "noun.num.pl": ["f", "oː", "t", "s"] },
+  man: { "noun.num.pl": ["m", "a", "n", "n", "i", "z"] },
+  woman: { "noun.num.pl": ["kʷ", "e", "n", "oː", "s"] },
+};
+
 export function presetGermanic(): SimulationConfig {
   const base = defaultConfig();
   return {
@@ -289,6 +317,8 @@ export function presetGermanic(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    seedSuppletion: SUPPLETION,
+    seedCulturalTier: 1,
     seedStressPattern: "initial",
     seedGrammar: {
       wordOrder: "SVO",

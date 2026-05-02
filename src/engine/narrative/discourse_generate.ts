@@ -24,6 +24,15 @@ import {
   type AbstractTemplate,
   type SlotAssignment,
 } from "./composer";
+import {
+  subjectPool,
+  objectPool,
+  verbPool,
+  adjectivePool,
+  timePool,
+  placePool,
+  pickWeighted,
+} from "./pools";
 
 export interface DiscourseLine {
   english: string;
@@ -47,21 +56,81 @@ function pickTemplate(
   return rng.next() < 0.6 ? pick(continuing, rng) : pick(introducing, rng);
 }
 
-function fillSlots(template: AbstractTemplate, rng: Rng): SlotAssignment {
-  const verbPool = template.needs.object
+/**
+ * Slot filler — picks from the language's actual lexicon (frequency-
+ * weighted) when it's rich enough, falls back to the small genre pools
+ * when the language is sparse. Sparse-language fallback ensures narratives
+ * still render for fresh proto-languages with <50 words.
+ */
+function fillSlots(
+  template: AbstractTemplate,
+  lang: Language,
+  rng: Rng,
+): SlotAssignment {
+  const subjectsLex = subjectPool(lang);
+  const objectsLex = objectPool(lang);
+  const verbsLex = verbPool(lang);
+  const adjsLex = adjectivePool(lang);
+  const timesLex = timePool(lang);
+  const placesLex = placePool(lang);
+
+  // Need at least ~6 entries to weight-sample meaningfully; otherwise fall
+  // back to the legacy hand-picked pool.
+  const subjects = subjectsLex.length >= 6 ? subjectsLex : SUBJECT_NOUN_POOL.slice();
+  const objects = objectsLex.length >= 6 ? objectsLex : OBJECT_NOUN_POOL.slice();
+  const adjs = adjsLex.length >= 4 ? adjsLex : ADJECTIVE_POOL.slice();
+  const times = timesLex.length >= 2 ? timesLex : TIME_POOL.slice();
+  const places = placesLex.length >= 2 ? placesLex : PLACE_POOL.slice();
+
+  // For verbs, transitive vs intransitive split is hard to derive from POS
+  // alone; keep the legacy hand-picked verb pool as the source of truth
+  // for the trans/intrans distinction, but extend with all lexicon verbs
+  // as a last-resort fallback.
+  const verbPoolForTemplate = template.needs.object
     ? TRANSITIVE_VERB_POOL
     : INTRANSITIVE_VERB_POOL.length > 0
       ? INTRANSITIVE_VERB_POOL
       : VERB_POOL;
+  const verbs =
+    verbPoolForTemplate.length > 0 ? verbPoolForTemplate.slice() : verbsLex;
+
   const slots: SlotAssignment = {
-    verb: pick(verbPool, rng),
+    verb: pickWeighted(lang, verbs, rng) ?? pick(verbs, rng),
   };
-  if (template.needs.subject) slots.subject = pick(SUBJECT_NOUN_POOL, rng);
-  if (template.needs.object) slots.object = pick(OBJECT_NOUN_POOL, rng);
-  if (template.needs.adjective) slots.adjective = pick(ADJECTIVE_POOL, rng);
-  if (template.needs.time) slots.time = pick(TIME_POOL, rng);
-  if (template.needs.place) slots.place = pick(PLACE_POOL, rng);
+  if (template.needs.subject) {
+    slots.subject =
+      pickWeighted(lang, subjects, rng) ?? pick(subjects, rng);
+  }
+  if (template.needs.object) {
+    slots.object =
+      pickWeighted(lang, objects, rng) ?? pick(objects, rng);
+  }
+  if (template.needs.adjective) {
+    slots.adjective = pickWeighted(lang, adjs, rng) ?? pick(adjs, rng);
+  }
+  if (template.needs.time) {
+    slots.time = pickWeighted(lang, times, rng) ?? pick(times, rng);
+  }
+  if (template.needs.place) {
+    slots.place = pickWeighted(lang, places, rng) ?? pick(places, rng);
+  }
   return slots;
+}
+
+/**
+ * Map discourse genre to the register the composer should bias alt-form
+ * selection toward. Myth + legend prefer high-register synonyms (steed,
+ * kin, art); daily + dialogue prefer low (horse, family, made).
+ */
+function genreRegisterFor(genre: DiscourseGenre): "high" | "low" | "neutral" {
+  switch (genre) {
+    case "myth":
+    case "legend":
+      return "high";
+    case "daily":
+    case "dialogue":
+      return "low";
+  }
 }
 
 function morphologicalGloss(tokens: { englishLemma: string; glossNote: string }[]): string {
@@ -87,9 +156,24 @@ export function generateDiscourseNarrative(
   const ctx = makeDiscourse(genre);
   const out: DiscourseLine[] = [];
 
+  // Per-genre negation rate: dialogue 30%, daily 25%, legend 15%, myth 10%.
+  const negationRate =
+    genre === "dialogue" ? 0.3 :
+    genre === "daily" ? 0.25 :
+    genre === "legend" ? 0.15 :
+    0.1;
+  // Coordination ("X and Y") rate per gen: 15% across the board.
+  const coordRate = 0.15;
+  const andForm = lang.lexicon["and"];
+
   for (let i = 0; i < lines; i++) {
-    const template = pickTemplate(genre, ctx, rng);
-    const slots = fillSlots(template, rng);
+    const baseTemplate = pickTemplate(genre, ctx, rng);
+    // Negation: ~negationRate of templates flip to negated.
+    const template: AbstractTemplate = rng.chance(negationRate)
+      ? { ...baseTemplate, negated: true }
+      : baseTemplate;
+
+    const slots = fillSlots(template, lang, rng);
 
     if (template.needs.subject && slots.subject) {
       mention(ctx, slots.subject as Meaning);
@@ -101,16 +185,65 @@ export function generateDiscourseNarrative(
       if (!template.needs.subject && wasNew) ctx.topic = ctx.entities.get(objMeaning)!;
     }
 
-    const composed = composeTargetSentence(lang, template, slots, ctx, script);
+    const composed = composeTargetSentence(lang, template, slots, ctx, script, {
+      rng,
+      pickAltProbability: 0.1,
+      genreRegister: genreRegisterFor(genre),
+    });
     if (composed.tokens.length === 0) {
       endTurn(ctx);
       continue;
     }
 
+    // Coordination: with coordRate probability, pick a second template +
+    // slots and join them with "and" (target form). Only fires when the
+    // language has "and" in its lexicon and both pieces composed cleanly.
+    let finalEnglish = composed.english;
+    let finalSurface = composed.surface;
+    let finalGloss = morphologicalGloss(composed.tokens);
+    if (andForm && rng.chance(coordRate)) {
+      const tpl2 = pickTemplate(genre, ctx, rng);
+      const slots2 = fillSlots(tpl2, lang, rng);
+      const composed2 = composeTargetSentence(lang, tpl2, slots2, ctx, script, {
+        rng,
+        pickAltProbability: 0.1,
+        genreRegister: genreRegisterFor(genre),
+      });
+      if (composed2.tokens.length > 0) {
+        const andSurface = composed2.tokens[0]!.targetSurface
+          ? composed.surface +
+            " " +
+            (lang.lexicon["and"]
+              ? composed2.tokens[0]!.targetSurface
+                ? ""
+                : ""
+              : "") +
+            ""
+          : "";
+        void andSurface;
+        // Use English "and" between the captions and the target-language
+        // "and" between the surfaces.
+        const andTargetRendered = lang.lexicon["and"]
+          ? composed2.surface
+            ? composed.surface +
+              " " +
+              (lang.lexicon["and"] ? "" : "") +
+              ""
+            : ""
+          : "";
+        void andTargetRendered;
+        finalEnglish = `${composed.english} and ${composed2.english}`;
+        finalSurface = composed2.surface
+          ? `${composed.surface} ${andForm.join("")} ${composed2.surface}`
+          : composed.surface;
+        finalGloss = `${morphologicalGloss(composed.tokens)} — and — ${morphologicalGloss(composed2.tokens)}`;
+      }
+    }
+
     out.push({
-      english: composed.english,
-      text: composed.surface,
-      gloss: morphologicalGloss(composed.tokens),
+      english: finalEnglish,
+      text: finalSurface,
+      gloss: finalGloss,
     });
     endTurn(ctx);
   }

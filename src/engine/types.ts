@@ -84,6 +84,18 @@ export interface Language {
   conservatism: number;
   speakers?: number;
   wordOrigin: Record<Meaning, string>;
+  /**
+   * Detailed derivation chain — parallel to wordOrigin (which is a single
+   * tag string for backwards-compat). Populated by the targeted-derivation
+   * mechanism so the UI can surface "freedom ← free + -dom" etymology
+   * info. Optional; old runs and primitives leave it empty.
+   */
+  wordOriginChain?: Record<Meaning, {
+    tag: string;
+    from?: Meaning;
+    via?: string;
+    donor?: string;
+  }>;
   activeRules: import("./phonology/generated-types").GeneratedRule[];
   retiredRules?: import("./phonology/generated-types").GeneratedRule[];
   ruleBias?: Record<string, number>;
@@ -94,6 +106,14 @@ export interface Language {
     cells: number[];
   };
   orthography: Record<string, string>;
+  /**
+   * Word-level orthographic overrides — frozen historical spellings that
+   * outlive sound change. Once a meaning enters this map, romanize() will
+   * return the stored string verbatim regardless of how the phonemic form
+   * has drifted. Mirrors the English knight/though/gnome pattern. Only
+   * fires for languages at cultural tier ≥ 3 (writing standardisation).
+   */
+  lexicalSpelling?: Record<Meaning, string>;
   otRanking: string[];
   lastChangeGeneration: Record<Meaning, number>;
   stressPattern?: "initial" | "penult" | "final" | "antepenult" | "lexical";
@@ -107,7 +127,22 @@ export interface Language {
    * heuristically assigned the first time they are needed.
    */
   gender?: Record<Meaning, number>;
-  derivationalSuffixes?: Array<{ affix: WordForm; tag: string }>;
+  /**
+   * Productive derivational suffixes the language has available for
+   * coining derived words. Each is bucketed by category (agentive,
+   * abstractNoun, etc.) so the genesis loop can reach for the right
+   * kind. Generated at language birth via seedDerivationalSuffixes;
+   * tier-gated (low-tier languages have fewer categories).
+   *
+   * The optional `category` field is undefined for legacy untyped
+   * entries from pre-Phase-20f saves; new code treats them as
+   * un-bucketed and falls back to random picking.
+   */
+  derivationalSuffixes?: Array<{
+    affix: WordForm;
+    tag: string;
+    category?: import("./lexicon/derivation").DerivationCategory;
+  }>;
   culturalTier?: 0 | 1 | 2 | 3;
   /**
    * Hysteresis counter for tier transitions. Increments on every tier-check
@@ -120,6 +155,21 @@ export interface Language {
   tierEligibilityStreak?: number;
   lexicalCapacity?: number;
   colexifiedAs?: Record<Meaning, Meaning[]>;
+  /**
+   * Per-meaning alternative forms (synonyms / lexical doublets) ranked by
+   * frequency. The primary form lives in `lexicon[m]`; alternates compete
+   * with it for use in narrative + translation. Borrowing into an
+   * already-occupied slot pushes the borrowed form here instead of
+   * replacing the native form (real-world doublets like sheep/mutton).
+   * Pruned each generation if low-frequency.
+   */
+  altForms?: Record<Meaning, WordForm[]>;
+  /**
+   * Parallel to altForms — register tag for each alternate (the primary
+   * form's register is in lang.registerOf). Lets narrative composer pick
+   * register-appropriate words for high-genre myth vs. colloquial dialogue.
+   */
+  altRegister?: Record<Meaning, Array<"high" | "low" | "neutral">>;
   substrateAccelerationRemaining?: number;
   recentLoanGens?: number[];
   variants?: Record<Meaning, FormVariant[]>;

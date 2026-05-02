@@ -7,6 +7,11 @@ import { genesisRulesFor, pushEvent } from "./helpers";
 import { isFormLegal } from "../phonology/wordShape";
 import { lexicalCapacity } from "../lexicon/tier";
 import { realismMultiplier } from "../phonology/rate";
+import { DERIVATION_TARGETS } from "../lexicon/derivation_targets";
+import {
+  attemptTargetedDerivation,
+  recordDerivationChain,
+} from "../genesis/mechanisms/targetedDerivation";
 
 export function stepGenesis(
   lang: Language,
@@ -29,6 +34,27 @@ export function stepGenesis(
   if (!rng.chance(gateProb)) return;
   const need = lexicalNeed(lang, state.tree);
   for (let i = 0; i < target; i++) {
+    // Targeted derivation pass: with 40% probability, look for a
+    // derivable abstract whose root is present + suffix-bucket exists.
+    // Coining "freedom" via "free + -dom" (Phase 20f).
+    if (rng.chance(0.4)) {
+      const derived = tryTargetedDerivation(lang, rng);
+      if (derived) {
+        if (isFormLegal(derived.meaning, derived.form)) {
+          lang.lexicon[derived.meaning] = derived.form;
+          lang.wordFrequencyHints[derived.meaning] = 0.4;
+          lang.wordOrigin[derived.meaning] = "derivation";
+          recordDerivationChain(lang, derived);
+          pushEvent(lang, {
+            generation,
+            kind: "coinage",
+            description: `derivation: ${derived.meaning} ← ${derived.rootMeaning} + ${derived.suffixTag}`,
+          });
+          continue;
+        }
+      }
+    }
+
     const outcome = tryCoin(
       lang,
       state.tree,
@@ -52,6 +78,26 @@ export function stepGenesis(
       description: `${outcome.originTag}: ${outcome.meaning}`,
     });
   }
+}
+
+/**
+ * Look for any DERIVATION_TARGETS entry where:
+ *   - the language doesn't yet have this meaning
+ *   - the language DOES have the root meaning
+ *   - the language has a suffix in the required category
+ * If multiple candidates, pick a random one.
+ */
+function tryTargetedDerivation(lang: Language, rng: Rng) {
+  const candidates: string[] = [];
+  for (const meaning of Object.keys(DERIVATION_TARGETS)) {
+    if (lang.lexicon[meaning]) continue; // already have it
+    const target = DERIVATION_TARGETS[meaning]!;
+    if (!lang.lexicon[target.root]) continue;
+    candidates.push(meaning);
+  }
+  if (candidates.length === 0) return null;
+  const meaning = candidates[rng.int(candidates.length)]!;
+  return attemptTargetedDerivation(lang, meaning, rng);
 }
 
 export function bootstrapNeologismNeighbors(lang: Language): void {

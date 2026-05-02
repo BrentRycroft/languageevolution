@@ -6,12 +6,17 @@ import {
   translateBetween,
   type TranslationResult,
 } from "../engine/translator/translate";
-import { translateSentence, type SentenceTranslation } from "../engine/translator/sentence";
+import {
+  translateSentence,
+  reverseParseToTokens,
+  type SentenceTranslation,
+} from "../engine/translator/sentence";
 import { findCognates, traceEtymology } from "../engine/translator/cognates";
 import { glossToEnglish } from "../engine/translator/glossToEnglish";
 import { formatForm } from "../engine/phonology/display";
 import type { MorphCategory } from "../engine/morphology/types";
 import { ScriptPicker } from "./ScriptPicker";
+import { useDebounced } from "./hooks/useDebounced";
 
 type Mode = "sentence" | "word" | "lang-to-lang" | "cognates" | "etymology";
 
@@ -29,8 +34,8 @@ export function Translator() {
   const [langIdB, setLangIdB] = useState<string>(alive[1] ?? alive[0] ?? "");
   const [text, setText] = useState("");
   const [category, setCategory] = useState<MorphCategory | "">("");
-  const [wordResult, setWordResult] = useState<TranslationResult | null>(null);
-  const [sentenceResult, setSentenceResult] = useState<SentenceTranslation | null>(null);
+  const [reverseDirection, setReverseDirection] = useState(false);
+  const debouncedText = useDebounced(text, 250);
 
   useEffect(() => {
     if (alive.length === 0) return;
@@ -50,23 +55,69 @@ export function Translator() {
     ? (Object.keys(lang.morphology.paradigms) as MorphCategory[])
     : [];
 
-  const run = () => {
-    if (!lang || !text.trim()) return;
-    setSentenceResult(null);
-    setWordResult(null);
-    if (mode === "sentence") {
-      setSentenceResult(translateSentence(lang, text.trim()));
-      return;
+  /**
+   * As-you-type translation results, recomputed on debounced input change.
+   * Memoised by [lang.id, generation, lang-to-lang lang.id, mode, debouncedText, category]
+   * so identical input doesn't re-run the engine pipeline. translateSentence /
+   * translate / translateBetween are deterministic for fixed lang+text, so
+   * the memo is correct.
+   */
+  /**
+   * Multi-sentence: split input on terminal punctuation (. ! ?) and
+   * translate each piece independently. Each row gets its own
+   * SentenceTranslation so the panel can show them stacked, like
+   * Google Translate when you paste a paragraph.
+   */
+  const sentenceResults: SentenceTranslation[] = useMemo(() => {
+    if (mode !== "sentence" || !lang || !debouncedText.trim()) return [];
+    const trimmed = debouncedText.trim();
+    const pieces = splitSentences(trimmed);
+    if (reverseDirection) {
+      return pieces.map((piece) => {
+        const tokens = reverseParseToTokens(lang, piece);
+        return {
+          english: piece,
+          englishTokens: [],
+          targetTokens: tokens,
+          arranged: tokens.map((t) => t.targetSurface),
+          missing: tokens.filter((t) => t.englishLemma === "?").map((t) => t.targetSurface),
+          notes: "",
+        };
+      });
     }
-    if (mode === "lang-to-lang" && langB) {
-      setWordResult(translateBetween(lang, langB, text.trim()));
-      return;
+    return pieces.map((piece) => translateSentence(lang, piece));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang?.id, state.generation, mode, debouncedText, reverseDirection]);
+
+  const wordResult: TranslationResult | null = useMemo(() => {
+    if (mode === "sentence") return null;
+    if (!lang || !debouncedText.trim()) return null;
+    if (mode === "lang-to-lang") {
+      if (!langB) return null;
+      return translateBetween(lang, langB, debouncedText.trim());
     }
     if (mode === "word") {
       const opts = category ? { inflect: category } : {};
-      setWordResult(translate(lang, text, opts));
+      return translate(lang, debouncedText.trim(), opts);
     }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    lang?.id,
+    langB?.id,
+    state.generation,
+    mode,
+    debouncedText,
+    category,
+  ]);
+
+  // Legacy callers used `run()` (Enter / button click) — keep as a no-op
+  // so existing call sites still compile, but the result is now driven by
+  // debounced text changes automatically.
+  const run = () => {
+    /* deprecated: results are recomputed automatically via useMemo */
   };
+  void run;
 
   return (
     <div style={{ fontSize: 13, maxWidth: 760 }}>
@@ -77,13 +128,29 @@ export function Translator() {
             className={mode === m ? "primary" : ""}
             onClick={() => {
               setMode(m);
-              setWordResult(null);
-              setSentenceResult(null);
             }}
           >
             {label(m)}
           </button>
         ))}
+        {mode === "sentence" && (
+          <button
+            type="button"
+            onClick={() => setReverseDirection((v) => !v)}
+            title={
+              reverseDirection
+                ? "Reverse mode: type the target language, see English"
+                : "English → target. Click to flip."
+            }
+            aria-label={
+              reverseDirection ? "Switch to English to target" : "Switch to target to English"
+            }
+            className={reverseDirection ? "active" : ""}
+            style={{ fontSize: 11 }}
+          >
+            {reverseDirection ? "← English" : "↕ Reverse"}
+          </button>
+        )}
         <span className="ml-auto">
           <ScriptPicker />
         </span>
@@ -95,8 +162,6 @@ export function Translator() {
           value={langId}
           onChange={(e) => {
             setLangId(e.target.value);
-            setWordResult(null);
-            setSentenceResult(null);
           }}
         >
           {alive.map((id) => (
@@ -189,16 +254,32 @@ export function Translator() {
         </div>
       )}
 
-      {(mode === "sentence" || mode === "word" || mode === "lang-to-lang") && (
-        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-          <button className="primary" onClick={run}>
-            Translate
-          </button>
-        </div>
-      )}
+      {(mode === "sentence" || mode === "word" || mode === "lang-to-lang") &&
+        text.trim() !== debouncedText.trim() && (
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              marginTop: 6,
+              fontSize: 11,
+              color: "var(--muted)",
+            }}
+          >
+            translating…
+          </div>
+        )}
 
-      {mode === "sentence" && sentenceResult && lang && (
-        <SentenceOutput result={sentenceResult} lang={lang} script={script} />
+      {mode === "sentence" && lang && sentenceResults.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {sentenceResults.map((result, i) => (
+            <SentenceOutput
+              key={i}
+              result={result}
+              lang={lang}
+              script={script}
+            />
+          ))}
+        </div>
       )}
 
       {wordResult && (mode === "word" || mode === "lang-to-lang") && (
@@ -229,6 +310,39 @@ export function Translator() {
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
             source: {wordResult.source} — {wordResult.notes}
           </div>
+          {(() => {
+            const targetLang = mode === "lang-to-lang" ? langB : lang;
+            const meaning = text.trim().toLowerCase();
+            const alts = targetLang?.altForms?.[meaning] ?? [];
+            if (!targetLang || alts.length === 0) return null;
+            const altSurfaces = alts.map((alt) =>
+              formatForm(alt, targetLang, script, meaning),
+            );
+            return (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--muted)",
+                  marginTop: 4,
+                  fontFamily: "'SF Mono', Menlo, monospace",
+                }}
+                title="Alternative forms (lexical doublets / synonyms)"
+              >
+                also: {altSurfaces.join(", ")}
+              </div>
+            );
+          })()}
+          {lang && lang.wordOriginChain?.[text.trim().toLowerCase()] && (
+            <div
+              style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}
+              title="Derivation chain"
+            >
+              ←{" "}
+              {lang.wordOriginChain[text.trim().toLowerCase()]?.from}{" "}
+              {"+ "}
+              {lang.wordOriginChain[text.trim().toLowerCase()]?.via}
+            </div>
+          )}
         </div>
       )}
 
@@ -241,6 +355,20 @@ export function Translator() {
       )}
     </div>
   );
+}
+
+/**
+ * Split a paragraph on terminal punctuation (. ! ?) so multi-sentence
+ * input renders as stacked rows like Google Translate. Trailing
+ * punctuation is dropped from each piece since translateSentence /
+ * tokeniseEnglish already handle their own punctuation. Empty pieces
+ * (consecutive punctuation, whitespace) are filtered.
+ */
+function splitSentences(text: string): string[] {
+  return text
+    .split(/[.!?]+/g)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }
 
 function SentenceOutput({

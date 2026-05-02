@@ -428,6 +428,31 @@ const MORPHOLOGY: Morphology = {
   },
 };
 
+/**
+ * Phase 20e-2: PIE athematic verb / suppletion fragments.
+ *
+ * Reconstructed past-tense / aorist forms for the small set of verbs
+ * known to be irregular in PIE itself (Beekes, Fortson). The simulator
+ * doesn't model PIE's full athematic conjugation, but the most common
+ * pattern — distinct e-grade present vs. zero/o-grade aorist — is
+ * captured here as suppletion entries the engine can apply.
+ */
+const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+  // *h₁es- (be) athematic; aorist *h₁ē-
+  be: { "verb.tense.past": ["h₁", "ē", "s"] },
+  // *h₁ei- (go) athematic; aorist *h₁it-
+  go: { "verb.tense.past": ["h₁", "i", "t"] },
+  // *gʷem- (come) — root aorist *gʷm̥-
+  come: { "verb.tense.past": ["gʷ", "m̥"] },
+  // *weid- (see, also "know" as perfect) — aorist *wēid-
+  see: { "verb.tense.past": ["w", "ē", "i", "d"] },
+  // *h₁ed- (eat) — aorist *h₁ēd-
+  eat: { "verb.tense.past": ["h₁", "ē", "d"] },
+  // Suppletive man/men: *wiHro- vs *h₂ner- (the famous PIE doublet)
+  // Stored as a plural alternate.
+  man: { "noun.num.pl": ["h₂", "n", "e", "r", "e", "s"] },
+};
+
 export function presetPIE(): SimulationConfig {
   const base = defaultConfig();
   return {
@@ -436,6 +461,8 @@ export function presetPIE(): SimulationConfig {
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
     seedMorphology: MORPHOLOGY,
+    seedSuppletion: SUPPLETION,
+    seedCulturalTier: 0,
     seedStressPattern: "lexical",
     seedLexicalStress: LEXICAL_STRESS,
     seedGrammar: {

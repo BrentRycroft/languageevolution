@@ -233,6 +233,7 @@ const LEXICON: Lexicon = {
   know: ["n", "o"],
   hear: ["h", "ɪ", "r"],
   feel: ["f", "iː", "l"],
+  find: ["f", "a", "j", "n", "d"],
   smell: ["s", "m", "ɛ", "l"],
   taste: ["t", "e", "j", "s", "t"],
   eat: ["iː", "t"],

@@ -34,6 +34,14 @@ export interface AbstractTemplate {
   };
   introducesEntity?: boolean;
   topicSubject?: boolean;
+  /**
+   * Sentence-level negation. When true, the composer emits a NEG token
+   * at the position dictated by lang.grammar.negationPosition (or
+   * defaulted to "pre-verb"). Past-tense English-style do-support is
+   * implicit in the surface form when both negated and tense=past
+   * are set on a tier-3 lang with a "do" entry.
+   */
+  negated?: boolean;
 }
 
 export interface SlotAssignment {
@@ -49,6 +57,19 @@ export interface ComposedSentence {
   tokens: TranslatedToken[];
   surface: string;
   english: string;
+}
+
+/**
+ * Optional knobs for composeTargetSentence. When `pickAltProbability` >0
+ * and `rng` is provided, the composer rolls per-slot and may substitute
+ * the primary lexicon form with a Phase-20d altForms entry. `genreRegister`
+ * biases the alt selection: "high"-genre prefers high-register alts,
+ * "low" prefers low. "neutral" uses uniform.
+ */
+export interface ComposeOptions {
+  rng?: { next: () => number; chance: (p: number) => boolean; int: (n: number) => number };
+  pickAltProbability?: number;
+  genreRegister?: "high" | "low" | "neutral";
 }
 
 interface RoleToken {
@@ -86,6 +107,36 @@ function makeToken(opts: {
     targetSurface: opts.targetSurface,
     resolution: "direct",
   };
+}
+
+/**
+ * If the language has altForms for `meaning` and the composer is given
+ * a non-zero pickAltProbability, return a random alt's form (biased by
+ * genre register). Otherwise return the primary form unchanged.
+ */
+function pickFormWithAlts(
+  lang: Language,
+  meaning: Meaning,
+  options: ComposeOptions,
+): WordForm | null {
+  const primary = lang.lexicon[meaning];
+  if (!primary) return null;
+  const alts = lang.altForms?.[meaning] ?? [];
+  if (alts.length === 0) return primary;
+  const { rng, pickAltProbability = 0, genreRegister = "neutral" } = options;
+  if (!rng || pickAltProbability <= 0) return primary;
+  if (!rng.chance(pickAltProbability)) return primary;
+  // Bias by register: high-register genre prefers high-register alts; low
+  // prefers low. With no register-tag info, pick uniformly.
+  const registers = lang.altRegister?.[meaning] ?? [];
+  const matching = alts.filter(
+    (_, i) =>
+      registers[i] === genreRegister ||
+      genreRegister === "neutral" ||
+      registers[i] === undefined,
+  );
+  const pool = matching.length > 0 ? matching : alts;
+  return pool[rng.int(pool.length)] ?? primary;
 }
 
 function inflectNoun(
@@ -172,8 +223,9 @@ function nounRoleToken(
   role: "S" | "O",
   opts: { plural: boolean; objectCase: boolean },
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken | null {
-  const base = lang.lexicon[meaning];
+  const base = pickFormWithAlts(lang, meaning, composeOptions);
   if (!base) return null;
   const { form, glossNote } = inflectNoun(lang, meaning, base, opts);
   return {
@@ -193,8 +245,9 @@ function verbRoleToken(
   meaning: Meaning,
   opts: { tense: "past" | "present" | "future"; person3sg: boolean },
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken | null {
-  const base = lang.lexicon[meaning];
+  const base = pickFormWithAlts(lang, meaning, composeOptions);
   if (!base) return null;
   const { form, glossNote } = inflectVerb(lang, meaning, base, opts);
   return {
@@ -213,8 +266,9 @@ function adjectiveRoleToken(
   lang: Language,
   meaning: Meaning,
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken | null {
-  const form = lang.lexicon[meaning];
+  const form = pickFormWithAlts(lang, meaning, composeOptions);
   if (!form) return null;
   return {
     role: "ADJ",
@@ -329,6 +383,7 @@ function buildSubjectGroup(
   topic: boolean,
   adj: Meaning | undefined,
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken[] {
   const out: RoleToken[] = [];
   if (topic) {
@@ -343,13 +398,20 @@ function buildSubjectGroup(
   if (det) out.push(det);
   const adjPos = lang.grammar.adjectivePosition ?? "pre";
   if (adj && adjPos === "pre") {
-    const adjTok = adjectiveRoleToken(lang, adj, script);
+    const adjTok = adjectiveRoleToken(lang, adj, script, composeOptions);
     if (adjTok) out.push(adjTok);
   }
-  const subj = nounRoleToken(lang, meaning, "S", { plural: false, objectCase: false }, script);
+  const subj = nounRoleToken(
+    lang,
+    meaning,
+    "S",
+    { plural: false, objectCase: false },
+    script,
+    composeOptions,
+  );
   if (subj) out.push(subj);
   if (adj && adjPos === "post") {
-    const adjTok = adjectiveRoleToken(lang, adj, script);
+    const adjTok = adjectiveRoleToken(lang, adj, script, composeOptions);
     if (adjTok) out.push(adjTok);
   }
   return out;
@@ -360,19 +422,27 @@ function buildObjectGroup(
   meaning: Meaning,
   adj: Meaning | undefined,
   script: DisplayScript,
+  composeOptions: ComposeOptions = {},
 ): RoleToken[] {
   const out: RoleToken[] = [];
   const det = articleRoleToken(lang, script);
   if (det) out.push(det);
   const adjPos = lang.grammar.adjectivePosition ?? "pre";
   if (adj && adjPos === "pre") {
-    const adjTok = adjectiveRoleToken(lang, adj, script);
+    const adjTok = adjectiveRoleToken(lang, adj, script, composeOptions);
     if (adjTok) out.push(adjTok);
   }
-  const obj = nounRoleToken(lang, meaning, "O", { plural: false, objectCase: true }, script);
+  const obj = nounRoleToken(
+    lang,
+    meaning,
+    "O",
+    { plural: false, objectCase: true },
+    script,
+    composeOptions,
+  );
   if (obj) out.push(obj);
   if (adj && adjPos === "post") {
-    const adjTok = adjectiveRoleToken(lang, adj, script);
+    const adjTok = adjectiveRoleToken(lang, adj, script, composeOptions);
     if (adjTok) out.push(adjTok);
   }
   return out;
@@ -417,6 +487,7 @@ export function composeTargetSentence(
   slots: SlotAssignment,
   ctx: DiscourseContext,
   script: DisplayScript = "ipa",
+  options: ComposeOptions = {},
 ): ComposedSentence {
   const tense = template.tense;
   const openerTokens: RoleToken[] = [];
@@ -439,6 +510,50 @@ export function composeTargetSentence(
   const subjectIs3sg = topic ? subjectIs3sgFromTopic : true;
 
   const verbTokens: RoleToken[] = [];
+
+  // Do-support for past/present negation: when the template is negated
+  // and the language has both "do" and "not" in its lexicon, prefer
+  // "did/do + not + bare verb" over inline NEG. We inflect "do" via
+  // verbRoleToken so suppletion fires → past tense produces "did",
+  // present 3sg produces "does".
+  const negated = !!template.negated;
+  const auxNot = lang.lexicon["not"];
+  const doForm = lang.lexicon["do"];
+  let didDoSupport = false;
+  if (negated && auxNot && doForm) {
+    const auxTok = verbRoleToken(
+      lang,
+      "do",
+      {
+        tense,
+        person3sg: tense === "present" && subjectIs3sg,
+      },
+      script,
+    );
+    if (auxTok) {
+      didDoSupport = true;
+      // Re-tag as AUX with the correct English surface form so
+      // glossToEnglish renders "did"/"does"/"do" verbatim. Clear the
+      // glossNote so the past/3sg flag isn't propagated to other verbs
+      // (the main V is bare under do-support).
+      auxTok.token.englishTag = "AUX";
+      auxTok.token.englishLemma =
+        tense === "past" ? "did" : subjectIs3sg ? "does" : "do";
+      auxTok.token.glossNote = "";
+      verbTokens.push(auxTok);
+      verbTokens.push({
+        role: "ADV",
+        token: makeToken({
+          englishLemma: "not",
+          englishTag: "ADV",
+          glossNote: "negation",
+          targetForm: auxNot,
+          targetSurface: renderForm(auxNot, lang, script, "not"),
+        }),
+      });
+    }
+  }
+
   if (tense === "future") {
     const willForm = lang.lexicon["will"];
     if (willForm) {
@@ -454,16 +569,45 @@ export function composeTargetSentence(
       });
     }
   }
+
+  // Bare verb after do-support; inflected verb otherwise.
   const vTok = verbRoleToken(
     lang,
     slots.verb,
     {
-      tense,
-      person3sg: tense === "present" && subjectIs3sg,
+      tense: didDoSupport ? "present" : tense,
+      person3sg:
+        !didDoSupport && tense === "present" && subjectIs3sg,
     },
     script,
+    options,
   );
   if (vTok) verbTokens.push(vTok);
+
+  // Inline NEG for languages without do-support: emit "not" at the
+  // position dictated by lang.grammar.negationPosition (default
+  // "pre-verb"). Skip when do-support already emitted a NEG.
+  if (negated && !didDoSupport && auxNot) {
+    const neg: RoleToken = {
+      role: "ADV",
+      token: makeToken({
+        englishLemma: "not",
+        englishTag: "ADV",
+        glossNote: "negation",
+        targetForm: auxNot,
+        targetSurface: renderForm(auxNot, lang, script, "not"),
+      }),
+    };
+    const negPos = lang.grammar.negationPosition ?? "pre-verb";
+    if (negPos === "post-verb") {
+      verbTokens.push(neg);
+    } else if (negPos === "pre-verb") {
+      verbTokens.unshift(neg);
+    } else {
+      // clause-final or unknown — append after verb
+      verbTokens.push(neg);
+    }
+  }
 
   const adjOnSubject = template.shape === "adj_subject";
   const adjOnObject = template.shape === "transitive_adj" || template.shape === "long_ago_trans_adj";
@@ -475,6 +619,7 @@ export function composeTargetSentence(
     topic,
     adjOnSubject ? slots.adjective : undefined,
     script,
+    options,
   );
 
   let objectGroup: RoleToken[] = [];
@@ -485,6 +630,7 @@ export function composeTargetSentence(
       slots.object,
       adjOnObject ? slots.adjective : undefined,
       script,
+      options,
     );
   } else if (template.needs.place && slots.place) {
     objectGroup = placeRoleTokens(lang, slots.place, script);
@@ -512,9 +658,13 @@ export function composeTargetSentence(
 
   const flatTokens = targetOrdered.map((rt) => rt.token);
   const englishTokens = englishOrdered.map((rt) => rt.token);
+  // Under do-support the main verb is bare ("did not see"), so don't
+  // pass past tense to glossToEnglish (would otherwise past-inflect the
+  // bare verb back to "saw"). Same logic applies to 3sg agreement.
   const english = glossToEnglish(englishTokens, {
-    guessTense: tense === "past" ? "past" : "present",
-    subjectIs3sg: tense === "future" ? false : subjectIs3sg,
+    guessTense: didDoSupport ? "present" : tense === "past" ? "past" : "present",
+    subjectIs3sg:
+      didDoSupport || tense === "future" ? false : subjectIs3sg,
     preserveOrder: true,
   });
 

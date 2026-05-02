@@ -172,7 +172,14 @@ function sanitizeLatin(s: string): string {
   return out;
 }
 
-export function romanize(form: WordForm, lang: Language): string {
+export function romanize(form: WordForm, lang: Language, meaning?: string): string {
+  // Word-level lexical spelling override: if the language has frozen a
+  // historical spelling for this meaning, use it verbatim. Models the
+  // English pattern where "knight" stayed spelled with k-n-i-g-h-t even
+  // after k-, gh deleted from pronunciation.
+  if (meaning && lang.lexicalSpelling?.[meaning]) {
+    return lang.lexicalSpelling[meaning]!;
+  }
   let out = "";
   let i = 0;
   while (i < form.length) {
@@ -232,12 +239,28 @@ export interface OrthographyShift {
   to: string;
 }
 
+/**
+ * Tier-gated multiplier for orthographic drift probability. Tier 0/1 have
+ * no writing tradition, so spelling can't lock in or drift independently
+ * of sound. Tier 2 (iron-age) is the writing threshold — drift at the
+ * baseline rate. Tier 3 (modern, with print + schools + dictionaries)
+ * sees etymology preservation, dictionary rules, and prestige spellings,
+ * driving spelling further from sound — drift accelerates 3x.
+ */
+export function tierOrthographyMultiplier(tier: number | undefined): number {
+  if (tier === undefined || tier < 2) return 0;
+  if (tier === 2) return 1;
+  return 3; // tier 3+
+}
+
 export function driftOrthography(
   lang: Language,
   rng: Rng,
   probability: number,
 ): OrthographyShift | null {
-  if (!rng.chance(probability)) return null;
+  const tierMul = tierOrthographyMultiplier(lang.culturalTier);
+  if (tierMul === 0) return null;
+  if (!rng.chance(probability * tierMul)) return null;
   const candidates = Object.keys(ALT_SPELLINGS);
   const inLang = candidates.filter((p) => lang.phonemeInventory.segmental.includes(p));
   const pool = inLang.length > 0 ? inLang : candidates;
@@ -249,4 +272,40 @@ export function driftOrthography(
   const to = others[rng.int(others.length)]!;
   lang.orthography[phoneme] = to;
   return { phoneme, from: current, to };
+}
+
+/**
+ * Per-word lexical spelling freeze — only fires for tier-3 languages.
+ * Picks a high-frequency word that doesn't already have a frozen spelling
+ * and captures its current romanization. From then on, romanize() will
+ * return the frozen string for this meaning regardless of how the
+ * phonemic form drifts.
+ *
+ * Returns the meaning that got frozen, or null if no eligible word found
+ * (tier &lt; 3, low gate, or no high-frequency unspelled word).
+ */
+export function freezeLexicalSpelling(
+  lang: Language,
+  rng: Rng,
+  probability: number,
+): { meaning: string; spelling: string } | null {
+  if ((lang.culturalTier ?? 0) < 3) return null;
+  if (!rng.chance(probability)) return null;
+
+  // Candidates: high-frequency meanings (>=0.6) without a frozen spelling.
+  const candidates: string[] = [];
+  for (const m of Object.keys(lang.lexicon)) {
+    if (lang.lexicalSpelling?.[m]) continue;
+    const f = lang.wordFrequencyHints[m] ?? 0.4;
+    if (f >= 0.6 && lang.lexicon[m]!.length > 0) candidates.push(m);
+  }
+  if (candidates.length === 0) return null;
+
+  const meaning = candidates[rng.int(candidates.length)]!;
+  const form = lang.lexicon[meaning]!;
+  // Capture the current romanization at this moment.
+  const spelling = romanize(form, { ...lang, lexicalSpelling: undefined }, undefined);
+  if (!lang.lexicalSpelling) lang.lexicalSpelling = {};
+  lang.lexicalSpelling[meaning] = spelling;
+  return { meaning, spelling };
 }
