@@ -94,6 +94,14 @@ export interface Language {
     cells: number[];
   };
   orthography: Record<string, string>;
+  /**
+   * Word-level orthographic overrides — frozen historical spellings that
+   * outlive sound change. Once a meaning enters this map, romanize() will
+   * return the stored string verbatim regardless of how the phonemic form
+   * has drifted. Mirrors the English knight/though/gnome pattern. Only
+   * fires for languages at cultural tier ≥ 3 (writing standardisation).
+   */
+  lexicalSpelling?: Record<Meaning, string>;
   otRanking: string[];
   lastChangeGeneration: Record<Meaning, number>;
   stressPattern?: "initial" | "penult" | "final" | "antepenult" | "lexical";

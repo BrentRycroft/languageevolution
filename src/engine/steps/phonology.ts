@@ -1,6 +1,6 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
 import { applyChangesToLexicon } from "../phonology/apply";
-import { driftOrthography } from "../phonology/orthography";
+import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
 import { rateMultiplier, speakerFactor, isolationFactor, realismMultiplier } from "../phonology/rate";
 import { applyOneRegularChange } from "../phonology/regular";
@@ -188,6 +188,19 @@ export function stepPhonology(
       generation,
       kind: "grammar_shift",
       description: `orthography: ${ortho.phoneme} spelt "${ortho.from}" → "${ortho.to}"`,
+    });
+  }
+
+  // Lexical spelling freeze — only fires for tier-3 languages, captures
+  // the current romanization of high-frequency words so they don't drift
+  // with future sound change. Models the English knight/though/gnome
+  // pattern.
+  const frozen = freezeLexicalSpelling(lang, rng, 0.001);
+  if (frozen) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `lexical spelling frozen: "${frozen.meaning}" → "${frozen.spelling}"`,
     });
   }
 

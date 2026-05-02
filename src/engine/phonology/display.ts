@@ -12,7 +12,7 @@ export function formatForm(
 ): string {
   const ipa = narrowTranscribe(form, lang, meaning);
   if (script === "ipa") return `[${ipa}]`;
-  const roman = romanize(form, lang);
+  const roman = romanize(form, lang, meaning);
   if (script === "roman") return roman;
   return `[${ipa}] · ${roman}`;
 }
