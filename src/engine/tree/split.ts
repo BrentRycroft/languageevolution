@@ -177,7 +177,11 @@ export function splitLeaf(
         : undefined,
       derivationalSuffixes: (parentLang.derivationalSuffixes ?? [])
         .filter(() => rng.chance(0.8))
-        .map((s) => ({ affix: s.affix.slice(), tag: s.tag })),
+        .map((s) => ({
+          affix: s.affix.slice(),
+          tag: s.tag,
+          category: s.category, // preserve Phase 20f category tag
+        })),
       culturalTier: parentLang.culturalTier,
       colexifiedAs: parentLang.colexifiedAs
         ? Object.fromEntries(

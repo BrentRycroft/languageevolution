@@ -80,6 +80,7 @@ export function cloneLanguage(lang: Language): Language {
       ? lang.derivationalSuffixes.map((s) => ({
           tag: s.tag,
           affix: s.affix.slice(),
+          category: s.category, // preserve Phase 20f category tag
         }))
       : undefined,
     suppletion: lang.suppletion
