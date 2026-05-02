@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Z } from "./zIndex";
 import type { TabSpec, TabId } from "./tabs";
 
@@ -12,15 +13,48 @@ interface Props {
  * "More ▾" overflow dropdown for tabs beyond the first 9. The first 9 stay
  * inline (matching the 1-9 keyboard shortcuts); 10+ go in here so the tab
  * bar doesn't overflow on narrow viewports.
+ *
+ * The dropdown renders into a React portal anchored at document.body so
+ * it escapes the .tab-bar's `overflow-x: auto` clipping (browsers
+ * implicitly clip the other axis when one overflow value is non-visible,
+ * which would hide a normally-positioned absolute child below the bar).
+ * Position is computed from the trigger button's getBoundingClientRect.
  */
 export function TabOverflowMenu({ tabs, activeTab, setActiveTab }: Props) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
 
+  // Recompute popup position whenever it opens (or window resizes / scrolls).
+  useLayoutEffect(() => {
+    if (!open) return;
+    const compute = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPosition({
+        top: rect.bottom + 4,
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    window.addEventListener("scroll", compute, true);
+    return () => {
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", compute, true);
+    };
+  }, [open]);
+
+  // Close on outside click — popup is portalled, so the contains() check
+  // has to consult both the trigger and the popup.
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (popupRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -29,8 +63,9 @@ export function TabOverflowMenu({ tabs, activeTab, setActiveTab }: Props) {
   const activeInOverflow = tabs.some((t) => t.id === activeTab);
 
   return (
-    <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
+    <>
       <button
+        ref={triggerRef}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -40,13 +75,14 @@ export function TabOverflowMenu({ tabs, activeTab, setActiveTab }: Props) {
       >
         More ▾
       </button>
-      {open && (
+      {open && position && createPortal(
         <div
+          ref={popupRef}
           role="menu"
           style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            right: 0,
+            position: "fixed",
+            top: position.top,
+            right: position.right,
             zIndex: Z.dropdown,
             minWidth: 160,
             background: "var(--panel-2)",
@@ -82,8 +118,9 @@ export function TabOverflowMenu({ tabs, activeTab, setActiveTab }: Props) {
               {t.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
