@@ -49,6 +49,28 @@ function fnv1aTinyHash(s: string): number {
 
 const ACHIEVEMENTS_KEY = "lev-achievements-v1";
 
+/**
+ * Returns a still-valid leaf id for the selection. Keeps the current
+ * selection if it points to an alive leaf; otherwise picks any alive leaf;
+ * otherwise falls back to the root id (which always exists in a valid state).
+ */
+function reconcileSelection(
+  selectedLangId: string | null,
+  state: SimulationState,
+): string | null {
+  if (selectedLangId) {
+    const node = state.tree[selectedLangId];
+    const isLeaf = node && node.childrenIds.length === 0;
+    const isAlive = node && !node.language.extinct;
+    if (isLeaf && isAlive) return selectedLangId;
+  }
+  for (const id of Object.keys(state.tree)) {
+    const node = state.tree[id]!;
+    if (node.childrenIds.length === 0 && !node.language.extinct) return id;
+  }
+  return state.rootId;
+}
+
 function loadPersistedAchievements(): string[] {
   try {
     if (typeof localStorage === "undefined") return [];
@@ -292,7 +314,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
   persistenceNotice: initial.loadFailure ?? null,
   confirmDialog: null,
   step: () => {
-    const { sim, history, activityHistory, unlockedAchievements, config } = get();
+    const { sim, history, activityHistory, unlockedAchievements, config, selectedLangId } = get();
     sim.step();
     const state = sim.getState();
     const { next: newHistory, changeCount } = recordHistory(history, state);
@@ -312,6 +334,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       ),
       unlockedAchievements: nextUnlocked,
       lastAchievement: fresh[0] ?? get().lastAchievement,
+      selectedLangId: reconcileSelection(selectedLangId, state),
     });
     tryAutosave([{ config, state, generationsRun: state.generation }]);
   },

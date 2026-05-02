@@ -73,8 +73,7 @@ export function WelcomeBanner() {
           (lexicon + rule diff between two languages),{" "}
           <strong className="t-text">Stemma</strong> (rule-similarity tree),{" "}
           <strong className="t-text">Glossary</strong> (linguistic terms
-          this sim uses), <strong className="t-text">Quiz</strong> (guess
-          which sound law produced a form).
+          this sim uses).
         </div>
         <div className="t-muted">
           Shortcuts: <kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>F</kbd> fast-forward ·
