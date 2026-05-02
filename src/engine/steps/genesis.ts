@@ -12,6 +12,7 @@ import {
   attemptTargetedDerivation,
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
+import { tryCommitCoinage } from "../lexicon/word";
 
 export function stepGenesis(
   lang: Language,
@@ -57,6 +58,20 @@ export function stepGenesis(
       const derived = tryTargetedDerivation(lang, rng);
       if (derived) {
         if (isFormLegal(derived.meaning, derived.form)) {
+          // Phase 21c: collision-aware commit. On homophone clash with
+          // an unrelated existing meaning, roll a polysemy probability;
+          // on rejection, skip this coinage (loop retries on next iter).
+          const commit = tryCommitCoinage(
+            lang,
+            derived.meaning,
+            derived.form,
+            rng,
+            {
+              bornGeneration: generation,
+              origin: "derivation",
+            },
+          );
+          if (!commit.committed) continue;
           lang.lexicon[derived.meaning] = derived.form;
           lang.wordFrequencyHints[derived.meaning] = 0.4;
           lang.wordOrigin[derived.meaning] = "derivation";
@@ -64,7 +79,9 @@ export function stepGenesis(
           pushEvent(lang, {
             generation,
             kind: "coinage",
-            description: `derivation: ${derived.meaning} ← ${derived.rootMeaning} + ${derived.suffixTag}`,
+            description: commit.viaPolysemy
+              ? `derivation+polysemy: ${derived.meaning} ← ${derived.rootMeaning} + ${derived.suffixTag} (homophone of existing word)`
+              : `derivation: ${derived.meaning} ← ${derived.rootMeaning} + ${derived.suffixTag}`,
           });
           continue;
         }
@@ -82,6 +99,20 @@ export function stepGenesis(
     );
     if (!outcome) break;
     if (!isFormLegal(outcome.meaning, outcome.form)) continue;
+    // Phase 21c: collision-aware commit. The form may already exist as
+    // a word for another meaning; in that case roll polysemy/reject.
+    const commit = tryCommitCoinage(
+      lang,
+      outcome.meaning,
+      outcome.form,
+      rng,
+      {
+        bornGeneration: generation,
+        register: outcome.register,
+        origin: outcome.originTag,
+      },
+    );
+    if (!commit.committed) continue;
     lang.lexicon[outcome.meaning] = outcome.form;
     lang.wordFrequencyHints[outcome.meaning] = 0.4;
     lang.wordOrigin[outcome.meaning] = outcome.originTag;
@@ -91,7 +122,9 @@ export function stepGenesis(
     pushEvent(lang, {
       generation,
       kind: "coinage",
-      description: `${outcome.originTag}: ${outcome.meaning}`,
+      description: commit.viaPolysemy
+        ? `${outcome.originTag}+polysemy: ${outcome.meaning} (homophone of existing word)`
+        : `${outcome.originTag}: ${outcome.meaning}`,
     });
   }
 }

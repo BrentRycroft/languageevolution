@@ -1,5 +1,7 @@
 import type { Language, Meaning, Word, WordSense, WordForm } from "../types";
+import type { Rng } from "../rng";
 import { formToString } from "../phonology/ipa";
+import { neighborsOf } from "../semantics/neighbors";
 
 /**
  * Stable join key for a phonemic form. Two words with the same key are
@@ -373,4 +375,88 @@ export function syncWordsAfterPhonology(
   }
   lang.words = merged;
   return events;
+}
+
+/**
+ * Cheap semantic relatedness check between two meanings. Used by the
+ * Phase 21c collision logic to decide whether a candidate coinage that
+ * would homophone-collide with an existing word should fold in as
+ * polysemy (related → high probability) or be rejected (unrelated →
+ * low probability). Real-world example: Spanish *banco* picked up the
+ * "bench" + "bank-of-river" + "financial-bank" senses partly because
+ * "bench" / "bank-of-river" are semantically adjacent.
+ */
+export function areMeaningsRelated(
+  lang: Language,
+  a: Meaning,
+  b: Meaning,
+): boolean {
+  if (a === b) return true;
+  const semA = neighborsOf(a);
+  if (semA.includes(b)) return true;
+  const semB = neighborsOf(b);
+  if (semB.includes(a)) return true;
+  const localA = lang.localNeighbors?.[a] ?? [];
+  if (localA.includes(b)) return true;
+  const localB = lang.localNeighbors?.[b] ?? [];
+  if (localB.includes(a)) return true;
+  return false;
+}
+
+/**
+ * Phase 21c: register a coinage in `lang.words` with collision-aware
+ * policy. When the candidate `form` already exists in the language for
+ * a different meaning, this helper rolls a probability:
+ *   - 0.4 (default) if any existing sense is semantically related to
+ *     the new meaning → attach as polysemy.
+ *   - 0.05 (default) for unrelated meanings → attach as accidental
+ *     homonymy occurs but is rare.
+ * If the roll fails, returns `committed: false` and the caller should
+ * skip the coinage (the genesis loop will retry on its next iteration).
+ *
+ * Returns `viaPolysemy: true` when the coinage attached as a sense on
+ * an existing word; the caller can use this to tag wordOrigin
+ * accordingly. Idempotent if the word already contains this meaning.
+ */
+export function tryCommitCoinage(
+  lang: Language,
+  meaning: Meaning,
+  form: WordForm,
+  rng: Rng,
+  opts: {
+    bornGeneration: number;
+    weight?: number;
+    register?: "high" | "low" | "neutral";
+    origin?: string;
+    polysemyProbRelated?: number;
+    polysemyProbUnrelated?: number;
+  },
+): { committed: boolean; viaPolysemy: boolean } {
+  const polyRel = opts.polysemyProbRelated ?? 0.4;
+  const polyUnrel = opts.polysemyProbUnrelated ?? 0.05;
+  const existing = findWordByForm(lang, form);
+  if (!existing) {
+    addWord(lang, form, meaning, opts);
+    return { committed: true, viaPolysemy: false };
+  }
+  // The form is already in the language. If the new meaning is already
+  // a sense of this word, we're idempotent.
+  if (existing.senses.some((s) => s.meaning === meaning)) {
+    return { committed: true, viaPolysemy: false };
+  }
+  const related = existing.senses.some((s) =>
+    areMeaningsRelated(lang, s.meaning, meaning),
+  );
+  const prob = related ? polyRel : polyUnrel;
+  if (!rng.chance(prob)) {
+    return { committed: false, viaPolysemy: false };
+  }
+  addSenseToWord(existing, {
+    meaning,
+    weight: opts.weight,
+    register: opts.register,
+    bornGeneration: opts.bornGeneration,
+    origin: opts.origin ?? "polysemy",
+  });
+  return { committed: true, viaPolysemy: true };
 }

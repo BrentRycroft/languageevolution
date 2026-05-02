@@ -4,6 +4,7 @@ import { leafIds } from "../tree/split";
 import { isVowel, isSyllabic } from "../phonology/ipa";
 import { isFormLegal } from "../phonology/wordShape";
 import { addAlt } from "../lexicon/altForms";
+import { tryCommitCoinage } from "../lexicon/word";
 import { stripTone } from "../phonology/tone";
 import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
@@ -60,6 +61,7 @@ export function tryBorrow(
   rng: Rng,
   probability: number,
   worldMap?: WorldMap,
+  generation: number = 0,
 ): LoanEvent | null {
   const donors = leafIds(tree).filter(
     (id) =>
@@ -127,6 +129,21 @@ export function tryBorrow(
   if (alreadyHas) {
     addAlt(recipient, meaning, adapted, prestige);
   } else {
+    // Phase 21c: collision-aware commit. The borrowed form may be a
+    // homophone of an existing native word; in that case roll polysemy
+    // (likely if related, rare if unrelated) or reject the borrowing.
+    const commit = tryCommitCoinage(
+      recipient,
+      meaning,
+      adapted,
+      rng,
+      {
+        bornGeneration: generation,
+        register: prestige,
+        origin: "borrow",
+      },
+    );
+    if (!commit.committed) return null;
     recipient.lexicon[meaning] = adapted;
   }
   if (!recipient.registerOf) recipient.registerOf = {};
