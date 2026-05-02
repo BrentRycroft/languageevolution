@@ -1,82 +1,44 @@
 import type { Meaning } from "../types";
 import type { DiscourseGenre } from "./discourse";
+import type { AbstractTemplate } from "./composer";
 
-export interface GenreTemplate {
-  english: string;
-  needs: {
-    subject: boolean;
-    object: boolean;
-    adjective: boolean;
-    time: boolean;
-    place: boolean;
-  };
-  introducesEntity?: boolean;
-  topicSubject?: boolean;
-  tense?: "past" | "present" | "future";
-}
-
-export const PAST_TENSE_VERB: Record<string, string> = {
-  go: "went", come: "came", see: "saw", know: "knew",
-  eat: "ate", drink: "drank", give: "gave", take: "took",
-  speak: "spoke", hold: "held", fight: "fought",
-  make: "made", break: "broke", fall: "fell",
-  sleep: "slept", die: "died",
-  run: "ran", walk: "walked", fly: "flew",
-  hear: "heard", think: "thought", say: "said",
-  call: "called", ask: "asked", carry: "carried",
-  throw: "threw", pull: "pulled", push: "pushed",
-  cut: "cut", bend: "bent", build: "built",
-  burn: "burned", wash: "washed", weave: "wove",
-  sit: "sat", stand: "stood", lie: "lay",
-  swim: "swam", live: "lived", grow: "grew",
-  love: "loved", fear: "feared",
-};
-
-export function futureForm(verb: string): string {
-  return `will ${verb}`;
-}
-
-export function pastForm(verb: string): string {
-  return PAST_TENSE_VERB[verb] ?? `${verb}ed`;
-}
-
-const MYTH_TEMPLATES: GenreTemplate[] = [
-  { english: "long ago the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "past" },
-  { english: "in the {TIME} the {S} {V}.", needs: { subject: true, object: false, adjective: false, time: true, place: false }, introducesEntity: true, tense: "past" },
-  { english: "the {ADJ} {S} {V} the {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
-  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true, tense: "past" },
-  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true, tense: "past" },
-  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true, tense: "past" },
-  { english: "long ago the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
-  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "future" },
+const MYTH_TEMPLATES: AbstractTemplate[] = [
+  { shape: "long_ago_trans",     tense: "past",   needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "time_prefix_intrans", tense: "past",  needs: { subject: true,  object: false, adjective: false, time: true,  place: false }, introducesEntity: true },
+  { shape: "transitive_adj",     tense: "past",   needs: { subject: true,  object: true,  adjective: true,  time: false, place: false }, introducesEntity: true },
+  { shape: "topic_trans",        tense: "past",   needs: { subject: false, object: true,  adjective: false, time: false, place: false }, topicSubject: true },
+  { shape: "topic_intrans",      tense: "past",   needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true },
+  { shape: "place_intrans",      tense: "past",   needs: { subject: true,  object: false, adjective: false, time: false, place: true  }, introducesEntity: true },
+  { shape: "long_ago_trans_adj", tense: "past",   needs: { subject: true,  object: true,  adjective: true,  time: false, place: false }, introducesEntity: true },
+  { shape: "transitive",         tense: "future", needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
 ];
 
-const LEGEND_TEMPLATES: GenreTemplate[] = [
-  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "past" },
-  { english: "the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
-  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true, tense: "past" },
-  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true, tense: "past" },
-  { english: "the {ADJ} {S} {V}.", needs: { subject: true, object: false, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
-  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true, tense: "past" },
+const LEGEND_TEMPLATES: AbstractTemplate[] = [
+  { shape: "transitive",     tense: "past",   needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "transitive_adj", tense: "past",   needs: { subject: true,  object: true,  adjective: true,  time: false, place: false }, introducesEntity: true },
+  { shape: "topic_trans",    tense: "past",   needs: { subject: false, object: true,  adjective: false, time: false, place: false }, topicSubject: true },
+  { shape: "place_intrans",  tense: "past",   needs: { subject: true,  object: false, adjective: false, time: false, place: true  }, introducesEntity: true },
+  { shape: "adj_subject",    tense: "past",   needs: { subject: true,  object: false, adjective: true,  time: false, place: false }, introducesEntity: true },
+  { shape: "topic_intrans",  tense: "past",   needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true },
 ];
 
-const DAILY_TEMPLATES: GenreTemplate[] = [
-  { english: "the {S} {V}.", needs: { subject: true, object: false, adjective: false, time: false, place: false }, introducesEntity: true, tense: "present" },
-  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "present" },
-  { english: "in the {TIME} {TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: true, place: false }, topicSubject: true, tense: "present" },
-  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true, tense: "present" },
-  { english: "the {S} {V} {PLACE}.", needs: { subject: true, object: false, adjective: false, time: false, place: true }, introducesEntity: true, tense: "present" },
-  { english: "the {S} {V}.", needs: { subject: true, object: false, adjective: false, time: false, place: false }, introducesEntity: true, tense: "future" },
+const DAILY_TEMPLATES: AbstractTemplate[] = [
+  { shape: "intransitive",        tense: "present", needs: { subject: true,  object: false, adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "transitive",          tense: "present", needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "topic_time_intrans",  tense: "present", needs: { subject: false, object: false, adjective: false, time: true,  place: false }, topicSubject: true },
+  { shape: "topic_trans",         tense: "present", needs: { subject: false, object: true,  adjective: false, time: false, place: false }, topicSubject: true },
+  { shape: "place_intrans",       tense: "present", needs: { subject: true,  object: false, adjective: false, time: false, place: true  }, introducesEntity: true },
+  { shape: "intransitive",        tense: "future",  needs: { subject: true,  object: false, adjective: false, time: false, place: false }, introducesEntity: true },
 ];
 
-const DIALOGUE_TEMPLATES: GenreTemplate[] = [
-  { english: "the {S} {V} the {O}.", needs: { subject: true, object: true, adjective: false, time: false, place: false }, introducesEntity: true, tense: "present" },
-  { english: "{TOPIC} {V}.", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true, tense: "present" },
-  { english: "the {S} {V} the {ADJ} {O}.", needs: { subject: true, object: true, adjective: true, time: false, place: false }, introducesEntity: true, tense: "past" },
-  { english: "{TOPIC} {V} the {O}.", needs: { subject: false, object: true, adjective: false, time: false, place: false }, topicSubject: true, tense: "future" },
+const DIALOGUE_TEMPLATES: AbstractTemplate[] = [
+  { shape: "transitive",     tense: "present", needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "topic_intrans",  tense: "present", needs: { subject: false, object: false, adjective: false, time: false, place: false }, topicSubject: true },
+  { shape: "transitive_adj", tense: "past",    needs: { subject: true,  object: true,  adjective: true,  time: false, place: false }, introducesEntity: true },
+  { shape: "topic_trans",    tense: "future",  needs: { subject: false, object: true,  adjective: false, time: false, place: false }, topicSubject: true },
 ];
 
-export function templatesFor(genre: DiscourseGenre): readonly GenreTemplate[] {
+export function templatesFor(genre: DiscourseGenre): readonly AbstractTemplate[] {
   switch (genre) {
     case "myth":     return MYTH_TEMPLATES;
     case "legend":   return LEGEND_TEMPLATES;

@@ -142,6 +142,7 @@ export interface ReverseOptions {
   guessTense?: "present" | "past";
   guessAspect?: "progressive" | "perfective" | "imperfective";
   subjectIs3sg?: boolean;
+  preserveOrder?: boolean;
 }
 
 export function glossToEnglish(
@@ -161,12 +162,14 @@ export function glossToEnglish(
   }
 
   const sortable = filtered.map((t, idx) => ({ t, idx }));
-  sortable.sort((a, b) => {
-    const ta = tagOrder(a.t.englishTag);
-    const tb = tagOrder(b.t.englishTag);
-    if (ta !== tb) return ta - tb;
-    return a.idx - b.idx;
-  });
+  if (!opts.preserveOrder) {
+    sortable.sort((a, b) => {
+      const ta = tagOrder(a.t.englishTag);
+      const tb = tagOrder(b.t.englishTag);
+      if (ta !== tb) return ta - tb;
+      return a.idx - b.idx;
+    });
+  }
 
   const words: string[] = [];
   for (const { t } of sortable) {
