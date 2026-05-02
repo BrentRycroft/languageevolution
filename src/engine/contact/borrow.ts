@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { leafIds } from "../tree/split";
 import { isVowel, isSyllabic } from "../phonology/ipa";
 import { isFormLegal } from "../phonology/wordShape";
+import { addAlt } from "../lexicon/altForms";
 import { stripTone } from "../phonology/tone";
 import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
@@ -115,12 +116,21 @@ export function tryBorrow(
   const adapted = repairLoanShape(substituted, recipient);
   if (adapted.length === 0) return null;
   if (!isFormLegal(meaning, adapted)) return null;
-  recipient.lexicon[meaning] = adapted;
   const donorPop = donor.speakers ?? 10000;
   const recipPop = recipient.speakers ?? 10000;
   const prestige: "high" | "low" = donorPop > recipPop * 2 ? "high" : "low";
+  // If the recipient already has a native form for this meaning, the
+  // borrowed form joins as a register-tagged alternate (cf. real-world
+  // doublets like sheep/mutton, ask/inquire). Otherwise it takes the
+  // primary slot.
+  const alreadyHas = !!recipient.lexicon[meaning];
+  if (alreadyHas) {
+    addAlt(recipient, meaning, adapted, prestige);
+  } else {
+    recipient.lexicon[meaning] = adapted;
+  }
   if (!recipient.registerOf) recipient.registerOf = {};
-  recipient.registerOf[meaning] = prestige;
+  if (!alreadyHas) recipient.registerOf[meaning] = prestige;
   recipient.wordFrequencyHints[meaning] = Math.max(
     recipient.wordFrequencyHints[meaning] ?? 0,
     prestige === "high" ? 0.55 : 0.45,

@@ -120,6 +120,21 @@ export interface Language {
   tierEligibilityStreak?: number;
   lexicalCapacity?: number;
   colexifiedAs?: Record<Meaning, Meaning[]>;
+  /**
+   * Per-meaning alternative forms (synonyms / lexical doublets) ranked by
+   * frequency. The primary form lives in `lexicon[m]`; alternates compete
+   * with it for use in narrative + translation. Borrowing into an
+   * already-occupied slot pushes the borrowed form here instead of
+   * replacing the native form (real-world doublets like sheep/mutton).
+   * Pruned each generation if low-frequency.
+   */
+  altForms?: Record<Meaning, WordForm[]>;
+  /**
+   * Parallel to altForms — register tag for each alternate (the primary
+   * form's register is in lang.registerOf). Lets narrative composer pick
+   * register-appropriate words for high-genre myth vs. colloquial dialogue.
+   */
+  altRegister?: Record<Meaning, Array<"high" | "low" | "neutral">>;
   substrateAccelerationRemaining?: number;
   recentLoanGens?: number[];
   variants?: Record<Meaning, FormVariant[]>;
