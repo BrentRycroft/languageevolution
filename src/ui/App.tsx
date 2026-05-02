@@ -29,6 +29,7 @@ import { ActivityHeatmap } from "./ActivityHeatmap";
 import { GlobalSearch } from "./GlobalSearch";
 import { SelectedLanguageBar } from "./SelectedLanguageBar";
 import { TABS, type TabId as Tab } from "./tabs";
+import { TabOverflowMenu } from "./TabOverflowMenu";
 import {
   MenuIcon,
   PlayIcon,
@@ -215,7 +216,7 @@ export function App() {
       </header>
 
       <nav className="tab-bar" role="tablist">
-        {TABS.map((t) => (
+        {TABS.slice(0, 9).map((t) => (
           <button
             key={t.id}
             id={`tab-${t.id}`}
@@ -230,6 +231,13 @@ export function App() {
             {t.label}
           </button>
         ))}
+        {TABS.length > 9 && (
+          <TabOverflowMenu
+            tabs={TABS.slice(9)}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+        )}
       </nav>
       <SelectedLanguageBar />
 
