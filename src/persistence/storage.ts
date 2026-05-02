@@ -92,3 +92,48 @@ export function loadRun(id: string): SavedRun | null {
     return null;
   }
 }
+
+/**
+ * Serialize a SavedRun to a portable JSON string. Output is the run object
+ * verbatim; importRun parses and runs it through migrateSavedRun so older
+ * exports continue to load on newer schema versions.
+ */
+export function exportRun(run: SavedRun): string {
+  return JSON.stringify(run, null, 2);
+}
+
+/**
+ * Parse a JSON string previously produced by exportRun (or a savedRun
+ * payload from another source). Returns null if the input is malformed
+ * or fails migration.
+ */
+export function importRunJson(text: string): SavedRun | null {
+  try {
+    return migrateSavedRun(JSON.parse(text));
+  } catch {
+    return null;
+  }
+}
+
+let importCounter = 0;
+
+/**
+ * Import a SavedRun + persist it under a fresh id (avoiding conflicts with
+ * an existing run that shares the same id from a previous export).
+ */
+export function importAndSaveRun(text: string): SavedRun | null {
+  const parsed = importRunJson(text);
+  if (!parsed) return null;
+  // Replace the id so multiple imports of the same exported file don't clash.
+  // Add a per-process counter so two imports in the same millisecond still
+  // get distinct ids.
+  const now = Date.now();
+  const seq = ++importCounter;
+  const hash = fnv1a(`import|${parsed.label}|${parsed.config.seed}|${now}|${seq}`);
+  const id = `run-${now.toString(36)}-${seq.toString(36)}-${hash.toString(36).padStart(7, "0").slice(0, 7)}`;
+  const run: SavedRun = { ...parsed, id, createdAt: now };
+  safeSet(RUN_KEY(id), JSON.stringify(run));
+  const ids = Array.from(new Set([id, ...listRuns().map((r) => r.id)]));
+  safeSet(INDEX_KEY, JSON.stringify(ids));
+  return run;
+}

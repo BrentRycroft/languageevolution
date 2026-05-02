@@ -1,6 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
-import { listRuns, saveRun, deleteRun } from "../persistence/storage";
+import {
+  listRuns,
+  saveRun,
+  deleteRun,
+  exportRun,
+  importAndSaveRun,
+} from "../persistence/storage";
+import { downloadAs, slugForFile } from "./exportUtils";
 import type { SavedRun } from "../engine/types";
 
 export function SavedRunsList() {
@@ -9,6 +16,7 @@ export function SavedRunsList() {
   const loadConfig = useSimStore((s) => s.loadConfig);
   const showConfirm = useSimStore((s) => s.showConfirm);
   const [runs, setRuns] = useState<SavedRun[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refresh = () => setRuns(listRuns());
   useEffect(() => {
@@ -36,6 +44,26 @@ export function SavedRunsList() {
   const onLoad = (r: SavedRun) => {
     loadConfig(r.config, r.generationsRun, r.stateSnapshot);
   };
+  const onExport = (r: SavedRun) => {
+    downloadAs(`run-${slugForFile(r.label)}.json`, exportRun(r), "application/json");
+  };
+  const onImportClick = () => fileInputRef.current?.click();
+  const onImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const text = await file.text();
+    const imported = importAndSaveRun(text);
+    if (!imported) {
+      await showConfirm({
+        title: "Import failed",
+        message: "The file isn't a valid saved-run JSON or it failed schema migration.",
+        confirmLabel: "OK",
+      });
+      return;
+    }
+    refresh();
+  };
   const onDelete = async (id: string) => {
     const ok = await showConfirm({
       title: "Delete this run?",
@@ -60,6 +88,19 @@ export function SavedRunsList() {
         >
           Save checkpoint
         </button>
+        <button
+          onClick={onImportClick}
+          title="Import a previously exported run JSON"
+        >
+          Import…
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          style={{ display: "none" }}
+          onChange={onImportFile}
+        />
       </div>
       <div className="runs-list">
         {runs.length === 0 && (
@@ -77,6 +118,13 @@ export function SavedRunsList() {
               </span>
             </span>
             <button onClick={() => onLoad(r)}>Load</button>
+            <button
+              onClick={() => onExport(r)}
+              title="Download this run as JSON"
+              aria-label="Export run"
+            >
+              ↓
+            </button>
             <button onClick={() => onDelete(r.id)} aria-label="Delete run">
               ×
             </button>
