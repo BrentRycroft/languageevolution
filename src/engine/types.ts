@@ -84,6 +84,18 @@ export interface Language {
   conservatism: number;
   speakers?: number;
   wordOrigin: Record<Meaning, string>;
+  /**
+   * Detailed derivation chain — parallel to wordOrigin (which is a single
+   * tag string for backwards-compat). Populated by the targeted-derivation
+   * mechanism so the UI can surface "freedom ← free + -dom" etymology
+   * info. Optional; old runs and primitives leave it empty.
+   */
+  wordOriginChain?: Record<Meaning, {
+    tag: string;
+    from?: Meaning;
+    via?: string;
+    donor?: string;
+  }>;
   activeRules: import("./phonology/generated-types").GeneratedRule[];
   retiredRules?: import("./phonology/generated-types").GeneratedRule[];
   ruleBias?: Record<string, number>;
@@ -115,7 +127,22 @@ export interface Language {
    * heuristically assigned the first time they are needed.
    */
   gender?: Record<Meaning, number>;
-  derivationalSuffixes?: Array<{ affix: WordForm; tag: string }>;
+  /**
+   * Productive derivational suffixes the language has available for
+   * coining derived words. Each is bucketed by category (agentive,
+   * abstractNoun, etc.) so the genesis loop can reach for the right
+   * kind. Generated at language birth via seedDerivationalSuffixes;
+   * tier-gated (low-tier languages have fewer categories).
+   *
+   * The optional `category` field is undefined for legacy untyped
+   * entries from pre-Phase-20f saves; new code treats them as
+   * un-bucketed and falls back to random picking.
+   */
+  derivationalSuffixes?: Array<{
+    affix: WordForm;
+    tag: string;
+    category?: import("./lexicon/derivation").DerivationCategory;
+  }>;
   culturalTier?: 0 | 1 | 2 | 3;
   /**
    * Hysteresis counter for tier transitions. Increments on every tier-check
