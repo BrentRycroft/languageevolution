@@ -1,28 +1,6 @@
 import { useEffect } from "react";
 import { useSimStore } from "../../state/store";
-
-type Tab =
-  | "tree"
-  | "map"
-  | "dictionary"
-  | "timeline"
-  | "grammar"
-  | "events"
-  | "translate"
-  | "compare"
-  | "stats";
-
-const TAB_ORDER: Tab[] = [
-  "tree",
-  "map",
-  "dictionary",
-  "timeline",
-  "grammar",
-  "events",
-  "translate",
-  "compare",
-  "stats",
-];
+import { TABS, type TabId } from "../tabs";
 
 interface Options {
   playing: boolean;
@@ -30,11 +8,15 @@ interface Options {
   step: () => void;
   stepN: (n: number) => void;
   reset: () => void;
-  setActiveTab: (tab: Tab) => void;
+  setActiveTab: (tab: TabId) => void;
+  /**
+   * Optional global-search opener. When provided, ⌘/Ctrl-K opens it.
+   */
+  openGlobalSearch?: () => void;
 }
 
 export function useKeyboardShortcuts(options: Options): void {
-  const { playing, togglePlay, step, stepN, reset, setActiveTab } = options;
+  const { playing, togglePlay, step, stepN, reset, setActiveTab, openGlobalSearch } = options;
   const showConfirm = useSimStore((s) => s.showConfirm);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -45,6 +27,16 @@ export function useKeyboardShortcuts(options: Options): void {
           target.tagName === "TEXTAREA" ||
           target.isContentEditable)
       ) {
+        // Only allow ⌘/Ctrl-K to slip through input focus.
+        if (!((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey))) {
+          return;
+        }
+      }
+      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
+        if (openGlobalSearch) {
+          e.preventDefault();
+          openGlobalSearch();
+        }
         return;
       }
       if (e.key === " ") {
@@ -68,11 +60,13 @@ export function useKeyboardShortcuts(options: Options): void {
           if (ok) reset();
         })();
       } else if (e.key >= "1" && e.key <= "9") {
+        // Tabs 1..9 map to the first 9 entries of the visible tab bar.
         const idx = parseInt(e.key, 10) - 1;
-        if (TAB_ORDER[idx]) setActiveTab(TAB_ORDER[idx]);
+        const tab = TABS[idx];
+        if (tab) setActiveTab(tab.id);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [playing, togglePlay, step, stepN, reset, setActiveTab, showConfirm]);
+  }, [playing, togglePlay, step, stepN, reset, setActiveTab, showConfirm, openGlobalSearch]);
 }

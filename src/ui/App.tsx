@@ -25,6 +25,7 @@ import { WelcomeBanner } from "./Onboarding";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 import { GlobalSearch } from "./GlobalSearch";
 import { SelectedLanguageBar } from "./SelectedLanguageBar";
+import { TABS, type TabId as Tab } from "./tabs";
 import {
   MenuIcon,
   PlayIcon,
@@ -57,47 +58,6 @@ function PanelSkeleton() {
     </div>
   );
 }
-
-type Tab =
-  | "tree"
-  | "map"
-  | "dictionary"
-  | "timeline"
-  | "grammar"
-  | "phonemes"
-  | "laws"
-  | "events"
-  | "translate"
-  | "compare"
-  | "stats"
-  | "glossary";
-
-const TABS: { id: Tab; label: string; title: string }[] = [
-  { id: "tree", label: "Tree", title: "Phylogenetic tree of languages" },
-  { id: "map", label: "Map", title: "2-D map of where languages live" },
-  {
-    id: "dictionary",
-    label: "Dictionary",
-    title: "Lexicon + grammar profile of the selected language",
-  },
-  { id: "timeline", label: "Timeline", title: "Form changes + sound-law lifecycles over time" },
-  { id: "grammar", label: "Grammar", title: "Grammar features of the selected language" },
-  { id: "phonemes", label: "Phonemes", title: "Segmental + tonal inventory for the selected language" },
-  { id: "laws", label: "Sound laws", title: "Procedurally-invented sound laws per language" },
-  { id: "events", label: "History", title: "Event log for the selected language" },
-  {
-    id: "translate",
-    label: "Translate",
-    title: "Word + sentence translation tools (AI-assisted)",
-  },
-  {
-    id: "compare",
-    label: "Compare",
-    title: "Side-by-side comparison of two languages — lexicon, narrative, cognates",
-  },
-  { id: "stats", label: "Stats", title: "Per-language stats dashboard" },
-  { id: "glossary", label: "Glossary", title: "Reference for rule families, shift taxa, register" },
-];
 
 export function App() {
   const playing = useSimStore((s) => s.playing);
