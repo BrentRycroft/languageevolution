@@ -357,7 +357,14 @@ export function LexiconView() {
                     const isChanged = justChangedRef.current.has(key);
                     const isSelected = selectedLangId === lid && selectedMeaning === meaning;
                     const origin = state.tree[lid]!.language.wordOrigin?.[meaning];
+                    const chain = state.tree[lid]!.language.wordOriginChain?.[meaning];
                     const glyph = originGlyph(origin);
+                    // Build a chain hint like "← free + -dom" for derivation
+                    // chains recorded by Phase 20f-2's targetedDerivation.
+                    const chainHint =
+                      chain && chain.from && chain.via
+                        ? ` ← ${chain.from} + ${chain.via}`
+                        : "";
                     return (
                       <td
                         key={lid}
@@ -373,7 +380,7 @@ export function LexiconView() {
                         onDoubleClick={() => {
                           if (form) setInspect({ langId: lid, meaning });
                         }}
-                        title={`${originTitle(origin)} — right-click or double-tap to inspect history`}
+                        title={`${originTitle(origin)}${chainHint} — right-click or double-tap to inspect history`}
                       >
                         {form}
                         {glyph && (

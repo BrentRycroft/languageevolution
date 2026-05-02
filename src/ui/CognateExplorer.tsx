@@ -145,19 +145,46 @@ export function CognateExplorer() {
           </tr>
         </thead>
         <tbody>
-          {cognates.map((c) => (
-            <tr key={c.languageId} style={{ opacity: c.extinct ? 0.5 : 1 }}>
-              <td style={{ padding: "3px 6px" }}>
-                {c.languageName}
-                {c.extinct && (
-                  <span style={{ marginLeft: 4, color: "var(--danger)" }} title="extinct">
-                    ×
-                  </span>
-                )}
-              </td>
-              <td style={{ padding: "3px 6px", color: "var(--accent)" }}>{c.form}</td>
-            </tr>
-          ))}
+          {cognates.map((c) => {
+            const lang = tree[c.languageId]?.language;
+            const chain = lang?.wordOriginChain?.[meaning.trim().toLowerCase()];
+            const alts = lang?.altForms?.[meaning.trim().toLowerCase()] ?? [];
+            return (
+              <tr key={c.languageId} style={{ opacity: c.extinct ? 0.5 : 1 }}>
+                <td style={{ padding: "3px 6px" }}>
+                  {c.languageName}
+                  {c.extinct && (
+                    <span style={{ marginLeft: 4, color: "var(--danger)" }} title="extinct">
+                      ×
+                    </span>
+                  )}
+                </td>
+                <td style={{ padding: "3px 6px", color: "var(--accent)" }}>
+                  {c.form}
+                  {chain && chain.from && chain.via && (
+                    <span
+                      className="t-muted"
+                      style={{ marginLeft: 6, fontSize: 11 }}
+                      title={`Derivation chain: ${chain.from} + ${chain.via}`}
+                    >
+                      ← {chain.from} + {chain.via}
+                    </span>
+                  )}
+                  {alts.length > 0 && lang && (
+                    <span
+                      className="t-muted"
+                      style={{ marginLeft: 6, fontSize: 11 }}
+                      title="Alternative forms (synonyms)"
+                    >
+                      (also: {alts
+                        .map((alt) => formatForm(alt, lang, script, meaning.trim().toLowerCase()))
+                        .join(", ")})
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
           {meaning.trim() && cognates.length === 0 && (
             <tr>
               <td colSpan={2} style={{ padding: "8px 6px", color: "var(--muted)" }}>
