@@ -7,7 +7,9 @@ import { TIER_LABELS } from "../engine/lexicon/concepts";
 import type { Language, LanguageNode, LanguageTree } from "../engine/types";
 
 export function MapView() {
-  const state = useSimStore((s) => s.state);
+  const tree = useSimStore((s) => s.state.tree);
+  const generation = useSimStore((s) => s.state.generation);
+  const pendingArealRules = useSimStore((s) => s.state.pendingArealRules);
   const config = useSimStore((s) => s.config);
   const selectedLangId = useSimStore((s) => s.selectedLangId);
   const selectLanguage = useSimStore((s) => s.selectLanguage);
@@ -35,7 +37,7 @@ export function MapView() {
     [config.mapMode, config.seed],
   );
 
-  const ownership = useMemo(() => buildOwnership(state.tree), [state.tree]);
+  const ownership = useMemo(() => buildOwnership(tree), [tree]);
 
   const pad = 40;
   const fitScale = Math.min(
@@ -88,7 +90,7 @@ export function MapView() {
       }
       const ownerId = ownership[cell.id];
       if (ownerId) {
-        const lang = state.tree[ownerId]?.language;
+        const lang = tree[ownerId]?.language;
         if (lang) {
           out[i] = languageColor(ownerId, lang.extinct ?? false, (lang.culturalTier ?? 0));
           continue;
@@ -97,7 +99,7 @@ export function MapView() {
       out[i] = biomeColor(cell.biome);
     }
     return out;
-  }, [worldMap, ownership, state.tree]);
+  }, [worldMap, ownership, tree]);
 
   const [hoverCell, setHoverCell] = useState<number | null>(null);
   const [showBilingual, setShowBilingual] = useState(true);
@@ -106,22 +108,22 @@ export function MapView() {
 
   const leafCentroids = useMemo(() => {
     const out: Record<string, { x: number; y: number }> = {};
-    for (const id of Object.keys(state.tree)) {
-      const node = state.tree[id]!;
+    for (const id of Object.keys(tree)) {
+      const node = tree[id]!;
       if (node.childrenIds.length > 0) continue;
       if (node.language.extinct) continue;
       const c = node.language.coords;
       if (c) out[id] = { x: c.x, y: c.y };
     }
     return out;
-  }, [state.tree]);
+  }, [tree]);
 
   const bilingualEdges = useMemo(() => {
     if (!showBilingual) return [] as Array<{ aId: string; bId: string; w: number }>;
     const seen = new Set<string>();
     const out: Array<{ aId: string; bId: string; w: number }> = [];
-    for (const id of Object.keys(state.tree)) {
-      const lang = state.tree[id]!.language;
+    for (const id of Object.keys(tree)) {
+      const lang = tree[id]!.language;
       const links = lang.bilingualLinks;
       if (!links) continue;
       for (const otherId of Object.keys(links)) {
@@ -135,14 +137,14 @@ export function MapView() {
       }
     }
     return out;
-  }, [state.tree, showBilingual, leafCentroids]);
+  }, [tree, showBilingual, leafCentroids]);
 
   const recentLoans = useMemo(() => {
     if (!showLoans) return [] as Array<{ donorId: string; recipientId: string; age: number }>;
     const out: Array<{ donorId: string; recipientId: string; age: number }> = [];
-    const cap = state.generation;
-    for (const id of Object.keys(state.tree)) {
-      const lang = state.tree[id]!.language;
+    const cap = generation;
+    for (const id of Object.keys(tree)) {
+      const lang = tree[id]!.language;
       for (const e of lang.events) {
         if (e.kind !== "borrow") continue;
         const age = cap - e.generation;
@@ -155,18 +157,18 @@ export function MapView() {
       }
     }
     return out;
-  }, [state.tree, state.generation, showLoans, leafCentroids]);
+  }, [tree, generation, showLoans, leafCentroids]);
 
   const arealWaves = useMemo(() => {
     if (!showAreal) return [] as Array<{ x: number; y: number; age: number; donorId: string }>;
-    const pending = state.pendingArealRules ?? [];
+    const pending = pendingArealRules ?? [];
     return pending.slice(-12).map((w) => ({
       x: w.donorCoords.x,
       y: w.donorCoords.y,
-      age: state.generation - w.birthGeneration,
+      age: generation - w.birthGeneration,
       donorId: w.donorId,
     }));
-  }, [state.pendingArealRules, state.generation, showAreal]);
+  }, [pendingArealRules, generation, showAreal]);
 
   return (
     <div
@@ -289,7 +291,7 @@ export function MapView() {
           </g>
         )}
         {}
-        {labelsForAliveLeavesSmoothed(state.tree, worldMap, smoothedLabelRef.current).map(({ langId, lang, point }) => {
+        {labelsForAliveLeavesSmoothed(tree, worldMap, smoothedLabelRef.current).map(({ langId, lang, point }) => {
           const { px, py } = project(point.x, point.y);
           const sample =
             selectedMeaning && lang.lexicon[selectedMeaning]
@@ -349,7 +351,7 @@ export function MapView() {
             pointerEvents: "none",
           }}
         >
-          {renderCellTooltip(hoverCell, worldMap, ownership, state.tree, selectedMeaning, script)}
+          {renderCellTooltip(hoverCell, worldMap, ownership, tree, selectedMeaning, script)}
         </div>
       )}
 

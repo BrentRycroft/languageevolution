@@ -133,7 +133,9 @@ function buildHierarchy(
 }
 
 export function LanguageTreeView() {
-  const state = useSimStore((s) => s.state);
+  const tree = useSimStore((s) => s.state.tree);
+  const rootId = useSimStore((s) => s.state.rootId);
+  const generation = useSimStore((s) => s.state.generation);
   const selectedLangId = useSimStore((s) => s.selectedLangId);
   const selectLanguage = useSimStore((s) => s.selectLanguage);
   const selectedMeaning = useSimStore((s) => s.selectedMeaning);
@@ -165,14 +167,14 @@ export function LanguageTreeView() {
 
   const layout = useMemo(() => {
     const sample = selectedMeaning ?? "water";
-    const data = buildHierarchy(state.tree, state.rootId, sample, state.generation, script, yearsPerGen);
+    const data = buildHierarchy(tree, rootId, sample, generation, script, yearsPerGen);
     const root = hierarchy(data);
     const margin = 24;
     const w = Math.max(200, size.w - margin * 2);
     const h = Math.max(160, size.h - margin * 2 - 20);
     d3tree<NodeDatum>().size([w, h]).separation(() => 1.2)(root);
     return { root, margin };
-  }, [state, selectedMeaning, size, script]);
+  }, [tree, rootId, generation, selectedMeaning, size, script, yearsPerGen]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 220 }}>
