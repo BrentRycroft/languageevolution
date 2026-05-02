@@ -4,6 +4,7 @@ import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargets } from "../semantics/grammaticalization";
 import { posOf } from "../lexicon/pos";
 import { harmonizeAffix } from "./harmony";
+import { genderOf } from "./gender";
 
 export interface MorphShift {
   kind: "affix_erode" | "category_merge" | "grammaticalization";
@@ -216,7 +217,7 @@ export function inflect(
     if (override && override.length > 0) return override.slice();
   }
   if (!paradigm) return base;
-  let affix = pickAffixVariant(paradigm, base);
+  let affix = pickAffixVariant(paradigm, base, lang, meaning);
   if (lang?.grammar.harmony && lang.grammar.harmony !== "none") {
     affix = harmonizeAffix(affix, base, lang.grammar.harmony);
   }
@@ -269,9 +270,22 @@ export function inflectCascade(
   return { form, applied };
 }
 
-function pickAffixVariant(paradigm: Paradigm, base: WordForm): WordForm {
+function pickAffixVariant(
+  paradigm: Paradigm,
+  base: WordForm,
+  lang?: Language,
+  meaning?: string,
+): WordForm {
   const variants = paradigm.variants;
   if (!variants || variants.length === 0) return paradigm.affix;
+
+  // Gender-conditioned variant takes precedence when applicable.
+  if (lang && meaning && (lang.grammar.genderCount ?? 0) > 0) {
+    const g = genderOf(lang, meaning);
+    const genderMatch = variants.find((v) => v.when === `gender:${g}`);
+    if (genderMatch) return genderMatch.affix;
+  }
+
   const last = base[base.length - 1];
   if (!last) return paradigm.affix;
   const isVowelFinal = isVowelLike(last);
