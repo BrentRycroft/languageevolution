@@ -112,6 +112,31 @@ const CATEGORY_PRIORITY: Record<SoundChange["category"], number> = {
   fortition: 0.5,
 };
 
+/**
+ * Phase 28c: directionality bias — multiplies rule firing probability
+ * to reflect cross-linguistic asymmetries. Lenition, voicing
+ * assimilation, and palatalisation are common natural processes;
+ * fortition (hardening) and metathesis are typologically marked.
+ *
+ * Pre-28c the catalog gave these categories near-equal weights, so
+ * fortition fired about as often as lenition — unrealistic. The bias
+ * applies uniformly across all rules in a category at lambda
+ * computation time, leaving the existing CATEGORY_PRIORITY (which
+ * controls ORDER, not LIKELIHOOD) intact.
+ */
+const CATEGORY_NATURAL_BIAS: Record<SoundChange["category"], number> = {
+  lenition: 1.5,
+  assimilation: 1.5,
+  palatalization: 1.5,
+  voicing: 1.2,
+  deletion: 1.0,
+  insertion: 1.0,
+  vowel: 1.0,
+  gemination: 1.0,
+  metathesis: 0.6,
+  fortition: 0.5,
+};
+
 function priorityFor(change: SoundChange): number {
   if (typeof change.priority === "number") return change.priority;
   return CATEGORY_PRIORITY[change.category] ?? 1.0;
@@ -190,10 +215,14 @@ export function applyChangesToWord(
     // rules to zero as currentLen approaches SOFT_FLOOR_LEN (=2). Vowel
     // shifts, palatalisation, fortition, insertion etc. are unaffected.
     const resistance = erosionResistance(change.category, current.length, seedLen);
+    // Phase 28c: directionality bias (natural processes ×1.2-1.5,
+    // marked processes ×0.5-0.6).
+    const naturalBias = CATEGORY_NATURAL_BIAS[change.category] ?? 1.0;
     const lambda = Math.min(
       3,
       adjusted *
         weight *
+        naturalBias *
         opts.globalRate *
         mult *
         ageMult *
