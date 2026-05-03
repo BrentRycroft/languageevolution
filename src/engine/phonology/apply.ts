@@ -75,6 +75,15 @@ export interface ApplyOptions {
    * applies. Replaces Phase 23b's `minLengthFor` hard cap.
    */
   seedLengths?: Record<Meaning, number>;
+  /**
+   * Phase 28d: per-meaning neighbour-momentum boost in [1, 1.5].
+   * Computed by the caller as the fraction of a meaning's local
+   * neighbours that changed in the last ~20 generations, scaled to
+   * 1 + 0.5×fraction. Multiplied into lambda so a word whose
+   * semantic neighbours are actively diffusing a sound change
+   * adopts it faster — the S-curve of lexical diffusion.
+   */
+  neighbourMomentum?: Record<Meaning, number>;
   _orderedChanges?: SoundChange[];
 }
 
@@ -218,11 +227,18 @@ export function applyChangesToWord(
     // Phase 28c: directionality bias (natural processes ×1.2-1.5,
     // marked processes ×0.5-0.6).
     const naturalBias = CATEGORY_NATURAL_BIAS[change.category] ?? 1.0;
+    // Phase 28d: lexical-diffusion S-curve. When this meaning's
+    // semantic neighbours have recently undergone change, the rule's
+    // probability boosts here too — modeling how sound changes spread
+    // word-by-word rather than firing exceptionlessly across the
+    // whole lexicon. Caller passes `neighbourMomentum` ∈ [1, 1.5].
+    const momentum = opts.neighbourMomentum?.[meaning] ?? 1;
     const lambda = Math.min(
       3,
       adjusted *
         weight *
         naturalBias *
+        momentum *
         opts.globalRate *
         mult *
         ageMult *

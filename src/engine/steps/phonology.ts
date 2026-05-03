@@ -61,6 +61,30 @@ export function stepPhonology(
     const f = config.seedLexicon[m];
     if (f && f.length > 0) seedLengths[m] = f.length;
   }
+  // Phase 28d: per-meaning neighbour-momentum boost. For each meaning,
+  // count what fraction of its local-neighbour set has changed within
+  // the last NEIGHBOUR_WINDOW generations and convert to a multiplier
+  // ∈ [1, 1.5]. Drives the S-curve of lexical diffusion: a word whose
+  // semantic neighbours are actively shifting picks up the change
+  // faster, while an isolated meaning resists. When a meaning has no
+  // recorded neighbours (early sim, or for closed-class words),
+  // momentum stays at 1 (neutral).
+  const NEIGHBOUR_WINDOW = 20;
+  const NEIGHBOUR_MOMENTUM_MAX = 0.5;
+  const neighbourMomentum: Record<string, number> = {};
+  for (const m of Object.keys(before)) {
+    const nbrs = lang.localNeighbors[m];
+    if (!nbrs || nbrs.length === 0) continue;
+    let recentlyChanged = 0;
+    for (const n of nbrs) {
+      const last = lang.lastChangeGeneration[n];
+      if (last !== undefined && generation - last <= NEIGHBOUR_WINDOW) {
+        recentlyChanged++;
+      }
+    }
+    const fraction = recentlyChanged / nbrs.length;
+    neighbourMomentum[m] = 1 + NEIGHBOUR_MOMENTUM_MAX * fraction;
+  }
   const opts = {
     globalRate: config.phonology.globalRate * realismMultiplier(config),
     weights: lang.changeWeights,
@@ -71,6 +95,7 @@ export function stepPhonology(
     stressPattern: lang.stressPattern,
     lexicalStress: lang.lexicalStress,
     seedLengths,
+    neighbourMomentum,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   // Phase 27.1: when the language is already over its tier-target
