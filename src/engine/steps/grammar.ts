@@ -1,6 +1,7 @@
 import type { Language, SimulationConfig } from "../types";
 import { driftGrammar } from "../grammar/evolve";
 import { enforceTypologicalUniversals } from "../grammar/universals";
+import { pickNextStressForDrift } from "../grammar/stressTransitions";
 import {
   maybeGrammaticalize,
   maybeMergeParadigms,
@@ -15,17 +16,6 @@ import { simplificationFactor, realismMultiplier } from "../phonology/rate";
 import { maybeReanalyse } from "../lexicon/reanalysis";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
-
-const STRESS_ADJACENT: Record<
-  NonNullable<Language["stressPattern"]>,
-  NonNullable<Language["stressPattern"]>[]
-> = {
-  initial: ["penult"],
-  penult: ["initial", "final", "antepenult"],
-  final: ["penult"],
-  antepenult: ["penult"],
-  lexical: ["penult"],
-};
 
 export function stepGrammar(
   lang: Language,
@@ -56,8 +46,7 @@ export function stepGrammar(
   }
   if (rng.chance(0.3)) {
     const current = lang.stressPattern ?? "penult";
-    const options = STRESS_ADJACENT[current];
-    const next = options[rng.int(options.length)]!;
+    const next = pickNextStressForDrift(current, rng);
     if (next !== current) {
       lang.stressPattern = next;
       pushEvent(lang, {

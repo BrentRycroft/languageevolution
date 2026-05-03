@@ -6,8 +6,7 @@ import { stepPhonology, stepArealWaves } from "./steps/phonology";
 import { validateConfig, summarizeValidation } from "./configValidation";
 import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
-import { stepInventoryHomeostasis } from "./steps/inventoryHomeostasis";
-import { stepPhonotacticRepair } from "./steps/phonotacticRepair";
+import { stepInventoryManagement } from "./steps/inventoryManagement";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
@@ -59,26 +58,62 @@ export function createSimulation(
   let state: SimulationState = buildInitialState(config);
 
   /**
-   * Step ordering inside step():
+   * Generation step ordering. Each entry below documents WHY that step
+   * runs at that point — the order is load-bearing.
    *
-   *   1. (gen 0 only) splitLeaf the proto into N daughters via
-   *      pickFirstSplitChildCount.
-   *   2. For each leaf:
-   *      a. stepPhonology — apply active rules to the lexicon.
-   *      b. stepGenesis — coin / borrow / derive new words.
-   *         (Phonology runs before genesis on purpose: a word coined
-   *         this generation should not be eroded by phonology in the
-   *         same step. New words enter the next-generation lexicon.)
-   *      c. stepGrammar / stepMorphology — drift typology + paradigms.
-   *      d. stepSemantics — drift, recarve, bleach.
-   *      e. stepContact — borrowing from neighbors.
-   *      f. stepArealTypology — areal pressure recomputation.
-   *      g. stepTreeSplit — possibly split this leaf.
-   *      h. stepDeath (only if still a leaf, i.e. it didn't just split)
-   *         — soft-cap-aware death pressure (uses generationsOverCap).
-   *   3. stepArealWaves — propagate any waves that were enqueued.
-   *   4. stepCreolization — possibly merge contacting languages.
-   *   5. Recompute generationsOverCap for next gen's death pressure.
+   * Pre-loop:
+   *   - (gen 0, tree mode) splitLeaf the proto into N daughters via
+   *     pickFirstSplitChildCount. Sets up the initial language family.
+   *
+   * Per leaf, in order:
+   *   1. speaker drift              — Malthusian population update.
+   *      Runs first because death-pressure later in the step uses the
+   *      fresh speaker count.
+   *   2. tickTerritory              — geographic spread / contact updates
+   *      that downstream contact / areal-share steps depend on.
+   *   3. cultural-tier hysteresis   — every 20 gens, evaluate tier
+   *      promotions. Triggers volatility upheavals + kinship
+   *      simplification when the tier crosses thresholds. Updates
+   *      lexicalCapacity for genesis.
+   *   4. stepVolatility             — tick the volatility regime so the
+   *      multiplier is fresh before phonology consumes it.
+   *   5. stepPhonology              — apply active sound-change rules
+   *      to the lexicon. Includes the Phase 27.1 novel-phoneme revert
+   *      and the regular-change-with-snapshot path.
+   *   6. stepLearner                — markedness reduction +
+   *      coda-simplification by child learners. Runs after phonology
+   *      so learners react to the post-rule lexicon.
+   *   7. stepInventoryManagement    — Phase 28a fold of the former
+   *      stepPhonotacticRepair + stepInventoryHomeostasis. Repairs
+   *      forms that violate the syllable profile, then prunes
+   *      phonemes when over the tier-target inventory size.
+   *   8. stepObsolescence           — retire near-homophone rivals.
+   *      Runs after the inventory has stabilised; mergers from #7 may
+   *      have produced new rivalries.
+   *   9. stepCopulaErosion / stepCopulaGenesis — copula lifecycle.
+   *  10. stepTaboo                  — taboo replacement.
+   *  11. stepGenesis                — coin / borrow / derive new words.
+   *      (Genesis runs after phonology on purpose: a word coined this
+   *      generation should NOT be eroded by phonology this step. New
+   *      words land in the next generation's lexicon.)
+   *      Also bootstrapNeologismNeighbors for the new entries.
+   *  12. stepGrammar / stepMorphology — drift typology + paradigms.
+   *      Runs after genesis so new derived/inflected forms can feed
+   *      back into next-gen patterns.
+   *  13. stepSemantics              — drift, recarve, bleach.
+   *  14. stepContact                — borrowing from neighbors.
+   *  15. stepArealTypology          — areal pressure recomputation.
+   *  16. stepTreeSplit              — possibly split this leaf into
+   *      daughters. Decided after all per-leaf evolution is done.
+   *  17. stepDeath                  — only if still a leaf (didn't just
+   *      split). Soft-cap-aware death pressure using generationsOverCap.
+   *
+   * Post-loop:
+   *   - stepArealWaves              — propagate any waves enqueued by
+   *     individual leaves' contact steps.
+   *   - stepCreolization (tree mode) — possibly merge contacting
+   *     languages.
+   *   - generationsOverCap update   — feeds next gen's death pressure.
    */
   const step = (): void => {
     const rng = makeRng(state.rngState);
@@ -168,14 +203,12 @@ export function createSimulation(
       stepVolatility(lang, nextGen, rng);
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
       if (config.modes.phonology) stepLearner(lang, config, rng, nextGen);
-      // Phase 27c: repair forms whose phonotactic score is heavily below
-      // the language's profile (e.g. CCC onset in a strict-CV language)
-      // by applying existing insertion rules until the score lifts.
-      if (config.modes.phonology) stepPhonotacticRepair(lang, rng, nextGen);
-      // Phase 27b: dynamic phoneme-inventory homeostasis. When inventory
-      // size exceeds the per-tier target, pruning probability scales up
-      // and prefers low-functional-load phonemes.
-      if (config.modes.phonology) stepInventoryHomeostasis(lang, rng, nextGen);
+      // Phase 28a: post-phonology inventory management. Folds the
+      // former stepPhonotacticRepair (Phase 27c) and
+      // stepInventoryHomeostasis (Phase 27b/27.1) into one step:
+      // 1. repair forms violating the language's syllable profile
+      // 2. prune phonemes when over the tier-target inventory size.
+      if (config.modes.phonology) stepInventoryManagement(lang, rng, nextGen);
       stepObsolescence(lang, config, rng, nextGen);
       stepCopulaErosion(lang, config, rng, nextGen);
       stepCopulaGenesis(lang, config, rng, nextGen);

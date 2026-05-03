@@ -5,7 +5,7 @@ import { geoDistance } from "../geo";
 import { isVowel } from "../phonology/ipa";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
-import { inventorySizePressure } from "../steps/inventoryHomeostasis";
+import { inventorySizePressure } from "../steps/inventoryManagement";
 
 const AREAL_HALF_LIFE = 200;
 // Phase 27.1: gate at ANY positive pressure (i.e. any inventory

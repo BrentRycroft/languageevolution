@@ -3,7 +3,8 @@ import { levenshtein } from "../phonology/ipa";
 import { complexityFor } from "../lexicon/complexity";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
-import { findWordsByMeaning, removeSense } from "../lexicon/word";
+import { findWordsByMeaning } from "../lexicon/word";
+import { deleteMeaning } from "../lexicon/mutate";
 
 /**
  * Phase 21d: two meanings sharing the same Word entry are not rivals —
@@ -46,16 +47,7 @@ export function stepObsolescence(
     const winner = loser === a ? b : a;
     const p = config.obsolescence.probabilityPerPairPerGeneration * lang.conservatism;
     if (!rng.chance(p)) return;
-    delete lang.lexicon[loser];
-    delete lang.wordFrequencyHints[loser];
-    if (lang.registerOf) delete lang.registerOf[loser];
-    delete lang.localNeighbors[loser];
-    delete lang.wordOrigin[loser];
-    delete lang.lastChangeGeneration[loser];
-    // Phase 21d: keep the form-centric words table in sync with the
-    // meaning-keyed lexicon. removeSense is a no-op when words is
-    // undefined (pre-21 saves).
-    removeSense(lang, loser);
+    deleteMeaning(lang, loser);
     pushEvent(lang, {
       generation,
       kind: "semantic_drift",
