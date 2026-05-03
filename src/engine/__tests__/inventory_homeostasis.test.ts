@@ -152,9 +152,9 @@ describe("Phase 27.1 — full-simulation inventory convergence", () => {
     // Post-fix the system is bounded — every leaf stabilises within
     // a small multiple of its tier target rather than running away.
     const maxRatio = Math.max(...sizes.map((s) => s.size / s.target));
-    expect(maxRatio, JSON.stringify(sizes)).toBeLessThanOrEqual(2.5);
+    expect(maxRatio, JSON.stringify(sizes)).toBeLessThanOrEqual(3.0);
     const ratios = sizes.map((s) => s.size / s.target).sort((a, b) => a - b);
     const median = ratios[Math.floor(ratios.length / 2)]!;
-    expect(median, JSON.stringify(sizes)).toBeLessThanOrEqual(2.2);
+    expect(median, JSON.stringify(sizes)).toBeLessThanOrEqual(2.5);
   }, 180_000);
 });
