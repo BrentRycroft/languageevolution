@@ -2,7 +2,7 @@ import type { Morphology, MorphCategory, Paradigm } from "./types";
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargets } from "../semantics/grammaticalization";
-import { posOf } from "../lexicon/pos";
+import { posOf, isClosedClass } from "../lexicon/pos";
 import { harmonizeAffix } from "./harmony";
 import { genderOf } from "./gender";
 
@@ -45,6 +45,10 @@ export function maybeGrammaticalize(
   };
   const candidates: Candidate[] = [];
   for (const m of meanings) {
+    // Phase 26c: grammaticalisation operates on OPEN-class meanings →
+    // closed-class function. Skip already-closed-class meanings (the
+    // promotion already happened, or they were always functional).
+    if (isClosedClass(posOf(m))) continue;
     const tag = semanticTagOf(m);
     if (!tag) continue;
     const form = lang.lexicon[m]!;

@@ -33,6 +33,7 @@ import {
   placePool,
   pickWeighted,
 } from "./pools";
+import { pickStanza } from "./poetry";
 
 export interface DiscourseLine {
   english: string;
@@ -53,6 +54,9 @@ function pickTemplate(
   const introducing = all.filter((t) => t.introducesEntity);
   const continuing = all.filter((t) => t.topicSubject);
   if (ctx.turnIndex === 0 || !ctx.topic) return pick(introducing, rng);
+  // Phase 26d: when a genre has no topicSubject templates (e.g. poetry's
+  // tight introducing-only set), fall back to introducing templates.
+  if (continuing.length === 0) return pick(introducing, rng);
   return rng.next() < 0.6 ? pick(continuing, rng) : pick(introducing, rng);
 }
 
@@ -126,6 +130,7 @@ function genreRegisterFor(genre: DiscourseGenre): "high" | "low" | "neutral" {
   switch (genre) {
     case "myth":
     case "legend":
+    case "poetry": // Phase 26d: poetic register prefers elevated alt forms.
       return "high";
     case "daily":
     case "dialogue":
@@ -154,6 +159,14 @@ export function generateDiscourseNarrative(
   const genre = options.genre ?? "myth";
   const rng = makeRng(`narrative.${seedStr}.${genre}`);
   const ctx = makeDiscourse(genre);
+
+  // Phase 26d: poetry mode generates a stanza by composing N candidate
+  // lines (more than requested), scoring each on meter + rhyme, and
+  // selecting the best fit per slot via pickStanza. Routes through the
+  // standard composer for the actual line text, then post-processes.
+  if (genre === "poetry") {
+    return generatePoetryStanza(lang, lines, ctx, rng, script);
+  }
   const out: DiscourseLine[] = [];
 
   // Per-genre negation rate: dialogue 30%, daily 25%, legend 15%, myth 10%.
@@ -267,4 +280,50 @@ export function generateDiscourseNarrative(
   }
 
   return out;
+}
+
+/**
+ * Phase 26d: poetry-mode stanza generator. Composes ~3× the requested
+ * line count as candidates, scores each on meter + rhyme, and selects
+ * the best fit per slot via pickStanza. Defaults to iambic + AABB —
+ * tunable per ctx if we expose options later.
+ */
+function generatePoetryStanza(
+  lang: Language,
+  lineCount: number,
+  ctx: DiscourseContext,
+  rng: Rng,
+  script: DisplayScript,
+): DiscourseLine[] {
+  const candidatePoolSize = Math.max(8, lineCount * 3);
+  const candidates: import("./poetry").CandidateLine[] = [];
+  for (let i = 0; i < candidatePoolSize; i++) {
+    const baseTemplate = pickTemplate("poetry", ctx, rng);
+    const slots = fillSlots(baseTemplate, lang, rng);
+    if (baseTemplate.needs.subject && slots.subject) {
+      mention(ctx, slots.subject as Meaning);
+    }
+    const composed = composeTargetSentence(lang, baseTemplate, slots, ctx, script, {
+      rng,
+      pickAltProbability: 0.2, // bias toward alts (high-register selected via genreRegisterFor)
+      genreRegister: "high",
+    });
+    if (composed.tokens.length === 0) continue;
+    candidates.push({
+      forms: composed.tokens.map((t) => t.targetForm).filter((f) => f.length > 0),
+      text: composed.surface,
+      english: composed.english,
+    });
+    endTurn(ctx);
+  }
+  const stanza = pickStanza(candidates, lang, {
+    meter: "iambic",
+    scheme: "AABB",
+    lineCount,
+  });
+  return stanza.map((s) => ({
+    english: s.english,
+    text: s.text,
+    gloss: "", // poetry mode doesn't render the morphological gloss line
+  }));
 }

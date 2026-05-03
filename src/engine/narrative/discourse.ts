@@ -1,6 +1,6 @@
 import type { Meaning } from "../types";
 
-export type DiscourseGenre = "myth" | "legend" | "daily" | "dialogue";
+export type DiscourseGenre = "myth" | "legend" | "daily" | "dialogue" | "poetry";
 
 export interface DiscourseEntity {
   meaning: Meaning;

@@ -4,6 +4,7 @@ import { BASIC_240 } from "../lexicon/basic240";
 import { CONCEPT_IDS, CONCEPTS, tierOf, type Tier } from "../lexicon/concepts";
 import { EXPANSION_NEED_BASELINE } from "../constants";
 import { leafIds } from "../tree/split";
+import { isClosedClass, posOf } from "../lexicon/pos";
 
 export interface LexicalNeedOptions {
   /**
@@ -56,7 +57,11 @@ export function lexicalNeed(
       // genesis replenishment, instead of letting eroded high-freq
       // words sit at minimum length forever.
       let shrinkage = 0;
-      if (seedLengths) {
+      // Phase 26c: closed-class words (DET, AUX, PREP, CONJ, PRON, NEG)
+      // are NOT lexically replaced when eroded — function-word
+      // reduction is a real linguistic process (English "going to" →
+      // "gonna" is a feature, not a bug). Skip the shrinkage signal.
+      if (seedLengths && !isClosedClass(posOf(m))) {
         const seedLen = seedLengths[m];
         const cur = lex[m];
         if (seedLen && cur && cur.length < Math.ceil(seedLen * 0.7)) {

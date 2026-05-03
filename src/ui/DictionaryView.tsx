@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSimStore } from "../state/store";
 import { posOf } from "../engine/lexicon/pos";
+import { verbCitationForm } from "../engine/morphology/citation";
 import { CONCEPTS, tierOf, TIER_LABELS } from "../engine/lexicon/concepts";
 import { formatForm } from "../engine/phonology/display";
 import { formatElapsed } from "../engine/time";
@@ -28,10 +29,28 @@ export function DictionaryView() {
     const data = filtered.map((m) => {
       const origin = lang.wordOrigin?.[m];
       const isLoan = origin?.startsWith("borrow:");
+      const pos = posOf(m);
+      // Phase 26b: render verbs in their citation form (infinitive). For
+      // English: "to go". For Romance: "amare". For bare-strategy
+      // languages: same as the bare lexicon form.
+      let displayForm = formatForm(lang.lexicon[m]!, lang, script);
+      if (pos === "verb") {
+        const cit = verbCitationForm(lang, m);
+        if (cit) {
+          if (cit.kind === "single") {
+            displayForm = formatForm(cit.form, lang, script, m);
+          } else {
+            displayForm =
+              formatForm(cit.particle, lang, script) +
+              " " +
+              formatForm(cit.root, lang, script, m);
+          }
+        }
+      }
       return {
         meaning: m,
-        form: formatForm(lang.lexicon[m]!, lang, script),
-        pos: posOf(m),
+        form: displayForm,
+        pos,
         cluster: CONCEPTS[m]?.cluster ?? "—",
         tier: tierOf(m),
         origin,

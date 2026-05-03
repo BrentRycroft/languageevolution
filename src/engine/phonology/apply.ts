@@ -1,7 +1,13 @@
 import type { Lexicon, Meaning, SoundChange, SoundChangeCategory, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
-import { corenessResistance } from "../lexicon/coreness";
+// Phase 26e: corenessResistance import removed. Swadesh-membership-based
+// rate dampening was redundant with Phase 24c's frequency-direction split
+// (high-freq content words get conservative-when-frequent treatment via
+// freqInput = 1 - freq), and not accurate to real etymology — Swadesh
+// words DO drift in real languages (PIE *ph₂tér → English father, Sanskrit
+// pitár, Latin pater). Removing the modifier lets Swadesh content words
+// participate in the same frequency-based dynamics as ordinary content.
 import { isFormLegal, repairSyllabicity } from "./wordShape";
 import { stressClass, type StressPattern } from "./stress";
 import { isVowel } from "./ipa";
@@ -160,7 +166,8 @@ export function applyChangesToWord(
   const freqExponent = 0.4 + freqInput * 1.2;
   const age = opts.agesSinceChange?.[meaning];
   const ageMult = ageBoost(age);
-  const coreMult = corenessResistance(meaning);
+  // Phase 26e: removed coreMult = corenessResistance(meaning). See header
+  // comment for rationale.
   const seedLen = opts.seedLengths?.[meaning] ?? word.length;
 
   let current = word;
@@ -190,7 +197,7 @@ export function applyChangesToWord(
         opts.globalRate *
         mult *
         ageMult *
-        coreMult *
+        // Phase 26e: removed coreMult — see header comment.
         lenFactor *
         resistance,
     );
