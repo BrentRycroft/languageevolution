@@ -16,6 +16,18 @@ export interface ApplyOptions {
   registerOf?: Record<Meaning, "high" | "low">;
   stressPattern?: StressPattern;
   lexicalStress?: Record<Meaning, number>;
+  /**
+   * Phase 23b: per-meaning minimum length floor. Used to refuse a sound-
+   * change application that would shrink a word below a fraction of its
+   * seed length. Without this, deletion-heavy rule cascades reduce
+   * 5-phoneme content words like *father* to 2 phonemes (`əj`) over
+   * 200 generations, which is unrealistically aggressive vs real
+   * PIE→English (~0% length erosion over 6000 years).
+   *
+   * When undefined or returns 0, defaults to `isFormLegal`'s built-in
+   * floor (2 for content words, 1 for ALLOWED_MONOSYLLABIC).
+   */
+  minLengthFor?: (meaning: Meaning) => number;
   _orderedChanges?: SoundChange[];
 }
 
@@ -122,6 +134,14 @@ export function applyChangesToWord(
       const next = change.apply(current, rng);
       if (next === current) break;
       if (!isFormLegal(meaning, next)) break;
+      // Phase 23b: per-meaning erosion floor. Reject the result if it
+      // would push the word below `minLengthFor(meaning)`. The caller
+      // wires this to ~70% of the seed length so a 5-phoneme word can
+      // shrink to 4 (acceptable) but not to 2 (over-eroded).
+      if (opts.minLengthFor) {
+        const floor = opts.minLengthFor(meaning);
+        if (floor > 0 && next.length < floor) break;
+      }
       current = next;
     }
   }

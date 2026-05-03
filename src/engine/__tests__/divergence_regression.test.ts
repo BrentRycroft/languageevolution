@@ -96,6 +96,54 @@ describe("Phase 23 — divergence regression", () => {
     expect(pw).toBeGreaterThan(0.8);
   });
 
+  it("after 200 generations, mean word length stays within 25% of the seed (no over-erosion)", () => {
+    // Phase 23b: cap erosion at ~30% of seed length per word so 5-phoneme
+    // content words like father (5) don't collapse to 2 phonemes (əj).
+    // Floor: min mean length = 0.75 × seed mean length.
+    const cfg = { ...presetEnglish(), seed: "length-regression-A" };
+    const sim = createSimulation(cfg);
+    const seedLex = cfg.seedLexicon;
+    const seedLengths = Object.values(seedLex).map((f) => f.length);
+    const seedMean =
+      seedLengths.reduce((a, b) => a + b, 0) / Math.max(1, seedLengths.length);
+    for (let i = 0; i < 200; i++) sim.step();
+    const state = sim.getState();
+    const leaves = leafIds(state.tree).filter(
+      (id) => !state.tree[id]!.language.extinct,
+    );
+    expect(leaves.length).toBeGreaterThan(0);
+    const langs = leaves.map((id) => state.tree[id]!.language);
+    for (const lang of langs) {
+      const lens = Object.values(lang.lexicon).map((f) => f.length);
+      const mean = lens.reduce((a, b) => a + b, 0) / Math.max(1, lens.length);
+      // Pre-Phase-23b: drops to 3.25 (~19% loss) on a 4.03 seed, with
+      // many 5-phoneme content words at length 2. Post-fix: 3.55–3.84
+      // (~5–12% loss), with content words preserving 4–5 phonemes.
+      expect(mean).toBeGreaterThan(seedMean * 0.75);
+    }
+  });
+
+  it("after 200 generations, fewer than 12% of words are 1-phoneme long", () => {
+    const cfg = { ...presetEnglish(), seed: "length-regression-B" };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 200; i++) sim.step();
+    const state = sim.getState();
+    const leaves = leafIds(state.tree).filter(
+      (id) => !state.tree[id]!.language.extinct,
+    );
+    expect(leaves.length).toBeGreaterThan(0);
+    const langs = leaves.map((id) => state.tree[id]!.language);
+    for (const lang of langs) {
+      const lens = Object.values(lang.lexicon).map((f) => f.length);
+      const oneCount = lens.filter((n) => n <= 1).length;
+      // Pre-Phase-23b: 5–8 single-phoneme words per language (often
+      // content words like 'a', 'or', 'he' collapsing fully). The
+      // ALLOWED_MONOSYLLABIC list intentionally permits a, the, of,
+      // etc. to be 1 phoneme, so the threshold isn't zero.
+      expect(oneCount / lens.length).toBeLessThan(0.12);
+    }
+  });
+
   it("over 50 generations a high-frequency word's form should change at least once and stay changed", () => {
     const cfg = { ...presetEnglish(), seed: "divergence-regression-C" };
     const sim = createSimulation(cfg);

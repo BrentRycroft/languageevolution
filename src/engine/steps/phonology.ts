@@ -44,6 +44,19 @@ export function stepPhonology(
     const last = lang.lastChangeGeneration[m];
     ages[m] = last === undefined ? 99 : generation - last;
   }
+  // Phase 23b: build a per-meaning length floor from the seed lexicon,
+  // capping erosion at ~30% of original length (rounded so 2-phoneme
+  // seeds stay at 2). Without this floor, deletion cascades reduce
+  // 5-phoneme content words to 2 phonemes over 200 gens (e.g., father
+  // /faðər/ → /əj/), which is unrealistically aggressive.
+  const seedLengths = config.seedLexicon;
+  const minLengthFor = (meaning: string): number => {
+    const seedForm = seedLengths[meaning];
+    if (!seedForm) return 0;
+    const seedLen = seedForm.length;
+    if (seedLen <= 2) return seedLen; // never erode 2-phoneme seeds
+    return Math.max(2, Math.ceil(seedLen * 0.7));
+  };
   const opts = {
     globalRate: config.phonology.globalRate * realismMultiplier(config),
     weights: lang.changeWeights,
@@ -53,6 +66,7 @@ export function stepPhonology(
     registerOf: lang.registerOf,
     stressPattern: lang.stressPattern,
     lexicalStress: lang.lexicalStress,
+    minLengthFor,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   for (const m of Object.keys(before)) {
