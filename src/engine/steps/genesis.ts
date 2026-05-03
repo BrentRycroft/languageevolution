@@ -12,7 +12,7 @@ import {
   attemptTargetedDerivation,
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
-import { tryCommitCoinage } from "../lexicon/word";
+import { tryCommitCoinage, removeSense } from "../lexicon/word";
 import {
   findSuffixByTag,
   registerSuffixUsage,
@@ -47,7 +47,14 @@ export function stepGenesis(
     delete lang.vocabularyCatchUpUntil;
   }
   if (!rng.chance(gateProb)) return;
-  const need = lexicalNeed(lang, state.tree);
+  // Phase 24: pass seed lengths to lexicalNeed so it can flag eroded
+  // existing meanings as candidates for lexical replacement.
+  const seedLengths: Record<string, number> = {};
+  for (const m of Object.keys(config.seedLexicon)) {
+    const f = config.seedLexicon[m];
+    if (f && f.length > 0) seedLengths[m] = f.length;
+  }
+  const need = lexicalNeed(lang, state.tree, { seedLengths });
   // Catch-up active iff the deadline is still in the future (the deletion
   // above handles cleanup; this is just the read-side flag).
   const catchUpActive =
@@ -132,6 +139,20 @@ export function stepGenesis(
     );
     if (!outcome) break;
     if (!isFormLegal(outcome.meaning, outcome.form)) continue;
+    // Phase 24: detect lexical replacement. When the target meaning
+    // already exists in the lexicon AND the new form is different, this
+    // coinage represents lexical replacement of an over-eroded form
+    // (the lexicalNeed shrinkage component flagged it). Strip the old
+    // form's sense from lang.words BEFORE the new commit so the words
+    // table doesn't accumulate stale entries.
+    const isReplacement =
+      !!lang.lexicon[outcome.meaning] &&
+      lang.lexicon[outcome.meaning]!.join("") !== outcome.form.join("");
+    let oldFormStr = "";
+    if (isReplacement) {
+      oldFormStr = lang.lexicon[outcome.meaning]!.join("");
+      removeSense(lang, outcome.meaning);
+    }
     // Phase 21c: collision-aware commit. The form may already exist as
     // a word for another meaning; in that case roll polysemy/reject.
     const commit = tryCommitCoinage(
@@ -142,22 +163,26 @@ export function stepGenesis(
       {
         bornGeneration: generation,
         register: outcome.register,
-        origin: outcome.originTag,
+        origin: isReplacement ? "lexical-replacement" : outcome.originTag,
       },
     );
     if (!commit.committed) continue;
     lang.lexicon[outcome.meaning] = outcome.form;
     lang.wordFrequencyHints[outcome.meaning] = 0.4;
-    lang.wordOrigin[outcome.meaning] = outcome.originTag;
+    lang.wordOrigin[outcome.meaning] = isReplacement
+      ? `lexical-replacement:${outcome.originTag}`
+      : outcome.originTag;
     if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
       lang.registerOf[outcome.meaning] = outcome.register ?? "low";
     }
     pushEvent(lang, {
       generation,
       kind: "coinage",
-      description: commit.viaPolysemy
-        ? `${outcome.originTag}+polysemy: ${outcome.meaning} (homophone of existing word)`
-        : `${outcome.originTag}: ${outcome.meaning}`,
+      description: isReplacement
+        ? `lexical-replacement: ${outcome.meaning} (${oldFormStr} → ${outcome.form.join("")}) via ${outcome.originTag}`
+        : commit.viaPolysemy
+          ? `${outcome.originTag}+polysemy: ${outcome.meaning} (homophone of existing word)`
+          : `${outcome.originTag}: ${outcome.meaning}`,
     });
   }
 }

@@ -1,4 +1,4 @@
-import type { Lexicon, Meaning, SoundChange, WordForm } from "../types";
+import type { Lexicon, Meaning, SoundChange, SoundChangeCategory, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
 import { corenessResistance } from "../lexicon/coreness";
@@ -6,6 +6,51 @@ import { isFormLegal, repairSyllabicity } from "./wordShape";
 import { stressClass, type StressPattern } from "./stress";
 import { isVowel } from "./ipa";
 import { stripTone } from "./tone";
+import { posOf } from "../lexicon/pos";
+
+/**
+ * Phase 24: rule categories that net-shrink or weaken a word. Soft
+ * erosion resistance dampens the firing rate of rules in this set as
+ * the word approaches its floor length. Non-erosive categories (vowel
+ * shifts, palatalisation, fortition, insertion, voicing, assimilation,
+ * metathesis) fire at full rate regardless of word length.
+ */
+const EROSIVE_CATEGORIES: ReadonlySet<SoundChangeCategory> = new Set<SoundChangeCategory>([
+  "lenition",
+  "deletion",
+  "gemination",
+]);
+
+const ABSOLUTE_FLOOR_LEN = 2;
+
+/**
+ * Phase 24: smooth erosion-resistance curve, gated by a per-seed floor.
+ * Returns 1.0 at full seed length (no resistance — rule fires at full
+ * rate) and decays toward 0 as the word approaches `seedFloor`, where
+ * `seedFloor = max(ABSOLUTE_FLOOR_LEN, ceil(seedLen * 0.7))`. Beyond
+ * `seedFloor`, returns 0 (no further erosion).
+ *
+ * The 0.7 ratio matches Phase 23b's hard cap, but the resistance is now
+ * a smooth probability scaling rather than an after-the-fact reject. A
+ * 5-phoneme word can drift to 4 (~50% rate) but rarely below; a
+ * 4-phoneme word drifts to 3; a 3-phoneme word drifts to 2; a 2-phoneme
+ * word never erodes (returns 1, but the rule's own length checks
+ * prevent below-2 outcomes via isFormLegal).
+ */
+export function erosionResistance(
+  category: SoundChangeCategory,
+  currentLen: number,
+  seedLen: number,
+): number {
+  if (!EROSIVE_CATEGORIES.has(category)) return 1;
+  if (seedLen <= ABSOLUTE_FLOOR_LEN) return 1; // 2-phoneme seeds get full rate
+  const seedFloor = Math.max(ABSOLUTE_FLOOR_LEN, Math.ceil(seedLen * 0.7));
+  const range = seedLen - seedFloor;
+  if (range <= 0) return 1; // pathological: floor equals seed (e.g., seedLen=3 → floor=3)
+  if (currentLen <= seedFloor) return 0;
+  const slack = currentLen - seedFloor;
+  return Math.min(1, Math.pow(slack / range, 1.5));
+}
 
 export interface ApplyOptions {
   globalRate: number;
@@ -16,6 +61,14 @@ export interface ApplyOptions {
   registerOf?: Record<Meaning, "high" | "low">;
   stressPattern?: StressPattern;
   lexicalStress?: Record<Meaning, number>;
+  /**
+   * Phase 24: per-meaning seed length, used by the soft erosion-
+   * resistance curve. When provided, deletion/lenition/gemination rules
+   * have their firing probability scaled down as the current word
+   * length approaches the SOFT_FLOOR_LEN (2). Without it, full rate
+   * applies. Replaces Phase 23b's `minLengthFor` hard cap.
+   */
+  seedLengths?: Record<Meaning, number>;
   _orderedChanges?: SoundChange[];
 }
 
@@ -74,6 +127,18 @@ function frequencyFor(meaning: Meaning, hints?: Record<Meaning, number>): number
   return typeof v === "number" ? Math.max(0, Math.min(1, v)) : DEFAULT_FREQUENCY;
 }
 
+/**
+ * Phase 24: predicate matching real-linguistic content-vs-function
+ * frequency-effect bifurcation. Content words (noun, verb, adj) get the
+ * conservative-when-frequent treatment (real example: PIE *méh₂tēr stays
+ * close to English "mother"). Function words (DET, AUX, PREP, CONJ) keep
+ * the erosion-when-frequent direction (real example: "going to" → "gonna").
+ */
+function isContentWord(meaning: Meaning): boolean {
+  const pos = posOf(meaning);
+  return pos === "noun" || pos === "verb" || pos === "adjective";
+}
+
 export function applyChangesToWord(
   word: WordForm,
   changes: SoundChange[],
@@ -85,10 +150,18 @@ export function applyChangesToWord(
   const freq = frequencyFor(meaning, opts.frequencyHints);
   const register = opts.registerOf?.[meaning];
   const registerShift = register === "high" ? -0.15 : register === "low" ? 0.05 : 0;
-  const freqExponent = 0.4 + Math.max(0.05, Math.min(1, freq + registerShift)) * 1.2;
+  // Phase 24: split the frequency-effect direction by part of speech.
+  // Content words: high-freq → conservative (smaller effective freq input
+  // to the exponent → larger exponent → smaller adjusted probability).
+  // Function words: keep the existing direction (high-freq → erosion).
+  const freqInput = isContentWord(meaning)
+    ? Math.max(0.05, Math.min(1, 1 - freq + registerShift))
+    : Math.max(0.05, Math.min(1, freq + registerShift));
+  const freqExponent = 0.4 + freqInput * 1.2;
   const age = opts.agesSinceChange?.[meaning];
   const ageMult = ageBoost(age);
   const coreMult = corenessResistance(meaning);
+  const seedLen = opts.seedLengths?.[meaning] ?? word.length;
 
   let current = word;
   const lexicalIdx = opts.lexicalStress?.[meaning];
@@ -106,6 +179,10 @@ export function applyChangesToWord(
 
     const adjusted = Math.pow(base, 1 / Math.max(0.01, freqExponent));
     const lenFactor = Math.min(1, Math.max(0.25, (current.length - 1) / 4));
+    // Phase 24: soft erosion resistance — fades probability of erosive
+    // rules to zero as currentLen approaches SOFT_FLOOR_LEN (=2). Vowel
+    // shifts, palatalisation, fortition, insertion etc. are unaffected.
+    const resistance = erosionResistance(change.category, current.length, seedLen);
     const lambda = Math.min(
       3,
       adjusted *
@@ -114,7 +191,8 @@ export function applyChangesToWord(
         mult *
         ageMult *
         coreMult *
-        lenFactor,
+        lenFactor *
+        resistance,
     );
 
     const hits = samplePoissonBounded(lambda, rng);

@@ -44,6 +44,17 @@ export function stepPhonology(
     const last = lang.lastChangeGeneration[m];
     ages[m] = last === undefined ? 99 : generation - last;
   }
+  // Phase 24: build a per-meaning seed-length map for the soft erosion
+  // resistance curve in apply.ts. Replaces Phase 23b's hard cap with a
+  // smooth probability scaling that fades to zero as currentLen
+  // approaches the floor (=2). The map covers seed meanings only;
+  // post-seed coinages get full rate (their seedLen falls back to
+  // current length, factor=1).
+  const seedLengths: Record<string, number> = {};
+  for (const m of Object.keys(config.seedLexicon)) {
+    const f = config.seedLexicon[m];
+    if (f && f.length > 0) seedLengths[m] = f.length;
+  }
   const opts = {
     globalRate: config.phonology.globalRate * realismMultiplier(config),
     weights: lang.changeWeights,
@@ -53,6 +64,7 @@ export function stepPhonology(
     registerOf: lang.registerOf,
     stressPattern: lang.stressPattern,
     lexicalStress: lang.lexicalStress,
+    seedLengths,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   for (const m of Object.keys(before)) {

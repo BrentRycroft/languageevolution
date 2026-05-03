@@ -906,9 +906,9 @@ export const CATALOG: SoundChange[] = [
     label: "VC# → Vː#",
     category: "deletion",
     description:
-      "Word-final consonant deletes and lengthens the preceding short vowel.",
+      "Word-final consonant deletes and lengthens the preceding short vowel (Phase 24: weight bumped to compete against bare deletion).",
     enabledByDefault: true,
-    baseWeight: 0.6,
+    baseWeight: 1.4,
     probabilityFor: (w) => {
       if (w.length < 2) return 0;
       const last = w[w.length - 1]!;
@@ -925,6 +925,86 @@ export const CATALOG: SoundChange[] = [
       if (!isConsonant(last) || !isVowel(prev) || prev.endsWith("ː")) return word;
       const out = word.slice(0, -1);
       out[out.length - 1] = prev + "ː";
+      return out;
+    },
+  },
+
+  {
+    id: "compensatory.medial_coda_lengthening",
+    label: "VCC → VːC (medial)",
+    category: "deletion",
+    description:
+      "Phase 24: a medial coda consonant in V₁CC₂… deletes and the preceding V₁ lengthens. Models Latin factum → Italian fatto-style mora preservation and English night /nixt/ → /naɪt/ where coda /x/ loss maintains length-by-quality.",
+    enabledByDefault: true,
+    baseWeight: 1.0,
+    probabilityFor: (w) => {
+      // Need V at i, C at i+1, C/V at i+2 (medial), with at least one
+      // segment after the deleted C so we don't double-fire with the
+      // word-final variant above.
+      for (let i = 0; i < w.length - 3; i++) {
+        const v = w[i]!;
+        const c1 = w[i + 1]!;
+        if (!isVowel(v)) continue;
+        if (v.endsWith("ː")) continue;
+        if (!isConsonant(c1)) continue;
+        return 0.04;
+      }
+      return 0;
+    },
+    apply: (word) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length - 3; i++) {
+        const v = word[i]!;
+        const c1 = word[i + 1]!;
+        if (!isVowel(v)) continue;
+        if (v.endsWith("ː")) continue;
+        if (!isConsonant(c1)) continue;
+        sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[Math.floor(Math.random() * sites.length)]!;
+      const out = word.slice();
+      out[idx] = (out[idx] ?? "") + "ː";
+      out.splice(idx + 1, 1);
+      return out;
+    },
+  },
+
+  {
+    id: "insertion.shape_repair_epenthesis",
+    label: "Cː → əCː / sC → əsC (shape repair)",
+    category: "insertion",
+    description:
+      "Phase 24: low-probability vowel epenthesis to repair awkward CC# codas or CC- onsets after over-erosion. Models Spanish spīritus → espíritu and the general cross-linguistic preference for CV syllables.",
+    enabledByDefault: true,
+    baseWeight: 0.7,
+    probabilityFor: (w) => {
+      if (w.length < 2) return 0;
+      const c0 = w[0]!;
+      const c1 = w[1]!;
+      if (isConsonant(c0) && isConsonant(c1)) return 0.04;
+      if (w.length >= 2) {
+        const last = w[w.length - 1]!;
+        const prev = w[w.length - 2]!;
+        if (isConsonant(last) && isConsonant(prev)) return 0.04;
+      }
+      return 0;
+    },
+    apply: (word) => {
+      const out = word.slice();
+      // Prefer onset repair when present, else coda.
+      if (out.length >= 2 && isConsonant(out[0]!) && isConsonant(out[1]!)) {
+        out.unshift("ə");
+        return out;
+      }
+      if (
+        out.length >= 2 &&
+        isConsonant(out[out.length - 1]!) &&
+        isConsonant(out[out.length - 2]!)
+      ) {
+        out.splice(out.length - 1, 0, "ə");
+        return out;
+      }
       return out;
     },
   },
