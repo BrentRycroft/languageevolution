@@ -332,8 +332,8 @@ export const CATALOG: SoundChange[] = [
       out[out.length - 2] = lengthened;
       return out;
     },
-    enabledByDefault: false,
-    baseWeight: 1,
+    enabledByDefault: true, // Phase 25: enable for vowel-system dynamism
+    baseWeight: 0.8,
   },
   {
     id: "metathesis.r_swap",
@@ -360,8 +360,8 @@ export const CATALOG: SoundChange[] = [
       out[idx + 1] = v;
       return out;
     },
-    enabledByDefault: false,
-    baseWeight: 1,
+    enabledByDefault: true, // Phase 25: rare but real (English ask/aks, Catalan jurar/juriar)
+    baseWeight: 0.5,
   },
   contextSub(
     "lenition.v_intervocalic",
@@ -402,8 +402,8 @@ export const CATALOG: SoundChange[] = [
       return 0.05;
     },
     apply: (word) => [...word, "e"],
-    enabledByDefault: false,
-    baseWeight: 1,
+    enabledByDefault: true, // Phase 25: real cross-linguistic (Latin → Romance final-e support)
+    baseWeight: 0.5,
   },
   {
     id: "insertion.anaptyxis",
@@ -427,8 +427,8 @@ export const CATALOG: SoundChange[] = [
       const idx = sites[rng.int(sites.length)]!;
       return [...word.slice(0, idx + 1), "ə", ...word.slice(idx + 1)];
     },
-    enabledByDefault: false,
-    baseWeight: 1,
+    enabledByDefault: true, // Phase 25: cluster-breaking (Aramaic-style)
+    baseWeight: 0.6,
   },
   {
     id: "deletion.apheresis",
@@ -646,8 +646,8 @@ export const CATALOG: SoundChange[] = [
       out[out.length - 2] = prev + tone;
       return out;
     },
-    enabledByDefault: false,
-    baseWeight: 1,
+    enabledByDefault: true, // Phase 25: tonal genesis (Mandarin / Vietnamese pattern)
+    baseWeight: 0.6,
   },
   {
     id: "tonogenesis.voiced_coda_loss",
@@ -810,8 +810,8 @@ export const CATALOG: SoundChange[] = [
     description:
       "Stressed short vowels in open syllables lengthen. Middle English `stān` → `stoːn`; Old High German `tag` → `tāg`. Skips already-long vowels and closed-syllable nuclei.",
     stressFilter: "stressed",
-    enabledByDefault: false,
-    baseWeight: 0.5,
+    enabledByDefault: true, // Phase 25: real Germanic + Romance pattern
+    baseWeight: 0.6,
     probabilityFor: (w) => {
       const sites = stressedPositions(w, "stressed");
       let n = 0;
@@ -1016,8 +1016,8 @@ export const CATALOG: SoundChange[] = [
     description:
       "Every vowel in a word aligns its backness with the first vowel " +
       "(Turkish-style harmony).",
-    enabledByDefault: false,
-    baseWeight: 0.4,
+    enabledByDefault: true, // Phase 25: vowel harmony families (Turkic, Uralic, Tungusic)
+    baseWeight: 0.5,
     probabilityFor: (w) => {
       let disagree = 0;
       let firstBack: "front" | "back" | null = null;
@@ -1137,7 +1137,7 @@ export const CATALOG: SoundChange[] = [
     category: "lenition",
     description:
       "Glottalised stops debuccalise to bare /ʔ/ (loss of oral closure).",
-    enabledByDefault: false,
+    enabledByDefault: true, // Phase 25: useful in language families that have ejectives
     baseWeight: 0.3,
     probabilityFor: (w) => {
       let n = 0;

@@ -5,6 +5,7 @@ import { buildInitialState } from "./steps/init";
 import { stepPhonology, stepArealWaves } from "./steps/phonology";
 import { validateConfig, summarizeValidation } from "./configValidation";
 import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
+import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
@@ -126,6 +127,15 @@ export function createSimulation(
             kind: "grammar_shift",
             description: `cultural tier: ${TIER_LABELS[priorTier]} → ${TIER_LABELS[nextTier]}`,
           });
+          // Phase 25: tier transitions historically trigger phonological
+          // upheavals (urbanisation, literacy, statehood reorganise the
+          // dialect landscape). Seed an upheaval period.
+          triggerVolatilityUpheaval(
+            lang,
+            nextGen,
+            rng,
+            `tier ${TIER_LABELS[priorTier]} → ${TIER_LABELS[nextTier]}`,
+          );
           if (priorTier === 0 && nextTier >= 1) {
             const merges = applyKinshipSimplification(lang, rng, 2);
             for (const m of merges) {
@@ -151,6 +161,9 @@ export function createSimulation(
         }
         lang.lexicalCapacity = lexicalCapacity(lang, nextGen);
       }
+      // Phase 25: tick the per-language volatility regime so its
+      // multiplier is fresh before phonology / grammar steps consume it.
+      stepVolatility(lang, nextGen, rng);
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
       if (config.modes.phonology) stepLearner(lang, config, rng, nextGen);
       stepObsolescence(lang, config, rng, nextGen);
