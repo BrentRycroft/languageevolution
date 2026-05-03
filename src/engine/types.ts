@@ -142,6 +142,23 @@ export interface Language {
     affix: WordForm;
     tag: string;
     category?: import("./lexicon/derivation").DerivationCategory;
+    /**
+     * Phase 22: count of successful targeted-derivation applications under
+     * this suffix. Once it reaches PRODUCTIVITY_THRESHOLD, the suffix is
+     * promoted to a productive grammatical rule.
+     */
+    usageCount?: number;
+    /**
+     * Phase 22: true once `usageCount >= PRODUCTIVITY_THRESHOLD`. Productive
+     * suffixes are surfaced in GrammarView as rules; new applications no
+     * longer push individual coinage events into the timeline.
+     */
+    productive?: boolean;
+    /**
+     * Phase 22: generation at which `productive` flipped to true. Lets the UI
+     * show "established gen 47" alongside the rule.
+     */
+    establishedGeneration?: number;
   }>;
   culturalTier?: 0 | 1 | 2 | 3;
   /**

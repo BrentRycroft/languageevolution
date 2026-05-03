@@ -81,6 +81,11 @@ export function cloneLanguage(lang: Language): Language {
           tag: s.tag,
           affix: s.affix.slice(),
           category: s.category, // preserve Phase 20f category tag
+          // Phase 22: preserve productivity tracking on clone so daughter
+          // languages inherit the parent's productive rules.
+          usageCount: s.usageCount,
+          productive: s.productive,
+          establishedGeneration: s.establishedGeneration,
         }))
       : undefined,
     suppletion: lang.suppletion

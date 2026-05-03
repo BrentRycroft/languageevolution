@@ -181,6 +181,13 @@ export function splitLeaf(
           affix: s.affix.slice(),
           tag: s.tag,
           category: s.category, // preserve Phase 20f category tag
+          // Phase 22: inherit productivity tracking. A daughter language
+          // begins with the parent's already-established productive
+          // rules (and their attestation counts). New attestations on
+          // either side after the split bump independently.
+          usageCount: s.usageCount,
+          productive: s.productive,
+          establishedGeneration: s.establishedGeneration,
         })),
       culturalTier: parentLang.culturalTier,
       colexifiedAs: parentLang.colexifiedAs

@@ -13,6 +13,11 @@ import {
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
 import { tryCommitCoinage } from "../lexicon/word";
+import {
+  findSuffixByTag,
+  registerSuffixUsage,
+  categoryLabel,
+} from "../lexicon/derivation";
 
 export function stepGenesis(
   lang: Language,
@@ -76,13 +81,41 @@ export function stepGenesis(
           lang.wordFrequencyHints[derived.meaning] = 0.4;
           lang.wordOrigin[derived.meaning] = "derivation";
           recordDerivationChain(lang, derived);
-          pushEvent(lang, {
-            generation,
-            kind: "coinage",
-            description: commit.viaPolysemy
-              ? `derivation+polysemy: ${derived.meaning} ← ${derived.rootMeaning} + ${derived.suffixTag} (homophone of existing word)`
-              : `derivation: ${derived.meaning} ← ${derived.rootMeaning} + ${derived.suffixTag}`,
-          });
+          // Phase 22: register the suffix usage. Productive suffixes
+          // (post-threshold) suppress per-coinage events — the rule
+          // applies silently like a plural marker — but the etymology
+          // still lives in lang.wordOriginChain[derived.meaning] so the
+          // UI can show "← think + -or" on hover.
+          const suffix = findSuffixByTag(lang, derived.suffixTag);
+          let wasProductive = false;
+          let justBecameProductive = false;
+          if (suffix) {
+            wasProductive = !!suffix.productive;
+            const r = registerSuffixUsage(suffix, generation);
+            justBecameProductive = r.justBecameProductive;
+            if (justBecameProductive) {
+              pushEvent(lang, {
+                generation,
+                kind: "grammaticalize",
+                description:
+                  `productive rule established: V + ${suffix.tag} = ${categoryLabel(suffix.category)} (after ${suffix.usageCount} attestations)`,
+              });
+            }
+          }
+          // Suppress the per-coinage event when the rule is *already*
+          // productive (i.e. before this call). The threshold-crossing
+          // call still gets one final coinage event so the third
+          // attestation appears alongside the establishment event for
+          // explanatory continuity.
+          if (!wasProductive) {
+            pushEvent(lang, {
+              generation,
+              kind: "coinage",
+              description: commit.viaPolysemy
+                ? `derivation+polysemy: ${derived.meaning} ← ${derived.rootMeaning} + ${derived.suffixTag} (homophone of existing word)`
+                : `derivation: ${derived.meaning} ← ${derived.rootMeaning} + ${derived.suffixTag}`,
+            });
+          }
           continue;
         }
       }

@@ -63,6 +63,12 @@ export function StatsPanel() {
     const homonyms = lang.words
       ? lang.words.filter((w) => w.senses.length >= 2).length
       : 0;
+    // Phase 22: count productive derivational rules — surfaces the
+    // language's morphological productivity at a glance (parallel to
+    // inflectional paradigms).
+    const productiveRules = (lang.derivationalSuffixes ?? []).filter(
+      (s) => s.productive,
+    ).length;
     return {
       id,
       name: lang.name,
@@ -77,6 +83,7 @@ export function StatsPanel() {
       frozenSpellings,
       derivationChains,
       homonyms,
+      productiveRules,
     };
   });
 
@@ -112,6 +119,12 @@ export function StatsPanel() {
             >
               homo
             </th>
+            <th
+              className="text-right"
+              title="Productive derivational rules (Phase 22) — suffixes promoted to grammatical rules after ≥3 attestations"
+            >
+              rules
+            </th>
             <th className="text-right">δ</th>
           </tr>
         </thead>
@@ -145,6 +158,7 @@ export function StatsPanel() {
                 <td className="text-right">{s.frozenSpellings || ""}</td>
                 <td className="text-right">{s.derivationChains || ""}</td>
                 <td className="text-right">{s.homonyms || ""}</td>
+                <td className="text-right">{s.productiveRules || ""}</td>
                 <td className="text-right">{s.mean.toFixed(2)}</td>
               </tr>
             );
