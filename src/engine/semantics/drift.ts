@@ -6,7 +6,10 @@ import { nearestMeanings, embed, cosine } from "./embeddings";
 import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS } from "../lexicon/pos";
-import { corenessResistance } from "../lexicon/coreness";
+// Phase 26e: corenessResistance import removed. Swadesh-membership-based
+// drift protection was redundant with Phase 24c's frequency-direction
+// split (high-freq content words are already conservative via
+// freqInput = 1 - freq), and not accurate to real etymology.
 import { CONCEPT_IDS, tierOf, type Tier } from "../lexicon/concepts";
 import { recordColexification } from "./colexification";
 import { BASIC_240 } from "../lexicon/basic240";
@@ -120,7 +123,13 @@ export function driftOneMeaning(
     for (const m of shuffled) {
       const reg = lang.registerOf?.[m];
       if (reg === "high" && rng.chance(0.5)) continue;
-      if (rng.chance(1 - corenessResistance(m))) continue;
+      // Phase 26e: removed Swadesh-coreness drift-skip. The coreness-
+      // based protection was redundant with Phase 24c's frequency-
+      // direction split (high-freq content words are already conservative
+      // via freqInput = 1 - freq) and double-protected Swadesh content
+      // words like water/mother/father from any drift. Real etymology
+      // shows these DO drift across families (PIE *méh₂tēr → English
+      // mother / Sanskrit mātṛ́ / Latin māter / Greek mḗtēr).
       const overrideNeighbors = override?.[m];
       const langTier = (lang.culturalTier ?? 0) as Tier;
       const expansionExtras = EXPANSION_IDS_BY_TIER.get(langTier) ?? [];
