@@ -1,17 +1,7 @@
 import type { Language, GrammarFeatures } from "../types";
 import type { Rng } from "../rng";
 import { proposeOneRule } from "../phonology/propose";
-
-const STRESS_ADJACENT: Record<
-  NonNullable<Language["stressPattern"]>,
-  NonNullable<Language["stressPattern"]>[]
-> = {
-  initial: ["penult", "final"],
-  penult: ["initial", "final", "antepenult"],
-  final: ["penult", "initial"],
-  antepenult: ["penult"],
-  lexical: ["penult", "initial"],
-};
+import { pickNextStressForSplit } from "../grammar/stressTransitions";
 
 type GrammarFlip = {
   feature: keyof GrammarFeatures;
@@ -71,8 +61,7 @@ export function applyFounderInnovation(
       }
     } else if (kind === "stress") {
       const current = child.stressPattern ?? "penult";
-      const opts = STRESS_ADJACENT[current];
-      const next = opts[rng.int(opts.length)]!;
+      const next = pickNextStressForSplit(current, rng);
       if (next !== current) {
         child.stressPattern = next;
         return { kind, description: `stress pattern: ${current} → ${next}` };
