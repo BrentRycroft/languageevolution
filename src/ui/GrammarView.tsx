@@ -39,6 +39,7 @@ export function GrammarView() {
           <GrammarFeatureList grammar={selected.grammar} lang={selected} />
           <InventoryDisplay lang={selected} />
           <ParadigmTable lang={selected} />
+          <ProductiveDerivationalRules lang={selected} />
         </>
       ) : (
         <div className="t-muted">Select a language to view grammar.</div>
@@ -146,6 +147,94 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
       )}
     </div>
   );
+}
+
+/**
+ * Phase 22: surface productive derivational suffixes as grammatical rules
+ * (parallel to inflectional paradigms above). A suffix is shown here once
+ * `productive === true` (i.e. it crossed PRODUCTIVITY_THRESHOLD attestations).
+ */
+function ProductiveDerivationalRules({
+  lang,
+}: {
+  lang: import("../engine/types").Language;
+}) {
+  const suffixes = (lang.derivationalSuffixes ?? []).filter((s) => s.productive);
+  if (suffixes.length === 0) {
+    const total = (lang.derivationalSuffixes ?? []).length;
+    if (total === 0) return null;
+    return (
+      <div style={{ marginTop: 12 }}>
+        <h4 style={{ marginBottom: 4 }}>Productive derivational rules</h4>
+        <div className="t-muted" style={{ fontSize: 11 }}>
+          No productive rules yet — the language has {total} derivational
+          suffix{total === 1 ? "" : "es"} below the productivity threshold.
+        </div>
+      </div>
+    );
+  }
+  // Build per-suffix examples by reading wordOriginChain entries whose via
+  // matches the suffix tag. Up to 3 examples per rule.
+  const examplesBySuffix = new Map<string, string[]>();
+  for (const [meaning, chain] of Object.entries(lang.wordOriginChain ?? {})) {
+    if (!chain || chain.tag !== "derivation" || !chain.via) continue;
+    const list = examplesBySuffix.get(chain.via) ?? [];
+    if (list.length < 3) list.push(meaning);
+    examplesBySuffix.set(chain.via, list);
+  }
+  return (
+    <div style={{ marginTop: 12 }}>
+      <h4 style={{ marginBottom: 4 }}>Productive derivational rules</h4>
+      <table className="paradigm-table" style={{ width: "100%" }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left" }}>Category</th>
+            <th style={{ textAlign: "left" }}>Suffix</th>
+            <th style={{ textAlign: "right" }}>Established</th>
+            <th style={{ textAlign: "right" }}>Attestations</th>
+            <th style={{ textAlign: "left" }}>Examples</th>
+          </tr>
+        </thead>
+        <tbody>
+          {suffixes.map((s) => {
+            const examples = examplesBySuffix.get(s.tag) ?? [];
+            return (
+              <tr key={s.tag}>
+                <td>{readableCategory(s.category)}</td>
+                <td>
+                  <code>{s.tag}</code>
+                </td>
+                <td style={{ textAlign: "right", color: "var(--muted)" }}>
+                  {s.establishedGeneration !== undefined
+                    ? `gen ${s.establishedGeneration}`
+                    : "—"}
+                </td>
+                <td style={{ textAlign: "right", color: "var(--muted)" }}>
+                  {s.usageCount ?? 0}
+                </td>
+                <td style={{ color: "var(--muted)" }}>
+                  {examples.length > 0 ? examples.join(", ") : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function readableCategory(c: string | undefined): string {
+  switch (c) {
+    case "agentive": return "agent noun";
+    case "abstractNoun": return "abstract noun";
+    case "dominionAbstract": return "dominion / abstract realm";
+    case "nominalisation": return "nominalisation";
+    case "diminutive": return "diminutive";
+    case "adjectival": return "adjective";
+    case "denominal": return "denominal verb";
+    default: return "derivation";
+  }
 }
 
 function ParadigmGroup({

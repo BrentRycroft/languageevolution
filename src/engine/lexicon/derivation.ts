@@ -28,6 +28,44 @@ export interface DerivationalSuffix {
   affix: WordForm;
   tag: string;
   category: DerivationCategory;
+  /**
+   * Phase 22: count of successful targeted-derivation applications.
+   * Reaching `PRODUCTIVITY_THRESHOLD` flips `productive` to true and
+   * promotes the suffix to a productive grammatical rule.
+   */
+  usageCount?: number;
+  /** Phase 22: true once `usageCount >= PRODUCTIVITY_THRESHOLD`. */
+  productive?: boolean;
+  /** Phase 22: generation at which `productive` flipped from false to true. */
+  establishedGeneration?: number;
+}
+
+/**
+ * Phase 22: minimum number of attestations before a derivational suffix is
+ * promoted from one-off coinage to a productive grammatical rule. Three
+ * matches the linguistic rule-of-thumb that three independent attestations
+ * make a pattern productive. Beyond this point, individual derivations
+ * stop logging coinage events — the rule applies silently.
+ */
+export const PRODUCTIVITY_THRESHOLD = 3;
+
+const CATEGORY_LABELS: Record<DerivationCategory, string> = {
+  agentive: "agent noun",
+  abstractNoun: "abstract noun",
+  dominionAbstract: "dominion / abstract realm",
+  nominalisation: "nominalisation",
+  diminutive: "diminutive",
+  adjectival: "adjective",
+  denominal: "denominal verb",
+};
+
+/**
+ * Human-readable label for a derivation category. Used by GrammarView and
+ * timeline events ("productive rule established: V + -or = agent noun").
+ */
+export function categoryLabel(category: DerivationCategory | undefined): string {
+  if (!category) return "derivation";
+  return CATEGORY_LABELS[category];
 }
 
 /**
@@ -122,7 +160,13 @@ export function seedDerivationalSuffixes(
     const tag = tags[rng.int(tags.length)]!;
     const affix = synthesiseSuffix(lang, rng);
     if (affix && affix.length > 0) {
-      out.push({ affix, tag, category });
+      out.push({
+        affix,
+        tag,
+        category,
+        usageCount: 0,
+        productive: false,
+      });
     }
   }
   return out;
@@ -145,4 +189,44 @@ export function findSuffixByCategory(
     }
   }
   return null;
+}
+
+/**
+ * Find the suffix entry whose tag matches. Used by the genesis loop after
+ * a successful targeted derivation to increment the corresponding suffix's
+ * usageCount and check the productivity threshold.
+ */
+export function findSuffixByTag(
+  lang: Language,
+  tag: string,
+): DerivationalSuffix | null {
+  const list = (lang.derivationalSuffixes ?? []) as DerivationalSuffix[];
+  for (const s of list) {
+    if (s.tag === tag) return s;
+  }
+  return null;
+}
+
+/**
+ * Phase 22: register one usage of a derivational suffix. Increments the
+ * usageCount; if the threshold is crossed, sets `productive = true` and
+ * `establishedGeneration`. Returns true exactly when this call is the one
+ * that flipped the suffix from non-productive to productive (so the caller
+ * can emit a single "productive rule established" event).
+ *
+ * Idempotent on a productive suffix: usageCount keeps incrementing but the
+ * return value stays false (we only fire the establishment event once).
+ */
+export function registerSuffixUsage(
+  suffix: DerivationalSuffix,
+  generation: number,
+): { justBecameProductive: boolean } {
+  suffix.usageCount = (suffix.usageCount ?? 0) + 1;
+  if (suffix.productive) return { justBecameProductive: false };
+  if (suffix.usageCount >= PRODUCTIVITY_THRESHOLD) {
+    suffix.productive = true;
+    suffix.establishedGeneration = generation;
+    return { justBecameProductive: true };
+  }
+  return { justBecameProductive: false };
 }
