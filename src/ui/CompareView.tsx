@@ -606,6 +606,7 @@ function NarrativeCompare({
           <option value="legend">legend</option>
           <option value="daily">daily life</option>
           <option value="dialogue">dialogue</option>
+          <option value="poetry">poetry (iambic AABB)</option>
         </select>
         <select
           value={lineCount}

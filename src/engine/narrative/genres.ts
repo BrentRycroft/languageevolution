@@ -42,12 +42,25 @@ const DIALOGUE_TEMPLATES: AbstractTemplate[] = [
   { shape: "topic_trans",    tense: "future",  needs: { subject: false, object: true,  adjective: false, time: false, place: false }, topicSubject: true },
 ];
 
+// Phase 26d: poetry templates favour short, regular SVO/SV shapes that
+// produce predictable meters (no PPs, no coordinations, no auxiliaries).
+// The poetic-stanza generator scores candidate lines for meter + rhyme,
+// so a tight template set gives the scorer better material.
+const POETRY_TEMPLATES: AbstractTemplate[] = [
+  { shape: "transitive",     tense: "present", needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "intransitive",   tense: "present", needs: { subject: true,  object: false, adjective: false, time: false, place: false }, introducesEntity: true },
+  { shape: "adj_subject",    tense: "present", needs: { subject: true,  object: false, adjective: true,  time: false, place: false }, introducesEntity: true },
+  { shape: "transitive_adj", tense: "present", needs: { subject: true,  object: true,  adjective: true,  time: false, place: false }, introducesEntity: true },
+  { shape: "transitive",     tense: "past",    needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
+];
+
 export function templatesFor(genre: DiscourseGenre): readonly AbstractTemplate[] {
   switch (genre) {
     case "myth":     return MYTH_TEMPLATES;
     case "legend":   return LEGEND_TEMPLATES;
     case "daily":    return DAILY_TEMPLATES;
     case "dialogue": return DIALOGUE_TEMPLATES;
+    case "poetry":   return POETRY_TEMPLATES;
   }
 }
 
