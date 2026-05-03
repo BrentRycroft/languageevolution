@@ -284,6 +284,15 @@ const MORPHOLOGY: Morphology = {
     "verb.person.1sg": { affix: ["o"], position: "suffix", category: "verb.person.1sg" },
     "verb.person.2sg": { affix: ["s"], position: "suffix", category: "verb.person.2sg" },
     "verb.person.3sg": { affix: ["t"], position: "suffix", category: "verb.person.3sg" },
+    // Phase 26a: full Romance-style 6-form conjugation. The simulator's
+    // realiseVerb (translator/realise.ts:535) already pushes the right
+    // verb.person.{ps}{ns} category when the paradigm exists; previously
+    // only sg variants were seeded so 1pl/2pl/3pl silently fell back to
+    // null inflection. Now Spanish-style multi-form conjugation is
+    // possible: speak + 1pl → speakmus, + 2pl → speaktis, + 3pl → speaknt.
+    "verb.person.1pl": { affix: ["m", "u", "s"], position: "suffix", category: "verb.person.1pl" },
+    "verb.person.2pl": { affix: ["t", "i", "s"], position: "suffix", category: "verb.person.2pl" },
+    "verb.person.3pl": { affix: ["n", "t"], position: "suffix", category: "verb.person.3pl" },
   },
 };
 
