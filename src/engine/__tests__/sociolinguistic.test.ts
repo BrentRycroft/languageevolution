@@ -42,14 +42,22 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
 }
 
 describe("agent-based actuation via social contagion", () => {
-  it("a fresh innovation starts at low adoption fraction", () => {
-    const lang = makeLang({}, { water: ["w", "a", "t"] });
+  it("a fresh innovation starts as the dominant variant (Phase 23: phonology has already actuated the canonical)", () => {
+    // Phase 23 fix: recordInnovation is called AFTER the caller has
+    // already mutated lang.lexicon[m] to the new form. So at the moment
+    // of recording, the new form IS the canonical / dominant variant in
+    // the lang's speech community. The previous semantic (innovation
+    // starts at 5% adoption) made stepSocialContagion revert virtually
+    // every sound change within 2-3 generations — the bug Phase 23
+    // diagnosed and fixed.
+    const lang = makeLang({}, { water: ["w", "a", "θ"] });
     recordInnovation(lang, "water", ["w", "a", "t"], ["w", "a", "θ"], 0, "phonology");
     const variants = lang.variants?.water ?? [];
     expect(variants.length).toBe(2);
     const newone = variants.find((v) => v.form.join("") === "waθ");
-    expect(newone?.adoptionFraction).toBeGreaterThan(0);
-    expect(newone?.adoptionFraction).toBeLessThan(0.2);
+    expect(newone?.adoptionFraction).toBeGreaterThan(0.8);
+    const oldone = variants.find((v) => v.form.join("") === "wat");
+    expect(oldone?.adoptionFraction).toBeLessThan(0.2);
   });
 
   it("majority variant grows logistically (S-curve) toward 1.0", () => {
