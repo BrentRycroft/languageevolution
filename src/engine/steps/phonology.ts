@@ -13,7 +13,7 @@ import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagio
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import { syncWordsAfterPhonology } from "../lexicon/word";
 import { volatilityMultiplier } from "./volatility";
-import { inventorySizePressure } from "./inventoryHomeostasis";
+import { inventorySizePressure } from "./inventoryManagement";
 import { stripTone } from "../phonology/tone";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";

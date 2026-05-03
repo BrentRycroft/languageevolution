@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { stepPhonotacticRepair } from "../steps/phonotacticRepair";
+import { stepPhonotacticRepair } from "../steps/inventoryManagement";
 import { phonotacticScore } from "../phonology/phonotactics";
 import { presetTokipona } from "../presets/tokipona";
 import { presetEnglish } from "../presets/english";

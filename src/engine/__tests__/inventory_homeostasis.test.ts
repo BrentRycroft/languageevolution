@@ -7,7 +7,7 @@ import {
   inventorySizePressure,
   tierInventoryTarget,
   stepInventoryHomeostasis,
-} from "../steps/inventoryHomeostasis";
+} from "../steps/inventoryManagement";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
