@@ -117,6 +117,30 @@ export interface Language {
   otRanking: string[];
   lastChangeGeneration: Record<Meaning, number>;
   stressPattern?: "initial" | "penult" | "final" | "antepenult" | "lexical";
+  /**
+   * Phase 26b: how the language realises the infinitive (citation form)
+   * of a verb. The simulator stores `lang.lexicon[verbMeaning]` as the
+   * BARE root; the infinitive is a derived view computed on demand by
+   * `morphology/citation.ts:verbCitationForm`. Strategies:
+   *
+   * - `bare`               — citation form = bare root (no marker).
+   * - `particle-prefix`    — emit a particle BEFORE the root (English "to V").
+   * - `particle-suffix`    — emit a particle AFTER the root.
+   * - `affix-prefix`       — concatenate an affix before the root.
+   * - `affix-suffix`       — concatenate an affix after the root (Latin -re,
+   *                           Spanish -r/-er/-ir, German -en, Italian -re).
+   *
+   * Defaults to `{ kind: "bare" }` for back-compat with pre-Phase-26
+   * presets. The translator + LexiconView consult this when displaying
+   * verbs in non-finite contexts.
+   */
+  infinitiveStrategy?: {
+    kind: "bare" | "particle-prefix" | "particle-suffix" | "affix-prefix" | "affix-suffix";
+    /** For "particle-*": the closed-class lemma to use ("to" in English). */
+    particle?: string;
+    /** For "affix-*": the phonological affix to concatenate. */
+    affix?: WordForm;
+  };
   suppletion?: Record<
     Meaning,
     Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
@@ -398,6 +422,8 @@ export interface SimulationConfig {
   seedLexicalStress?: Record<Meaning, number>;
   seedCulturalTier?: 0 | 1 | 2 | 3;
   seedSuppletion?: NonNullable<Language["suppletion"]>;
+  /** Phase 26b: per-preset infinitive realisation strategy. See Language.infinitiveStrategy. */
+  seedInfinitiveStrategy?: NonNullable<Language["infinitiveStrategy"]>;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;

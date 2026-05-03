@@ -333,6 +333,8 @@ export function presetRomance(): SimulationConfig {
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 2,
     seedStressPattern: "penult",
+    // Phase 26b: Romance infinitive = -re affix suffix (Latin amāre, Spanish amar/comer/vivir).
+    seedInfinitiveStrategy: { kind: "affix-suffix", affix: ["r", "e"] },
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "free",

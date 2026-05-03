@@ -45,6 +45,7 @@ export type MorphCategory =
   | "verb.person.2pl"
   | "verb.person.3pl"
   | "verb.honor.formal"
+  | "verb.form.infinitive"
   | "adj.num.pl"
   | "adj.degree.cmp"
   | "adj.degree.sup"

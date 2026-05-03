@@ -91,6 +91,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},
     stressPattern: config.seedStressPattern ?? "penult",
+    infinitiveStrategy: config.seedInfinitiveStrategy ?? { kind: "bare" },
     lexicalStress: config.seedLexicalStress
       ? { ...config.seedLexicalStress }
       : undefined,

@@ -733,6 +733,8 @@ export function presetEnglish(): SimulationConfig {
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 3,
     seedStressPattern: "initial",
+    // Phase 26b: English infinitive = "to V" particle prefix.
+    seedInfinitiveStrategy: { kind: "particle-prefix", particle: "to" },
     seedGrammar: {
       wordOrder: "SVO",
       affixPosition: "suffix",
