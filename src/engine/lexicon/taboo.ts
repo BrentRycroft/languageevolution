@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { relatedMeanings } from "../semantics/clusters";
 import { neighborsOf } from "../semantics/neighbors";
 import { isFormLegal } from "../phonology/wordShape";
+import { isClosedClass, posOf } from "./pos";
 
 export interface TabooEvent {
   meaning: Meaning;
@@ -19,7 +20,15 @@ export function maybeTabooReplace(
   if (!rng.chance(probability)) return null;
   const candidates = Object.keys(lang.lexicon).filter((m) => {
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
-    return freq >= 0.7 && !m.includes("-");
+    if (freq < 0.7) return false;
+    if (m.includes("-")) return false;
+    // Phase 26c: closed-class words (DET, AUX, PREP, CONJ, PRON, NEG, COP)
+    // are NOT subject to taboo replacement. Real languages don't taboo
+    // their function words — taboo affects content words tied to
+    // dangerous referents (gods, predators, dead persons), never
+    // articles or conjunctions.
+    if (isClosedClass(posOf(m))) return false;
+    return true;
   });
   if (candidates.length === 0) return null;
   const target = candidates[rng.int(candidates.length)]!;

@@ -5,7 +5,7 @@ import { relatedMeanings, clusterOf } from "./clusters";
 import { nearestMeanings, embed, cosine } from "./embeddings";
 import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
-import { samePOS } from "../lexicon/pos";
+import { samePOS, isClosedClass, posOf } from "../lexicon/pos";
 // Phase 26e: corenessResistance import removed. Swadesh-membership-based
 // drift protection was redundant with Phase 24c's frequency-direction
 // split (high-freq content words are already conservative via
@@ -121,6 +121,13 @@ export function driftOneMeaning(
   }
   for (const strict of [true, false]) {
     for (const m of shuffled) {
+      // Phase 26c: closed-class words (DET, AUX, PREP, CONJ, PRON, NEG,
+      // COP) are NOT subject to semantic drift. Their meanings are
+      // tightly tied to grammatical function and don't shift the way
+      // content words do (English "the" never drifted into a content
+      // noun; PIE *de-/to- demonstratives stayed demonstrative across
+      // millennia in every IE branch). Drift mechanism gates here.
+      if (isClosedClass(posOf(m))) continue;
       const reg = lang.registerOf?.[m];
       if (reg === "high" && rng.chance(0.5)) continue;
       // Phase 26e: removed Swadesh-coreness drift-skip. The coreness-

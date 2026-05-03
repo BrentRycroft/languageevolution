@@ -2,6 +2,7 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { clusterOf, relatedMeanings } from "../semantics/clusters";
 import { isFormLegal } from "../phonology/wordShape";
+import { isClosedClass, posOf } from "../lexicon/pos";
 
 export interface AnalogyEvent {
   meaning: string;
@@ -23,6 +24,11 @@ export function maybeAnalogicalLevel(
     form: WordForm;
   }> = [];
   for (const m of meanings) {
+    // Phase 26c: closed-class words don't undergo analogical leveling.
+    // Articles, prepositions, conjunctions don't reshape their forms
+    // based on cluster mates (real cross-linguistic pattern: function
+    // words are tightly constrained morphologically).
+    if (isClosedClass(posOf(m))) continue;
     const cluster = clusterOf(m);
     if (!cluster) continue;
     const mates = relatedMeanings(m).filter(
