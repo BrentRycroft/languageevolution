@@ -34,8 +34,14 @@ import { pushEvent } from "./helpers";
  */
 
 const PER_TIER_TARGET = [22, 28, 34, 40] as const;
-const BASE_PRUNE_PROB = 0.04;
-const MAX_PRUNE_PROB = 0.30;
+const BASE_PRUNE_PROB = 0.03;
+// Phase 27.1: per-generation hard cap on consecutive merger attempts.
+// At high pressure we prune until either we hit the cap or no
+// candidate has a viable neighbour. This is needed because sound-
+// change rules can introduce multiple novel phonemes per generation
+// (palatalisation, labialisation, vowel lengthening, etc.) and a
+// fixed small attempt count can't keep up.
+const MAX_ATTEMPTS_PER_GEN = 5;
 
 export function tierInventoryTarget(tier: number | undefined): number {
   const t = Math.max(0, Math.min(3, Math.floor(tier ?? 0)));
@@ -55,21 +61,42 @@ export function inventorySizePressure(lang: Language): number {
   return (size - target) / target;
 }
 
+/**
+ * Phase 27.1: pressure-driven homeostasis. While the language is over
+ * target, prune phonemes one at a time until either we're at-target
+ * or no further candidate has a viable neighbour. Capped at
+ * MAX_ATTEMPTS_PER_GEN to avoid pathological gens with mass merger.
+ *
+ * When at-or-below target, fire a maintenance prune at low probability
+ * (catches the natural-drift-toward-simpler-systems effect).
+ */
 export function stepInventoryHomeostasis(
   lang: Language,
   rng: Rng,
   generation: number,
 ): void {
-  const pressure = inventorySizePressure(lang);
-  // Base pruning probability + pressure-scaled component.
-  const prob = Math.min(MAX_PRUNE_PROB, BASE_PRUNE_PROB + 0.20 * pressure);
-  if (!rng.chance(prob)) return;
-  const merger = prunePhonemes(lang, rng, generation);
-  if (merger) {
+  let pressure = inventorySizePressure(lang);
+  if (pressure === 0) {
+    if (!rng.chance(BASE_PRUNE_PROB)) return;
+    const merger = prunePhonemes(lang, rng, generation);
+    if (merger) {
+      pushEvent(lang, {
+        generation,
+        kind: "sound_change",
+        description: `maintenance merger: /${merger.from}/ → /${merger.to}/ (${merger.affectedWords} word${merger.affectedWords === 1 ? "" : "s"} affected)`,
+      });
+    }
+    return;
+  }
+  for (let i = 0; i < MAX_ATTEMPTS_PER_GEN; i++) {
+    const merger = prunePhonemes(lang, rng, generation);
+    if (!merger) return;
     pushEvent(lang, {
       generation,
       kind: "sound_change",
       description: `homeostatic merger (×${pressure.toFixed(2)} pressure): /${merger.from}/ → /${merger.to}/ (${merger.affectedWords} word${merger.affectedWords === 1 ? "" : "s"} affected)`,
     });
+    pressure = inventorySizePressure(lang);
+    if (pressure === 0) return; // back at target
   }
 }

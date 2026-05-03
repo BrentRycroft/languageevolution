@@ -8,7 +8,10 @@ import { arealShareAffinity } from "../geo/territory";
 import { inventorySizePressure } from "../steps/inventoryHomeostasis";
 
 const AREAL_HALF_LIFE = 200;
-const AREAL_PRESSURE_GATE = 0.5; // skip areal share when pressure > 0.5
+// Phase 27.1: gate at ANY positive pressure (i.e. any inventory
+// overshoot). Previously 0.5, which let neighbors keep adding phonemes
+// to a language already trying to shrink itself back to target.
+const AREAL_PRESSURE_GATE = 0.0;
 
 export interface ArealPhonemeEvent {
   donorId: string;
