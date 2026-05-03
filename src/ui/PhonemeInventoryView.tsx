@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useSimStore } from "../state/store";
 import { featuresOf } from "../engine/phonology/features";
 import { isVowel, isSyllabic } from "../engine/phonology/ipa";
+import { profileBadge } from "../engine/phonology/phonotactics";
+import { functionalLoadMap } from "../engine/phonology/functionalLoad";
 import type { Phoneme } from "../engine/types";
 
 export function PhonemeInventoryView() {
@@ -77,6 +79,11 @@ export function PhonemeInventoryView() {
   const usesTones = lang.phonemeInventory.usesTones;
   const tones = lang.phonemeInventory.tones;
 
+  // Phase 27b UI: per-phoneme functional load (homophones-on-merger
+  // proportion). Used to tint inventory cells — high load = saturated,
+  // low load = faded merger candidate.
+  const loadMap = functionalLoadMap(lang, state.generation);
+
   const innovative = lang.phonemeInventory.segmental.filter(
     (p) => !protoSet.has(p),
   );
@@ -102,9 +109,13 @@ export function PhonemeInventoryView() {
           {lang.stressPattern === "lexical" && lang.lexicalStress
             ? ` (${Object.keys(lang.lexicalStress).length} overrides)`
             : ""}
+          {/* Phase 27a: syllable-shape badge */}
+          {lang.phonotacticProfile
+            ? ` · syllable ${profileBadge(lang.phonotacticProfile)}`
+            : ""}
         </span>
         <span className="label-line">
-          <span style={{ color: "var(--accent-2)" }}>●</span> innovative vs proto · 🤝 areal · 🔧 internal rule
+          <span style={{ color: "var(--accent-2)" }}>●</span> innovative vs proto · 🤝 areal · 🔧 internal rule · faded = low functional load
         </span>
       </div>
 
@@ -147,10 +158,18 @@ export function PhonemeInventoryView() {
                   : prov?.source === "internal-rule"
                     ? `Internal rule${prov.generation ? ` (gen ${prov.generation})` : ""}`
                     : "Native (inherited from proto)";
+              const load = loadMap[p] ?? 0;
+              const loadLabel =
+                load >= 0.2
+                  ? "high (essential — many minimal pairs)"
+                  : load >= 0.05
+                    ? "moderate"
+                    : "low (merger candidate — few minimal pairs)";
+              const loadOpacity = 0.45 + 0.55 * Math.min(1, load * 4);
               return (
                 <span
                   key={p}
-                  title={`${p} — ${provText}${isNew ? " · new since proto" : ""}`}
+                  title={`${p} — ${provText}${isNew ? " · new since proto" : ""} · functional load: ${loadLabel}`}
                   style={{
                     minWidth: 28,
                     padding: "2px 8px",
@@ -163,6 +182,7 @@ export function PhonemeInventoryView() {
                       ? "var(--panel-2)"
                       : "var(--panel)",
                     color: "var(--text)",
+                    opacity: loadOpacity,
                     fontSize: "var(--fs-2)",
                     display: "inline-flex",
                     alignItems: "center",

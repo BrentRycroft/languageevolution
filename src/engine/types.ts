@@ -1,7 +1,7 @@
 import type { Rng } from "./rng";
 
 export type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
-import type { Meaning, WordForm, Lexicon } from "./primitives";
+import type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
 
 export type SoundChangeCategory =
   | "lenition"
@@ -140,6 +140,38 @@ export interface Language {
     particle?: string;
     /** For "affix-*": the phonological affix to concatenate. */
     affix?: WordForm;
+  };
+  /**
+   * Phase 27a: phonotactic profile — language-specific syllable shape
+   * constraints. Hawaiian-style languages (maxOnset=1, maxCoda=0) reject
+   * complex clusters; English-style (maxOnset=3, maxCoda=4) accept them.
+   * Used as a SOFT bias (not a hard gate) by:
+   *   - genesis: prefer compliant candidates when coining.
+   *   - borrowing: trigger repair on heavily-violating loans.
+   *   - sound change: penalty in lambda for rules whose output violates.
+   *   - phonotactic-repair pass: fix violators via existing epenthesis rules.
+   *
+   * `strictness` weighs the penalties. 0 = anything goes; 1 = strict
+   * enforcement.
+   */
+  phonotacticProfile?: {
+    /** Max consecutive consonants in a word-initial onset. */
+    maxOnset: number;
+    /** Max consecutive consonants in a word-final coda. */
+    maxCoda: number;
+    /** Max consecutive consonants anywhere in the word (medial CC). */
+    maxCluster: number;
+    /** 0..1 — how aggressively the engine biases toward compliance. */
+    strictness: number;
+  };
+  /**
+   * Phase 27b: per-phoneme functional-load cache. Updated lazily by
+   * `functionalLoadMap(lang, generation)`. Generation key invalidates
+   * the cache when the lexicon or inventory changes.
+   */
+  functionalLoadCache?: {
+    generation: number;
+    perPhoneme: Record<Phoneme, number>;
   };
   suppletion?: Record<
     Meaning,
@@ -424,6 +456,8 @@ export interface SimulationConfig {
   seedSuppletion?: NonNullable<Language["suppletion"]>;
   /** Phase 26b: per-preset infinitive realisation strategy. See Language.infinitiveStrategy. */
   seedInfinitiveStrategy?: NonNullable<Language["infinitiveStrategy"]>;
+  /** Phase 27a: per-preset phonotactic profile. See Language.phonotacticProfile. */
+  seedPhonotacticProfile?: NonNullable<Language["phonotacticProfile"]>;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;

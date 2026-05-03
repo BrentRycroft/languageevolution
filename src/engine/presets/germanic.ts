@@ -320,6 +320,14 @@ export function presetGermanic(): SimulationConfig {
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 1,
     seedStressPattern: "initial",
+    // Phase 27a: Germanic licenses moderate clusters (OE strang "strong",
+    // CCCVCC); mild strictness allows historical-quality sound changes.
+    seedPhonotacticProfile: {
+      maxOnset: 3,
+      maxCoda: 3,
+      maxCluster: 4,
+      strictness: 0.4,
+    },
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "free",

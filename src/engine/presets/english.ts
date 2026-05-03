@@ -735,6 +735,15 @@ export function presetEnglish(): SimulationConfig {
     seedStressPattern: "initial",
     // Phase 26b: English infinitive = "to V" particle prefix.
     seedInfinitiveStrategy: { kind: "particle-prefix", particle: "to" },
+    // Phase 27a: English allows CCCVCCC (strengths, sphincters); strictness
+    // is mild so historical-quality clusters survive but extreme outputs
+    // get adapted.
+    seedPhonotacticProfile: {
+      maxOnset: 3,
+      maxCoda: 4,
+      maxCluster: 4,
+      strictness: 0.4,
+    },
     seedGrammar: {
       wordOrder: "SVO",
       affixPosition: "suffix",

@@ -92,6 +92,14 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     lastChangeGeneration: {},
     stressPattern: config.seedStressPattern ?? "penult",
     infinitiveStrategy: config.seedInfinitiveStrategy ?? { kind: "bare" },
+    // Phase 27a: phonotactic profile defaults to permissive (English-like)
+    // when no preset specifies — preserves pre-Phase-27 behavior.
+    phonotacticProfile: config.seedPhonotacticProfile ?? {
+      maxOnset: 3,
+      maxCoda: 4,
+      maxCluster: 4,
+      strictness: 0.4,
+    },
     lexicalStress: config.seedLexicalStress
       ? { ...config.seedLexicalStress }
       : undefined,

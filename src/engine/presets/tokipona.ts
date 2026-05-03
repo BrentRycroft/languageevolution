@@ -167,6 +167,15 @@ export function presetTokipona(): SimulationConfig {
     // morphology, no writing tradition. Tier 0 keeps it that way.
     seedCulturalTier: 0,
     seedStressPattern: "initial",
+    // Phase 27a: Polynesian-style strict CV — no clusters, no codas.
+    // Highest strictness so even single-step erosion away from CV gets
+    // repaired.
+    seedPhonotacticProfile: {
+      maxOnset: 1,
+      maxCoda: 0,
+      maxCluster: 1,
+      strictness: 0.95,
+    },
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "none",

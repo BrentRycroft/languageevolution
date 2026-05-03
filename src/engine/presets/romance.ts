@@ -335,6 +335,14 @@ export function presetRomance(): SimulationConfig {
     seedStressPattern: "penult",
     // Phase 26b: Romance infinitive = -re affix suffix (Latin amāre, Spanish amar/comer/vivir).
     seedInfinitiveStrategy: { kind: "affix-suffix", affix: ["r", "e"] },
+    // Phase 27a: Romance prefers (C)CVC (Latin amare, Spanish hablar);
+    // moderate strictness biases against complex onsets/codas.
+    seedPhonotacticProfile: {
+      maxOnset: 2,
+      maxCoda: 2,
+      maxCluster: 3,
+      strictness: 0.7,
+    },
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "free",
