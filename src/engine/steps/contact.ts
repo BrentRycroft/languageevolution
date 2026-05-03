@@ -39,6 +39,7 @@ export function stepContact(
     rng,
     config.contact.borrowProbabilityPerGeneration,
     worldMap,
+    generation,
   );
   if (loan) {
     lang.wordOrigin[loan.meaning] = `borrow:${loan.donor}`;

@@ -15,6 +15,7 @@ import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { assignAllGenders } from "../morphology/gender";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
+import { syncWordsFromLexicon } from "../lexicon/word";
 import {
   getWorldMap,
   randomLandCell,
@@ -102,6 +103,11 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   seedNativeProvenance(rootLang);
   assignAllGenders(rootLang);
+  // Phase 21a: build the form-centric `words` table from the seed
+  // lexicon so day-zero languages already have the new layer populated.
+  // No behavior change: `lexicon` remains the source of truth until
+  // 21b+ wire writers through `addWord`/`removeSense`.
+  syncWordsFromLexicon(rootLang, 0);
   const mapMode = config.mapMode ?? "random";
   const worldMap = getWorldMap(mapMode, config.seed);
   let originId: number | null =

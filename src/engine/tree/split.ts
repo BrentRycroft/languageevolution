@@ -203,6 +203,18 @@ export function splitLeaf(
             ]),
           )
         : undefined,
+      // Phase 21a: deep-clone the parent's words table so each daughter
+      // gets its own independent word entries (no shared refs).
+      words: parentLang.words
+        ? parentLang.words.map((w) => ({
+            form: w.form.slice(),
+            formKey: w.formKey,
+            senses: w.senses.map((s) => ({ ...s })),
+            primarySenseIndex: w.primarySenseIndex,
+            bornGeneration: w.bornGeneration,
+            origin: w.origin,
+          }))
+        : undefined,
     };
   };
 

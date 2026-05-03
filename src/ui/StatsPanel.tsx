@@ -58,6 +58,11 @@ export function StatsPanel() {
     const derivationChains = lang.wordOriginChain
       ? Object.keys(lang.wordOriginChain).length
       : 0;
+    // Phase 21e: count polysemous words (≥2 senses) — homonyms like
+    // English "bank" / "light" / "bear".
+    const homonyms = lang.words
+      ? lang.words.filter((w) => w.senses.length >= 2).length
+      : 0;
     return {
       id,
       name: lang.name,
@@ -71,6 +76,7 @@ export function StatsPanel() {
       altCount,
       frozenSpellings,
       derivationChains,
+      homonyms,
     };
   });
 
@@ -99,6 +105,12 @@ export function StatsPanel() {
               title="Words coined via targeted derivation (e.g. freedom ← free + -dom)"
             >
               deriv
+            </th>
+            <th
+              className="text-right"
+              title="Homonyms — words carrying ≥2 senses (Phase 21, e.g. bank = financial / river)"
+            >
+              homo
             </th>
             <th className="text-right">δ</th>
           </tr>
@@ -132,6 +144,7 @@ export function StatsPanel() {
                 <td className="text-right">{s.altCount || ""}</td>
                 <td className="text-right">{s.frozenSpellings || ""}</td>
                 <td className="text-right">{s.derivationChains || ""}</td>
+                <td className="text-right">{s.homonyms || ""}</td>
                 <td className="text-right">{s.mean.toFixed(2)}</td>
               </tr>
             );

@@ -105,6 +105,18 @@ export function cloneLanguage(lang: Language): Language {
         )
       : undefined,
     recentLoanGens: lang.recentLoanGens ? lang.recentLoanGens.slice() : undefined,
+    // Phase 21a: deep-clone the form-centric words table so daughter
+    // languages don't share Word/sense references with the parent.
+    words: lang.words
+      ? lang.words.map((w) => ({
+          form: w.form.slice(),
+          formKey: w.formKey,
+          senses: w.senses.map((s) => ({ ...s })),
+          primarySenseIndex: w.primarySenseIndex,
+          bornGeneration: w.bornGeneration,
+          origin: w.origin,
+        }))
+      : undefined,
   };
 }
 

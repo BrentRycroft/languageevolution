@@ -1,5 +1,10 @@
-import type { SavedRun, SimulationConfig } from "../engine/types";
+import type {
+  Language,
+  SavedRun,
+  SimulationConfig,
+} from "../engine/types";
 import { defaultConfig } from "../engine/config";
+import { syncWordsFromLexicon } from "../engine/lexicon/word";
 
 /**
  * Bump LATEST_SAVE_VERSION when adding a breaking change. Each bump must:
@@ -12,7 +17,7 @@ import { defaultConfig } from "../engine/config";
  * get default values without needing an explicit migration. Migrations
  * therefore only need to handle field renames, type changes, or removals.
  */
-export const LATEST_SAVE_VERSION = 5;
+export const LATEST_SAVE_VERSION = 6;
 
 type RawObj = Record<string, unknown>;
 
@@ -30,6 +35,26 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
   2: (raw) => ({ ...raw, version: 3 }),
   3: (raw) => ({ ...raw, version: 4 }),
   4: (raw) => ({ ...raw, version: 5 }),
+  // Phase 21a: v6 introduces the form-centric `words` field on Language.
+  // For old saves that lack it, build one from the meaning-keyed lexicon
+  // (and any colexification metadata) so post-migration languages have
+  // both views populated. Same logic the runtime uses on a fresh seed.
+  5: (raw) => {
+    const snapshot = raw.stateSnapshot as RawObj | undefined;
+    if (snapshot && snapshot.tree && typeof snapshot.tree === "object") {
+      const tree = snapshot.tree as Record<string, RawObj>;
+      const generation =
+        typeof snapshot.generation === "number" ? snapshot.generation : 0;
+      for (const node of Object.values(tree)) {
+        const lang = node.language as Language | undefined;
+        if (!lang) continue;
+        if (!lang.words) {
+          syncWordsFromLexicon(lang, generation);
+        }
+      }
+    }
+    return { ...raw, version: 6 };
+  },
 };
 
 export function migrateSavedRun(raw: unknown): SavedRun | null {
