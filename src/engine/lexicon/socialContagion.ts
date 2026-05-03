@@ -13,6 +13,16 @@ function formsEqual(a: WordForm, b: WordForm): boolean {
   return true;
 }
 
+/**
+ * Record an innovation in the lang.variants tracker. Called by phonology /
+ * learner / etc. AFTER they have already mutated `lang.lexicon[meaning]`
+ * to `newForm`. Because the canonical lexicon has ALREADY swapped, the
+ * new form is the dominant variant in the speech community at this
+ * moment, and the old form is the residual minority. Earlier versions
+ * had this inverted (NEW=5%, OLD=95%), which made stepSocialContagion
+ * revert virtually every sound change within 2-3 generations of being
+ * applied — the divergence-killer Phase 23 was created to fix.
+ */
 export function recordInnovation(
   lang: Language,
   meaning: Meaning,
@@ -25,31 +35,36 @@ export function recordInnovation(
   const existing = lang.variants[meaning] ?? [];
   const oldKey = oldForm ? oldForm.slice() : null;
 
+  // Phase 23: the canonical was just swapped to newForm; reflect that
+  // in the adoption-fraction model so contagion doesn't fight phonology.
+  const RESIDUAL = NEW_VARIANT_FRACTION; // 0.05 — old form's residual share
+  const DOMINANT = 1 - NEW_VARIANT_FRACTION; // 0.95 — new (canonical) form's share
+
   if (oldKey) {
     const oldEntry = existing.find((v) => formsEqual(v.form, oldKey));
     if (oldEntry) {
-      oldEntry.adoptionFraction = oldEntry.adoptionFraction ?? 1 - NEW_VARIANT_FRACTION;
+      oldEntry.adoptionFraction = RESIDUAL;
     } else {
       existing.push({
         form: oldKey,
         weight: 1,
         bornGeneration: generation - 1,
-        adoptionFraction: 1 - NEW_VARIANT_FRACTION,
+        adoptionFraction: RESIDUAL,
       });
     }
   }
 
   const innovationEntry = existing.find((v) => formsEqual(v.form, newForm));
   if (innovationEntry) {
-    innovationEntry.adoptionFraction = (innovationEntry.adoptionFraction ?? 0) + NEW_VARIANT_FRACTION;
-    innovationEntry.weight = Math.max(innovationEntry.weight, NEW_VARIANT_FRACTION);
+    innovationEntry.adoptionFraction = DOMINANT;
+    innovationEntry.weight = Math.max(innovationEntry.weight, DOMINANT);
     if (innovator) innovationEntry.innovator = innovator;
   } else {
     existing.push({
       form: newForm.slice(),
-      weight: NEW_VARIANT_FRACTION,
+      weight: DOMINANT,
       bornGeneration: generation,
-      adoptionFraction: NEW_VARIANT_FRACTION,
+      adoptionFraction: DOMINANT,
       innovator,
     });
   }
