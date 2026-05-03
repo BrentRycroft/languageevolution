@@ -299,6 +299,14 @@ export function presetBantu(): SimulationConfig {
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 1,
     seedStressPattern: "penult",
+    // Phase 27a: Bantu is CV-heavy with NC clusters (mb-, nd-, ng-) but
+    // no codas. Strict to push borrowings toward the canonical shape.
+    seedPhonotacticProfile: {
+      maxOnset: 2,
+      maxCoda: 0,
+      maxCluster: 2,
+      strictness: 0.85,
+    },
     seedGrammar: {
       wordOrder: "SVO",
       articlePresence: "none",

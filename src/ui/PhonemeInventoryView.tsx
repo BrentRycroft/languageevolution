@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useSimStore } from "../state/store";
 import { featuresOf } from "../engine/phonology/features";
 import { isVowel, isSyllabic } from "../engine/phonology/ipa";
+import { profileBadge } from "../engine/phonology/phonotactics";
 import type { Phoneme } from "../engine/types";
 
 export function PhonemeInventoryView() {
@@ -101,6 +102,10 @@ export function PhonemeInventoryView() {
           {" · "}stress {lang.stressPattern ?? "penult"}
           {lang.stressPattern === "lexical" && lang.lexicalStress
             ? ` (${Object.keys(lang.lexicalStress).length} overrides)`
+            : ""}
+          {/* Phase 27a: syllable-shape badge */}
+          {lang.phonotacticProfile
+            ? ` · syllable ${profileBadge(lang.phonotacticProfile)}`
             : ""}
         </span>
         <span className="label-line">

@@ -465,6 +465,15 @@ export function presetPIE(): SimulationConfig {
     seedCulturalTier: 0,
     seedStressPattern: "lexical",
     seedLexicalStress: LEXICAL_STRESS,
+    // Phase 27a: PIE licenses substantial clusters (*kʷetwores-, *septḿ);
+    // medium strictness so reconstructed-quality clusters survive but
+    // pathological outputs trigger repair.
+    seedPhonotacticProfile: {
+      maxOnset: 3,
+      maxCoda: 3,
+      maxCluster: 4,
+      strictness: 0.5,
+    },
     seedGrammar: {
       wordOrder: "SOV",
       articlePresence: "none",
