@@ -83,41 +83,78 @@ describe("Phase 27b — inventory size pressure", () => {
   });
 });
 
-describe("Phase 27b — stepInventoryHomeostasis", () => {
+describe("Phase 27.1 — stepInventoryHomeostasis", () => {
   it("doesn't crash on a normal-sized language", () => {
     const lang = freshEnglish();
     const rng = makeRng("homeostasis-normal");
     expect(() => stepInventoryHomeostasis(lang, rng, 0)).not.toThrow();
   });
 
-  it("an artificially-bloated language shrinks toward target over many gens", () => {
+  it("an artificially bloated language shrinks to within 1.2× target within 30 gens", () => {
     const lang = freshEnglish();
-    // Add a bunch of "junk" phonemes that occur in 0-1 words (so they're
-    // pruning candidates by raw frequency).
-    const inv = lang.phonemeInventory.segmental.slice();
-    const original = inv.length;
-    const junk = ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"];
-    for (const p of junk) inv.push(p);
-    lang.phonemeInventory.segmental = inv;
-    const startSize = inv.length;
+    lang.culturalTier = 3; // target 40
+    const target = tierInventoryTarget(lang.culturalTier);
+    // Pool of palatalised/labialised/aspirated consonant variants, each
+    // featurally adjacent to a base in the seed inventory so
+    // nearestNeighbour can find a merger target.
+    const filler = [
+      "pʲ", "tʲ", "kʲ", "bʲ", "dʲ", "gʲ",
+      "pʷ", "tʷ", "kʷ", "bʷ", "dʷ", "gʷ",
+      "fʲ", "sʲ", "zʲ", "fʷ", "sʷ", "zʷ",
+      "mʲ", "nʲ", "lʲ", "rʲ", "mʷ", "nʷ",
+      "pʰ", "tʰ", "kʰ", "bʰ", "dʰ", "gʰ",
+    ];
+    const seedSet = new Set(lang.phonemeInventory.segmental);
+    const novel = filler.filter((p) => !seedSet.has(p));
+    const startSize = lang.phonemeInventory.segmental.length + novel.length;
+    expect(startSize).toBeGreaterThanOrEqual(50);
+    lang.phonemeInventory.segmental = [
+      ...lang.phonemeInventory.segmental,
+      ...novel,
+    ];
+    for (let i = 0; i < novel.length; i++) {
+      lang.lexicon[`__junk_${i}__`] = ["a", novel[i]!];
+    }
+    expect(lang.phonemeInventory.segmental.length).toBe(startSize);
     expect(inventorySizePressure(lang)).toBeGreaterThan(0);
 
-    // Add ONE word containing each junk phoneme so it's in the lexicon
-    // and prunable.
-    for (let i = 0; i < junk.length; i++) {
-      lang.lexicon[`__junk_${i}__`] = ["a", junk[i]!];
-    }
-
-    // Run homeostasis with a forced rng for many generations.
-    let gen = 1;
-    let totalSteps = 0;
-    while (totalSteps < 200) {
-      const rng = makeRng(`homeo-${gen}`);
+    for (let gen = 1; gen <= 30; gen++) {
+      const rng = makeRng(`homeo-shrink-${gen}`);
       stepInventoryHomeostasis(lang, rng, gen);
-      gen++;
-      totalSteps++;
-      if (lang.phonemeInventory.segmental.length <= original + 2) break;
     }
-    expect(lang.phonemeInventory.segmental.length).toBeLessThan(startSize);
+    expect(lang.phonemeInventory.segmental.length).toBeLessThanOrEqual(
+      Math.floor(target * 1.2),
+    );
   });
+});
+
+describe("Phase 27.1 — full-simulation inventory convergence", () => {
+  it("English preset over 200 gens keeps leaf inventories bounded (no runaway growth)", () => {
+    const cfg = { ...presetEnglish(), seed: "homeostasis-convergence" };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 200; i++) sim.step();
+    const state = sim.getState();
+    let checkedAny = false;
+    const sizes: { name: string; size: number; target: number }[] = [];
+    for (const id of Object.keys(state.tree)) {
+      const node = state.tree[id]!;
+      if (node.childrenIds.length > 0) continue;
+      const lang = node.language;
+      if (lang.extinct) continue;
+      checkedAny = true;
+      const target = tierInventoryTarget(lang.culturalTier);
+      const size = lang.phonemeInventory.segmental.length;
+      sizes.push({ name: lang.name, size, target });
+    }
+    expect(checkedAny).toBe(true);
+    // Pre-Phase-27.1 the inventory grew without bound (one
+    // probabilistic prune per gen vs 5+ phoneme additions per gen).
+    // Post-fix the system is bounded — every leaf stabilises within
+    // a small multiple of its tier target rather than running away.
+    const maxRatio = Math.max(...sizes.map((s) => s.size / s.target));
+    expect(maxRatio, JSON.stringify(sizes)).toBeLessThanOrEqual(2.5);
+    const ratios = sizes.map((s) => s.size / s.target).sort((a, b) => a - b);
+    const median = ratios[Math.floor(ratios.length / 2)]!;
+    expect(median, JSON.stringify(sizes)).toBeLessThanOrEqual(2.2);
+  }, 180_000);
 });

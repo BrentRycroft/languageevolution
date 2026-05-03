@@ -10,10 +10,11 @@ import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../ph
 import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
 import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/variants";
 import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
-import { prunePhonemes } from "../phonology/pruning";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import { syncWordsAfterPhonology } from "../lexicon/word";
 import { volatilityMultiplier } from "./volatility";
+import { inventorySizePressure } from "./inventoryHomeostasis";
+import { stripTone } from "../phonology/tone";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
@@ -72,6 +73,31 @@ export function stepPhonology(
     seedLengths,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
+  // Phase 27.1: when the language is already over its tier-target
+  // inventory, reject post-rule forms that introduce phonemes which
+  // weren't in the inventory before this generation. This prevents
+  // sound-change additions from outpacing homeostatic pruning.
+  // Mergers (rules that REDUCE the inventory) are still allowed —
+  // their outputs are by definition in the old inventory.
+  if (inventorySizePressure(lang) > 0) {
+    const oldInv = new Set(lang.phonemeInventory.segmental);
+    for (const m of Object.keys(lang.lexicon)) {
+      const newForm = lang.lexicon[m]!;
+      const oldForm = before[m];
+      if (!oldForm || newForm === oldForm) continue;
+      let introducesNovel = false;
+      for (const raw of newForm) {
+        const base = stripTone(raw);
+        if (!oldInv.has(base) && !oldInv.has(raw)) {
+          introducesNovel = true;
+          break;
+        }
+      }
+      if (introducesNovel) {
+        lang.lexicon[m] = oldForm;
+      }
+    }
+  }
   for (const m of Object.keys(before)) {
     if (lang.lexicon[m]) continue;
     delete lang.wordFrequencyHints[m];
@@ -185,8 +211,31 @@ export function stepPhonology(
   }
 
   if (rng.chance(config.phonology_lawful.regularChangeProbability)) {
+    // Phase 27.1: snapshot inventory before applyOneRegularChange so
+    // we can revert if the rule introduces a phoneme that wasn't
+    // previously in the inventory while we're already over target.
+    const preInv = new Set(lang.phonemeInventory.segmental);
+    const preLex: Record<string, WordForm> = {};
+    if (inventorySizePressure(lang) > 0) {
+      for (const m of Object.keys(lang.lexicon)) preLex[m] = lang.lexicon[m]!;
+    }
     const ruleId = applyOneRegularChange(lang, changes, rng);
     if (ruleId) {
+      if (Object.keys(preLex).length > 0) {
+        let introducesNovel = false;
+        outer: for (const m of Object.keys(lang.lexicon)) {
+          for (const raw of lang.lexicon[m]!) {
+            const base = stripTone(raw);
+            if (!preInv.has(base) && !preInv.has(raw)) {
+              introducesNovel = true;
+              break outer;
+            }
+          }
+        }
+        if (introducesNovel) {
+          for (const m of Object.keys(preLex)) lang.lexicon[m] = preLex[m]!;
+        }
+      }
       refreshInventory(lang);
       pushEvent(lang, {
         generation,
@@ -196,17 +245,10 @@ export function stepPhonology(
     }
   }
 
-  if (rng.chance(0.04)) {
-    const merger = prunePhonemes(lang, rng, generation);
-    if (merger) {
-      refreshInventory(lang);
-      pushEvent(lang, {
-        generation,
-        kind: "sound_change",
-        description: `phonemic merger: /${merger.from}/ → /${merger.to}/ (low-frequency phoneme dropped from inventory in ${merger.affectedWords} word${merger.affectedWords === 1 ? "" : "s"})`,
-      });
-    }
-  }
+  // Phase 27.1: the historical 4% per-gen prunePhonemes call here was
+  // retired. Phoneme pruning now lives entirely in
+  // stepInventoryHomeostasis (which uses functional-load-aware
+  // selection and pressure-scaled attempt counts).
 
   const spread = maybeSpreadTone(lang, rng, 0.02);
   if (spread > 0) {

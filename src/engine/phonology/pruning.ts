@@ -44,6 +44,17 @@ function featuralDistance(a: Phoneme, b: Phoneme): number {
   return d;
 }
 
+// IPA diacritics commonly applied to base phonemes by sound-change
+// rules: aspirated, palatalised, labialised, pharyngealised, glottal,
+// long, nasal. Stripping these maps a complex phoneme back to its
+// likely base (`tʷʲ` → `t`, `aː` → `a`, `ẽ` → `e`).
+const DIACRITICS = /[ʷʲʰˤˀːˑ̥̩̯̃̊]/g;
+
+function stripDiacritics(p: string): string {
+  const stripped = stripTone(p).replace(DIACRITICS, "");
+  return stripped || p;
+}
+
 function nearestNeighbour(
   candidate: Phoneme,
   inventory: Phoneme[],
@@ -59,6 +70,32 @@ function nearestNeighbour(
     }
   }
   if (bestD <= 1.5) return best;
+  // Phase 27.1 fallback 1: strip diacritics and look up the base.
+  const base = stripDiacritics(candidate);
+  if (base !== candidate && base.length > 0 && inventory.includes(base)) {
+    return base;
+  }
+  // Phase 27.1 fallback 2: pick the inventory phoneme sharing the
+  // longest base prefix (after diacritic stripping). Catches cases
+  // where the base itself isn't in the inventory but a featurally
+  // adjacent variant is.
+  let prefBest: Phoneme | null = null;
+  let prefLen = 0;
+  const cb = stripDiacritics(candidate);
+  for (const p of inventory) {
+    if (p === candidate) continue;
+    const pb = stripDiacritics(p);
+    let i = 0;
+    while (i < pb.length && i < cb.length && pb[i] === cb[i]) i++;
+    if (i > prefLen) {
+      prefLen = i;
+      prefBest = p;
+    }
+  }
+  if (prefBest && prefLen > 0) return prefBest;
+  // Phase 27.1 fallback 3: any closest-by-feature neighbour, no
+  // distance cap. Better an ugly merger than runaway inventory growth.
+  if (best) return best;
   return null;
 }
 
@@ -93,24 +130,39 @@ export function prunePhonemes(
     if (load <= LOW_LOAD_THRESHOLD) rareCandidates.push(p);
   }
   if (rareCandidates.length === 0) return null;
-  // Weight selection: prefer LOWER functional load.
-  const weighted = rareCandidates.map((p) => ({
+  // Weight selection: prefer LOWER functional load. Walk candidates in
+  // weighted-random order until we find one whose nearestNeighbour is
+  // non-null. Phase 27.1: previously we picked one candidate up front
+  // and bailed if its neighbour was null — losing the whole attempt
+  // and letting un-mergeable phonemes stay un-mergeable forever.
+  const remaining = rareCandidates.map((p) => ({
     phoneme: p,
     weight: 1 - Math.min(1, loads[p] ?? 0),
   }));
-  let total = 0;
-  for (const w of weighted) total += w.weight;
-  let r = rng.next() * total;
-  let candidate = weighted[0]!.phoneme;
-  for (const w of weighted) {
-    r -= w.weight;
-    if (r <= 0) {
-      candidate = w.phoneme;
+  let candidate: Phoneme | null = null;
+  let neighbour: Phoneme | null = null;
+  while (remaining.length > 0) {
+    const total = remaining.reduce((s, w) => s + w.weight, 0);
+    if (total <= 0) break;
+    let r = rng.next() * total;
+    let pickIdx = 0;
+    for (let i = 0; i < remaining.length; i++) {
+      r -= remaining[i]!.weight;
+      if (r <= 0) {
+        pickIdx = i;
+        break;
+      }
+    }
+    const pick = remaining[pickIdx]!;
+    remaining.splice(pickIdx, 1);
+    const n = nearestNeighbour(pick.phoneme, inventory);
+    if (n) {
+      candidate = pick.phoneme;
+      neighbour = n;
       break;
     }
   }
-  const neighbour = nearestNeighbour(candidate, inventory);
-  if (!neighbour) return null;
+  if (!candidate || !neighbour) return null;
 
   let affected = 0;
   for (const m of Object.keys(lang.lexicon)) {
@@ -134,7 +186,19 @@ export function prunePhonemes(
   if (lang.inventoryProvenance) {
     delete lang.inventoryProvenance[candidate];
   }
-  // Phase 27b: invalidate the functional-load cache after mutation.
-  delete lang.functionalLoadCache;
-  return affected > 0 ? { from: candidate, to: neighbour, affectedWords: affected } : null;
+  // Phase 27.1: previously we deleted `lang.functionalLoadCache` here
+  // so subsequent pruning calls in the same generation would see
+  // post-merger loads. That made multi-attempt homeostasis loops
+  // O(N²×W) per generation. The cache key is generation-based, so it
+  // is invalidated naturally each new gen — minor intra-gen staleness
+  // is an acceptable tradeoff for the speedup.
+  if (lang.functionalLoadCache) {
+    delete lang.functionalLoadCache.perPhoneme[candidate];
+  }
+  // Phase 27.1: even when affected === 0 (the candidate was a phantom
+  // — in segmental but not in any lexicon entry, e.g. left over from
+  // an areal share whose lexicon edits got overwritten), the inventory
+  // shrunk. Report the prune so callers don't bail thinking nothing
+  // happened.
+  return { from: candidate, to: neighbour, affectedWords: affected };
 }
