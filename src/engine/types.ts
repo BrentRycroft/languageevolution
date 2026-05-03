@@ -1,7 +1,7 @@
 import type { Rng } from "./rng";
 
 export type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
-import type { Meaning, WordForm, Lexicon } from "./primitives";
+import type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
 
 export type SoundChangeCategory =
   | "lenition"
@@ -163,6 +163,15 @@ export interface Language {
     maxCluster: number;
     /** 0..1 — how aggressively the engine biases toward compliance. */
     strictness: number;
+  };
+  /**
+   * Phase 27b: per-phoneme functional-load cache. Updated lazily by
+   * `functionalLoadMap(lang, generation)`. Generation key invalidates
+   * the cache when the lexicon or inventory changes.
+   */
+  functionalLoadCache?: {
+    generation: number;
+    perPhoneme: Record<Phoneme, number>;
   };
   suppletion?: Record<
     Meaning,

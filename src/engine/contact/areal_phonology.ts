@@ -5,8 +5,10 @@ import { geoDistance } from "../geo";
 import { isVowel } from "../phonology/ipa";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
+import { inventorySizePressure } from "../steps/inventoryHomeostasis";
 
 const AREAL_HALF_LIFE = 200;
+const AREAL_PRESSURE_GATE = 0.5; // skip areal share when pressure > 0.5
 
 export interface ArealPhonemeEvent {
   donorId: string;
@@ -23,6 +25,11 @@ export function maybeArealPhonemeShare(
   baseProbability: number,
   worldMap?: WorldMap,
 ): ArealPhonemeEvent | null {
+  // Phase 27b: gate areal-share when the recipient is already over its
+  // tier-target inventory size. Suppresses growth when the homeostatic
+  // pressure exceeds AREAL_PRESSURE_GATE — the recipient is already
+  // shedding low-load phonemes, no point adding more from neighbors.
+  if (inventorySizePressure(recipient) > AREAL_PRESSURE_GATE) return null;
   if (!recipient.coords) return null;
   const sisters = leafIds(tree)
     .filter(

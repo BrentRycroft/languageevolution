@@ -6,6 +6,7 @@ import { stepPhonology, stepArealWaves } from "./steps/phonology";
 import { validateConfig, summarizeValidation } from "./configValidation";
 import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
+import { stepInventoryHomeostasis } from "./steps/inventoryHomeostasis";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
@@ -166,6 +167,10 @@ export function createSimulation(
       stepVolatility(lang, nextGen, rng);
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
       if (config.modes.phonology) stepLearner(lang, config, rng, nextGen);
+      // Phase 27b: dynamic phoneme-inventory homeostasis. When inventory
+      // size exceeds the per-tier target, pruning probability scales up
+      // and prefers low-functional-load phonemes.
+      if (config.modes.phonology) stepInventoryHomeostasis(lang, rng, nextGen);
       stepObsolescence(lang, config, rng, nextGen);
       stepCopulaErosion(lang, config, rng, nextGen);
       stepCopulaGenesis(lang, config, rng, nextGen);

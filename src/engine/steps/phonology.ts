@@ -197,7 +197,7 @@ export function stepPhonology(
   }
 
   if (rng.chance(0.04)) {
-    const merger = prunePhonemes(lang, rng);
+    const merger = prunePhonemes(lang, rng, generation);
     if (merger) {
       refreshInventory(lang);
       pushEvent(lang, {

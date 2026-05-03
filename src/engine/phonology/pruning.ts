@@ -2,9 +2,11 @@ import type { Language, Phoneme, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { featuresOf } from "./features";
 import { stripTone } from "./tone";
+import { functionalLoadMap } from "./functionalLoad";
 
 const MAX_RARE_OCCURRENCES = 2;
 const MIN_INVENTORY_TO_PRUNE = 12;
+const LOW_LOAD_THRESHOLD = 0.05; // ≤5% homophone-creation rate is "low load"
 
 function countOccurrences(lang: Language): Map<Phoneme, number> {
   const counts = new Map<Phoneme, number>();
@@ -66,7 +68,11 @@ export interface PhonemeMerger {
   affectedWords: number;
 }
 
-export function prunePhonemes(lang: Language, rng: Rng): PhonemeMerger | null {
+export function prunePhonemes(
+  lang: Language,
+  rng: Rng,
+  generation: number = 0,
+): PhonemeMerger | null {
   const inventory = lang.phonemeInventory.segmental;
   if (inventory.length < MIN_INVENTORY_TO_PRUNE) return null;
   const counts = countOccurrences(lang);
@@ -75,8 +81,34 @@ export function prunePhonemes(lang: Language, rng: Rng): PhonemeMerger | null {
     const n = counts.get(p) ?? 0;
     if (n > 0 && n <= MAX_RARE_OCCURRENCES) rareCandidates.push(p);
   }
+  // Phase 27b: also include LOW-FUNCTIONAL-LOAD phonemes regardless
+  // of raw count. A phoneme used in 50 words but always in
+  // free-variation positions (no homophones created on merger) is
+  // a much better candidate than one used in 2 words that distinguish
+  // critical contrasts.
+  const loads = functionalLoadMap(lang, generation);
+  for (const p of inventory) {
+    if (rareCandidates.includes(p)) continue;
+    const load = loads[p] ?? 0;
+    if (load <= LOW_LOAD_THRESHOLD) rareCandidates.push(p);
+  }
   if (rareCandidates.length === 0) return null;
-  const candidate = rareCandidates[rng.int(rareCandidates.length)]!;
+  // Weight selection: prefer LOWER functional load.
+  const weighted = rareCandidates.map((p) => ({
+    phoneme: p,
+    weight: 1 - Math.min(1, loads[p] ?? 0),
+  }));
+  let total = 0;
+  for (const w of weighted) total += w.weight;
+  let r = rng.next() * total;
+  let candidate = weighted[0]!.phoneme;
+  for (const w of weighted) {
+    r -= w.weight;
+    if (r <= 0) {
+      candidate = w.phoneme;
+      break;
+    }
+  }
   const neighbour = nearestNeighbour(candidate, inventory);
   if (!neighbour) return null;
 
@@ -102,5 +134,7 @@ export function prunePhonemes(lang: Language, rng: Rng): PhonemeMerger | null {
   if (lang.inventoryProvenance) {
     delete lang.inventoryProvenance[candidate];
   }
+  // Phase 27b: invalidate the functional-load cache after mutation.
+  delete lang.functionalLoadCache;
   return affected > 0 ? { from: candidate, to: neighbour, affectedWords: affected } : null;
 }
