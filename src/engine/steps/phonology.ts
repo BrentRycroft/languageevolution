@@ -13,6 +13,7 @@ import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagio
 import { prunePhonemes } from "../phonology/pruning";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import { syncWordsAfterPhonology } from "../lexicon/word";
+import { volatilityMultiplier } from "./volatility";
 import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
@@ -38,7 +39,11 @@ export function stepPhonology(
     rateMultiplier(generation, lang.id) *
     lang.conservatism *
     speakerFactor(lang.speakers) *
-    isolationFactor(nearestNeighborDistance(state, lang));
+    isolationFactor(nearestNeighborDistance(state, lang)) *
+    // Phase 25: time-varying volatility regime — multiplies rate during
+    // upheaval periods (Norman conquest / Great Vowel Shift bursts) and
+    // dampens it during stable centuries.
+    volatilityMultiplier(lang);
   const ages: Record<string, number> = {};
   for (const m of Object.keys(before)) {
     const last = lang.lastChangeGeneration[m];

@@ -179,6 +179,23 @@ export interface Language {
    * after literacy" effect. Cleared once expired.
    */
   vocabularyCatchUpUntil?: number;
+  /**
+   * Phase 25: time-varying volatility regime. Each language cycles
+   * between a default "stable" mode (rate ≈ 1×) and occasional
+   * "upheaval" periods (rate 3–5×) lasting ~10–25 generations. Models
+   * real-history bursts: Norman conquest, Great Vowel Shift, the Bantu
+   * expansion, etc. Triggers: tier transitions, heavy contact, random
+   * exogenous events. Cleared once `until` is reached.
+   */
+  volatilityPhase?: {
+    kind: "stable" | "upheaval";
+    /** Generation at which this phase ends and a new one is rolled. */
+    until: number;
+    /** Rate multiplier applied to phonology + grammar steps. */
+    multiplier: number;
+    /** Optional human-readable trigger ("tier-2 transition", "heavy contact", etc.) for the timeline. */
+    trigger?: string;
+  };
   lexicalCapacity?: number;
   colexifiedAs?: Record<Meaning, Meaning[]>;
   /**
