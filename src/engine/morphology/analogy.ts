@@ -29,6 +29,12 @@ export function maybeAnalogicalLevel(
     // based on cluster mates (real cross-linguistic pattern: function
     // words are tightly constrained morphologically).
     if (isClosedClass(posOf(m))) continue;
+    // Phase 28e: suppletive paradigms (go/went, be/am/are/was) survive
+    // by being lexically irregular. Length-based leveling would erase
+    // exactly the irregularity that makes them suppletive in the first
+    // place, so skip any meaning carrying a suppletion record.
+    const supp = lang.suppletion?.[m];
+    if (supp && Object.keys(supp).length > 0) continue;
     const cluster = clusterOf(m);
     if (!cluster) continue;
     const mates = relatedMeanings(m).filter(
