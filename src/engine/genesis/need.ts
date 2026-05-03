@@ -5,9 +5,22 @@ import { CONCEPT_IDS, CONCEPTS, tierOf, type Tier } from "../lexicon/concepts";
 import { EXPANSION_NEED_BASELINE } from "../constants";
 import { leafIds } from "../tree/split";
 
+export interface LexicalNeedOptions {
+  /**
+   * Phase 24: per-meaning seed length. When provided, lexicalNeed adds
+   * a "shrinkage" component to the need score for already-existing
+   * meanings whose form has eroded below ~70% of seed length AND whose
+   * frequency is high (i.e., still actively used). This drives genesis
+   * to propose lexical replacement for over-eroded content words —
+   * Latin *caput* → Romance *testa* once *caput* lost discriminability.
+   */
+  seedLengths?: Record<Meaning, number>;
+}
+
 export function lexicalNeed(
   lang: Language,
   tree: LanguageTree,
+  opts: LexicalNeedOptions = {},
 ): Record<Meaning, number> {
   const out: Record<Meaning, number> = {};
   const lex = lang.lexicon;
@@ -34,9 +47,26 @@ export function lexicalNeed(
   const tier = (lang.culturalTier ?? 0) as Tier;
   const basicSet = BASIC_240 as readonly Meaning[];
   const basicSetLookup = new Set(basicSet);
+  const seedLengths = opts.seedLengths;
   for (const m of CONCEPT_IDS) {
     if (lex[m]) {
-      out[m] = 0;
+      // Phase 24: existing meanings get a shrinkage-based replacement
+      // need when the current form is below 70% of seed length AND the
+      // word is still high-frequency. This closes the loop: erosion →
+      // genesis replenishment, instead of letting eroded high-freq
+      // words sit at minimum length forever.
+      let shrinkage = 0;
+      if (seedLengths) {
+        const seedLen = seedLengths[m];
+        const cur = lex[m];
+        if (seedLen && cur && cur.length < Math.ceil(seedLen * 0.7)) {
+          const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+          if (freq > 0.4) {
+            shrinkage = 0.5 * (1 - cur.length / seedLen);
+          }
+        }
+      }
+      out[m] = shrinkage;
       continue;
     }
     if (tierOf(m) > tier) {
