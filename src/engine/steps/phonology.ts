@@ -5,6 +5,8 @@ import { maybeLearnOt } from "../phonology/ot";
 import { rateMultiplier, speakerFactor, isolationFactor, realismMultiplier } from "../phonology/rate";
 import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
+import { stepToneSandhi } from "../phonology/sandhi";
+import { recordCorrespondences } from "../phonology/soundLaws";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../phonology/propose";
 import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
@@ -98,6 +100,10 @@ export function stepPhonology(
     neighbourMomentum,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
+  // Phase 29 Tranche 5d: record proto→daughter substitutions for
+  // every position-aligned change to surface systematic correspondences
+  // (Grimm's-Law-grade shifts) in the UI / audit reports.
+  recordCorrespondences(lang, before, lang.lexicon, generation);
   // Phase 27.1: when the language is already over its tier-target
   // inventory, reject post-rule forms that introduce phonemes which
   // weren't in the inventory before this generation. This prevents
@@ -281,6 +287,17 @@ export function stepPhonology(
       generation,
       kind: "sound_change",
       description: `tone spread to ${spread} word${spread === 1 ? "" : "s"}`,
+    });
+  }
+
+  // Phase 29 Tranche 5g: tone sandhi — adjacent-tone resolution
+  // (Mandarin T3+T3 → T2+T3, OCP avoidance, contour smoothing).
+  const sandhiHits = stepToneSandhi(lang, rng, generation);
+  if (sandhiHits > 0) {
+    pushEvent(lang, {
+      generation,
+      kind: "sound_change",
+      description: `tone sandhi: ${sandhiHits} adjacent-tone pair${sandhiHits === 1 ? "" : "s"} resolved`,
     });
   }
 

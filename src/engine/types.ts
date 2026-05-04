@@ -195,6 +195,34 @@ export interface Language {
     generation: number;
     perPhoneme: Record<Phoneme, number>;
   };
+  /**
+   * Phase 29 Tranche 5d: sound correspondence law tracker. Each
+   * (proto, daughter, environment) triple records how often a given
+   * substitution actually fires across the lexicon vs how often it
+   * MIGHT fire (matching site count). The fires/total ratio is the
+   * "regularity" — a Grimm's-Law-grade systematic shift exhibits ≥
+   * 0.8. The UI uses this to surface "this language exhibits the
+   * shift /p/ → /f/ word-initially with 87% regularity" badges.
+   *
+   * Key format: `${from}>${to}@${environment}` where environment is
+   * "any" / "initial" / "final" / "intervocalic".
+   */
+  correspondences?: Record<
+    string,
+    {
+      from: Phoneme;
+      to: Phoneme;
+      environment: "any" | "initial" | "final" | "intervocalic";
+      /** Number of attested applications across the lexicon. */
+      fires: number;
+      /** Number of matching sites observed (fires + non-fires). */
+      total: number;
+      /** Generation at which this correspondence was first recorded. */
+      firstSeenGeneration: number;
+      /** Most recent gen the correspondence fired. */
+      lastFireGeneration: number;
+    }
+  >;
   suppletion?: Record<
     Meaning,
     Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
