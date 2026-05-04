@@ -5,6 +5,7 @@ import { CATALOG_BY_ID } from "../phonology/catalog";
 import { phonotacticScore } from "../phonology/phonotactics";
 import { effectiveTier } from "../defaults";
 import { setLexiconForm } from "../lexicon/mutate";
+import { syncWordsAfterPhonology } from "../lexicon/word";
 import { pushEvent } from "./helpers";
 
 /**
@@ -164,17 +165,14 @@ export function stepInventoryManagement(
 ): void {
   runPhonotacticRepair(lang, rng, generation);
   runHomeostasis(lang, rng, generation);
-  // Phase 29 Tranche 7b OPEN ISSUE: prunePhonemes writes lang.lexicon
-  // directly (per-meaning setLexiconForm is O(N×W) — see commit notes).
-  // A single end-of-step `syncWordsAfterPhonology(lang, generation)`
-  // call here was tried and tanked the 200-gen English convergence
-  // test from 80s → 11+ minutes (CPU-bound, killed). Root cause is
-  // unidentified — even at 200 syncs × O(W=600), the budget is < 5s,
-  // so something feeds back into either lang.words explosion or
-  // repeated normalisation. Property test now ONLY asserts post-coinage
-  // sync (genesis chokepoint) and start-of-sim agreement; mid-gen
-  // desyncs from prunePhonemes' direct lexicon writes are tolerated
-  // until the perf root-cause is found. See plan Tranche 7b notes.
+  // Phase 29 Tranche 7b: prunePhonemes mutates lang.lexicon directly
+  // (a per-meaning setLexiconForm makes prunePhonemes O(N×W)). A
+  // single end-of-step syncWordsAfterPhonology call amortises the
+  // catch-up. Pre-fix this caused an infinite loop in
+  // applyOneRegularChange (regular.ts safety bound `< form.length`
+  // grew with the form for any insertion-style rule). Now bounded by
+  // MAX_PER_MEANING_PASSES.
+  if (lang.words) syncWordsAfterPhonology(lang, generation);
 }
 
 // Back-compat exports for tests that referenced the pre-28a entry

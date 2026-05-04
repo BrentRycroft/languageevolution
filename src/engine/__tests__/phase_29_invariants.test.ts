@@ -124,23 +124,48 @@ describe("Phase 29 Tranche 7b — cross-system invariants", () => {
     );
   });
 
-  // Phase 29 Tranche 7b OPEN: full lexicon ↔ words agreement after a
-  // 30-gen run is currently NOT enforced. Direct lang.lexicon writes in
-  // prunePhonemes (and the regular-change path in stepPhonology) bypass
-  // the chokepoint for performance reasons (a per-step
-  // syncWordsAfterPhonology call tanks the convergence test from 80s →
-  // 11+ minutes; root cause is open). Until that's resolved, we
-  // tolerate mid-gen desync and only assert that the sync invariants
-  // hold for fresh languages and through the chokepoint helpers (the
-  // setLexiconForm / deleteMeaning property tests above already prove
-  // this).
-
   it("a fresh language built from a preset has lexicon ↔ words in agreement", () => {
     for (const buildPreset of [presetEnglish, presetTokipona, presetBantu]) {
       const sim = createSimulation(buildPreset());
       const root = sim.getState().tree[sim.getState().rootId]!.language;
       const check = lexiconAgreesWithWords(root);
       expect(check.ok, check.ok ? "" : `${root.name}: ${check.reason}`).toBe(true);
+    }
+  });
+
+  // Phase 29 Tranche 7b: previously OPEN (mid-gen desync from
+  // prunePhonemes' direct lexicon writes). Closed by adding an
+  // end-of-step syncWordsAfterPhonology in stepInventoryManagement.
+  // Re-enabling the assertion required also bounding
+  // applyOneRegularChange's per-meaning safety loop (was
+  // `safety < form.length`, which grew with the form when an
+  // insertion-style rule fired and looped infinitely under certain
+  // late-generation states).
+
+  it("a 30-gen English run leaves every leaf's lexicon ↔ words in agreement", () => {
+    const { langs } = aliveLeavesOf(presetEnglish);
+    expect(langs.length).toBeGreaterThan(0);
+    for (const lang of langs) {
+      const check = lexiconAgreesWithWords(lang);
+      expect(check.ok, check.ok ? "" : `${lang.name}: ${check.reason}`).toBe(true);
+    }
+  });
+
+  it("a 30-gen Tokipona run leaves every leaf's lexicon ↔ words in agreement", () => {
+    const { langs } = aliveLeavesOf(presetTokipona);
+    expect(langs.length).toBeGreaterThan(0);
+    for (const lang of langs) {
+      const check = lexiconAgreesWithWords(lang);
+      expect(check.ok, check.ok ? "" : `${lang.name}: ${check.reason}`).toBe(true);
+    }
+  });
+
+  it("a 30-gen Bantu run leaves every leaf's lexicon ↔ words in agreement", () => {
+    const { langs } = aliveLeavesOf(presetBantu);
+    expect(langs.length).toBeGreaterThan(0);
+    for (const lang of langs) {
+      const check = lexiconAgreesWithWords(lang);
+      expect(check.ok, check.ok ? "" : `${lang.name}: ${check.reason}`).toBe(true);
     }
   });
 
