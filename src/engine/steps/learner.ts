@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { recordInnovation } from "../lexicon/socialContagion";
 import { isFormLegal } from "../phonology/wordShape";
+import { setLexiconForm } from "../lexicon/mutate";
 import { isVowel, isConsonant } from "../phonology/ipa";
 import { featuresOf } from "../phonology/features";
 
@@ -84,7 +85,8 @@ export function stepLearner(
       const next: WordForm = form.map((p) => (p === reduction.phoneme ? reduction.replacement : p));
       if (!isFormLegal(m, next)) continue;
       recordInnovation(lang, m, form, next, generation, "learner");
-      lang.lexicon[m] = next;
+      // Phase 29 Tranche 1 round 2: route through chokepoint.
+      setLexiconForm(lang, m, next, { bornGeneration: generation, origin: "learner-markedness" });
       lang.lastChangeGeneration[m] = generation;
       mutated++;
     }
@@ -111,7 +113,8 @@ export function stepLearner(
       if (!isFormLegal(m, simplified)) continue;
       if (rng.chance(0.4)) {
         recordInnovation(lang, m, form, simplified, generation, "learner");
-        lang.lexicon[m] = simplified;
+        // Phase 29 Tranche 1 round 2: route through chokepoint.
+        setLexiconForm(lang, m, simplified, { bornGeneration: generation, origin: "learner-coda-simplification" });
         lang.lastChangeGeneration[m] = generation;
         codaSimplifications++;
         if (codaSimplifications >= 3) break;

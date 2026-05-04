@@ -4,6 +4,7 @@ import { prunePhonemes } from "../phonology/pruning";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { phonotacticScore } from "../phonology/phonotactics";
 import { effectiveTier } from "../defaults";
+import { setLexiconForm } from "../lexicon/mutate";
 import { pushEvent } from "./helpers";
 
 /**
@@ -103,7 +104,8 @@ function runPhonotacticRepair(
       if (repaired === form || repaired.length === form.length) continue;
       const after = phonotacticScore(repaired, profile);
       if (after - before < REPAIR_MIN_IMPROVEMENT) continue;
-      lang.lexicon[meaning] = repaired;
+      // Phase 29 Tranche 1 round 2: route through chokepoint.
+      setLexiconForm(lang, meaning, repaired, { bornGeneration: generation, origin: "phonotactic-repair" });
       pushEvent(lang, {
         generation,
         kind: "sound_change",

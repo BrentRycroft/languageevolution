@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { setLexiconForm } from "./mutate";
 
 const NEW_VARIANT_FRACTION = 0.05;
 const CONTAGION_RATE = 0.18;
@@ -162,7 +163,8 @@ export function stepSocialContagion(
         finalAdoption: topFrac,
         innovator: top.innovator,
       });
-      lang.lexicon[m] = top.form.slice();
+      // Phase 29 Tranche 1 round 2: route through chokepoint.
+      setLexiconForm(lang, m, top.form.slice(), { bornGeneration: generation, origin: `social-contagion:${top.innovator ?? "anon"}` });
     }
 
     const survivors = list.filter((v) => (v.adoptionFraction ?? 0) >= 0.02);

@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { setLexiconForm } from "./mutate";
 
 /**
  * Helpers for managing alternative forms (synonyms / lexical doublets) on a
@@ -88,7 +89,8 @@ export function promoteAltOnPrimaryLoss(lang: Language, meaning: Meaning): WordF
   const alts = lang.altForms?.[meaning];
   if (!alts || alts.length === 0) return null;
   const promoted = alts.shift()!;
-  lang.lexicon[meaning] = promoted;
+  // Phase 29 Tranche 1 round 2: route through chokepoint.
+  setLexiconForm(lang, meaning, promoted, { bornGeneration: 0, origin: "altform-promoted" });
   const regs = lang.altRegister?.[meaning];
   if (regs) regs.shift();
   if (alts.length === 0) {
