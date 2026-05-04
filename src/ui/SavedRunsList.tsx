@@ -76,8 +76,51 @@ export function SavedRunsList() {
     refresh();
   };
 
+  // Phase 29 Tranche 8f: drag-and-drop a saved-run JSON onto the
+  // panel to import. Wires through the same validation + migration
+  // path as the Import… button.
+  const [isDragOver, setIsDragOver] = useState(false);
+  const onDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes("Files")) setIsDragOver(true);
+  };
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  const onDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget === e.target) setIsDragOver(false);
+  };
+  const onDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const imported = importAndSaveRun(text);
+    if (!imported) {
+      await showConfirm({
+        title: "Import failed",
+        message:
+          "The dropped file isn't a valid saved-run JSON or it failed schema migration.",
+        confirmLabel: "OK",
+      });
+      return;
+    }
+    refresh();
+  };
+
   return (
-    <div>
+    <div
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      style={{
+        outline: isDragOver ? "2px dashed var(--accent)" : "none",
+        outlineOffset: 4,
+        borderRadius: 6,
+      }}
+    >
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         <button onClick={onSaveReplayable} title="Save config + gen count (replays from seed)">
           Save replayable
@@ -90,7 +133,7 @@ export function SavedRunsList() {
         </button>
         <button
           onClick={onImportClick}
-          title="Import a previously exported run JSON"
+          title="Import a previously exported run JSON (or drag-drop a file onto this panel)"
         >
           Import…
         </button>

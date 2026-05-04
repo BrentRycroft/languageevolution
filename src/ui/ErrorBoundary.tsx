@@ -51,9 +51,24 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.error.message}
             {this.state.error.stack ? `\n\n${this.state.error.stack}` : ""}
           </pre>
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
             <button className="primary" onClick={this.reset}>
               Try again
+            </button>
+            <button
+              onClick={() => {
+                const text = `${this.state.error!.message}\n\n${
+                  this.state.error!.stack ?? ""
+                }`;
+                if (typeof navigator !== "undefined" && navigator.clipboard) {
+                  navigator.clipboard.writeText(text).catch((e) => {
+                    console.warn("clipboard write failed", e);
+                  });
+                }
+              }}
+              title="Copy error message + stack trace to clipboard"
+            >
+              Copy error
             </button>
             <button
               onClick={() => {

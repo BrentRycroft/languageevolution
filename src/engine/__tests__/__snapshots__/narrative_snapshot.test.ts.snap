@@ -1,0 +1,88 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset translator output (30 gens) is stable 1`] = `
+{
+  "generation": 30,
+  "outputs": [
+    {
+      "english": "the king sees the wolf",
+      "target": "ðə˧˥ gi˥g fiːj ðə˧˥ wulh",
+    },
+    {
+      "english": "the dogs see the wolves",
+      "target": "ðə˧˥ kʌ˧gs fiː ðə˧˥ wulhs",
+    },
+    {
+      "english": "i give you the bread",
+      "target": "a˥w gi˥f vu",
+    },
+    {
+      "english": "the king walks at the river",
+      "target": "ðə˧˥ gi˥g wʌ˧gj a˥k ðə˧˥ ri˥fə˧˥r",
+    },
+    {
+      "english": "the king does not see the wolf",
+      "target": "ðə˧˥ gi˥g na˥k fiːj ðə˧˥ wulh",
+    },
+  ],
+  "preset": "english",
+}
+`;
+
+exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset translator output (30 gens) is stable 1`] = `
+{
+  "generation": 30,
+  "outputs": [
+    {
+      "english": "the king sees the wolf",
+      "target": "iləlu bege viːbebeʔt iləlu bu˩˧˥˩pu˩˧˥˩um",
+    },
+    {
+      "english": "the dogs see the wolves",
+      "target": "iləlu gaːdei viːbebent iləlu bu˩˧˥˩pu˩˧˥˩ium",
+    },
+    {
+      "english": "i give you the bread",
+      "target": "egō baːbeo ʈuːum",
+    },
+    {
+      "english": "the king walks at the river",
+      "target": "iləlu bege aːbbu˩˧˥˩baːbeʔt iləlu vbu˩˧˥˩be",
+    },
+    {
+      "english": "the king does not see the wolf",
+      "target": "iləlu bege noː viːbebeʔt iləlu bu˩˧˥˩pu˩˧˥˩um",
+    },
+  ],
+  "preset": "romance",
+}
+`;
+
+exports[`Phase 29 Tranche 7c — narrative snapshot stability > Toki Pona preset translator output (30 gens) is stable 1`] = `
+{
+  "generation": 30,
+  "outputs": [
+    {
+      "english": "the king sees the wolf",
+      "target": "fiji fuːjili lupin",
+    },
+    {
+      "english": "the dogs see the wolves",
+      "target": "fuːjili fuːjili lupin",
+    },
+    {
+      "english": "i give you the bread",
+      "target": "mi fin pəːnəː",
+    },
+    {
+      "english": "the king walks at the river",
+      "target": "fiji fahi liluː ləːjəː",
+    },
+    {
+      "english": "the king does not see the wolf",
+      "target": "fiji fuːjili ələ lupin",
+    },
+  ],
+  "preset": "tokipona",
+}
+`;
