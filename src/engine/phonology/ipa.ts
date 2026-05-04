@@ -52,12 +52,27 @@ export function isVowel(p: Phoneme): boolean {
   if (p.endsWith("ː") && VOWELS.has(p.slice(0, -1))) {
     result = true;
   } else {
-    for (const m of TONE_MARKS_VOWEL) {
-      if (p.endsWith(m)) {
-        const base = p.slice(0, -m.length);
-        if (VOWELS.has(base)) { result = true; break; }
-        if (base.endsWith("ː") && VOWELS.has(base.slice(0, -1))) { result = true; break; }
+    // Phase 29: strip stacked tone marks recursively. The
+    // tone-spread step can re-tag an already-toned vowel, leaving
+    // forms like /i˧˥˩˧˥˩/. The previous one-strip loop bottomed
+    // out at /i˧˥˩/ → not in VOWELS and bailed.
+    let base = p;
+    let stripped = false;
+    while (true) {
+      let advanced = false;
+      for (const m of TONE_MARKS_VOWEL) {
+        if (base.endsWith(m)) {
+          base = base.slice(0, -m.length);
+          stripped = true;
+          advanced = true;
+          break;
+        }
       }
+      if (!advanced) break;
+    }
+    if (stripped) {
+      if (VOWELS.has(base)) result = true;
+      else if (base.endsWith("ː") && VOWELS.has(base.slice(0, -1))) result = true;
     }
   }
   IS_VOWEL_CACHE[p] = result;
