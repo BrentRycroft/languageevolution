@@ -79,6 +79,8 @@ export default defineConfig(({ command }) => ({
             "**/divergence_regression.test.ts",
             "**/integration_e2e.test.ts",
             "**/sprint4_realism_polish.test.ts",
+            "**/rate_calibration.test.ts",
+            "**/genesis_mechanisms.test.ts",
           ]),
     ],
   },

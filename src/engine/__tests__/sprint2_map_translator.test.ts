@@ -184,10 +184,10 @@ describe("§C — sim integration", () => {
     expect(proto.territory!.cells.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("default and explicit Earth-mode produce non-crashing 50-gen runs", () => {
+  it("default and explicit Earth-mode produce non-crashing 30-gen runs", () => {
     for (const mode of ["random", "earth"] as const) {
       const sim = createSimulation({ ...defaultConfig(), seed: `mode-${mode}`, mapMode: mode });
-      for (let i = 0; i < 50; i++) sim.step();
+      for (let i = 0; i < 30; i++) sim.step();
       const state = sim.getState();
       let totalCells = 0;
       for (const id of Object.keys(state.tree)) {

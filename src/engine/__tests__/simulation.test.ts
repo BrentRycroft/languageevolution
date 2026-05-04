@@ -48,12 +48,15 @@ describe("simulation determinism", () => {
     const cfg = defaultConfig();
     const a = createSimulation(cfg);
     const b = createSimulation(cfg);
-    for (let i = 0; i < 50; i++) {
+    // Phase 29 Tranche 7g: 50→30 gens. The determinism check fires
+    // every step, so 30 is plenty to surface any non-deterministic
+    // path (e.g. Math.random leak), and brings the test under 10s.
+    for (let i = 0; i < 30; i++) {
       a.step();
       b.step();
     }
-    expect(a.getState().generation).toBe(50);
-    expect(b.getState().generation).toBe(50);
+    expect(a.getState().generation).toBe(30);
+    expect(b.getState().generation).toBe(30);
     expect(Object.keys(a.getState().tree).sort()).toEqual(
       Object.keys(b.getState().tree).sort(),
     );

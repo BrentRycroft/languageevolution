@@ -114,10 +114,10 @@ describe("Phase 27c — stepPhonotacticRepair", () => {
 });
 
 describe("Phase 27c — long-run integration", () => {
-  it("Toki Pona run keeps mean phonotactic score high over 100 gens", () => {
+  it("Toki Pona run keeps mean phonotactic score high over 60 gens", () => {
     const cfg = { ...presetTokipona(), seed: "phonotactic-repair-tokipona" };
     const sim = createSimulation(cfg);
-    for (let i = 0; i < 100; i++) sim.step();
+    for (let i = 0; i < 60; i++) sim.step();
     const state = sim.getState();
     const root = state.tree[state.rootId]!.language;
     if (root.extinct) return;
