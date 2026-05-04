@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { isFormLegal } from "../phonology/wordShape";
 import { recordOneSidedColexification } from "./colexification";
+import { deleteMeaning } from "../lexicon/mutate";
 
 export type RecarveEventKind = "merge" | "split";
 
@@ -50,12 +51,8 @@ function tryMerge(lang: Language, rng: Rng): RecarveEvent | null {
   const fb = lang.wordFrequencyHints[b] ?? 0.4;
   const winner = fa > fb ? a : fa < fb ? b : a < b ? a : b;
   const loser = winner === a ? b : a;
-  delete lang.lexicon[loser];
-  delete lang.wordFrequencyHints[loser];
-  delete lang.wordOrigin[loser];
-  delete lang.localNeighbors[loser];
-  delete lang.lastChangeGeneration[loser];
-  if (lang.registerOf) delete lang.registerOf[loser];
+  // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
+  deleteMeaning(lang, loser);
   if (lang.suppletion) delete lang.suppletion[loser];
   recordOneSidedColexification(lang, winner, loser);
   return { kind: "merge", winner, loser };
@@ -83,12 +80,8 @@ export function applyKinshipSimplification(
     const fb = lang.wordFrequencyHints[b] ?? 0.4;
     const winner = fa >= fb ? a : b;
     const loser = winner === a ? b : a;
-    delete lang.lexicon[loser];
-    delete lang.wordFrequencyHints[loser];
-    delete lang.wordOrigin[loser];
-    delete lang.localNeighbors[loser];
-    delete lang.lastChangeGeneration[loser];
-    if (lang.registerOf) delete lang.registerOf[loser];
+    // Phase 29 Tranche 1a: route through chokepoint.
+    deleteMeaning(lang, loser);
     if (lang.suppletion) delete lang.suppletion[loser];
     recordOneSidedColexification(lang, winner, loser);
     out.push({ kind: "merge", winner, loser });

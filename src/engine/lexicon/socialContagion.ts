@@ -98,7 +98,7 @@ export function stepSocialContagion(
   if (!lang.variants) return [];
   const actuations: SociolinguisticActuation[] = [];
   const clustering = lang.socialNetworkClustering ?? 0.7;
-  const speakerN = Math.max(50, lang.speakerCount ?? lang.speakers ?? 1000);
+  const speakerN = Math.max(50, lang.speakers ?? 1000);
   const noiseScale = SOCIAL_NOISE_RANGE / Math.sqrt(speakerN / 1000);
 
   for (const m of Object.keys(lang.variants)) {

@@ -17,7 +17,7 @@ import { syncWordsFromLexicon } from "../engine/lexicon/word";
  * get default values without needing an explicit migration. Migrations
  * therefore only need to handle field renames, type changes, or removals.
  */
-export const LATEST_SAVE_VERSION = 6;
+export const LATEST_SAVE_VERSION = 7;
 
 type RawObj = Record<string, unknown>;
 
@@ -54,6 +54,27 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
       }
     }
     return { ...raw, version: 6 };
+  },
+  // Phase 29 Tranche 1b: drop the duplicate `Language.speakerCount` field.
+  // Pre-v7 saves carrying speakerCount get its value copied into
+  // `speakers` if speakers is undefined, then speakerCount is removed.
+  6: (raw) => {
+    const snapshot = raw.stateSnapshot as RawObj | undefined;
+    if (snapshot && snapshot.tree && typeof snapshot.tree === "object") {
+      const tree = snapshot.tree as Record<string, RawObj>;
+      for (const node of Object.values(tree)) {
+        const langRaw = node.language as RawObj | undefined;
+        if (!langRaw) continue;
+        if (
+          typeof langRaw.speakerCount === "number" &&
+          typeof langRaw.speakers !== "number"
+        ) {
+          langRaw.speakers = langRaw.speakerCount;
+        }
+        delete langRaw.speakerCount;
+      }
+    }
+    return { ...raw, version: 7 };
   },
 };
 

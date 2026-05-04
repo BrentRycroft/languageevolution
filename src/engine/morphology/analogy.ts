@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { clusterOf, relatedMeanings } from "../semantics/clusters";
 import { isFormLegal } from "../phonology/wordShape";
 import { isClosedClass, posOf } from "../lexicon/pos";
+import { setLexiconForm } from "../lexicon/mutate";
 
 export interface AnalogyEvent {
   meaning: string;
@@ -60,7 +61,8 @@ export function maybeAnalogicalLevel(
     next = [...chosen.form.slice(0, middle + 1), pad, ...chosen.form.slice(middle + 1)];
   }
   if (!isFormLegal(chosen.meaning, next)) return null;
-  lang.lexicon[chosen.meaning] = next;
+  // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
+  setLexiconForm(lang, chosen.meaning, next, { bornGeneration: 0, origin: "analogy" });
   return {
     meaning: chosen.meaning,
     from: chosen.form.join(""),

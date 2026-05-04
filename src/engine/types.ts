@@ -295,7 +295,6 @@ export interface Language {
   recentLoanGens?: number[];
   variants?: Record<Meaning, FormVariant[]>;
   bilingualLinks?: Record<string, number>;
-  speakerCount?: number;
   socialNetworkClustering?: number;
   /**
    * Phase 21: form-centric primary lexicon. Each entry binds one phonemic
@@ -516,7 +515,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 6;
+  version: 7;
   id: string;
   label: string;
   createdAt: number;

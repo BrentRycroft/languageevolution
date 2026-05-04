@@ -3,6 +3,7 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargets } from "../semantics/grammaticalization";
 import { posOf, isClosedClass } from "../lexicon/pos";
+import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { harmonizeAffix } from "./harmony";
 import { genderOf } from "./gender";
 
@@ -78,12 +79,10 @@ export function maybeGrammaticalize(
   };
   lang.morphology.paradigms[chosen.target] = pdm;
   const candidate = chosen.meaning;
-  delete lang.lexicon[candidate];
-  delete lang.wordFrequencyHints[candidate];
-  delete lang.wordOrigin[candidate];
-  delete lang.localNeighbors[candidate];
-  delete lang.lastChangeGeneration[candidate];
-  if (lang.registerOf) delete lang.registerOf[candidate];
+  // Phase 29 Tranche 1a: route through the lexicon mutation chokepoint
+  // so lang.words stays in sync (grammaticalisation removes the source
+  // meaning entirely; pre-1a the manual teardown left a stale word).
+  deleteMeaning(lang, candidate);
   return {
     kind: "grammaticalization",
     description: `"${candidate}" (${chosen.tag}) → ${chosen.target} ${pdm.position} /${chosen.form.join("")}/`,
@@ -119,7 +118,8 @@ export function maybeCliticize(
   const chosen = candidates[rng.int(candidates.length)]!;
   const next = chosen.form.slice(0, -1);
   if (next.length < 2) return null;
-  lang.lexicon[chosen.m] = next;
+  // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
+  setLexiconForm(lang, chosen.m, next, { bornGeneration: 0, origin: `clitic:${chosen.tag}` });
   lang.wordOrigin[chosen.m] = `clitic:${chosen.tag}`;
   lang.wordFrequencyHints[chosen.m] = 0.45;
   return {
