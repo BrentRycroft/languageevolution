@@ -259,15 +259,39 @@ const LEXICON: Lexicon = {
   by: ["p", "e", "r"],
 };
 
+// Phase 29 Tranche 5s: deepened from ~33 to ~80 entries to catch the
+// frequency-direction split (Phase 24c) for the Romance lexicon. Pre-
+// fix the bulk of meanings defaulted to 0.5 — no high/low signal —
+// so high-freq content words drifted at the same rate as rare ones,
+// muting Romance's actual diachrony (very-high-freq esse/ire/posse/
+// vidēre persist while mid-freq words erode).
 const FREQ: Record<Meaning, number> = {
-  water: 0.95, fire: 0.85, mother: 0.92, father: 0.92, child: 0.9,
-  go: 0.96, come: 0.95, eat: 0.95, drink: 0.94, see: 0.94,
-  one: 0.97, two: 0.94, three: 0.92, big: 0.9, small: 0.9,
-  i: 0.99, you: 0.99, we: 0.97, this: 0.96, that: 0.96,
-  be: 0.98, do: 0.95, make: 0.93, give: 0.92, take: 0.92,
-  day: 0.92, night: 0.92, sun: 0.88, moon: 0.85,
-  hand: 0.89, foot: 0.89, eye: 0.9, head: 0.85,
-  bread: 0.85, wine: 0.82,
+  // Pronouns + closed-class
+  i: 0.99, you: 0.99, we: 0.97, they: 0.95, he: 0.96, she: 0.96, it: 0.95,
+  this: 0.96, that: 0.96, here: 0.92, there: 0.92,
+  not: 0.97, and: 0.98, or: 0.93,
+  // Most-frequent verbs
+  be: 0.98, have: 0.97, do: 0.95, go: 0.96, come: 0.95,
+  see: 0.94, say: 0.94, know: 0.93, give: 0.92, take: 0.92,
+  make: 0.93, find: 0.88, want: 0.93, eat: 0.95, drink: 0.94,
+  walk: 0.85, run: 0.85, sit: 0.83, stand: 0.85, sleep: 0.88,
+  hear: 0.88, speak: 0.88, think: 0.9,
+  // Kinship + body — high persistence
+  mother: 0.92, father: 0.92, child: 0.9, brother: 0.85, sister: 0.85,
+  hand: 0.89, foot: 0.89, eye: 0.9, head: 0.85, mouth: 0.85,
+  ear: 0.83, nose: 0.83, heart: 0.85, blood: 0.85,
+  // Numerals
+  one: 0.97, two: 0.94, three: 0.92, four: 0.86, five: 0.86,
+  // Very common nouns
+  water: 0.95, fire: 0.85, day: 0.92, night: 0.92, sun: 0.88, moon: 0.85,
+  earth: 0.84, sky: 0.84, star: 0.78, tree: 0.83, stone: 0.83,
+  bread: 0.85, wine: 0.82, food: 0.85, house: 0.88, road: 0.78,
+  // Adjectives
+  big: 0.9, small: 0.9, good: 0.92, bad: 0.85, new: 0.83, old: 0.83,
+  long: 0.78, short: 0.74, hot: 0.75, cold: 0.75,
+  // Mid-low frequency content words (will erode faster)
+  shoulder: 0.5, navel: 0.45, scale: 0.4, claw: 0.42, fin: 0.4,
+  thunder: 0.55, lightning: 0.5, hill: 0.5, valley: 0.5,
 };
 
 const MORPHOLOGY: Morphology = {
@@ -344,10 +368,15 @@ export function presetRomance(): SimulationConfig {
       strictness: 0.7,
     },
     seedGrammar: {
+      // Phase 29 Tranche 5s: corrected adjectivePosition to "pre".
+      // The romance preset models Latin (proto, NOT Romance daughters);
+      // Latin was pre-attributive — "magna villa" not "villa magna".
+      // The post-position pattern emerged in Romance daughters and
+      // should fall out from grammar drift, not be seeded.
       wordOrder: "SVO",
       articlePresence: "free",
-      caseStrategy: "preposition",
-      adjectivePosition: "post",
+      caseStrategy: "case",
+      adjectivePosition: "pre",
       possessorPosition: "post",
     },
     preset: "romance",

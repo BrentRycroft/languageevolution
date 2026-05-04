@@ -47,6 +47,29 @@ const TimelineChart = lazy(() =>
   import("./TimelineChart").then((m) => ({ default: m.TimelineChart })),
 );
 
+/**
+ * Phase 29 Tranche 6c: surface the stepN abort flag as a visible
+ * button. Only renders while the abort flag is reset to false (i.e.
+ * a long stepN loop is potentially in flight). Pressing it sets the
+ * flag and the next gen-boundary in `stepN` breaks out.
+ */
+function CancelStepButton() {
+  const aborted = useSimStore((s) => s.stepAbortRequested);
+  const cancel = useSimStore((s) => s.cancelStep);
+  return (
+    <button
+      onClick={cancel}
+      disabled={aborted}
+      className="icon-only"
+      aria-label="Cancel fast-forward"
+      title="Cancel an in-flight fast-forward at the next generation boundary"
+      style={{ opacity: aborted ? 0.4 : 1 }}
+    >
+      ✕
+    </button>
+  );
+}
+
 function PanelSkeleton() {
   return (
     <div
@@ -195,6 +218,7 @@ export function App() {
           >
             <FastForwardIcon size={16} />
           </button>
+          <CancelStepButton />
           <button
             onClick={async () => {
               const ok = await showConfirm({

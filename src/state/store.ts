@@ -125,6 +125,13 @@ interface SimStore {
   lastAchievement: string | null;
   persistenceNotice: PersistenceNotice | null;
   confirmDialog: ConfirmRequest | null;
+  /**
+   * Phase 29 Tranche 6c: when a long stepN loop is in progress, the
+   * UI can set this flag to break out at the next gen boundary.
+   * Reset to false on the next step entry.
+   */
+  stepAbortRequested: boolean;
+  cancelStep: () => void;
   step: () => void;
   stepN: (n: number) => void;
   stepNAsync: (n: number) => Promise<void>;
@@ -324,6 +331,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
   lastAchievement: null,
   persistenceNotice: initial.loadFailure ?? null,
   confirmDialog: null,
+  stepAbortRequested: false,
+  cancelStep: () => set({ stepAbortRequested: true }),
   step: () => {
     const { sim, history, activityHistory, unlockedAchievements, config, selectedLangId } = get();
     sim.step();
@@ -351,7 +360,16 @@ export const useSimStore = create<SimStore>((set, get) => ({
   },
   stepN: (n) => {
     const s = get();
-    for (let i = 0; i < n; i++) s.step();
+    for (let i = 0; i < n; i++) {
+      // Phase 29 Tranche 6c (in-thread): honour an abort request set
+      // by `cancelStep`. Without this, a user pressing Cancel during
+      // a 1000-gen jump still has to wait for the loop to finish.
+      if (get().stepAbortRequested) {
+        set({ stepAbortRequested: false });
+        return;
+      }
+      s.step();
+    }
   },
   stepNAsync: async (n) => {
     const { config, sim, history, activityHistory } = get();

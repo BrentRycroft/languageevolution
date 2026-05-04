@@ -326,7 +326,6 @@ function TreeNodeHover({
       className="tree-node-hover"
       style={{ left, top }}
       role="tooltip"
-      aria-hidden="true"
     >
       <div className="tree-node-hover-header">
         <span className="tree-node-hover-name">{data.name}</span>

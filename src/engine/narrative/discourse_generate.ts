@@ -277,7 +277,13 @@ function generatePoetryStanza(
   rng: Rng,
   script: DisplayScript,
 ): DiscourseLine[] {
-  const candidatePoolSize = Math.max(8, lineCount * 3);
+  // Phase 29 Tranche 5i: enlarge the candidate pool so pickStanza
+  // has enough lines to actually satisfy the rhyme constraint.
+  // Pre-fix the 3×line pool meant a 4-line AABB stanza had ~12
+  // candidates and rarely found two pairs of rhymes — falling back
+  // to non-rhyming output. 8×line gives ~32 candidates which lifts
+  // the achieved-rhyme rate substantially.
+  const candidatePoolSize = Math.max(16, lineCount * 8);
   const candidates: import("./poetry").CandidateLine[] = [];
   for (let i = 0; i < candidatePoolSize; i++) {
     const baseTemplate = pickTemplate("poetry", ctx, rng);

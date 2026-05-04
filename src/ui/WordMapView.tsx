@@ -27,7 +27,14 @@ export function WordMapView() {
   const [sort, setSort] = useState<SortMode>("senses-desc");
   const [search, setSearch] = useState("");
 
-  const lang = selectedLangId ? state.tree[selectedLangId]?.language : undefined;
+  // Phase 29 Tranche 8b: empty-state polish. When no language is
+  // selected, default to the first alive leaf (or the root proto)
+  // rather than rendering an empty pane. Pre-fix users opening the
+  // tab from a fresh load saw "no language selected" with no hint.
+  const fallbackLangId = selectedLangId
+    ? selectedLangId
+    : aliveLeaves[0] ?? state.rootId;
+  const lang = state.tree[fallbackLangId]?.language;
   const words: Word[] = lang?.words ?? [];
 
   const filtered = useMemo(() => {
@@ -74,7 +81,7 @@ export function WordMapView() {
         <label style={{ display: "flex", gap: 4, alignItems: "center" }}>
           <span style={{ color: "var(--muted)" }}>Language:</span>
           <select
-            value={selectedLangId ?? ""}
+            value={selectedLangId ?? fallbackLangId ?? ""}
             onChange={(e) => selectLanguage(e.target.value || null)}
           >
             {aliveLeaves.map((id) => {
