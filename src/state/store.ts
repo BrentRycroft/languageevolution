@@ -576,26 +576,43 @@ export const useSimStore = create<SimStore>((set, get) => ({
     updateConfig({ ...config, seed: makeRandomSeed() });
   },
   applyRuleBiasToLanguage: (langId, bias) => {
+    // Phase 29 Tranche 6h: previously this routine mutated
+    // node.language in place and then called set() with a shallow-
+    // spread tree. React subscribers reading
+    // useSimStore(s => s.state.tree[id]?.language) never re-rendered
+    // because node.language's reference was unchanged. Now we clone
+    // the affected node + language so subscribers see the new
+    // ruleBias / activeRules / events array. The underlying engine
+    // sim.tree shares the same node object so subsequent step()s
+    // continue from the mutated state — only the outward-facing
+    // snapshot is a fresh reference.
     const { sim } = get();
     const state = sim.getState();
     const node = state.tree[langId];
     if (!node) return;
-    node.language.ruleBias = { ...(node.language.ruleBias ?? {}), ...bias };
+    const lang = node.language;
+    lang.ruleBias = { ...(lang.ruleBias ?? {}), ...bias };
     try {
       const rng = makeRng(state.rngState ^ fnv1aTinyHash(langId));
-      const rule = proposeOneRule(node.language, rng, state.generation);
+      const rule = proposeOneRule(lang, rng, state.generation);
       if (rule) {
-        node.language.activeRules = node.language.activeRules ?? [];
-        node.language.activeRules.push(rule);
-        node.language.events.push({
+        lang.activeRules = lang.activeRules ?? [];
+        lang.activeRules.push(rule);
+        lang.events.push({
           generation: state.generation,
           kind: "sound_change",
           description: `new sound law (bias): ${rule.description}`,
         });
       }
-    } catch {
+    } catch (e) {
+      console.warn("applyRuleBiasToLanguage: proposeOneRule failed", e);
     }
-    set({ state: { ...state, tree: { ...state.tree } } });
+    const refreshedNode = {
+      ...node,
+      language: { ...lang },
+    };
+    const tree = { ...state.tree, [langId]: refreshedNode };
+    set({ state: { ...state, tree } });
   },
   dismissAchievementToast: () => set({ lastAchievement: null }),
   dismissPersistenceNotice: () => set({ persistenceNotice: null }),

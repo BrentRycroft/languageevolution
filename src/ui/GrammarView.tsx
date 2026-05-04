@@ -41,6 +41,7 @@ export function GrammarView() {
           <InventoryDisplay lang={selected} />
           <ParadigmTable lang={selected} />
           <ProductiveDerivationalRules lang={selected} />
+          <GrammaticalisationTimeline lang={selected} />
         </>
       ) : (
         <div className="t-muted">Select a language to view grammar.</div>
@@ -145,6 +146,55 @@ function ParadigmTable({ lang }: { lang: import("../engine/types").Language }) {
           label="Other morphology"
           cats={otherCats}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Phase 29 Tranche 4f: condensed timeline of grammaticalisation +
+ * reanalysis events for the selected language. Surfaces what was
+ * previously buried in the global EventsLog with no per-language
+ * filter, so you can see at a glance which content words have been
+ * promoted to grammatical morphology over time.
+ */
+function GrammaticalisationTimeline({
+  lang,
+}: {
+  lang: import("../engine/types").Language;
+}) {
+  const events = (lang.events ?? []).filter(
+    (e) =>
+      e.kind === "grammaticalize" ||
+      e.kind === "grammar_shift" && e.description.startsWith("reanalysis"),
+  );
+  if (events.length === 0) return null;
+  const recent = events.slice(-10).reverse();
+  return (
+    <div style={{ marginTop: 12 }}>
+      <h4 style={{ marginBottom: 4 }}>Grammaticalisation timeline</h4>
+      <table className="paradigm-table" style={{ width: "100%", fontSize: 11 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "right", width: 50 }}>gen</th>
+            <th style={{ textAlign: "left" }}>event</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recent.map((e, i) => (
+            <tr key={`${e.generation}-${i}`}>
+              <td style={{ textAlign: "right", color: "var(--muted)" }}>
+                {e.generation}
+              </td>
+              <td>{e.description}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {events.length > recent.length && (
+        <div className="t-muted" style={{ fontSize: 10, marginTop: 4 }}>
+          showing {recent.length} of {events.length} — full list in Events tab
+        </div>
       )}
     </div>
   );
