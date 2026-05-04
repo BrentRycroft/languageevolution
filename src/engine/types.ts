@@ -303,6 +303,19 @@ export interface Language {
    */
   wordOrderLastFlipGen?: number;
   /**
+   * Phase 31 Tranche 31a: language-level tonal regime. Tone is
+   * essentially all-or-nothing per language: tonal languages (Mandarin,
+   * Yoruba, most Niger-Congo) tone every syllable; non-tonal languages
+   * (English, Spanish, Russian) have zero contrastive tone; pitch-
+   * accent languages mark one syllable per word. Pre-Phase-31 the
+   * simulator allowed per-word tone drift, producing inconsistent
+   * states like "32% of Bantu words are tonal, the other 68% are
+   * not." `refreshInventory` now classifies the language each gen
+   * based on coverage thresholds and `phonemeInventory.usesTones` is
+   * derived from this field.
+   */
+  toneRegime?: "non-tonal" | "tonal" | "pitch-accent";
+  /**
    * Generation deadline for the abstract-vocabulary catch-up window.
    * Set when a language crosses into tier 2 (literacy / abstract noun
    * morphology unlocks): the genesis driver bumps targetedDerivation
@@ -554,6 +567,12 @@ export interface SimulationConfig {
   seedInfinitiveStrategy?: NonNullable<Language["infinitiveStrategy"]>;
   /** Phase 27a: per-preset phonotactic profile. See Language.phonotacticProfile. */
   seedPhonotacticProfile?: NonNullable<Language["phonotacticProfile"]>;
+  /**
+   * Phase 31 Tranche 31d: declarative tonal regime. Determines
+   * whether the proto language is tonal at gen 0 and whether
+   * tonogenesis rules can fire during the run.
+   */
+  seedToneRegime?: NonNullable<Language["toneRegime"]>;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;

@@ -324,6 +324,11 @@ export function presetBantu(): SimulationConfig {
       adjectivePosition: "post",
       possessorPosition: "post",
     },
+    // Phase 31 Tranche 31d: Bantu is tonal — most Niger-Congo
+    // languages mark tone on every syllable. The proto-language
+    // begins tonal; non-tonal daughters can still emerge via
+    // detonogenesis if it pushes coverage below threshold.
+    seedToneRegime: "tonal",
     preset: "bantu",
   };
 }

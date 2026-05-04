@@ -12,35 +12,43 @@ export const FALLING = "˥˩";
 export const TONE_MARKS: ReadonlyArray<string> = [RISING, FALLING, HIGH, MID, LOW];
 
 /**
- * Phase 30 Tranche 30a: strip ALL trailing tone marks recursively. Pre-
- * Phase-30 this stripped only one tone, so a stacked-tone segment like
- * `e˥˧˥˧˥` returned `e˥˧˥˧` (only RISING removed) and the inventory
- * sweep then counted the partially-stripped form as a "phoneme."
- * Recursive stripping makes the inventory faithful to the segment's
- * actual phonemic identity.
+ * Phase 30 Tranche 30a + Phase 31 Tranche 31a: strip ALL tone marks
+ * regardless of position in the segment string. Pre-Phase-31 only
+ * trailing tones were stripped, so an interleaved segment like
+ * `eː˧ː` (long-e + mid-tone + length) survived because `ː` is at the
+ * rightmost position and isn't a tone. This produced phantom
+ * inventory entries where the same phoneme appeared as e/eː/eː˧/eː˧ː
+ * etc. Now stripTone removes every tone token anywhere in the
+ * string, returning the pure base+length segment.
  */
 export function stripTone(p: Phoneme): Phoneme {
   let out = p;
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const m of TONE_MARKS) {
-      if (out.endsWith(m)) {
-        out = out.slice(0, -m.length);
-        changed = true;
-        break;
-      }
+  for (const m of TONE_MARKS) {
+    while (true) {
+      const idx = out.indexOf(m);
+      if (idx === -1) break;
+      out = out.slice(0, idx) + out.slice(idx + m.length);
     }
   }
   return out;
 }
 
 /**
- * Returns the rightmost tone mark on a phoneme, or null. (Same shape
- * as before Phase 30 — only `stripTone` got the recursive upgrade.)
+ * Returns the rightmost tone mark on a phoneme, or null. Pre-Phase-31
+ * this only checked endsWith; Phase 31 also detects tones embedded
+ * before secondary diacritics (length, nasalisation) like the `˧` in
+ * `eː˧ː`.
  */
 export function toneOf(p: Phoneme): string | null {
   for (const m of TONE_MARKS) if (p.endsWith(m)) return m;
+  // Phase 31 Tranche 31a: scan for embedded tone (rule applications
+  // can leave tones before secondary diacritics — `eː˧ː`, `e˧̃`).
+  // Return the LAST one found in the string so toneOf agrees with
+  // "this segment is tone-bearing."
+  for (const m of TONE_MARKS) {
+    const idx = p.lastIndexOf(m);
+    if (idx >= 0) return m;
+  }
   return null;
 }
 

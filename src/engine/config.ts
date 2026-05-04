@@ -83,5 +83,8 @@ export function defaultConfig(): SimulationConfig {
     seedLexicon: DEFAULT_LEXICON,
     seedFrequencyHints: DEFAULT_FREQUENCY_HINTS,
     seedMorphology: DEFAULT_MORPHOLOGY,
+    // Phase 31 Tranche 31d: default preset is non-tonal. Presets that
+    // override (e.g., bantu) declare their own seedToneRegime.
+    seedToneRegime: "non-tonal",
   };
 }
