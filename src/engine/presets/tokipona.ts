@@ -134,10 +134,22 @@ const LEXICON: Lexicon = {
   become: ["k", "a", "m", "a"],
 };
 
+// Phase 29 Tranche 5s: deepened Toki Pona frequency hints. Toki
+// Pona's "core" lexicon is ~120 words so a high fraction of the
+// lexicon is always high-frequency by design.
 const FREQ: Record<Meaning, number> = {
-  i: 0.98, you: 0.98, good: 0.95, bad: 0.9,
-  water: 0.9, fire: 0.85, eat: 0.9, see: 0.9,
-  big: 0.85, small: 0.85, speak: 0.9,
+  i: 0.98, you: 0.98, we: 0.95, this: 0.95, that: 0.95,
+  not: 0.95, and: 0.95, or: 0.9,
+  be: 0.95, have: 0.9, go: 0.95, come: 0.92, see: 0.9, say: 0.9,
+  know: 0.88, give: 0.85, take: 0.85, eat: 0.9, drink: 0.88,
+  speak: 0.9, hear: 0.85, sleep: 0.82, walk: 0.8,
+  good: 0.95, bad: 0.9, big: 0.85, small: 0.85, new: 0.78, old: 0.78,
+  mother: 0.88, father: 0.88, child: 0.85,
+  hand: 0.83, foot: 0.83, eye: 0.85, head: 0.82, mouth: 0.82,
+  one: 0.95, two: 0.92,
+  water: 0.9, fire: 0.85, sun: 0.85, moon: 0.8,
+  earth: 0.78, sky: 0.78, tree: 0.8, stone: 0.78,
+  day: 0.85, night: 0.85,
 };
 
 const MORPHOLOGY: Morphology = { paradigms: {} };
@@ -189,4 +201,9 @@ export function presetTokipona(): SimulationConfig {
   };
 }
 
-export { RULE_BIAS as TOKIPONA_RULE_BIAS };
+// Phase 29 Tranche 9h: TOKIPONA_RULE_BIAS export removed — it was
+// never consumed (no config path took it as input). The values lived
+// on as a stranded module export. If a future preset wants to tune
+// per-family rule weights at language birth, plumb `seedRuleBias` /
+// `lang.ruleBias` through SimulationConfig and re-introduce.
+void RULE_BIAS;

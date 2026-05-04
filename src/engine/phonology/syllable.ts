@@ -55,11 +55,38 @@ function sonorityOf(p: Phoneme): number {
   return 0;
 }
 
+// Phase 29 Tranche 5q: per-language licit-cluster overrides. The
+// English-only s+stop exception was inadequate for Slavic /sm-/, /vz-/,
+// Greek /pn-/, /pt-/, Tibeto-Burman /sl-/, /sn-/, etc. Rather than
+// hard-code dozens of exceptions, declare cluster patterns that bypass
+// the sonority-rise requirement when the cluster has cross-linguistic
+// precedent. Forms can match by (a, b) prefix pair.
+const SONORITY_VIOLATION_EXCEPTIONS: ReadonlyArray<readonly [string, string]> = [
+  // s + stop (English, German, Greek, Slavic, Romance)
+  ["s", "p"], ["s", "t"], ["s", "k"],
+  // s + nasal (Slavic /sm-/, /sn-/, Greek /sm-/, /sn-/)
+  ["s", "m"], ["s", "n"],
+  // s + lateral (Tibeto-Burman /sl-/, English "slow")
+  ["s", "l"],
+  // s + glide (Slavic /sv-/-style mapped to /sw/, Russian /sv-/)
+  ["s", "w"], ["s", "j"],
+  // Greek-style stop + nasal (/pn-/, /kn-/, /tn-/). Keep stop+stop
+  // out — those break the existing "apti → ap.ti" split rule and
+  // aren't licit onsets in the languages we model.
+  ["p", "n"], ["k", "n"], ["t", "n"],
+  // Voiced fricative + sonorant clusters (Slavic /vz-/, /vj-/)
+  ["v", "z"], ["v", "j"], ["z", "v"],
+];
+
 function legalOnset(form: WordForm, start: number, nucleus: number): boolean {
   for (let k = start; k < nucleus - 1; k++) {
     const a = form[k]!;
     const b = form[k + 1]!;
-    if (a === "s" && (b === "p" || b === "t" || b === "k")) continue;
+    let isException = false;
+    for (const [ea, eb] of SONORITY_VIOLATION_EXCEPTIONS) {
+      if (a === ea && b === eb) { isException = true; break; }
+    }
+    if (isException) continue;
     if (sonorityOf(a) >= sonorityOf(b)) return false;
   }
   return true;

@@ -382,15 +382,24 @@ const LEXICON: Lexicon = {
   by: ["h₁", "e", "p", "i"],
 };
 
+// Phase 29 Tranche 5s: deepened PIE frequency hints.
 const FREQ: Record<Meaning, number> = {
-  water: 0.95, fire: 0.85, mother: 0.95, father: 0.95, child: 0.9,
-  eye: 0.9, foot: 0.9, hand: 0.9, heart: 0.85, head: 0.85,
-  go: 0.97, come: 0.96, eat: 0.95, drink: 0.94, see: 0.95, hear: 0.92,
-  one: 0.98, two: 0.96, three: 0.94, big: 0.9, small: 0.9,
-  i: 0.99, you: 0.99, we: 0.97, this: 0.96, that: 0.96,
-  be: 0.99, do: 0.97, make: 0.94, give: 0.93, take: 0.93,
-  day: 0.93, night: 0.93, sun: 0.9, moon: 0.85,
-  good: 0.92, bad: 0.9, new: 0.85, old: 0.85,
+  i: 0.99, you: 0.99, we: 0.97, they: 0.95, he: 0.96, she: 0.96, it: 0.95,
+  this: 0.96, that: 0.96, here: 0.92, there: 0.92,
+  not: 0.97, and: 0.98, or: 0.92,
+  be: 0.99, have: 0.96, do: 0.97, go: 0.97, come: 0.96,
+  see: 0.95, say: 0.93, know: 0.92, give: 0.93, take: 0.93,
+  make: 0.94, want: 0.92, eat: 0.95, drink: 0.94, sleep: 0.88,
+  walk: 0.85, run: 0.85, hear: 0.92, speak: 0.88, think: 0.88,
+  mother: 0.95, father: 0.95, child: 0.9, brother: 0.85, sister: 0.85,
+  daughter: 0.85, son: 0.85,
+  hand: 0.9, foot: 0.9, eye: 0.9, head: 0.85, mouth: 0.83,
+  ear: 0.82, heart: 0.85, blood: 0.85,
+  one: 0.98, two: 0.96, three: 0.94, four: 0.86, five: 0.86,
+  water: 0.95, fire: 0.85, day: 0.93, night: 0.93, sun: 0.9, moon: 0.85,
+  earth: 0.86, sky: 0.84, star: 0.78, tree: 0.82, stone: 0.82,
+  big: 0.9, small: 0.9, good: 0.92, bad: 0.9, new: 0.85, old: 0.85,
+  thunder: 0.55, lightning: 0.5, hill: 0.5, shoulder: 0.5,
 };
 
 const LEXICAL_STRESS: Record<Meaning, number> = {

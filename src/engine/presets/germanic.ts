@@ -257,14 +257,29 @@ const LEXICON: Lexicon = {
   by: ["b", "i"],
 };
 
+// Phase 29 Tranche 5s: deepened Germanic frequency hints.
 const FREQ: Record<Meaning, number> = {
-  water: 0.95, fire: 0.85, mother: 0.92, father: 0.92, child: 0.9,
-  go: 0.96, come: 0.95, eat: 0.95, drink: 0.92, see: 0.94,
-  one: 0.97, two: 0.94, three: 0.92, big: 0.9, small: 0.9,
-  i: 0.99, you: 0.99, we: 0.97, this: 0.96, that: 0.96,
-  be: 0.98, do: 0.95, make: 0.93, give: 0.92, take: 0.92,
-  day: 0.92, night: 0.92, sun: 0.88, moon: 0.85,
-  hand: 0.89, foot: 0.89, eye: 0.9, head: 0.85,
+  // Pronouns + closed-class
+  i: 0.99, you: 0.99, we: 0.97, they: 0.95, he: 0.96, she: 0.96, it: 0.95,
+  this: 0.96, that: 0.96, here: 0.92, there: 0.92,
+  not: 0.97, and: 0.98, or: 0.93,
+  // Top verbs — Germanic strong-verb candidates
+  be: 0.98, have: 0.97, do: 0.95, go: 0.96, come: 0.95,
+  see: 0.94, say: 0.94, know: 0.93, give: 0.92, take: 0.92,
+  make: 0.93, find: 0.88, want: 0.93, eat: 0.95, drink: 0.92,
+  walk: 0.85, run: 0.85, sleep: 0.88, hear: 0.88, speak: 0.88,
+  // Kinship / body — high persistence
+  mother: 0.92, father: 0.92, child: 0.9, brother: 0.85, sister: 0.85,
+  hand: 0.89, foot: 0.89, eye: 0.9, head: 0.85, mouth: 0.85,
+  ear: 0.83, heart: 0.85, blood: 0.85,
+  one: 0.97, two: 0.94, three: 0.92, four: 0.86, five: 0.86,
+  // Common nouns
+  water: 0.95, fire: 0.85, day: 0.92, night: 0.92, sun: 0.88, moon: 0.85,
+  earth: 0.84, sky: 0.84, star: 0.78, tree: 0.83, stone: 0.83,
+  house: 0.88, road: 0.78, bread: 0.85,
+  big: 0.9, small: 0.9, good: 0.92, bad: 0.85, new: 0.83, old: 0.83,
+  // Mid-low
+  thunder: 0.55, lightning: 0.5, hill: 0.5, shoulder: 0.5, claw: 0.42,
 };
 
 const MORPHOLOGY: Morphology = {

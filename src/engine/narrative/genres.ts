@@ -64,16 +64,36 @@ export function templatesFor(genre: DiscourseGenre): readonly AbstractTemplate[]
   }
 }
 
+// Phase 29 Tranche 5h: deepened from 13 → 32 subjects, 15 → 35 objects
+// to reduce repetition in narrative output. The audit (100-gen run, 50
+// sentences) saw only 6 unique nouns total — forcing recombinations
+// like "took the color with the village". The expanded pool draws
+// across kinship, animal, role, and elemental categories.
 export const SUBJECT_NOUN_POOL: readonly Meaning[] = [
-  "mother", "father", "child", "brother", "sister", "friend", "king",
-  "dog", "wolf", "horse", "bear",
-  "warrior", "stranger",
+  // Kinship
+  "mother", "father", "child", "brother", "sister", "daughter", "son",
+  // Roles
+  "friend", "king", "warrior", "stranger", "priest", "elder", "thief",
+  "farmer", "hunter", "shepherd", "smith", "trader", "queen",
+  // Animals
+  "dog", "wolf", "horse", "bear", "eagle", "snake", "fish",
+  "cow", "deer", "fox",
+  // Pronouns / generic
+  "i", "you", "we", "they",
 ];
 
 export const OBJECT_NOUN_POOL: readonly Meaning[] = [
-  "hand", "foot", "eye", "head", "heart",
-  "tree", "water", "fire", "stone", "moon", "sun", "river", "house",
-  "bread", "meat", "milk",
+  // Body parts
+  "hand", "foot", "eye", "head", "heart", "ear", "mouth", "blood",
+  // Natural / elemental
+  "tree", "water", "fire", "stone", "moon", "sun", "river", "wind",
+  "mountain", "sea", "sky", "earth", "rain", "snow",
+  // Built / household
+  "house", "road", "field", "boat", "knife", "spear", "rope",
+  // Food
+  "bread", "meat", "milk", "fruit", "grain", "salt", "wine",
+  // Animals (as object)
+  "horse", "dog", "wolf", "cow", "fish",
 ];
 
 export const TRANSITIVE_VERB_POOL: readonly Meaning[] = [
