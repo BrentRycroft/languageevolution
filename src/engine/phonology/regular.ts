@@ -18,10 +18,18 @@ export function applyOneRegularChange(
 
   const next: Lexicon = {};
   const dropped: string[] = [];
+  // Phase 29 Tranche 7b: hard cap on per-meaning iteration. The
+  // previous bound of `form.length` could become an infinite loop if
+  // `picked.apply(form)` returns a longer form (e.g., an insertion
+  // rule that always fires) — the bound grows with the form. Even
+  // with no insertion, capping prevents pathological catalog
+  // interactions where `probabilityFor` can stay > 0 across many
+  // applications without `after === form` triggering.
+  const MAX_PER_MEANING_PASSES = 10;
   for (const m of Object.keys(lang.lexicon)) {
     const original = lang.lexicon[m]!;
     let form = original;
-    for (let safety = 0; safety < form.length; safety++) {
+    for (let safety = 0; safety < MAX_PER_MEANING_PASSES; safety++) {
       if (picked.probabilityFor(form) <= 0) break;
       const after = picked.apply(form, rng);
       if (after === form || after.join("") === form.join("")) break;
