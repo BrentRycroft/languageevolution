@@ -2,7 +2,7 @@ import type { Phoneme } from "../primitives";
 
 export const VOWELS: ReadonlySet<Phoneme> = new Set([
   "a", "e", "i", "o", "u",
-  "ɛ", "ɔ", "ə", "ɨ", "ɯ", "ø", "y", "œ",
+  "ɛ", "ɔ", "ə", "ɨ", "ɯ", "ø", "y", "œ", "ʌ",
   "æ", "ɑ", "ɒ", "ʏ", "ɪ", "ʊ",
   "aː", "eː", "iː", "oː", "uː",
   "á", "é", "í", "ó", "ú",
@@ -10,6 +10,12 @@ export const VOWELS: ReadonlySet<Phoneme> = new Set([
   "â", "ê", "î", "ô", "û",
   "ā", "ē", "ī", "ō", "ū",
   "ã", "ẽ", "ĩ", "õ", "ũ",
+  // Phase 29 Tranche 5a: nasalisation rule outputs. Bare combining
+  // tilde + non-precomposed vowels (ɛ̃, ɔ̃, ɑ̃) plus the length-marked
+  // nasal forms (aː̃ etc.) flow through the simulator from the new
+  // `nasalization.vowel_before_nasal` rule.
+  "ɛ̃", "ɔ̃", "ɑ̃", "œ̃",
+  "aː̃", "ẽː", "ĩː", "õː", "ũː", "ɛ̃ː", "ɔ̃ː",
 ]);
 
 export const CONSONANTS: ReadonlySet<Phoneme> = new Set([

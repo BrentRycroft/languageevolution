@@ -71,6 +71,14 @@ export default defineConfig(({ command }) => ({
             "**/lexicogenesis_e2e.test.ts",
             "**/presets.test.ts",
             "**/render_every_tab.test.tsx",
+            // Phase 29 Tranche 7g: heavyweight multi-hundred-gen tests
+            // exceed the 5-minute CI budget when included alongside
+            // the full default suite. Gated behind RUN_SLOW=1 so the
+            // default `npm test` stays well under budget. CI / pre-push
+            // runs `npm run test:slow` for the full surface.
+            "**/divergence_regression.test.ts",
+            "**/integration_e2e.test.ts",
+            "**/sprint4_realism_polish.test.ts",
           ]),
     ],
   },

@@ -123,6 +123,9 @@ export function stepPhonology(
     neighbourMomentum,
     ruleActuationGen,
     currentGeneration: generation,
+    // Phase 29 Tranche 5o: hand the lang to apply.ts so candidate
+    // outputs are filtered by the OT ranking (soft constraint).
+    langForOt: lang,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   // Phase 29 Tranche 5d: record proto→daughter substitutions for

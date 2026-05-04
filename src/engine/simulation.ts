@@ -207,11 +207,6 @@ export function createSimulation(
       if (config.modes.volatility) stepVolatility(lang, nextGen, rng);
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
       if (config.modes.phonology && config.modes.learner) stepLearner(lang, config, rng, nextGen);
-      // Phase 28a: post-phonology inventory management. Folds the
-      // former stepPhonotacticRepair (Phase 27c) and
-      // stepInventoryHomeostasis (Phase 27b/27.1) into one step:
-      // 1. repair forms violating the language's syllable profile
-      // 2. prune phonemes when over the tier-target inventory size.
       if (config.modes.phonology) stepInventoryManagement(lang, rng, nextGen);
       if (config.modes.obsolescence) stepObsolescence(lang, config, rng, nextGen);
       if (config.modes.copula) {

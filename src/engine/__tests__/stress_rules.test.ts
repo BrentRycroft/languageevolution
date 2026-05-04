@@ -26,10 +26,16 @@ describe("stress-aware catalog rules", () => {
     expect(CATALOG_BY_ID["stress.unstressed_medial_syncope"]!.stressFilter).toBe("unstressed");
   });
 
-  it("ships each new stress rule disabled by default (opt-in per language)", () => {
-    for (const id of RULES) {
+  // Phase 25: stress.open_syllable_lengthening was promoted to
+  // enabledByDefault=true (Middle English stān → stoːn is a strong
+  // cross-Germanic / Romance pattern worth enabling for the default
+  // English-shaped preset). The rest stay opt-in.
+  it("ships the four typologically-marked stress rules disabled by default", () => {
+    const optIn = RULES.filter((id) => id !== "stress.open_syllable_lengthening");
+    for (const id of optIn) {
       expect(CATALOG_BY_ID[id]!.enabledByDefault).toBe(false);
     }
+    expect(CATALOG_BY_ID["stress.open_syllable_lengthening"]!.enabledByDefault).toBe(true);
   });
 
   describe("pretonic weakening", () => {

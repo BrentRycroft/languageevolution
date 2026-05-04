@@ -82,13 +82,16 @@ describe("genesis mechanisms", () => {
     }
   });
 
-  it("200-gen run produces a variety of origin tags", () => {
+  // Phase 29 Tranche 7g: trimmed 200→80 gens to keep CI under 5 min.
+  // 80 gens still triggers ≥ 2 origin tags reliably (compounding,
+  // borrowing, reduplication, etc.) which is all the assertion needs.
+  it("80-gen run produces a variety of origin tags", () => {
     const sim = createSimulation({
       ...defaultConfig(),
       seed: "diversity",
       tree: { ...defaultConfig().tree, splitProbabilityPerGeneration: 0.1 },
     });
-    for (let i = 0; i < 200; i++) sim.step();
+    for (let i = 0; i < 80; i++) sim.step();
     const state = sim.getState();
     const tags = new Set<string>();
     for (const id of leafIds(state.tree)) {
