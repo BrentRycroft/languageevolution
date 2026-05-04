@@ -12,6 +12,7 @@ import {
   PLACE_POOL,
   templatesFor,
 } from "./genres";
+import { filterByFrame } from "./frames";
 import {
   endTurn,
   makeDiscourse,
@@ -106,8 +107,16 @@ function fillSlots(
       pickWeighted(lang, subjects, rng) ?? pick(subjects, rng);
   }
   if (template.needs.object) {
+    // Phase 29 Tranche 5g: filter the object pool to candidates whose
+    // semantic class intersects the verb's argument frame. Catches
+    // "drink the start" and "took the color with the village"-style
+    // nonsense by constraining drink → liquid, eat → food, etc.
+    // Falls through to the original pool when the verb has no frame.
+    const framed: string[] = slots.verb
+      ? filterByFrame(slots.verb, objects).slice()
+      : objects;
     slots.object =
-      pickWeighted(lang, objects, rng) ?? pick(objects, rng);
+      pickWeighted(lang, framed, rng) ?? pick(framed, rng);
   }
   if (template.needs.adjective) {
     slots.adjective = pickWeighted(lang, adjs, rng) ?? pick(adjs, rng);

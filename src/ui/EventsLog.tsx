@@ -64,18 +64,44 @@ export function EventsLog() {
     [selected?.events, selected],
   );
   const [filter, setFilter] = useState("");
+  // Phase 29 Tranche 4g: per-kind toggle chips. When the set is
+  // non-empty, only events whose kind is in the set are shown. When
+  // empty, all kinds are shown (the default).
+  const [enabledKinds, setEnabledKinds] = useState<
+    ReadonlySet<LanguageEvent["kind"]>
+  >(new Set());
+  const toggleKind = (k: LanguageEvent["kind"]) => {
+    setEnabledKinds((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+  };
+
+  const kindCounts = useMemo(() => {
+    const out: Partial<Record<LanguageEvent["kind"], number>> = {};
+    for (const e of allEvents) {
+      out[e.kind] = (out[e.kind] ?? 0) + 1;
+    }
+    return out;
+  }, [allEvents]);
 
   const events = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return allEvents;
-    return allEvents.filter(
+    let out = allEvents;
+    if (enabledKinds.size > 0) {
+      out = out.filter((e) => enabledKinds.has(e.kind));
+    }
+    if (!q) return out;
+    return out.filter(
       (e) =>
         KIND_LABEL[e.kind].toLowerCase().includes(q) ||
         e.kind.toLowerCase().includes(q) ||
         e.description.toLowerCase().includes(q) ||
         `g${e.generation}`.includes(q),
     );
-  }, [allEvents, filter]);
+  }, [allEvents, filter, enabledKinds]);
 
   if (!selected) {
     return (
@@ -141,6 +167,62 @@ export function EventsLog() {
           </>
         )}
       </div>
+      {Object.keys(kindCounts).length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 4,
+            marginBottom: 6,
+          }}
+          role="group"
+          aria-label="Filter by event kind"
+        >
+          {(Object.keys(kindCounts) as LanguageEvent["kind"][])
+            .sort((a, b) => (kindCounts[b] ?? 0) - (kindCounts[a] ?? 0))
+            .map((k) => {
+              const active = enabledKinds.has(k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => toggleKind(k)}
+                  aria-pressed={active}
+                  title={`${KIND_LABEL[k]}: ${kindCounts[k]} event${kindCounts[k] === 1 ? "" : "s"}`}
+                  style={{
+                    fontSize: 10,
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    border: `1px solid ${active ? KIND_COLOR[k] : "var(--border)"}`,
+                    background: active ? KIND_COLOR[k] : "transparent",
+                    color: active ? "var(--bg)" : KIND_COLOR[k],
+                    cursor: "pointer",
+                  }}
+                >
+                  {KIND_LABEL[k]} {kindCounts[k]}
+                </button>
+              );
+            })}
+          {enabledKinds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setEnabledKinds(new Set())}
+              title="Show all kinds"
+              style={{
+                fontSize: 10,
+                padding: "2px 6px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "transparent",
+                color: "var(--muted)",
+                cursor: "pointer",
+              }}
+            >
+              clear
+            </button>
+          )}
+        </div>
+      )}
       {events.length === 0 && (
         <div className="t-muted">
           No events yet — run the simulation to see this language's history.

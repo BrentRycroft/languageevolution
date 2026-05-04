@@ -6,6 +6,7 @@ import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import { fnv1a } from "../rng";
 import type { Rng } from "../rng";
 import { lexicalCapacity } from "../lexicon/tier";
+import { rebuildFormKeyIndex } from "../lexicon/word";
 import { partitionTerritory } from "../geo/territory";
 import type { WorldMap } from "../geo/map";
 import { leafIds } from "./leafIds";
@@ -234,6 +235,11 @@ export function splitLeaf(
   const children: Language[] = [];
   for (let i = 0; i < childCount; i++) {
     children.push(makeChild(i !== 0));
+  }
+  // Phase 29 Tranche 1e: each daughter's words[] is a fresh deep
+  // clone — build a fresh form-key index against the new refs.
+  for (const child of children) {
+    if (child.words) rebuildFormKeyIndex(child);
   }
   for (const child of children) {
     child.lexicalCapacity = lexicalCapacity(child, generation);

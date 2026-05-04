@@ -112,7 +112,15 @@ export function App() {
     const payload = readShareFromLocation();
     if (!payload) return;
     const { loadConfig } = useSimStore.getState();
-    loadConfig(payload.config, payload.replay ?? 0);
+    // Phase 29 Tranche 8f: when the share URL carries a state
+    // snapshot (v2), pass it through to loadConfig so the recipient
+    // sees the exact tree instead of replaying from gen 0. v1 URLs
+    // (no snapshot) keep the replay behaviour.
+    loadConfig(
+      payload.config,
+      payload.replay ?? 0,
+      payload.stateSnapshot,
+    );
     if (payload.biases) {
       const { applyRuleBiasToLanguage } = useSimStore.getState();
       for (const [langId, bias] of Object.entries(payload.biases)) {
@@ -130,6 +138,7 @@ export function App() {
     stepN,
     reset,
     setActiveTab,
+    activeTab,
     openGlobalSearch: requestGlobalSearchOpen,
   });
 

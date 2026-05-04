@@ -17,6 +17,12 @@ export function formKeyOf(form: WordForm): string {
  * Find the Word entry matching the given form. Returns undefined if the
  * language hasn't been migrated to v6 yet (no `words` field) — callers
  * should fall back to the meaning-keyed lexicon in that case.
+ *
+ * Phase 29 Tranche 1e: when the form-key index `wordsByFormKey` is
+ * present, the lookup is O(1) instead of O(N). The index is rebuilt
+ * by `rebuildFormKeyIndex` after any wholesale `lang.words` mutation
+ * (currently: syncWordsAfterPhonology, init, split). Per-call writers
+ * like setLexiconForm / addWord update the index incrementally.
  */
 export function findWordByForm(
   lang: Language,
@@ -24,7 +30,26 @@ export function findWordByForm(
 ): Word | undefined {
   if (!lang.words) return undefined;
   const key = formKeyOf(form);
+  if (lang.wordsByFormKey) {
+    return lang.wordsByFormKey.get(key);
+  }
   return lang.words.find((w) => w.formKey === key);
+}
+
+/**
+ * Phase 29 Tranche 1e: rebuild the form-key index from scratch after
+ * any mutation that may have replaced `lang.words` wholesale.
+ */
+export function rebuildFormKeyIndex(lang: Language): void {
+  if (!lang.words) {
+    lang.wordsByFormKey = undefined;
+    return;
+  }
+  const map = new Map<string, Word>();
+  for (const w of lang.words) {
+    map.set(w.formKey, w);
+  }
+  lang.wordsByFormKey = map;
 }
 
 /**
@@ -96,7 +121,11 @@ export function addWord(
 ): Word {
   if (!lang.words) lang.words = [];
   const key = formKeyOf(form);
-  const existing = lang.words.find((w) => w.formKey === key);
+  // Phase 29 Tranche 1e: prefer the O(1) index when present; falls
+  // back to linear scan for v6 saves that haven't been touched yet.
+  const existing = lang.wordsByFormKey
+    ? lang.wordsByFormKey.get(key)
+    : lang.words.find((w) => w.formKey === key);
   if (existing) {
     addSenseToWord(existing, {
       meaning,
@@ -124,6 +153,7 @@ export function addWord(
     origin: opts.origin,
   };
   lang.words.push(word);
+  if (lang.wordsByFormKey) lang.wordsByFormKey.set(key, word);
   return word;
 }
 
@@ -147,6 +177,8 @@ export function removeSense(lang: Language, meaning: Meaning): void {
     next.push(w);
   }
   lang.words = next;
+  // Phase 29 Tranche 1e: keep the form-key index consistent.
+  if (lang.wordsByFormKey) rebuildFormKeyIndex(lang);
 }
 
 /**
@@ -262,6 +294,9 @@ export function syncWordsFromLexicon(
       bornGeneration,
     });
   }
+  // Phase 29 Tranche 1e: build the form-key index alongside the
+  // initial words[] so future findWordByForm calls are O(1).
+  rebuildFormKeyIndex(lang);
 }
 
 /**
@@ -374,6 +409,9 @@ export function syncWordsAfterPhonology(
     merged.push(anchor);
   }
   lang.words = merged;
+  // Phase 29 Tranche 1e: index is now stale because words got
+  // rewritten and form-keys may have collapsed. Rebuild from scratch.
+  rebuildFormKeyIndex(lang);
   return events;
 }
 

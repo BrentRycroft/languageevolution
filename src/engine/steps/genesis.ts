@@ -13,7 +13,7 @@ import {
   attemptTargetedDerivation,
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
-import { tryCommitCoinage } from "../lexicon/word";
+import { tryCommitCoinage, rebuildFormKeyIndex } from "../lexicon/word";
 import {
   findSuffixByTag,
   registerSuffixUsage,
@@ -191,6 +191,9 @@ export function stepGenesis(
         }
         return true;
       });
+      // Phase 29 Tranche 1e: lang.words just got replaced by a fresh
+      // filtered copy, so the form-key index is stale. Rebuild it.
+      rebuildFormKeyIndex(lang);
     }
     lang.lexicon[outcome.meaning] = outcome.form;
     lang.wordFrequencyHints[outcome.meaning] = 0.4;

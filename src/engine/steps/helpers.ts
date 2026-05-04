@@ -34,6 +34,21 @@ export function inventoryFromLexicon(lex: Lexicon): PhonemeInventory {
   };
 }
 
+/**
+ * Phase 29 Tranche 1c: derived phoneme-set view. Returns a fresh
+ * Set computed from the lexicon (or `lang.words` when present), so
+ * callers that just want O(1) "does this language have phoneme X"
+ * checks don't have to scan the segmental array. The cached array
+ * `phonemeInventory.segmental` remains the source of truth for ORDER
+ * (tier-target pruning needs deterministic ordering); this getter is
+ * for SET-membership questions where order doesn't matter.
+ */
+export function getPhonemeSet(lang: Language): ReadonlySet<string> {
+  // Prefer the cached array — it's already deduped and pruning may
+  // have removed phonemes we don't want surfaced.
+  return new Set(lang.phonemeInventory.segmental);
+}
+
 export function seedNativeProvenance(lang: Language): void {
   if (!lang.inventoryProvenance) lang.inventoryProvenance = {};
   for (const p of lang.phonemeInventory.segmental) {

@@ -49,3 +49,35 @@ function appendUnique(
   if (!bag.includes(value)) bag.push(value);
   map[key] = bag;
 }
+
+/**
+ * Phase 29 Tranche 1d: derived view of colexification. Walks
+ * `lang.words[*].senses[]` and returns every meaning sharing a form
+ * with `meaning` (excluding the meaning itself). Falls back to the
+ * legacy `lang.colexifiedAs` field when `lang.words` isn't populated
+ * (pre-Phase 21 saves) — that path stays for back-compat but is no
+ * longer the source of truth.
+ *
+ * Callers should prefer this over reading `lang.colexifiedAs`
+ * directly. The legacy field still exists because some events
+ * (recarve merges) record asymmetric "winner colexifies loser" edges
+ * that don't survive the senses scan; those reads remain valid as a
+ * historical projection but won't reflect post-event drift.
+ */
+export function getColexifications(
+  lang: Language,
+  meaning: Meaning,
+): Meaning[] {
+  if (lang.words && lang.words.length > 0) {
+    const out = new Set<Meaning>();
+    for (const w of lang.words) {
+      const meaningsHere = w.senses.map((s) => s.meaning);
+      if (!meaningsHere.includes(meaning)) continue;
+      for (const m of meaningsHere) {
+        if (m !== meaning) out.add(m);
+      }
+    }
+    if (out.size > 0) return Array.from(out);
+  }
+  return lang.colexifiedAs?.[meaning]?.slice() ?? [];
+}

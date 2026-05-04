@@ -532,6 +532,12 @@ function ShareUrlButton() {
   const state = useSimStore((s) => s.state);
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState("");
+  // Phase 29 Tranche 8f: when checked, the share URL embeds the
+  // current state snapshot so the recipient sees the exact tree
+  // instead of replaying from gen 0. Off by default — a snapshot
+  // pushes the URL well past 30k chars on long runs and many
+  // browsers / chat tools will truncate.
+  const [includeState, setIncludeState] = useState(false);
 
   const build = () => {
     const biases: Record<string, Record<string, number>> = {};
@@ -540,11 +546,12 @@ function ShareUrlButton() {
       if (b) biases[id] = b;
     }
     const link = shareUrl({
-      v: 1,
+      v: includeState ? 2 : 1,
       seed: config.seed,
       config,
       biases: Object.keys(biases).length > 0 ? biases : undefined,
       replay: state.generation,
+      ...(includeState ? { stateSnapshot: state } : {}),
     });
     setUrl(link);
     if (navigator.clipboard) {
@@ -561,6 +568,23 @@ function ShareUrlButton() {
         Generates a URL that replays this run from its seed. Copies to
         clipboard and lets you grab the link below.
       </div>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: "var(--fs-1)",
+          color: "var(--muted)",
+          marginBottom: 6,
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={includeState}
+          onChange={(e) => setIncludeState(e.target.checked)}
+        />
+        Include state snapshot (longer URL — recipient skips the replay)
+      </label>
       <button onClick={build} className="primary">
         {copied ? "Copied!" : "Copy share link"}
       </button>
