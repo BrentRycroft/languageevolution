@@ -358,16 +358,28 @@ function realiseNP(
   }
   out.push(...ppTokens);
   if (np.coord) {
-    const cf = closedClassForm(lang, np.coord.lemma) ?? [];
-    if (cf.length > 0) {
-      out.push({
-        surface: cf.join(""),
-        form: cf,
-        english: np.coord.lemma,
-        role: "DET" as const,
-        resolution: "concept",
-      });
+    // Phase 30 Tranche 30f: ensure a coordinator is always emitted.
+    // Pre-fix, when closedClassForm returned empty (rare but
+    // possible after heavy phonological erosion), the coordinated
+    // NP rendered as bare juxtaposition ("the bull the wolf"
+    // instead of "the bull and the wolf"). Now we fall back to
+    // lang.lexicon[lemma] (if present) and finally to the lemma
+    // itself as a single-segment placeholder so every coordination
+    // shows a separator.
+    let cf = closedClassForm(lang, np.coord.lemma) ?? [];
+    if (cf.length === 0 && lang.lexicon[np.coord.lemma]) {
+      cf = lang.lexicon[np.coord.lemma]!.slice();
     }
+    if (cf.length === 0) {
+      cf = [np.coord.lemma];
+    }
+    out.push({
+      surface: cf.join(""),
+      form: cf,
+      english: np.coord.lemma,
+      role: "DET" as const,
+      resolution: "concept",
+    });
     out.push(...realiseNP(np.coord.np, lang, ctx, role));
   }
   if (np.relative) {

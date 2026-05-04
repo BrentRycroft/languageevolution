@@ -1,7 +1,7 @@
 import type { Language, Phoneme, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { featuresOf } from "./features";
-import { stripTone } from "./tone";
+import { stripTone, capToneStacking } from "./tone";
 import { functionalLoadMap } from "./functionalLoad";
 
 const MAX_RARE_OCCURRENCES = 2;
@@ -173,7 +173,9 @@ export function prunePhonemes(
       const base = stripTone(raw);
       if (base === candidate) {
         changed = true;
-        return neighbour + tone;
+        // Phase 30 Tranche 30a: cap any preserved tone stack on the
+        // post-merger phoneme.
+        return capToneStacking(neighbour + tone);
       }
       return raw;
     });

@@ -50,6 +50,31 @@ export function rhymesWith(
 }
 
 /**
+ * Phase 30 Tranche 30e: relaxed assonance match — same stressed
+ * nucleus vowel even when codas differ. Used by `pickStanza` as a
+ * second-tier fallback after strict rhyme fails.
+ *
+ * "cat" / "bag" assonate via /a/. "go" / "no" assonate via /o/.
+ * Strict rhyme would reject "cat" vs "bag" but assonance accepts.
+ */
+export function assonatesWith(
+  a: WordForm,
+  b: WordForm,
+  pattern: StressPattern = "penult",
+  lexicalIdxA?: number,
+  lexicalIdxB?: number,
+): boolean {
+  const ra = rhymeSyllable(a, pattern, lexicalIdxA);
+  const rb = rhymeSyllable(b, pattern, lexicalIdxB);
+  if (ra.length === 0 || rb.length === 0) return false;
+  // Find the first vowel in each and compare.
+  const va = ra.find((p) => isVowel(stripTone(p)) || isSyllabic(stripTone(p)));
+  const vb = rb.find((p) => isVowel(stripTone(p)) || isSyllabic(stripTone(p)));
+  if (!va || !vb) return false;
+  return stripTone(va) === stripTone(vb);
+}
+
+/**
  * Count syllables in a word (= count of vowels and syllabic consonants).
  * Used by meter computation.
  */

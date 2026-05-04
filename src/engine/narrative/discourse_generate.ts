@@ -154,6 +154,25 @@ function morphologicalGloss(tokens: { englishLemma: string; glossNote: string }[
     .join("—");
 }
 
+/**
+ * Phase 30 Tranche 30e: surface-level article elision for casual
+ * registers. Strips the article-final vowel when the next word
+ * begins with a vowel. Heuristic-only: looks for whitespace-bounded
+ * 1-3 char "article-like" tokens followed by a vowel-initial token.
+ */
+function applyArticleElision(surface: string): string {
+  const VOWELS = "aeiouæɛɔəɪʊɛɑøœɯyɨ";
+  return surface.replace(
+    /\b([\p{L}]{1,3})\s+([\p{L}])/gu,
+    (m, art: string, next: string) => {
+      const last = art[art.length - 1] ?? "";
+      if (!VOWELS.includes(last.toLowerCase())) return m;
+      if (!VOWELS.includes(next.toLowerCase())) return m;
+      return `${art.slice(0, -1)}'${next}`;
+    },
+  );
+}
+
 export function generateDiscourseNarrative(
   lang: Language,
   seedStr: string,
@@ -225,14 +244,34 @@ export function generateDiscourseNarrative(
       if (!template.needs.subject && wasNew) ctx.topic = ctx.entities.get(objMeaning)!;
     }
 
+    // Phase 30 Tranche 30e: per-genre alt-pick probability. Daily +
+    // dialogue stay close to the canonical (low alt rate) so they
+    // read as everyday speech. Myth/legend lean on alt-form picking
+    // to surface the elevated synonym pool (via genreRegister=high).
+    // Poetry uses the same path through generatePoetryStanza which
+    // owns its own alt-rate (see Phase 29 Tranche 5i).
+    const altRate =
+      genre === "myth" || genre === "legend" ? 0.18 : 0.05;
     const composed = composeTargetSentence(lang, template, slots, ctx, script, {
       rng,
-      pickAltProbability: 0.1,
+      pickAltProbability: altRate,
       genreRegister: genreRegisterFor(genre),
     });
     if (composed.tokens.length === 0) {
       endTurn(ctx);
       continue;
+    }
+    // Phase 30 Tranche 30e: daily/dialogue article elision. When the
+    // language has free articles and the article precedes a
+    // vowel-initial noun, elide the article-final vowel ("the apple"
+    // → "th'apple") in the surface form. Operates on the rendered
+    // string only — token-level forms stay full so the engine still
+    // tracks the underlying NP.
+    if (
+      (genre === "daily" || genre === "dialogue") &&
+      lang.grammar.articlePresence === "free"
+    ) {
+      composed.surface = applyArticleElision(composed.surface);
     }
 
     // Coordination: with coordRate probability, pick a second template +

@@ -369,12 +369,12 @@ export function presetRomance(): SimulationConfig {
     },
     seedGrammar: {
       // Phase 29 Tranche 5s: corrected adjectivePosition to "pre".
-      // The romance preset models Latin (proto, NOT Romance daughters);
-      // Latin was pre-attributive — "magna villa" not "villa magna".
-      // The post-position pattern emerged in Romance daughters and
-      // should fall out from grammar drift, not be seeded.
+      // Phase 30 Tranche 30d: articlePresence: "none". Latin had no
+      // definite article; ille/illa grammaticalised into Romance
+      // daughters' articles centuries later. Drift pathway can
+      // re-introduce articles via grammaticalize step.
       wordOrder: "SVO",
-      articlePresence: "free",
+      articlePresence: "none",
       caseStrategy: "case",
       adjectivePosition: "pre",
       possessorPosition: "post",

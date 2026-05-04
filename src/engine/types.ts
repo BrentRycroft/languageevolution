@@ -298,6 +298,11 @@ export interface Language {
    */
   tierEligibilityStreak?: number;
   /**
+   * Phase 30 Tranche 30c: generation when wordOrder was last flipped.
+   * The drift gate enforces a 50-gen cooldown to prevent thrashing.
+   */
+  wordOrderLastFlipGen?: number;
+  /**
    * Generation deadline for the abstract-vocabulary catch-up window.
    * Set when a language crosses into tier 2 (literacy / abstract noun
    * morphology unlocks): the genesis driver bumps targetedDerivation

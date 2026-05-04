@@ -50,26 +50,10 @@ const EVIDENTIALS: NonNullable<GrammarFeatures["evidentialMarking"]>[] = [
 ];
 
 const DRIFT_RULES: readonly DriftRule[] = [
-  {
-    feature: "wordOrder",
-    probability: 0.2,
-    shift: (g, rng) => {
-      let options = ADJACENT[g.wordOrder];
-      if (!g.hasCase) {
-        const rigid: GrammarFeatures["wordOrder"][] = ["SVO", "SOV"];
-        const pullTargets = options.filter((o) => rigid.includes(o));
-        if (pullTargets.length > 0 && !rigid.includes(g.wordOrder)) {
-          options = pullTargets;
-        } else if (pullTargets.length > 0 && rigid.includes(g.wordOrder)) {
-          options = [...pullTargets, ...pullTargets, ...pullTargets, ...options];
-        }
-      }
-      const pick = options[rng.int(options.length)]!;
-      const shift = { feature: "wordOrder", from: g.wordOrder, to: pick };
-      g.wordOrder = pick;
-      return shift;
-    },
-  },
+  // Phase 30 Tranche 30c: wordOrder drift moved out of DRIFT_RULES.
+  // It now lives in `maybeDriftWordOrder` (below) so the call site
+  // can gate on tier + synthetic index + cooldown — the data DRIFT_RULES
+  // doesn't have access to. Removing it here so it doesn't fire twice.
   {
     feature: "alignment",
     probability: 0.04,
@@ -240,6 +224,56 @@ export function driftGrammar(
     }
   }
   return shifts;
+}
+
+/**
+ * Phase 30 Tranche 30c: gated word-order drift.
+ *
+ * Pre-fix the wordOrder rule fired at 0.2/gen unconditionally, so an
+ * English-preset language at tier 3 with established morphology
+ * could flip SVO → SOV in 60 gens. That's too fast — real-world
+ * tier-3 isolating languages are typologically stable for centuries.
+ *
+ * Gate: probability scales with `(1 - tier × 0.25) × (1 -
+ * syntheticIndex × 0.4)` and a 50-gen cooldown after every flip.
+ * A tier-3 isolating language flips ~1/10 as often as tier-0
+ * inflecting one. `lang.wordOrderLastFlipGen` records the last flip.
+ */
+const WORD_ORDER_FLIP_COOLDOWN = 50;
+
+export function maybeDriftWordOrder(
+  lang: import("../types").Language,
+  rng: Rng,
+  generation: number,
+): GrammarShift | null {
+  const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
+  const synth = lang.grammar.synthesisIndex ?? 0.5;
+  const lastFlip = lang.wordOrderLastFlipGen;
+  if (lastFlip !== undefined && generation - lastFlip < WORD_ORDER_FLIP_COOLDOWN) {
+    return null;
+  }
+  const tierFactor = Math.max(0.1, 1 - tier * 0.25);
+  const synthFactor = Math.max(0.2, 1 - synth * 0.4);
+  const baseRate = 0.2;
+  const probability = baseRate * tierFactor * synthFactor;
+  if (!rng.chance(probability)) return null;
+
+  const g = lang.grammar;
+  let options = ADJACENT[g.wordOrder];
+  if (!g.hasCase) {
+    const rigid: GrammarFeatures["wordOrder"][] = ["SVO", "SOV"];
+    const pullTargets = options.filter((o) => rigid.includes(o));
+    if (pullTargets.length > 0 && !rigid.includes(g.wordOrder)) {
+      options = pullTargets;
+    } else if (pullTargets.length > 0 && rigid.includes(g.wordOrder)) {
+      options = [...pullTargets, ...pullTargets, ...pullTargets, ...options];
+    }
+  }
+  const pick = options[rng.int(options.length)]!;
+  const from = g.wordOrder;
+  g.wordOrder = pick;
+  lang.wordOrderLastFlipGen = generation;
+  return { feature: "wordOrder", from, to: pick };
 }
 
 export { cloneGrammar } from "../utils/clone";

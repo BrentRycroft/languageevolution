@@ -1,6 +1,6 @@
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
-import { isToneBearing, stripTone, toneOf } from "./tone";
+import { isToneBearing, stripTone, toneOf, capToneStacking } from "./tone";
 import { setLexiconForm } from "../lexicon/mutate";
 
 export function maybeSpreadTone(
@@ -41,6 +41,7 @@ function spreadOnce(form: WordForm, rng: Rng): WordForm {
   const site = sites[rng.int(sites.length)]!;
   const out = form.slice();
   const base = stripTone(out[site.to]!);
-  out[site.to] = base + site.tone;
+  // Phase 30 Tranche 30a: cap tone stacking on the spread target.
+  out[site.to] = capToneStacking(base + site.tone);
   return out;
 }

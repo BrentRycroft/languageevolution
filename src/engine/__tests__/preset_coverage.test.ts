@@ -48,13 +48,19 @@ describe("preset closed-class coverage — every preset seeds the basics", () =>
     });
   }
 
-  it("Germanic + Romance + English seed articles + set articlePresence=free", () => {
-    for (const preset of [presetGermanic, presetRomance, presetEnglish]) {
+  it("Germanic + English seed articles + set articlePresence=free; Romance models Latin (no articles)", () => {
+    // Phase 30 Tranche 30d: Romance preset models Latin (proto), and
+    // Latin had no definite article — ille/illa grammaticalised into
+    // Romance daughters' articles centuries later. The seed
+    // articlePresence is therefore "none"; the drift / grammaticalize
+    // pathway can introduce articles in daughter languages.
+    for (const preset of [presetGermanic, presetEnglish]) {
       const cfg = preset();
       expect(cfg.seedLexicon["the"]).toBeDefined();
       expect(cfg.seedLexicon["a"]).toBeDefined();
       expect(cfg.seedGrammar?.articlePresence).toBe("free");
     }
+    expect(presetRomance().seedGrammar?.articlePresence).toBe("none");
   });
 
   it("English carries SVO + no case + -s plural + -ed past + -ing progressive", () => {
@@ -77,17 +83,17 @@ describe("preset closed-class coverage — every preset seeds the basics", () =>
 });
 
 describe("preset grammar typology is propagated to the proto language", () => {
-  it("Romance proto carries SVO + pre-noun adjectives + free articles", () => {
-    // Phase 29 Tranche 5s: Romance preset models LATIN (the proto),
-    // which was pre-attributive ("magna villa"). The post-attributive
-    // pattern emerged in Romance daughters and now falls out from
-    // grammar drift instead of being pre-seeded.
+  it("Romance proto carries SVO + pre-noun adjectives + no articles (Latin)", () => {
+    // Phase 30 Tranche 30d: Latin had no articles. Romance preset
+    // models the proto, so articlePresence: "none". Daughter
+    // languages get articles via grammaticalisation pathway, not
+    // by seed.
     const sim = createSimulation(presetRomance());
     sim.step();
     const proto = sim.getState().tree["L-0"]!.language;
     expect(proto.grammar.wordOrder).toBe("SVO");
     expect(proto.grammar.adjectivePosition).toBe("pre");
-    expect(proto.grammar.articlePresence).toBe("free");
+    expect(proto.grammar.articlePresence).toBe("none");
   });
 
   it("PIE proto carries SOV + case strategy + no articles", () => {

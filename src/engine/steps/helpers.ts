@@ -25,12 +25,24 @@ export function pushEvent(lang: Language, event: LanguageEvent): void {
 }
 
 export function inventoryFromLexicon(lex: Lexicon): PhonemeInventory {
+  // Phase 30 Tranche 30a: segmental inventory tracks tone-stripped
+  // base phonemes only. Tone-bearing allotones (a˥, a˧, a˩, a˧˥)
+  // collapse to /a/ for size-of-inventory accounting; tones live
+  // separately in the `tones` array.
   const set = new Set<string>();
-  for (const m of Object.keys(lex)) for (const p of lex[m]!) set.add(p);
+  const tones = new Set<string>();
+  for (const m of Object.keys(lex)) {
+    for (const p of lex[m]!) {
+      const base = stripTone(p);
+      set.add(base);
+      const t = toneOf(p);
+      if (t) tones.add(t);
+    }
+  }
   return {
     segmental: Array.from(set).sort(),
-    tones: [],
-    usesTones: false,
+    tones: Array.from(tones).sort(),
+    usesTones: tones.size > 0,
   };
 }
 
@@ -59,11 +71,17 @@ export function seedNativeProvenance(lang: Language): void {
 }
 
 export function refreshInventory(lang: Language): void {
+  // Phase 30 Tranche 30a: segmental holds tone-stripped base
+  // phonemes; tones live in `tones`. Pre-fix this set held
+  // tone-bearing allotones (`a˥`, `a˧`, `a˩`, `a˧˥`) as separate
+  // entries, so a 14-vowel system with 3 tones counted as 14×3=42
+  // "phonemes" — driving tier-target overshoot and homeostatic
+  // merger spam.
   const observed = new Set<string>();
   const tones = new Set<string>();
   for (const m of Object.keys(lang.lexicon)) {
     for (const p of lang.lexicon[m]!) {
-      observed.add(p);
+      observed.add(stripTone(p));
       const t = toneOf(p);
       if (t) tones.add(t);
     }
