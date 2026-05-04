@@ -192,9 +192,10 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "deletion.final_vowel",
-    label: "V → ∅ / _#",
+    label: "V → ∅ / _#  [unstressed]",
     category: "deletion",
-    description: "Drop word-final vowel (if a nucleus still remains).",
+    stressFilter: "unstressed",
+    description: "Drop unstressed word-final vowel (if a nucleus still remains). Latin → French (rosa → rose), Old English → Middle English -e loss.",
     probabilityFor: (w) => {
       if (w.length < 4) return 0;
       if (!isVowel(w[w.length - 1]!)) return 0;
@@ -312,8 +313,9 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "vowel.lengthening_open_syllable",
-    label: "V → Vː / _C#",
+    label: "V → Vː / _C# [stressed]",
     category: "vowel",
+    stressFilter: "stressed",
     description: "Lengthen final stressed vowel before single consonant.",
     probabilityFor: (w) => {
       if (w.length < 3) return 0;
@@ -450,7 +452,8 @@ export const CATALOG: SoundChange[] = [
     label: "C → ∅ / _#",
     category: "deletion",
     positionBias: "final",
-    description: "Drop a word-final consonant.",
+    stressFilter: "unstressed",
+    description: "Drop a word-final consonant in unstressed final syllables (Old English → Middle English -e drop, French final-consonant loss).",
     probabilityFor: (w) =>
       w.length >= 3 && isConsonant(w[w.length - 1]!) ? 0.04 : 0,
     apply: (word) =>
@@ -462,10 +465,11 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "deletion.syncope",
-    label: "V → ∅ / C_C",
+    label: "V → ∅ / C_C [unstressed]",
     category: "deletion",
     positionBias: "internal",
-    description: "Drop an internal unstressed vowel between two consonants.",
+    stressFilter: "unstressed",
+    description: "Drop an internal unstressed vowel between two consonants (Latin → Romance, Old English → Middle English).",
     probabilityFor: (w) => {
       let n = 0;
       for (let i = 1; i < w.length - 1; i++) {
@@ -615,10 +619,10 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "tonogenesis.voiced_coda",
-    label: "V → V˩ / _[+voiced]#",
+    label: "V → V˩ / _[+voiced]#  ·  V → V˥ / _[-voiced]#",
     category: "tonogenesis",
     description:
-      "Tonogenesis: a word-final voiced obstruent lowers the preceding vowel (tone split). Disabled by default — branches can pick it up via rule-set perturbation on split.",
+      "Tonogenesis split: word-final voiced obstruent lowers the preceding vowel (˩); voiceless obstruent raises it (˥). Both pathways attested cross-linguistically (Vietnamese, Punjabi, Lhasa Tibetan).",
     probabilityFor: (w) => {
       if (w.length < 2) return 0;
       const last = w[w.length - 1]!;
@@ -1166,6 +1170,135 @@ export const CATALOG: SoundChange[] = [
       const idx = sites[rng.int(sites.length)]!;
       const out = word.slice();
       out[idx] = "ʔ";
+      return out;
+    },
+  },
+
+  // Phase 29 Tranche 5a: well-attested cross-linguistic rule
+  // families that the audit identified as missing from the catalog.
+
+  {
+    id: "devoicing.final_obstruent",
+    label: "[+voiced obstr] → [-voiced] / _#",
+    category: "devoicing",
+    positionBias: "final",
+    description:
+      "Final-obstruent devoicing (Auslautverhärtung): word-final b/d/g/v/z → p/t/k/f/s. German, Russian, Polish, Catalan, Turkish.",
+    enabledByDefault: true,
+    baseWeight: 1,
+    probabilityFor: (w) => {
+      if (w.length < 2) return 0;
+      const last = w[w.length - 1]!;
+      return VOICED_OBSTRUENTS.has(last) ? 0.07 : 0;
+    },
+    apply: (word) => {
+      const FINAL_DEVOICE: Record<string, string> = {
+        b: "p", d: "t", g: "k", v: "f", z: "s",
+        ʒ: "ʃ", dʒ: "tʃ", ɣ: "x", β: "f", ð: "θ",
+      };
+      if (word.length < 2) return word;
+      const last = word[word.length - 1]!;
+      const repl = FINAL_DEVOICE[last];
+      if (!repl) return word;
+      const out = word.slice();
+      out[out.length - 1] = repl;
+      return out;
+    },
+  },
+
+  {
+    id: "nasalization.vowel_before_nasal",
+    label: "V → Ṽ / _N",
+    category: "vowel",
+    positionBias: "any",
+    description:
+      "Vowel nasalization: a vowel before a nasal consonant gains a nasalised allophone (French sang, Portuguese mão, many Niger-Congo).",
+    enabledByDefault: true,
+    baseWeight: 0.6,
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 0; i < w.length - 1; i++) {
+        const v = w[i]!;
+        const c = w[i + 1]!;
+        if (!isVowel(stripTone(v)) || v.includes("̃")) continue;
+        if (c === "n" || c === "m" || c === "ŋ" || c === "ɲ") n++;
+      }
+      return 1 - Math.pow(1 - 0.05, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length - 1; i++) {
+        const v = word[i]!;
+        const c = word[i + 1]!;
+        if (!isVowel(stripTone(v)) || v.includes("̃")) continue;
+        if (c === "n" || c === "m" || c === "ŋ" || c === "ɲ") sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = word[idx]! + "̃";
+      return out;
+    },
+  },
+
+  {
+    id: "lenition.tap_intervocalic",
+    label: "t/d → ɾ / V_V",
+    category: "lenition",
+    positionBias: "internal",
+    description:
+      "Intervocalic flapping/tapping: alveolar stop reduces to a tap between vowels (American English butter, Spanish pero/caro distinction, Korean -da).",
+    enabledByDefault: true,
+    baseWeight: 1,
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 1; i < w.length - 1; i++) {
+        const p = w[i]!;
+        if (p !== "t" && p !== "d") continue;
+        if (!isVowel(stripTone(w[i - 1]!))) continue;
+        if (!isVowel(stripTone(w[i + 1]!))) continue;
+        n++;
+      }
+      return 1 - Math.pow(1 - 0.06, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 1; i < word.length - 1; i++) {
+        const p = word[i]!;
+        if (p !== "t" && p !== "d") continue;
+        if (!isVowel(stripTone(word[i - 1]!))) continue;
+        if (!isVowel(stripTone(word[i + 1]!))) continue;
+        sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = "ɾ";
+      return out;
+    },
+  },
+
+  {
+    id: "fortition.initial_aspiration",
+    label: "[-voiced stop] → [+aspirated] / #_",
+    category: "fortition",
+    positionBias: "initial",
+    description:
+      "Initial voiceless-stop aspiration: word-initial p/t/k → pʰ/tʰ/kʰ. Mandarin, Korean, English (allophonic), Hindi (contrastive).",
+    enabledByDefault: false,
+    baseWeight: 1,
+    probabilityFor: (w) => {
+      if (w.length < 2) return 0;
+      const first = w[0]!;
+      if (first !== "p" && first !== "t" && first !== "k") return 0;
+      return 0.05;
+    },
+    apply: (word) => {
+      if (word.length < 2) return word;
+      const first = word[0]!;
+      if (first !== "p" && first !== "t" && first !== "k") return word;
+      const out = word.slice();
+      out[0] = first + "ʰ";
       return out;
     },
   },
