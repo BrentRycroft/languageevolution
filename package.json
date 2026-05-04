@@ -9,7 +9,11 @@
     "preview": "vite preview --base /languageevolution/",
     "test": "vitest run",
     "test:slow": "RUN_SLOW=1 vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "audit:divergence": "tsx scripts/audit-divergence.ts",
+    "audit:length": "tsx scripts/audit-length.ts",
+    "bench": "tsx scripts/bench-sim.ts"
   },
   "dependencies": {
     "d3-delaunay": "^6.0.4",
