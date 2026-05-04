@@ -143,6 +143,17 @@ export function textToIpa(input: string): Phoneme[] {
   for (let i = 0; i < work.length; i++) {
     const cur = work[i]!;
     const next = work[i + 1] ?? "";
+    // Phase 29 Tranche 5p: recognise prenasalised stops written as
+    // IPA-style superscript-n + stop ("ⁿp", "ⁿb", "ⁿt", "ⁿd",
+    // "ⁿk", "ⁿg", "ⁿj"). Pre-fix these collapsed to /n/ + stop on
+    // input, so Bantu-style /ⁿpondo/ couldn't survive a textToIpa
+    // round-trip. The combined-phoneme forms are already in
+    // CONSONANTS via PHONE_FEATURES.
+    if (cur === "ⁿ" && /^[pbtdkgj]$/.test(next)) {
+      out.push(("ⁿ" + next) as Phoneme);
+      i++;
+      continue;
+    }
     const pair = cur + next;
     const digraph = ASCII_TO_IPA[pair];
     if (digraph !== undefined) {
