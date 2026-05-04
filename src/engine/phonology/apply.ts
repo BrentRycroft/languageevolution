@@ -90,6 +90,20 @@ export interface ApplyOptions {
    * adopts it faster — the S-curve of lexical diffusion.
    */
   neighbourMomentum?: Record<Meaning, number>;
+  /**
+   * Phase 29 Tranche 5c: lexical diffusion S-curve. Tracks when each
+   * rule first actuated in this language. The Wang sigmoid uses
+   * (currentGeneration - actuatedAt) as the time variable, so a
+   * newly-actuated rule fires at a damped rate that ramps up over
+   * dozens of generations rather than instantly hitting full rate.
+   * Per-meaning frequency tilts the threshold: high-freq content
+   * words flip late (large t0), low-freq early.
+   *
+   * Both fields must be present for the S-curve to apply; missing
+   * either yields a multiplier of 1 (no effect, back-compat).
+   */
+  ruleActuationGen?: Record<string, number>;
+  currentGeneration?: number;
   _orderedChanges?: SoundChange[];
 }
 
@@ -261,12 +275,34 @@ export function applyChangesToWord(
     // word-by-word rather than firing exceptionlessly across the
     // whole lexicon. Caller passes `neighbourMomentum` ∈ [1, 1.5].
     const momentum = opts.neighbourMomentum?.[meaning] ?? 1;
+    // Phase 29 Tranche 5c: Wang lexical-diffusion S-curve. The rule's
+    // age in this language drives a sigmoid that ramps from a damped
+    // initial rate to full rate over generations. Per-meaning
+    // frequency tilts the threshold: high-freq content words have a
+    // larger t0 (resist longer); low-freq words have a smaller t0.
+    // Without ruleActuationGen / currentGeneration in opts, multiplier
+    // is 1 (back-compat).
+    let wangBoost = 1;
+    if (opts.ruleActuationGen && opts.currentGeneration !== undefined) {
+      const actuatedAt = opts.ruleActuationGen[change.id];
+      if (actuatedAt !== undefined) {
+        const age = opts.currentGeneration - actuatedAt;
+        // freq-tilted threshold: high-freq content words get pushed
+        // further out (t0 ≈ 50–100 gens); low-freq early adopters
+        // (t0 ≈ 5–15 gens). Function words (Phase 24c flips direction)
+        // adopt fast regardless.
+        const t0 = isContentWord(meaning) ? 10 + (1 - freq) * -60 + 60 : 5;
+        const k = 0.15;
+        wangBoost = 1 / (1 + Math.exp(-k * (age - t0)));
+      }
+    }
     const lambda = Math.min(
       3,
       adjusted *
         weight *
         naturalBias *
         momentum *
+        wangBoost *
         opts.globalRate *
         mult *
         ageMult *

@@ -12,7 +12,7 @@ import {
   attemptTargetedDerivation,
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
-import { tryCommitCoinage, removeSense } from "../lexicon/word";
+import { tryCommitCoinage } from "../lexicon/word";
 import {
   findSuffixByTag,
   registerSuffixUsage,
@@ -151,7 +151,6 @@ export function stepGenesis(
     let oldFormStr = "";
     if (isReplacement) {
       oldFormStr = lang.lexicon[outcome.meaning]!.join("");
-      removeSense(lang, outcome.meaning);
     }
     // Phase 21c: collision-aware commit. The form may already exist as
     // a word for another meaning; in that case roll polysemy/reject.
@@ -167,6 +166,31 @@ export function stepGenesis(
       },
     );
     if (!commit.committed) continue;
+    // Phase 29 Tranche 5c+1: remove the OLD sense AFTER commit succeeds.
+    // Pre-fix the removeSense ran upstream of the polysemy roll, so a
+    // failed roll left lang.lexicon with the old form but lang.words
+    // with no sense for the meaning — silent dual-truth desync.
+    if (isReplacement) {
+      // The new word entry was just added by tryCommitCoinage; drop
+      // any other word that still carries this meaning's sense.
+      // (removeSense filters lang.words, dropping the meaning from
+      //  every other word and removing words whose only sense was the
+      //  meaning. The new word still carries its newly-added sense.)
+      const newKey = outcome.form.join("");
+      const before = lang.words ?? [];
+      lang.words = before.filter((w) => {
+        if (w.formKey === newKey) return true;
+        const remaining = w.senses.filter((s) => s.meaning !== outcome.meaning);
+        if (remaining.length === 0) return false;
+        if (remaining.length !== w.senses.length) {
+          const oldPrim = w.senses[w.primarySenseIndex]?.meaning;
+          w.senses = remaining;
+          const np = remaining.findIndex((s) => s.meaning === oldPrim);
+          w.primarySenseIndex = np >= 0 ? np : 0;
+        }
+        return true;
+      });
+    }
     lang.lexicon[outcome.meaning] = outcome.form;
     lang.wordFrequencyHints[outcome.meaning] = 0.4;
     lang.wordOrigin[outcome.meaning] = isReplacement

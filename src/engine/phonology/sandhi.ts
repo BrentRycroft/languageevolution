@@ -1,6 +1,7 @@
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { HIGH, LOW, MID, RISING, FALLING, isToneBearing, toneOf, stripTone } from "./tone";
+import { setLexiconForm } from "../lexicon/mutate";
 
 /**
  * Phase 29 Tranche 5g: tone sandhi.
@@ -120,7 +121,9 @@ export function stepToneSandhi(
       next[s.posA] = baseA + s.newToneA;
       next[s.posB] = baseB + s.newToneB;
     }
-    lang.lexicon[meaning] = next;
+    // Phase 29 Tranche 5g + Tranche 1: route through chokepoint so
+    // lang.words tracks the post-sandhi form.
+    setLexiconForm(lang, meaning, next, { bornGeneration: generation, origin: "tone-sandhi" });
   }
   return sites.length;
 }

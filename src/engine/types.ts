@@ -196,6 +196,18 @@ export interface Language {
     perPhoneme: Record<Phoneme, number>;
   };
   /**
+   * Phase 29 Tranche 5c: per-rule actuation timestamp. Once a rule
+   * starts firing in this language, its `actuatedAt` is set to the
+   * current generation. The Wang S-curve in apply.ts gates per-rule
+   * lambda by (currentGen - actuatedAt) so a rule's effect ramps up
+   * over generations rather than firing at full rate the moment it's
+   * enabled. Together with frequency-direction (Phase 24c) this
+   * produces the lexical-diffusion S-curve: low-frequency words
+   * adopt early, high-frequency content words lag by tens of
+   * generations.
+   */
+  diffusionState?: Record<string, { actuatedAt: number }>;
+  /**
    * Phase 29 Tranche 5d: sound correspondence law tracker. Each
    * (proto, daughter, environment) triple records how often a given
    * substitution actually fires across the lexicon vs how often it

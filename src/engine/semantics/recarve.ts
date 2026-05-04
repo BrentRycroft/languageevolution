@@ -3,7 +3,7 @@ import type { Rng } from "../rng";
 import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { isFormLegal } from "../phonology/wordShape";
 import { recordOneSidedColexification } from "./colexification";
-import { deleteMeaning } from "../lexicon/mutate";
+import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
 
 export type RecarveEventKind = "merge" | "split";
 
@@ -103,7 +103,11 @@ function trySplit(lang: Language, rng: Rng): RecarveEvent | null {
   const pick = candidates[rng.int(candidates.length)]!;
   const form = lex[pick.source]!;
   if (!isFormLegal(pick.target, form)) return null;
-  lang.lexicon[pick.target] = form.slice();
+  // Phase 29 Tranche 1 round 3: route through chokepoint.
+  setLexiconForm(lang, pick.target, form.slice(), {
+    bornGeneration: 0,
+    origin: "recarve-split",
+  });
   const freq = lang.wordFrequencyHints[pick.source] ?? 0.4;
   lang.wordFrequencyHints[pick.target] = freq;
   const reg = lang.registerOf?.[pick.source];
