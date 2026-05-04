@@ -5,6 +5,7 @@ import type { MorphCategory } from "../engine/morphology/types";
 import { formToString } from "../engine/phonology/ipa";
 import { formatForm } from "../engine/phonology/display";
 import { posOf } from "../engine/lexicon/pos";
+import { PRODUCTIVITY_THRESHOLD } from "../engine/lexicon/derivation";
 import { ScriptPicker } from "./ScriptPicker";
 
 export function GrammarView() {
@@ -159,17 +160,74 @@ function ProductiveDerivationalRules({
 }: {
   lang: import("../engine/types").Language;
 }) {
-  const suffixes = (lang.derivationalSuffixes ?? []).filter((s) => s.productive);
+  const all = lang.derivationalSuffixes ?? [];
+  const suffixes = all.filter((s) => s.productive);
   if (suffixes.length === 0) {
-    const total = (lang.derivationalSuffixes ?? []).length;
-    if (total === 0) return null;
+    if (all.length === 0) return null;
+    // Phase 29 Tranche 4d: surface near-miss suffixes — top 3 by
+    // attestation count with a progress bar to PRODUCTIVITY_THRESHOLD,
+    // so users can see which derivational patterns are about to
+    // become productive.
+    const candidates = all
+      .slice()
+      .sort((a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0))
+      .slice(0, 3);
     return (
       <div style={{ marginTop: 12 }}>
         <h4 style={{ marginBottom: 4 }}>Productive derivational rules</h4>
-        <div className="t-muted" style={{ fontSize: 11 }}>
-          No productive rules yet — the language has {total} derivational
-          suffix{total === 1 ? "" : "es"} below the productivity threshold.
+        <div className="t-muted" style={{ fontSize: 11, marginBottom: 6 }}>
+          No productive rules yet — the language has {all.length}{" "}
+          derivational suffix{all.length === 1 ? "" : "es"} below the
+          productivity threshold ({PRODUCTIVITY_THRESHOLD} attestations).
         </div>
+        <table className="paradigm-table" style={{ width: "100%" }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left" }}>Category</th>
+              <th style={{ textAlign: "left" }}>Suffix</th>
+              <th style={{ textAlign: "right" }}>Attestations</th>
+              <th style={{ textAlign: "left" }}>Progress</th>
+            </tr>
+          </thead>
+          <tbody>
+            {candidates.map((s) => {
+              const pct = Math.min(
+                100,
+                Math.round(((s.usageCount ?? 0) / PRODUCTIVITY_THRESHOLD) * 100),
+              );
+              return (
+                <tr key={s.tag}>
+                  <td>{readableCategory(s.category)}</td>
+                  <td>
+                    <code>{s.tag}</code>
+                  </td>
+                  <td style={{ textAlign: "right", color: "var(--muted)" }}>
+                    {s.usageCount ?? 0}/{PRODUCTIVITY_THRESHOLD}
+                  </td>
+                  <td>
+                    <div
+                      style={{
+                        width: 80,
+                        height: 6,
+                        background: "var(--panel-2)",
+                        borderRadius: 3,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${pct}%`,
+                          height: "100%",
+                          background: "var(--accent)",
+                          borderRadius: 3,
+                        }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     );
   }

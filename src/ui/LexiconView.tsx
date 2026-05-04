@@ -378,6 +378,13 @@ export function LexiconView() {
                             .map((s) => s.meaning)
                             .filter((m) => m !== meaning)
                         : [];
+                    // Phase 29 Tranche 4e: surface suppletion records.
+                    // Languages that have evolved or seeded irregular forms
+                    // for this meaning (Latin esse → fui; English go → went)
+                    // get a visible badge so users can find them at a glance.
+                    const suppletiveSlots = lang.suppletion?.[meaning]
+                      ? Object.keys(lang.suppletion[meaning] ?? {})
+                      : [];
                     return (
                       <td
                         key={lid}
@@ -397,6 +404,10 @@ export function LexiconView() {
                           otherSenses.length > 0
                             ? ` — also: ${otherSenses.join(", ")}`
                             : ""
+                        }${
+                          suppletiveSlots.length > 0
+                            ? ` — suppletive in: ${suppletiveSlots.join(", ")}`
+                            : ""
                         } — right-click or double-tap to inspect history`}
                       >
                         {form}
@@ -410,6 +421,16 @@ export function LexiconView() {
                             aria-label={`also means ${otherSenses.join(", ")}`}
                           >
                             ↔{otherSenses.length}
+                          </span>
+                        )}
+                        {suppletiveSlots.length > 0 && (
+                          <span
+                            className="origin-glyph"
+                            style={{ color: "var(--warning, #d94)" }}
+                            aria-label={`suppletive forms exist for ${suppletiveSlots.join(", ")}`}
+                            title={`suppletive: ${suppletiveSlots.join(", ")}`}
+                          >
+                            ✦
                           </span>
                         )}
                       </td>

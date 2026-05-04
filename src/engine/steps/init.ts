@@ -14,6 +14,7 @@ import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { assignAllGenders } from "../morphology/gender";
+import { classifyLexicon } from "../morphology/inflectionClass";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
 import { syncWordsFromLexicon } from "../lexicon/word";
 import {
@@ -112,6 +113,11 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   seedNativeProvenance(rootLang);
   assignAllGenders(rootLang);
+  // Phase 29 Tranche 5e: bucket every seed meaning into an inflection
+  // class (Latin-style 1/2/3/4) biased by phonological shape. The
+  // class is stable across the language's lifetime and consulted by
+  // paradigm-pickers for class-specific affixes.
+  classifyLexicon(rootLang, rng);
   // Phase 21a: build the form-centric `words` table from the seed
   // lexicon so day-zero languages already have the new layer populated.
   // No behavior change: `lexicon` remains the source of truth until

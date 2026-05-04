@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSimStore } from "../state/store";
 import type { GeneratedRule } from "../engine/phonology/generated";
+import { topRegularCorrespondences } from "../engine/phonology/soundLaws";
 import { ListSearch } from "./ListSearch";
 
 function shortId(id: string): string {
@@ -133,6 +134,8 @@ export function SoundLawsView() {
         )}
       </section>
 
+      <Correspondences lang={lang} />
+
       {retired.length > 0 && (
         <section>
           <h5 style={{ marginBottom: 6, color: "var(--muted)" }}>Retired</h5>
@@ -165,6 +168,56 @@ export function SoundLawsView() {
         </section>
       )}
     </div>
+  );
+}
+
+function Correspondences({
+  lang,
+}: {
+  lang: import("../engine/types").Language;
+}) {
+  const rows = useMemo(() => topRegularCorrespondences(lang, 4, 0.4, 12), [lang]);
+  if (rows.length === 0) {
+    return (
+      <section>
+        <h5 style={{ marginBottom: 6 }}>Sound correspondences</h5>
+        <div style={{ color: "var(--muted)", fontSize: "var(--fs-2)" }}>
+          No systematic correspondences yet — run the sim long enough for a
+          few sound shifts to leave a regular trace across the lexicon.
+        </div>
+      </section>
+    );
+  }
+  return (
+    <section>
+      <h5 style={{ marginBottom: 6 }} title="Phoneme→phoneme shifts that hold across many words (Grimm's-Law style).">
+        Sound correspondences
+      </h5>
+      <table className="sound-laws-table">
+        <thead>
+          <tr>
+            <th>shift</th>
+            <th>environment</th>
+            <th title="Times the rule fired">fires</th>
+            <th title="Times the source phoneme appeared in the same environment">total</th>
+            <th title="fires / total">regularity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={`${r.from}>${r.to}@${r.environment}`}>
+              <td>
+                <code>{r.from}</code> → <code>{r.to}</code>
+              </td>
+              <td className="ctx">{r.environment}</td>
+              <td className="num">{r.fires}</td>
+              <td className="num">{r.total}</td>
+              <td className="num">{(r.regularity * 100).toFixed(0)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
 

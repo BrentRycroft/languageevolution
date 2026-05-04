@@ -27,7 +27,7 @@ import { pushEvent } from "./steps/helpers";
 import { TIER_LABELS } from "./lexicon/concepts";
 import { applyKinshipSimplification } from "./semantics/recarve";
 import { getWorldMap } from "./geo/map";
-import { tickTerritory } from "./geo/territory";
+import { tickTerritory, reabsorbExtinctTerritory } from "./geo/territory";
 
 export interface Simulation {
   getState: () => SimulationState;
@@ -118,12 +118,16 @@ export function createSimulation(
   const step = (): void => {
     const rng = makeRng(state.rngState);
     const nextGen = state.generation + 1;
+    // Phase 29 Tranche 6f: hoist the worldMap fetch out of the per-leaf
+    // loop. getWorldMap is cached internally but the call still does
+    // hash work; we only need it once per generation regardless.
+    const worldMap = getWorldMap(config.mapMode ?? "random", config.seed);
 
     if (state.generation === 0 && config.modes.tree) {
       const childCount = pickFirstSplitChildCount(rng);
       splitLeaf(state.tree, state.rootId, nextGen, rng, {
         childCount,
-        worldMap: getWorldMap(config.mapMode ?? "random", config.seed),
+        worldMap,
       });
     }
 
@@ -143,7 +147,6 @@ export function createSimulation(
         const drift = Math.exp(malthusian + noise);
         lang.speakers = Math.max(50, Math.round(lang.speakers * drift));
       }
-      const worldMap = getWorldMap(config.mapMode ?? "random", config.seed);
       tickTerritory(lang, state.tree, worldMap, rng);
       if (nextGen % 20 === 0) {
         const priorTier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
@@ -235,6 +238,10 @@ export function createSimulation(
     if (config.modes.tree && config.modes.creolization) {
       stepCreolization(state, config, rng, nextGen);
     }
+    // Phase 29 Tranche 4l: redistribute extinct languages' lingering
+    // territory to bordering living neighbours so dead patches don't
+    // stay orphaned forever.
+    reabsorbExtinctTerritory(state.tree, worldMap, rng);
     const aliveAfter = leafIds(state.tree).filter(
       (id) => !state.tree[id]!.language.extinct,
     ).length;

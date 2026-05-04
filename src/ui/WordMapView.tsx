@@ -157,10 +157,10 @@ export function WordMapView() {
               </tr>
             </thead>
             <tbody>
-              {filtered.slice(0, 500).map((w, i) => {
+              {filtered.slice(0, 500).map((w) => {
                 const surface = formatForm(w.form, lang, script, w.senses[0]?.meaning);
                 return (
-                  <tr key={`${w.formKey}-${i}`}>
+                  <tr key={w.formKey}>
                     <td>
                       <strong>{surface}</strong>
                       {w.senses.length >= 2 && (

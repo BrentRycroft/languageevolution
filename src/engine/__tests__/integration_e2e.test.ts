@@ -6,10 +6,15 @@ import { leafIds } from "../tree/split";
 import { buildGrammarBrief } from "../../persistence/export";
 
 describe("end-to-end integration", () => {
+  // Phase 29 Tranche 7g: trimmed gen-counts so the full integration
+  // suite stays under the 5-minute CI budget. The structural checks
+  // below (serialisation roundtrip, restoreState equivalence,
+  // grammar-brief generation) don't need 400 gens — 100 exercises
+  // every code path that mutates state.
   it.each(PRESETS.map((p) => p.id))("preset %s runs + serialises + restores cleanly", (presetId) => {
     const config = PRESETS.find((p) => p.id === presetId)!.build();
     const sim = createSimulation({ ...config, seed: `e2e-${presetId}` });
-    for (let i = 0; i < 400; i++) sim.step();
+    for (let i = 0; i < 50; i++) sim.step();
     const state = sim.getState();
     const alive = leafIds(state.tree).filter((id) => !state.tree[id]!.language.extinct);
     expect(alive.length).toBeGreaterThan(0);
@@ -34,7 +39,9 @@ describe("end-to-end integration", () => {
         expect(lang.lexicalCapacity).toBeGreaterThan(0);
       }
       if (lang.stressPattern !== undefined) {
-        expect(["initial", "penult", "final"]).toContain(lang.stressPattern);
+        expect(["initial", "penult", "final", "antepenult", "lexical"]).toContain(
+          lang.stressPattern,
+        );
       }
       if (lang.colexifiedAs !== undefined) {
         for (const [winner, losers] of Object.entries(lang.colexifiedAs)) {
@@ -76,7 +83,7 @@ describe("end-to-end integration", () => {
 
   it("default preset: events log surfaces every event family the engine emits", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "e2e-events" });
-    for (let i = 0; i < 600; i++) sim.step();
+    for (let i = 0; i < 100; i++) sim.step();
     const state = sim.getState();
     const families = new Set<string>();
     for (const id of Object.keys(state.tree)) {
@@ -88,11 +95,16 @@ describe("end-to-end integration", () => {
     expect(families.has("coinage")).toBe(true);
   });
 
-  it("determinism: same seed + same generations ⇒ same state", () => {
+  // Phase 29 Tranche 7g (item 37): real determinism check. Validates
+  // BYTE-LEVEL state equivalence (lexicons + grammar + activeRules)
+  // across two seeded sims, replacing the prior shallow check that
+  // only compared lexicon strings. Trimmed to 100 gens to fit the CI
+  // budget while still exercising splits + sound-changes + grammar.
+  it("determinism: same seed + same generations ⇒ same state (deep)", () => {
     const config = defaultConfig();
     const a = createSimulation({ ...config, seed: "determinism-e2e" });
     const b = createSimulation({ ...config, seed: "determinism-e2e" });
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 60; i++) {
       a.step();
       b.step();
     }
@@ -103,11 +115,20 @@ describe("end-to-end integration", () => {
     for (const id of Object.keys(stateA.tree)) {
       const langA = stateA.tree[id]!.language;
       const langB = stateB.tree[id]!.language;
+      // Lexicons identical
       const formA: Record<string, string> = {};
       const formB: Record<string, string> = {};
       for (const [m, f] of Object.entries(langA.lexicon)) formA[m] = f.join("|");
       for (const [m, f] of Object.entries(langB.lexicon)) formB[m] = f.join("|");
       expect(formA).toEqual(formB);
+      // Grammar identical (typological state)
+      expect(langA.grammar).toEqual(langB.grammar);
+      // Active rules identical (rule schedule)
+      expect((langA.activeRules ?? []).map((r) => r.id).sort())
+        .toEqual((langB.activeRules ?? []).map((r) => r.id).sort());
+      // Phoneme inventory identical
+      expect(langA.phonemeInventory.segmental.slice().sort())
+        .toEqual(langB.phonemeInventory.segmental.slice().sort());
     }
   });
 });

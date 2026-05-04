@@ -8,6 +8,7 @@ import { isFormLegal } from "../phonology/wordShape";
 import { lexicalCapacity } from "../lexicon/tier";
 import { realismMultiplier } from "../phonology/rate";
 import { DERIVATION_TARGETS } from "../lexicon/derivation_targets";
+import { assignInflectionClass } from "../morphology/inflectionClass";
 import {
   attemptTargetedDerivation,
   recordDerivationChain,
@@ -198,6 +199,17 @@ export function stepGenesis(
       : outcome.originTag;
     if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
       lang.registerOf[outcome.meaning] = outcome.register ?? "low";
+    }
+    // Phase 29 Tranche 5e: assign an inflection class for the new
+    // coinage. Lexical replacement preserves the existing class
+    // (the meaning's grammar slot doesn't change just because the
+    // form did); pure new coinages get a freshly-rolled class biased
+    // by the form's phonological shape.
+    if (!isReplacement) {
+      if (!lang.inflectionClass) lang.inflectionClass = {};
+      if (!lang.inflectionClass[outcome.meaning]) {
+        lang.inflectionClass[outcome.meaning] = assignInflectionClass(outcome.form, rng);
+      }
     }
     pushEvent(lang, {
       generation,

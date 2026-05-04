@@ -240,6 +240,15 @@ export interface Language {
     Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
   >;
   /**
+   * Phase 29 Tranche 5e: per-meaning inflection class. Latin-style
+   * 1st/2nd/3rd/4th conjugations (or noun declensions). Assigned at
+   * coinage time biased by the form's phonological shape; consulted
+   * by paradigm-pickers via the `class:N` ParadigmCondition. Languages
+   * with no classification system leave this undefined for all
+   * meanings (the default).
+   */
+  inflectionClass?: Record<Meaning, import("./morphology/types").InflectionClass>;
+  /**
    * Per-noun gender assignment when grammar.genderCount > 0.
    * Values are 0..(genderCount-1). Set lazily; missing entries get
    * heuristically assigned the first time they are needed.

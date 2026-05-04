@@ -57,8 +57,14 @@ export class ErrorBoundary extends Component<Props, State> {
             </button>
             <button
               onClick={() => {
-                localStorage.removeItem("lev.runs.v1.index");
-                this.reset();
+                if (
+                  confirm(
+                    "Permanently delete all saved runs from this browser? This cannot be undone.",
+                  )
+                ) {
+                  localStorage.removeItem("lev.runs.v1.index");
+                  this.reset();
+                }
               }}
             >
               Clear saved runs &amp; retry

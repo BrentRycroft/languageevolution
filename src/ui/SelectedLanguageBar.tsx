@@ -74,6 +74,18 @@ export function SelectedLanguageBar() {
       </span>
       <span>{speakers.toLocaleString()} speakers</span>
       <span>{Object.keys(selected.lexicon).length} words</span>
+      {selected.volatilityPhase?.kind === "upheaval" && (
+        <span
+          className="t-danger"
+          title={`Rapid-change era — multiplier ×${selected.volatilityPhase.multiplier.toFixed(1)}, until gen ${selected.volatilityPhase.until}${
+            selected.volatilityPhase.trigger
+              ? ` (trigger: ${selected.volatilityPhase.trigger})`
+              : ""
+          }`}
+        >
+          ⚡ upheaval ×{selected.volatilityPhase.multiplier.toFixed(1)}
+        </span>
+      )}
       {selected.extinct && (
         <span className="t-danger">† extinct</span>
       )}
