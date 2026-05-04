@@ -211,6 +211,29 @@ export function stepGenesis(
         lang.inflectionClass[outcome.meaning] = assignInflectionClass(outcome.form, rng);
       }
     }
+    // Phase 29 Tranche 4i: when the mechanism surfaced its
+    // constituents, record an etymology chain so the UI can show
+    // "← cat + tree" for a compound, "← speak + -er" for a
+    // derivation, etc. Targeted-derivation already populates this
+    // field upstream via recordDerivationChain; the MECHANISMS
+    // path was previously dropping all etymology.
+    if (!isReplacement && outcome.sources) {
+      if (!lang.wordOriginChain) lang.wordOriginChain = {};
+      const s = outcome.sources;
+      if (s.partMeanings && s.partMeanings.length >= 2) {
+        lang.wordOriginChain[outcome.meaning] = {
+          tag: outcome.originTag,
+          from: s.partMeanings[0]!,
+          via: s.partMeanings[1]!,
+        };
+      } else if (s.donorLangId && s.donorMeaning) {
+        lang.wordOriginChain[outcome.meaning] = {
+          tag: outcome.originTag,
+          from: s.donorMeaning,
+          via: `←${s.donorLangId}`,
+        };
+      }
+    }
     pushEvent(lang, {
       generation,
       kind: isReplacement ? "lexical_replacement" : "coinage",

@@ -21,7 +21,7 @@ export type ClosedClassLemma =
   | "CLF"
   | "Q";
 
-const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
+export const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "the", "a",
   "in", "on", "at", "to", "from", "by", "with", "for", "of",
   "under", "over", "through", "near", "after", "before",
