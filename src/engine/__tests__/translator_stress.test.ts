@@ -117,8 +117,21 @@ describe("translator stress test", () => {
     const lang = clone(baseLang);
     const out = translateSentence(lang, "the king sees the wolf which runs");
     const englishLemmas = out.targetTokens.map((t) => t.englishLemma);
+    // Phase 31 follow-up: the original assertion `wolfCount >= 2`
+    // assumed an internal-headed or resumptive RC strategy where
+    // the antecedent appears once in the matrix and once again
+    // inside the RC. Real PIE / English / Bantu use gap or
+    // relativizer strategy: the antecedent appears exactly once,
+    // the RC subject is a gap (or just a relativizer like "which").
+    // Test the actual preservation contract: the antecedent is NOT
+    // LOST when we add an RC, the RC verb is present, and the
+    // relativizer is emitted. That's the meaningful check.
     const wolfCount = englishLemmas.filter((e) => e === "wolf").length;
-    expect(wolfCount).toBeGreaterThanOrEqual(2);
+    const runCount = englishLemmas.filter((e) => e === "run").length;
+    const whichCount = englishLemmas.filter((e) => e === "which").length;
+    expect(wolfCount, "antecedent must appear at least once").toBeGreaterThanOrEqual(1);
+    expect(runCount, "RC verb must be emitted").toBeGreaterThanOrEqual(1);
+    expect(whichCount, "relativizer must be emitted").toBeGreaterThanOrEqual(1);
   });
 
   it("preserves coord-clause subject inheritance", () => {
