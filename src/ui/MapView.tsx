@@ -40,6 +40,17 @@ export function MapView() {
 
   const ownership = useMemo(() => buildOwnership(tree), [tree]);
 
+  const smoothedLabels = useMemo(
+    () => labelsForAliveLeavesSmoothed(tree, worldMap, smoothedLabelRef.current),
+    [tree, worldMap],
+  );
+
+  useEffect(() => {
+    const next: Record<string, { x: number; y: number }> = {};
+    for (const l of smoothedLabels) next[l.langId] = l.point;
+    smoothedLabelRef.current = next;
+  }, [smoothedLabels]);
+
   const pad = 40;
   const fitScale = Math.min(
     (size.w - pad * 2) / (worldMap.bounds.maxX - worldMap.bounds.minX),
@@ -292,7 +303,7 @@ export function MapView() {
           </g>
         )}
         {}
-        {labelsForAliveLeavesSmoothed(tree, worldMap, smoothedLabelRef.current).map(({ langId, lang, point }) => {
+        {smoothedLabels.map(({ langId, lang, point }) => {
           const { px, py } = project(point.x, point.y);
           const sample =
             selectedMeaning && lang.lexicon[selectedMeaning]
@@ -475,11 +486,10 @@ function biomeColor(biome: MapCell["biome"]): string {
 function labelsForAliveLeavesSmoothed(
   tree: LanguageTree,
   worldMap: WorldMap,
-  cache: Record<string, { x: number; y: number }>,
+  cache: Readonly<Record<string, { x: number; y: number }>>,
 ): Array<{ langId: string; lang: Language; point: { x: number; y: number } }> {
   const out: Array<{ langId: string; lang: Language; point: { x: number; y: number } }> = [];
   const ALPHA = 0.18;
-  const seen = new Set<string>();
   for (const id of Object.keys(tree)) {
     const node: LanguageNode = tree[id]!;
     if (node.childrenIds.length > 0) continue;
@@ -500,12 +510,7 @@ function labelsForAliveLeavesSmoothed(
     const smoothed = prev
       ? { x: prev.x + (target.x - prev.x) * ALPHA, y: prev.y + (target.y - prev.y) * ALPHA }
       : target;
-    cache[id] = smoothed;
-    seen.add(id);
     out.push({ langId: id, lang, point: smoothed });
-  }
-  for (const id of Object.keys(cache)) {
-    if (!seen.has(id)) delete cache[id];
   }
   return out;
 }

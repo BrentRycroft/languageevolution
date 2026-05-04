@@ -50,10 +50,15 @@ function lexiconAgreesWithWords(lang: Language): { ok: true } | { ok: false; mea
     const key = formKeyOf(form);
     const matchingWord = lang.words.find((w) => w.formKey === key);
     if (!matchingWord) {
+      // Diagnostic: what does lang.words have for this meaning?
+      const wordsForMeaning = lang.words.filter((w) =>
+        w.senses.some((s) => s.meaning === m),
+      );
+      const formsHeld = wordsForMeaning.map((w) => w.formKey).join(", ") || "(none)";
       return {
         ok: false,
         meaning: m,
-        reason: `lexicon[${m}] = ${key} but no word in lang.words has that formKey`,
+        reason: `lexicon[${m}] = ${key} but no word in lang.words has that formKey (sense lives on formKeys: ${formsHeld})`,
       };
     }
     const carriesSense = matchingWord.senses.some((s) => s.meaning === m);

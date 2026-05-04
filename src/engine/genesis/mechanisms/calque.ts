@@ -14,18 +14,25 @@ export const MECHANISM_CALQUE: CoinageMechanism = {
     const a = lang.lexicon[parts[0]!];
     const b = lang.lexicon[parts[1]!];
     if (!a || !b) return null;
-    let someoneHas = false;
+    let donorId: string | null = null;
     for (const id of Object.keys(tree)) {
       if (id === lang.id) continue;
       if (tree[id]!.language.extinct) continue;
       if (tree[id]!.language.lexicon[target]) {
-        someoneHas = true;
+        donorId = id;
         break;
       }
     }
-    if (!someoneHas) return null;
+    if (!donorId) return null;
     const form: WordForm = [...a, ...b];
     if (form.length > 10) return null;
-    return { form };
+    return {
+      form,
+      sources: {
+        partMeanings: [parts[0]!, parts[1]!],
+        donorLangId: donorId,
+        donorMeaning: target,
+      },
+    };
   },
 };

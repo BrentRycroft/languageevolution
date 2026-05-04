@@ -434,10 +434,11 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "deletion.apheresis",
-    label: "C → ∅ / #_",
+    label: "C → ∅ / #_  [unstressed]",
     category: "deletion",
     positionBias: "initial",
-    description: "Drop a word-initial single consonant (esquire → squire).",
+    stressFilter: "unstressed",
+    description: "Drop a word-initial single consonant in unstressed initial syllables (esquire → squire, espaniol → spaniol).",
     probabilityFor: (w) =>
       w.length >= 3 && isConsonant(w[0]!) && !isConsonant(w[1]!) ? 0.03 : 0,
     apply: (word) =>
@@ -1243,11 +1244,12 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "lenition.tap_intervocalic",
-    label: "t/d → ɾ / V_V",
+    label: "t/d → ɾ / V_V  [unstressed]",
     category: "lenition",
     positionBias: "internal",
+    stressFilter: "unstressed",
     description:
-      "Intervocalic flapping/tapping: alveolar stop reduces to a tap between vowels (American English butter, Spanish pero/caro distinction, Korean -da).",
+      "Intervocalic flapping/tapping: alveolar stop reduces to a tap between vowels in unstressed environments (American English butter — flap appears specifically in pretonic / unstressed-following position).",
     enabledByDefault: true,
     baseWeight: 1,
     probabilityFor: (w) => {

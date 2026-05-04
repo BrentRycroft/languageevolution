@@ -8,17 +8,24 @@ const AUTOSAVE_KEY = "lev.autosave.v2";
 // failed the future-version check on load.
 const AUTOSAVE_VERSION = LATEST_SAVE_VERSION;
 
-const PERSIST_EVENT_CAP = 30;
+// Phase 29 Tranche 5l: bumped from 30 → 80 to match the runtime cap
+// (engine soft-limits events to ~80 per language). The prior 30
+// silently truncated 60% of recent activity on save → reload, so the
+// EventsLog after a reload showed only the last few generations.
+const PERSIST_EVENT_CAP = 80;
 
 function trimLanguageForPersist(lang: Language): Language {
   const events =
     lang.events.length > PERSIST_EVENT_CAP
       ? lang.events.slice(-PERSIST_EVENT_CAP)
       : lang.events;
-  const out: Language = { ...lang, events };
-  delete (out as Partial<Language>).variants;
-  delete (out as Partial<Language>).bilingualLinks;
-  return out;
+  // Phase 29 Tranche 5l: stop stripping `variants` and `bilingualLinks`
+  // on save. Pre-fix, social-contagion variant history and contact
+  // graphs were silently lost on every reload — no reload could
+  // resume the in-progress diffusion of an actuating variant. Both
+  // are bounded structures (variants caps at ~10/meaning, links
+  // bounded by adjacent leaves), so persisting them costs little.
+  return { ...lang, events };
 }
 
 function trimStateForPersist(state: SimulationState): SimulationState {

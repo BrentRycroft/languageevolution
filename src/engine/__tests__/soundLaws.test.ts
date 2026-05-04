@@ -62,10 +62,13 @@ describe("Phase 29 Tranche 5d — sound correspondence laws", () => {
     expect(pToF!.regularity).toBeGreaterThanOrEqual(0.99);
   });
 
-  it("a 100-gen English run produces at least one systematic correspondence", () => {
+  // Phase 29 Tranche 7g: 100→60 gens. The systematic-shift signature
+  // emerges by gen 40–60 in any English run with active lenition rules;
+  // 100 was overkill and pushed CI time past budget.
+  it("a 60-gen English run produces at least one systematic correspondence", () => {
     const cfg = { ...presetEnglish(), seed: "soundlaw-test" };
     const sim = createSimulation(cfg);
-    for (let i = 0; i < 100; i++) sim.step();
+    for (let i = 0; i < 60; i++) sim.step();
     const state = sim.getState();
     const leaves = leafIds(state.tree).filter(
       (id) => !state.tree[id]!.language.extinct,

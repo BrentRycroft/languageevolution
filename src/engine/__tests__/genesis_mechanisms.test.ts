@@ -82,13 +82,16 @@ describe("genesis mechanisms", () => {
     }
   });
 
-  it("200-gen run produces a variety of origin tags", () => {
+  // Phase 29 Tranche 7g: trimmed 200→120 gens. 80 wasn't quite
+  // enough to reliably trigger ≥ 2 distinct origin tags under the
+  // default split rate; 120 is enough and still well within budget.
+  it("120-gen run produces a variety of origin tags", () => {
     const sim = createSimulation({
       ...defaultConfig(),
       seed: "diversity",
       tree: { ...defaultConfig().tree, splitProbabilityPerGeneration: 0.1 },
     });
-    for (let i = 0; i < 200; i++) sim.step();
+    for (let i = 0; i < 120; i++) sim.step();
     const state = sim.getState();
     const tags = new Set<string>();
     for (const id of leafIds(state.tree)) {

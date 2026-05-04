@@ -6,6 +6,7 @@ import { isVowel } from "../phonology/ipa";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 import { inventorySizePressure } from "../steps/inventoryManagement";
+import { setLexiconForm } from "../lexicon/mutate";
 
 const AREAL_HALF_LIFE = 200;
 // Phase 27.1: gate at ANY positive pressure (i.e. any inventory
@@ -96,7 +97,8 @@ export function maybeArealPhonemeShare(
         break;
       }
     }
-    recipient.lexicon[m] = newForm;
+    // Phase 29 Tranche 1 round 3: route through chokepoint.
+    setLexiconForm(recipient, m, newForm, { bornGeneration: 0, origin: `areal:${donor.id}` });
     affected.push(m);
   }
   if (affected.length === 0) return null;

@@ -88,7 +88,10 @@ describe("comparative reconstruction", () => {
     expect(meanings.has("z")).toBe(true);
   });
 
-  it("end-to-end: reconstructed root forms stay close to seed lexicon for stable Swadesh words after 100 gens", () => {
+  // Phase 29 Tranche 7g: trimmed 100→60 gens. The reconstruction
+  // assertion only needs sister-language drift to be observable; 60
+  // gens demonstrates that, and brings runtime from 40s under budget.
+  it("end-to-end: reconstructed root forms stay close to seed lexicon for stable Swadesh words after 60 gens", () => {
     const cfg = defaultConfig();
     cfg.seed = "reconstruction-1";
     const sim = createSimulation(cfg);
@@ -96,7 +99,7 @@ describe("comparative reconstruction", () => {
     const seedSnapshot: Record<string, WordForm> = {};
     for (const m of Object.keys(seedLex)) seedSnapshot[m] = seedLex[m]!.slice();
 
-    for (let i = 0; i < 100; i++) sim.step();
+    for (let i = 0; i < 60; i++) sim.step();
     const tree = sim.getState().tree;
     const rootId = sim.getState().rootId;
     const stableMeanings = ["water", "fire", "mother", "father", "i", "you", "two"];

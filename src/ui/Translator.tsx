@@ -117,7 +117,6 @@ export function Translator() {
   const run = () => {
     /* deprecated: results are recomputed automatically via useMemo */
   };
-  void run;
 
   return (
     <div style={{ fontSize: 13, maxWidth: 760 }}>
@@ -390,7 +389,6 @@ function SentenceOutput({
         borderRadius: 6,
       }}
     >
-      {}
       <div
         style={{
           fontSize: "var(--fs-3)",
@@ -409,7 +407,6 @@ function SentenceOutput({
               })
               .join(" ")}
       </div>
-      {}
       <div
         className="token-row"
       >

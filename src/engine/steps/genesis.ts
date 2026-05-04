@@ -8,11 +8,12 @@ import { isFormLegal } from "../phonology/wordShape";
 import { lexicalCapacity } from "../lexicon/tier";
 import { realismMultiplier } from "../phonology/rate";
 import { DERIVATION_TARGETS } from "../lexicon/derivation_targets";
+import { assignInflectionClass } from "../morphology/inflectionClass";
 import {
   attemptTargetedDerivation,
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
-import { tryCommitCoinage, removeSense } from "../lexicon/word";
+import { tryCommitCoinage } from "../lexicon/word";
 import {
   findSuffixByTag,
   registerSuffixUsage,
@@ -151,7 +152,6 @@ export function stepGenesis(
     let oldFormStr = "";
     if (isReplacement) {
       oldFormStr = lang.lexicon[outcome.meaning]!.join("");
-      removeSense(lang, outcome.meaning);
     }
     // Phase 21c: collision-aware commit. The form may already exist as
     // a word for another meaning; in that case roll polysemy/reject.
@@ -167,6 +167,31 @@ export function stepGenesis(
       },
     );
     if (!commit.committed) continue;
+    // Phase 29 Tranche 5c+1: remove the OLD sense AFTER commit succeeds.
+    // Pre-fix the removeSense ran upstream of the polysemy roll, so a
+    // failed roll left lang.lexicon with the old form but lang.words
+    // with no sense for the meaning — silent dual-truth desync.
+    if (isReplacement) {
+      // The new word entry was just added by tryCommitCoinage; drop
+      // any other word that still carries this meaning's sense.
+      // (removeSense filters lang.words, dropping the meaning from
+      //  every other word and removing words whose only sense was the
+      //  meaning. The new word still carries its newly-added sense.)
+      const newKey = outcome.form.join("");
+      const before = lang.words ?? [];
+      lang.words = before.filter((w) => {
+        if (w.formKey === newKey) return true;
+        const remaining = w.senses.filter((s) => s.meaning !== outcome.meaning);
+        if (remaining.length === 0) return false;
+        if (remaining.length !== w.senses.length) {
+          const oldPrim = w.senses[w.primarySenseIndex]?.meaning;
+          w.senses = remaining;
+          const np = remaining.findIndex((s) => s.meaning === oldPrim);
+          w.primarySenseIndex = np >= 0 ? np : 0;
+        }
+        return true;
+      });
+    }
     lang.lexicon[outcome.meaning] = outcome.form;
     lang.wordFrequencyHints[outcome.meaning] = 0.4;
     lang.wordOrigin[outcome.meaning] = isReplacement
@@ -174,6 +199,40 @@ export function stepGenesis(
       : outcome.originTag;
     if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
       lang.registerOf[outcome.meaning] = outcome.register ?? "low";
+    }
+    // Phase 29 Tranche 5e: assign an inflection class for the new
+    // coinage. Lexical replacement preserves the existing class
+    // (the meaning's grammar slot doesn't change just because the
+    // form did); pure new coinages get a freshly-rolled class biased
+    // by the form's phonological shape.
+    if (!isReplacement) {
+      if (!lang.inflectionClass) lang.inflectionClass = {};
+      if (!lang.inflectionClass[outcome.meaning]) {
+        lang.inflectionClass[outcome.meaning] = assignInflectionClass(outcome.form, rng);
+      }
+    }
+    // Phase 29 Tranche 4i: when the mechanism surfaced its
+    // constituents, record an etymology chain so the UI can show
+    // "← cat + tree" for a compound, "← speak + -er" for a
+    // derivation, etc. Targeted-derivation already populates this
+    // field upstream via recordDerivationChain; the MECHANISMS
+    // path was previously dropping all etymology.
+    if (!isReplacement && outcome.sources) {
+      if (!lang.wordOriginChain) lang.wordOriginChain = {};
+      const s = outcome.sources;
+      if (s.partMeanings && s.partMeanings.length >= 2) {
+        lang.wordOriginChain[outcome.meaning] = {
+          tag: outcome.originTag,
+          from: s.partMeanings[0]!,
+          via: s.partMeanings[1]!,
+        };
+      } else if (s.donorLangId && s.donorMeaning) {
+        lang.wordOriginChain[outcome.meaning] = {
+          tag: outcome.originTag,
+          from: s.donorMeaning,
+          via: `←${s.donorLangId}`,
+        };
+      }
     }
     pushEvent(lang, {
       generation,

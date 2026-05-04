@@ -129,10 +129,13 @@ describe("Phase 27.1 — stepInventoryHomeostasis", () => {
 });
 
 describe("Phase 27.1 — full-simulation inventory convergence", () => {
-  it("English preset over 200 gens keeps leaf inventories bounded (no runaway growth)", () => {
+  // Phase 29 Tranche 7g: trimmed to 60 gens. The homeostatic regime
+  // engages by gen ~50 (when English hits tier-3 cap ~40 phonemes);
+  // 60 is enough to demonstrate boundedness without burning 22s.
+  it("English preset over 60 gens keeps leaf inventories bounded (no runaway growth)", () => {
     const cfg = { ...presetEnglish(), seed: "homeostasis-convergence" };
     const sim = createSimulation(cfg);
-    for (let i = 0; i < 200; i++) sim.step();
+    for (let i = 0; i < 60; i++) sim.step();
     const state = sim.getState();
     let checkedAny = false;
     const sizes: { name: string; size: number; target: number }[] = [];

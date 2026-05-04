@@ -2,6 +2,7 @@ import type { Language, WordForm } from "../types";
 import { inflect, inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassForm } from "./closedClass";
+import { fnv1a } from "../rng";
 import type { NP, PP, Sentence, VP } from "./syntax";
 import { sliceOrder } from "./wordOrder";
 import { classifierMeaningFor } from "./classifiers";
@@ -467,7 +468,17 @@ function realisePP(pp: PP, lang: Language, ctx: NPCtx): RealisedToken[] {
   if (ctx.caseStrategy === "case") return npTokens;
   const pf = closedClassForm(lang, pp.prep.lemma) ?? [];
   if (pf.length === 0) return npTokens;
-  if (ctx.caseStrategy === "postposition") {
+  // Phase 29 Tranche 4h: realise the "mixed" caseStrategy. Per
+  // (lang, prep) lemma pair, pick prep vs. postp deterministically
+  // by hashing — so a "mixed" language ends up with stable per-prep
+  // assignments (e.g. /at/ pre-N, /of/ post-N) rather than flipping
+  // randomly. Mirrors real mixed-typology languages (Persian: prep
+  // dominant + a few postpositions; Akkadian: postp dominant + a
+  // few preps).
+  const isPostposition =
+    ctx.caseStrategy === "postposition" ||
+    (ctx.caseStrategy === "mixed" && fnv1a(`${lang.id}::pp::${pp.prep.lemma}`) % 2 === 0);
+  if (isPostposition) {
     return [...npTokens, { surface: pf.join(""), form: pf, english: pp.prep.lemma, role: "POSTP" }];
   }
   return [{ surface: pf.join(""), form: pf, english: pp.prep.lemma, role: "PREP" }, ...npTokens];

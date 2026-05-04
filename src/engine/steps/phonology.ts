@@ -87,6 +87,29 @@ export function stepPhonology(
     const fraction = recentlyChanged / nbrs.length;
     neighbourMomentum[m] = 1 + NEIGHBOUR_MOMENTUM_MAX * fraction;
   }
+  // Phase 29 Tranche 5c: build the rule-actuation timestamp lookup.
+  // For any rule whose probabilityFor returns > 0 on at least one
+  // current lexicon entry AND which has not yet been recorded as
+  // actuated, mark it as actuated this generation. The Wang sigmoid
+  // in apply.ts uses (currentGeneration - actuatedAt) per rule to
+  // ramp lambda from a damped initial rate to full rate over the
+  // following dozens of generations.
+  if (!lang.diffusionState) lang.diffusionState = {};
+  const lexiconKeys = Object.keys(before);
+  for (const change of changes) {
+    if (lang.diffusionState[change.id] !== undefined) continue;
+    for (const m of lexiconKeys) {
+      if (change.probabilityFor(before[m]!) > 0) {
+        lang.diffusionState[change.id] = { actuatedAt: generation };
+        break;
+      }
+    }
+  }
+  const ruleActuationGen: Record<string, number> = {};
+  for (const [ruleId, entry] of Object.entries(lang.diffusionState)) {
+    ruleActuationGen[ruleId] = entry.actuatedAt;
+  }
+
   const opts = {
     globalRate: config.phonology.globalRate * realismMultiplier(config),
     weights: lang.changeWeights,
@@ -98,6 +121,11 @@ export function stepPhonology(
     lexicalStress: lang.lexicalStress,
     seedLengths,
     neighbourMomentum,
+    ruleActuationGen,
+    currentGeneration: generation,
+    // Phase 29 Tranche 5o: hand the lang to apply.ts so candidate
+    // outputs are filtered by the OT ranking (soft constraint).
+    langForOt: lang,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   // Phase 29 Tranche 5d: record proto→daughter substitutions for
@@ -268,6 +296,12 @@ export function stepPhonology(
         }
       }
       refreshInventory(lang);
+      // Phase 29 Tranche 7b: applyOneRegularChange wholesale-replaces
+      // lang.lexicon with direct writes; sync words afterwards so the
+      // form-keyed view tracks. Safe now that the infinite-loop in
+      // applyOneRegularChange itself is bounded by
+      // MAX_PER_MEANING_PASSES (Tranche 7b fix).
+      if (lang.words) syncWordsAfterPhonology(lang, generation);
       pushEvent(lang, {
         generation,
         kind: "sound_change",

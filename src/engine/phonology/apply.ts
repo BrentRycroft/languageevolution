@@ -13,6 +13,8 @@ import { stressClass, type StressPattern } from "./stress";
 import { isVowel } from "./ipa";
 import { stripTone } from "./tone";
 import { posOf } from "../lexicon/pos";
+import { otFit } from "./ot";
+import type { Language } from "../types";
 
 /**
  * Phase 24: rule categories that net-shrink or weaken a word. Soft
@@ -90,8 +92,37 @@ export interface ApplyOptions {
    * adopts it faster — the S-curve of lexical diffusion.
    */
   neighbourMomentum?: Record<Meaning, number>;
+  /**
+   * Phase 29 Tranche 5c: lexical diffusion S-curve. Tracks when each
+   * rule first actuated in this language. The Wang sigmoid uses
+   * (currentGeneration - actuatedAt) as the time variable, so a
+   * newly-actuated rule fires at a damped rate that ramps up over
+   * dozens of generations rather than instantly hitting full rate.
+   * Per-meaning frequency tilts the threshold: high-freq content
+   * words flip late (large t0), low-freq early.
+   *
+   * Both fields must be present for the S-curve to apply; missing
+   * either yields a multiplier of 1 (no effect, back-compat).
+   */
+  ruleActuationGen?: Record<string, number>;
+  currentGeneration?: number;
+  /**
+   * Phase 29 Tranche 5o: pass the language's OT ranking so candidate
+   * outputs can be scored against the constraint hierarchy. When a
+   * change worsens otFit by more than `OT_REJECT_THRESHOLD`, reject
+   * with probability proportional to the worsening. Implements the
+   * "soft penalty" wiring the plan called for, so the OT module
+   * isn't dead-on-arrival.
+   *
+   * Without `langForOt` the OT filter is skipped (back-compat). The
+   * caller (steps/phonology.ts) supplies `lang` here.
+   */
+  langForOt?: Pick<Language, "otRanking">;
   _orderedChanges?: SoundChange[];
 }
+
+const OT_REJECT_THRESHOLD = 0.05;
+const OT_REJECT_GAIN = 1.5;
 
 function hasStressFilterMatch(
   word: WordForm,
@@ -261,12 +292,34 @@ export function applyChangesToWord(
     // word-by-word rather than firing exceptionlessly across the
     // whole lexicon. Caller passes `neighbourMomentum` ∈ [1, 1.5].
     const momentum = opts.neighbourMomentum?.[meaning] ?? 1;
+    // Phase 29 Tranche 5c: Wang lexical-diffusion S-curve. The rule's
+    // age in this language drives a sigmoid that ramps from a damped
+    // initial rate to full rate over generations. Per-meaning
+    // frequency tilts the threshold: high-freq content words have a
+    // larger t0 (resist longer); low-freq words have a smaller t0.
+    // Without ruleActuationGen / currentGeneration in opts, multiplier
+    // is 1 (back-compat).
+    let wangBoost = 1;
+    if (opts.ruleActuationGen && opts.currentGeneration !== undefined) {
+      const actuatedAt = opts.ruleActuationGen[change.id];
+      if (actuatedAt !== undefined) {
+        const age = opts.currentGeneration - actuatedAt;
+        // freq-tilted threshold: high-freq content words get pushed
+        // further out (t0 ≈ 50–100 gens); low-freq early adopters
+        // (t0 ≈ 5–15 gens). Function words (Phase 24c flips direction)
+        // adopt fast regardless.
+        const t0 = isContentWord(meaning) ? 10 + (1 - freq) * -60 + 60 : 5;
+        const k = 0.15;
+        wangBoost = 1 / (1 + Math.exp(-k * (age - t0)));
+      }
+    }
     const lambda = Math.min(
       3,
       adjusted *
         weight *
         naturalBias *
         momentum *
+        wangBoost *
         opts.globalRate *
         mult *
         ageMult *
@@ -280,6 +333,19 @@ export function applyChangesToWord(
       const next = change.apply(current, rng);
       if (next === current) break;
       if (!isFormLegal(meaning, next)) break;
+      // Phase 29 Tranche 5o: soft OT filter. Compare candidate vs
+      // current under the language's OT ranking; if the candidate is
+      // appreciably worse, reject probabilistically. Skip when the
+      // language hasn't supplied a ranking (back-compat).
+      if (opts.langForOt) {
+        const fitBefore = otFit(current, opts.langForOt as Language);
+        const fitAfter = otFit(next, opts.langForOt as Language);
+        const drop = fitBefore - fitAfter;
+        if (drop > OT_REJECT_THRESHOLD) {
+          const rejectP = Math.min(0.85, drop * OT_REJECT_GAIN);
+          if (rng.chance(rejectP)) break;
+        }
+      }
       current = next;
     }
   }

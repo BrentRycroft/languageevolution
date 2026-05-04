@@ -167,6 +167,11 @@ export function splitLeaf(
       lexicalStress: parentLang.lexicalStress
         ? { ...parentLang.lexicalStress }
         : undefined,
+      // Phase 29 Tranche 5e: daughter inherits the parent's inflection
+      // class assignments. Stable across splits unless analogy re-classes.
+      inflectionClass: parentLang.inflectionClass
+        ? { ...parentLang.inflectionClass }
+        : undefined,
       suppletion: parentLang.suppletion
         ? Object.fromEntries(
             Object.entries(parentLang.suppletion).map(([m, slots]) => [

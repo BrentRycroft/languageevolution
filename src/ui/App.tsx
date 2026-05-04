@@ -306,29 +306,28 @@ export function App() {
             <Glossary />
           </div>
         )}
-        {}
-        <div
-          className="panel panel-single"
-          role="tabpanel"
-          id="tabpanel-events"
-          aria-labelledby="tab-events"
-          style={{ display: activeTab === "events" ? "" : "none" }}
-          aria-hidden={activeTab !== "events"}
-        >
-          <h3>History</h3>
-          <EventsLog />
-        </div>
-        <div
-          className="panel panel-single"
-          role="tabpanel"
-          id="tabpanel-translate"
-          aria-labelledby="tab-translate"
-          style={{ display: activeTab === "translate" ? "" : "none" }}
-          aria-hidden={activeTab !== "translate"}
-        >
-          <h3>Translator</h3>
-          <Translator />
-        </div>
+        {activeTab === "events" && (
+          <div
+            className="panel panel-single"
+            role="tabpanel"
+            id="tabpanel-events"
+            aria-labelledby="tab-events"
+          >
+            <h3>History</h3>
+            <EventsLog />
+          </div>
+        )}
+        {activeTab === "translate" && (
+          <div
+            className="panel panel-single"
+            role="tabpanel"
+            id="tabpanel-translate"
+            aria-labelledby="tab-translate"
+          >
+            <h3>Translator</h3>
+            <Translator />
+          </div>
+        )}
         {activeTab === "compare" && (
           <div className="panel panel-single" role="tabpanel" id="tabpanel-compare" aria-labelledby="tab-compare">
             <h3>Compare</h3>

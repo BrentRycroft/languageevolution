@@ -12,6 +12,18 @@ export interface CoinageOutcome {
   mechanism: string;
   originTag: string;
   register?: "high" | "low";
+  /**
+   * Phase 29 Tranche 4i: optional etymology surfaced by mechanisms
+   * that know their constituents. Used by genesis.ts to populate
+   * lang.wordOriginChain so the UI can show "← cat + tree" for
+   * compounds, "← speak + -er" for derivations, etc.
+   */
+  sources?: {
+    partMeanings?: string[];
+    donorLangId?: string;
+    donorMeaning?: string;
+    via?: string;
+  };
 }
 
 export function tryCoin(
@@ -73,6 +85,7 @@ export function tryCoin(
       mechanism: pick.mech.id,
       originTag: pick.mech.originTag,
       register: pick.mech.register,
+      sources: result.sources,
     };
   }
 

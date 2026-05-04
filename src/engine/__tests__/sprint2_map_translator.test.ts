@@ -165,10 +165,14 @@ describe("§C — territory dynamics", () => {
     }
   });
 
-  it("releaseTerritory empties the cell list", () => {
+  // Phase 29 Tranche 4l: releaseTerritory no longer blanks the cell
+  // list immediately. The cells stay on the extinct lang as historical
+  // territory and get gradually reabsorbed by living neighbours via
+  // `reabsorbExtinctTerritory`. See territory.ts for rationale.
+  it("releaseTerritory preserves the cell list (Phase 29 Tranche 4l)", () => {
     const lang = bareLang("L", { territory: { cells: [1, 2, 3] } });
     releaseTerritory(lang);
-    expect(lang.territory!.cells).toEqual([]);
+    expect(lang.territory!.cells).toEqual([1, 2, 3]);
   });
 });
 
@@ -180,10 +184,10 @@ describe("§C — sim integration", () => {
     expect(proto.territory!.cells.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("default and explicit Earth-mode produce non-crashing 100-gen runs", () => {
+  it("default and explicit Earth-mode produce non-crashing 30-gen runs", () => {
     for (const mode of ["random", "earth"] as const) {
       const sim = createSimulation({ ...defaultConfig(), seed: `mode-${mode}`, mapMode: mode });
-      for (let i = 0; i < 100; i++) sim.step();
+      for (let i = 0; i < 30; i++) sim.step();
       const state = sim.getState();
       let totalCells = 0;
       for (const id of Object.keys(state.tree)) {

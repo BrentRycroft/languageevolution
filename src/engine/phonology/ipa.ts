@@ -2,7 +2,7 @@ import type { Phoneme } from "../primitives";
 
 export const VOWELS: ReadonlySet<Phoneme> = new Set([
   "a", "e", "i", "o", "u",
-  "ɛ", "ɔ", "ə", "ɨ", "ɯ", "ø", "y", "œ",
+  "ɛ", "ɔ", "ə", "ɨ", "ɯ", "ø", "y", "œ", "ʌ",
   "æ", "ɑ", "ɒ", "ʏ", "ɪ", "ʊ",
   "aː", "eː", "iː", "oː", "uː",
   "á", "é", "í", "ó", "ú",
@@ -10,6 +10,12 @@ export const VOWELS: ReadonlySet<Phoneme> = new Set([
   "â", "ê", "î", "ô", "û",
   "ā", "ē", "ī", "ō", "ū",
   "ã", "ẽ", "ĩ", "õ", "ũ",
+  // Phase 29 Tranche 5a: nasalisation rule outputs. Bare combining
+  // tilde + non-precomposed vowels (ɛ̃, ɔ̃, ɑ̃) plus the length-marked
+  // nasal forms (aː̃ etc.) flow through the simulator from the new
+  // `nasalization.vowel_before_nasal` rule.
+  "ɛ̃", "ɔ̃", "ɑ̃", "œ̃",
+  "aː̃", "ẽː", "ĩː", "õː", "ũː", "ɛ̃ː", "ɔ̃ː",
 ]);
 
 export const CONSONANTS: ReadonlySet<Phoneme> = new Set([
@@ -46,12 +52,27 @@ export function isVowel(p: Phoneme): boolean {
   if (p.endsWith("ː") && VOWELS.has(p.slice(0, -1))) {
     result = true;
   } else {
-    for (const m of TONE_MARKS_VOWEL) {
-      if (p.endsWith(m)) {
-        const base = p.slice(0, -m.length);
-        if (VOWELS.has(base)) { result = true; break; }
-        if (base.endsWith("ː") && VOWELS.has(base.slice(0, -1))) { result = true; break; }
+    // Phase 29: strip stacked tone marks recursively. The
+    // tone-spread step can re-tag an already-toned vowel, leaving
+    // forms like /i˧˥˩˧˥˩/. The previous one-strip loop bottomed
+    // out at /i˧˥˩/ → not in VOWELS and bailed.
+    let base = p;
+    let stripped = false;
+    while (true) {
+      let advanced = false;
+      for (const m of TONE_MARKS_VOWEL) {
+        if (base.endsWith(m)) {
+          base = base.slice(0, -m.length);
+          stripped = true;
+          advanced = true;
+          break;
+        }
       }
+      if (!advanced) break;
+    }
+    if (stripped) {
+      if (VOWELS.has(base)) result = true;
+      else if (base.endsWith("ː") && VOWELS.has(base.slice(0, -1))) result = true;
     }
   }
   IS_VOWEL_CACHE[p] = result;
@@ -137,6 +158,17 @@ export function textToIpa(input: string): Phoneme[] {
   for (let i = 0; i < work.length; i++) {
     const cur = work[i]!;
     const next = work[i + 1] ?? "";
+    // Phase 29 Tranche 5p: recognise prenasalised stops written as
+    // IPA-style superscript-n + stop ("ⁿp", "ⁿb", "ⁿt", "ⁿd",
+    // "ⁿk", "ⁿg", "ⁿj"). Pre-fix these collapsed to /n/ + stop on
+    // input, so Bantu-style /ⁿpondo/ couldn't survive a textToIpa
+    // round-trip. The combined-phoneme forms are already in
+    // CONSONANTS via PHONE_FEATURES.
+    if (cur === "ⁿ" && /^[pbtdkgj]$/.test(next)) {
+      out.push(("ⁿ" + next) as Phoneme);
+      i++;
+      continue;
+    }
     const pair = cur + next;
     const digraph = ASCII_TO_IPA[pair];
     if (digraph !== undefined) {

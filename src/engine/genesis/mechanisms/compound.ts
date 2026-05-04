@@ -30,6 +30,6 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
     if (form.length < minLen) form = [...form, "ə"];
     const fit = 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
     if (fit < 0.25) return null;
-    return { form };
+    return { form, sources: { partMeanings: [partA, partB] } };
   },
 };

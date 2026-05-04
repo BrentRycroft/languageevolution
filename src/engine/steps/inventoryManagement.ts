@@ -131,31 +131,35 @@ function runHomeostasis(
   lang: Language,
   rng: Rng,
   generation: number,
-): void {
+): boolean {
   let pressure = inventorySizePressure(lang);
+  let anyMerger = false;
   if (pressure === 0) {
-    if (!rng.chance(BASE_PRUNE_PROB)) return;
+    if (!rng.chance(BASE_PRUNE_PROB)) return false;
     const merger = prunePhonemes(lang, rng, generation);
     if (merger) {
+      anyMerger = true;
       pushEvent(lang, {
         generation,
         kind: "sound_change",
         description: `maintenance merger: /${merger.from}/ → /${merger.to}/ (${merger.affectedWords} word${merger.affectedWords === 1 ? "" : "s"} affected)`,
       });
     }
-    return;
+    return anyMerger;
   }
   for (let i = 0; i < MAX_PRUNE_ATTEMPTS_PER_GEN; i++) {
     const merger = prunePhonemes(lang, rng, generation);
-    if (!merger) return;
+    if (!merger) return anyMerger;
+    anyMerger = true;
     pushEvent(lang, {
       generation,
       kind: "sound_change",
       description: `homeostatic merger (×${pressure.toFixed(2)} pressure): /${merger.from}/ → /${merger.to}/ (${merger.affectedWords} word${merger.affectedWords === 1 ? "" : "s"} affected)`,
     });
     pressure = inventorySizePressure(lang);
-    if (pressure === 0) return;
+    if (pressure === 0) return anyMerger;
   }
+  return anyMerger;
 }
 
 export function stepInventoryManagement(
@@ -164,15 +168,14 @@ export function stepInventoryManagement(
   generation: number,
 ): void {
   runPhonotacticRepair(lang, rng, generation);
-  runHomeostasis(lang, rng, generation);
-  // Phase 29 Tranche 7b: prunePhonemes mutates lang.lexicon directly
-  // (a per-meaning setLexiconForm makes prunePhonemes O(N×W)). A
-  // single end-of-step syncWordsAfterPhonology call amortises the
-  // catch-up. Pre-fix this caused an infinite loop in
-  // applyOneRegularChange (regular.ts safety bound `< form.length`
-  // grew with the form for any insertion-style rule). Now bounded by
-  // MAX_PER_MEANING_PASSES.
-  if (lang.words) syncWordsAfterPhonology(lang, generation);
+  const merged = runHomeostasis(lang, rng, generation);
+  // Phase 29 Tranche 7b: prunePhonemes mutates lang.lexicon directly,
+  // bypassing setLexiconForm. Sync once at end-of-step to amortise the
+  // catch-up. Phase 29 Tranche 7c (perf): skip the sync entirely when
+  // no merger fired — most generations don't trigger pruning.
+  // runPhonotacticRepair already routes through setLexiconForm so its
+  // changes are already reflected in lang.words.
+  if (merged && lang.words) syncWordsAfterPhonology(lang, generation);
 }
 
 // Back-compat exports for tests that referenced the pre-28a entry
@@ -187,4 +190,6 @@ export const stepInventoryHomeostasis = (
   lang: Language,
   rng: Rng,
   generation: number,
-): void => runHomeostasis(lang, rng, generation);
+): void => {
+  runHomeostasis(lang, rng, generation);
+};

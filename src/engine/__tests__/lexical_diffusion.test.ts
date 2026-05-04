@@ -66,12 +66,15 @@ describe("Phase 28d — lexical diffusion", () => {
     ).toBeGreaterThan(baseline);
   });
 
+  // Phase 29 Tranche 7g: trimmed 200→100 gens. The freq-graded
+  // divergence signature is observable by gen 80–100 — running 200
+  // just adds noise and cost (the prior run took 75s alone).
   it("explicit-frequency content words show frequency-graded divergence", () => {
     const cfg = { ...presetEnglish(), seed: "diffusion-rate" };
     const sim = createSimulation(cfg);
     const seedLex = cfg.seedLexicon;
     const freqHints = cfg.seedFrequencyHints ?? {};
-    for (let i = 0; i < 200; i++) sim.step();
+    for (let i = 0; i < 100; i++) sim.step();
     const state = sim.getState();
     const leaves = leafIds(state.tree).filter(
       (id) => !state.tree[id]!.language.extinct,

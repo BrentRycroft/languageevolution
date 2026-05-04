@@ -14,8 +14,13 @@ import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { assignAllGenders } from "../morphology/gender";
+import { classifyLexicon } from "../morphology/inflectionClass";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
 import { syncWordsFromLexicon } from "../lexicon/word";
+import {
+  CLOSED_CLASS_LEMMAS,
+  closedClassForm,
+} from "../translator/closedClass";
 import {
   getWorldMap,
   randomLandCell,
@@ -25,6 +30,28 @@ import {
 
 function initialLexicalCapacity(lang: Language): number {
   return computeCapacity(lang, lang.birthGeneration);
+}
+
+/**
+ * Phase 29 Tranche 5k: pour synthesised closed-class lemmas
+ * (the/of/and/i/you/…) into the lexicon at language birth so they
+ * evolve through normal phonology. Only fills lemmas that the seed
+ * lexicon doesn't already define. Marks them with origin
+ * "closed-class" and high frequency so the rate-curve treats them
+ * as function words (faster erosion than content words).
+ */
+function seedClosedClassLexicon(lang: Language): void {
+  for (const lemma of CLOSED_CLASS_LEMMAS) {
+    if (lemma === "Q" || lemma === "CLF") continue;
+    if (lang.lexicon[lemma]) continue;
+    const form = closedClassForm(lang, lemma);
+    if (!form || form.length === 0) continue;
+    lang.lexicon[lemma] = form;
+    if (!lang.wordOrigin[lemma]) lang.wordOrigin[lemma] = "closed-class";
+    if (lang.wordFrequencyHints[lemma] === undefined) {
+      lang.wordFrequencyHints[lemma] = 0.95;
+    }
+  }
 }
 
 function cloneSuppletion(
@@ -111,7 +138,23 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   seedNativeProvenance(rootLang);
+  // Phase 29 Tranche 5k: pour synthesised closed-class lemmas into
+  // the lexicon at language birth so they participate in phonology
+  // like any other word. Pre-fix the closedClassForm() machinery
+  // recomputed forms from a hash on every call, meaning function
+  // words like "the" / "of" / "and" / "i" / "you" never eroded —
+  // contradicting Phase 24's whole frequency-direction premise that
+  // function words should erode FASTEST. (closedClassTable still
+  // synthesises for any lemma we haven't seeded; pre-existing
+  // analogy + drift gates already exclude these meanings, so they
+  // erode but don't reshape.)
+  seedClosedClassLexicon(rootLang);
   assignAllGenders(rootLang);
+  // Phase 29 Tranche 5e: bucket every seed meaning into an inflection
+  // class (Latin-style 1/2/3/4) biased by phonological shape. The
+  // class is stable across the language's lifetime and consulted by
+  // paradigm-pickers for class-specific affixes.
+  classifyLexicon(rootLang, rng);
   // Phase 21a: build the form-centric `words` table from the seed
   // lexicon so day-zero languages already have the new layer populated.
   // No behavior change: `lexicon` remains the source of truth until

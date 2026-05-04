@@ -65,6 +65,17 @@ export function tickTerritory(
       occupier.coords = territoryCentroid(map, occupier.territory.cells);
     }
   }
+  // Phase 29 Tranche 4l: even if no living occupier, an EXTINCT lang
+  // may still nominally own this cell (dead territory pending
+  // reabsorption). Strip the cell from any such extinct owner so the
+  // ownership map stays consistent.
+  for (const id of Object.keys(tree)) {
+    const node = tree[id]!;
+    if (!node.language.extinct) continue;
+    const cells = node.language.territory?.cells;
+    if (!cells || !cells.includes(target)) continue;
+    node.language.territory!.cells = cells.filter((c) => c !== target);
+  }
   lang.territory.cells.push(target);
   lang.coords = territoryCentroid(map, lang.territory.cells);
 }
@@ -185,5 +196,72 @@ export function arealShareAffinity(
 
 export function releaseTerritory(lang: Language): void {
   if (!lang.territory) return;
-  lang.territory = { cells: [] };
+  // Phase 29 Tranche 4l: don't blank cells outright. Keep them on the
+  // extinct lang as historical territory; the new
+  // `reabsorbExtinctTerritory` step will redistribute them to living
+  // neighbours over a few generations, while MapView already prefers
+  // the living owner via buildOwnership when both claim the cell.
+}
+
+/**
+ * Phase 29 Tranche 4l: gradually reassign cells of extinct languages
+ * to living neighbours that border them. Replaces the prior behavior
+ * (immediate blanking) which left interior cells permanently orphaned.
+ *
+ * Per call: for every cell still claimed by an extinct lang that has a
+ * living neighbour, with `perCellProb` probability transfer it to one
+ * of the bordering living langs (uniform random pick). Over ~10 calls
+ * a typical dead territory is fully reabsorbed.
+ */
+export function reabsorbExtinctTerritory(
+  tree: LanguageTree,
+  map: WorldMap,
+  rng: Rng,
+  perCellProb = 0.18,
+): void {
+  const aliveByCell = new Map<number, string>();
+  for (const id of Object.keys(tree)) {
+    const lang = tree[id]!.language;
+    if (lang.extinct) continue;
+    for (const c of lang.territory?.cells ?? []) aliveByCell.set(c, id);
+  }
+  for (const id of Object.keys(tree)) {
+    const lang = tree[id]!.language;
+    if (!lang.extinct) continue;
+    const cells = lang.territory?.cells;
+    if (!cells || cells.length === 0) continue;
+    const remaining: number[] = [];
+    for (const cellId of cells) {
+      if (aliveByCell.has(cellId)) {
+        // Already claimed by a living lang (e.g. via tickTerritory);
+        // drop from this extinct owner.
+        continue;
+      }
+      if (!rng.chance(perCellProb)) {
+        remaining.push(cellId);
+        continue;
+      }
+      const cell = map.cells[cellId];
+      if (!cell) {
+        remaining.push(cellId);
+        continue;
+      }
+      const candidates: string[] = [];
+      for (const n of cell.neighbours) {
+        const owner = aliveByCell.get(n);
+        if (owner) candidates.push(owner);
+      }
+      if (candidates.length === 0) {
+        remaining.push(cellId);
+        continue;
+      }
+      const inheritor = candidates[rng.int(candidates.length)]!;
+      const inheritorLang = tree[inheritor]!.language;
+      if (!inheritorLang.territory) inheritorLang.territory = { cells: [] };
+      inheritorLang.territory.cells.push(cellId);
+      aliveByCell.set(cellId, inheritor);
+      inheritorLang.coords = territoryCentroid(map, inheritorLang.territory.cells);
+    }
+    lang.territory = { cells: remaining };
+  }
 }

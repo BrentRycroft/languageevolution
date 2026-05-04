@@ -56,15 +56,27 @@ export type MorphCategory =
 export type StemShape = "vowel-final" | "consonant-final";
 
 /**
+ * Phase 29 Tranche 5e: inflection class. Latin-style 1st/2nd/3rd/4th
+ * conjugations (or noun declensions). Each language assigns each
+ * inflectable meaning to one class; paradigms can carry per-class
+ * affix overrides via `Paradigm.byClass`.
+ *
+ * Default class is 1 (most common). Languages with no classification
+ * system simply leave inflectionClass undefined for all meanings.
+ */
+export type InflectionClass = 1 | 2 | 3 | 4;
+
+/**
  * A `when` predicate selects an affix variant for a given stem.
  *
  * - `"vowel-final"` / `"consonant-final"` — match the last segment.
  * - `"gender:N"` — match nouns/adjectives whose gender is N.
+ * - `"class:N"` — match the inflectionClass of the meaning (Phase 29 5e).
  *
- * For an MVP, the matcher checks gender first (if specified and provided),
- * then falls back to stem-shape variants.
+ * For an MVP, the matcher checks class first (if specified and the
+ * meaning has a class), then gender, then stem-shape variants.
  */
-export type ParadigmCondition = StemShape | `gender:${number}`;
+export type ParadigmCondition = StemShape | `gender:${number}` | `class:${number}`;
 
 export interface ParadigmVariant {
   when: ParadigmCondition;
