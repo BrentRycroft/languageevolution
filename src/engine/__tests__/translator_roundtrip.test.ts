@@ -15,10 +15,18 @@ function reverseRecovers(english: string, expectedLemmas: string[]): string[] {
     .filter(Boolean)
     .join(" ");
   const rev = reverseTranslate(lang, targetSurface);
-  const recovered = rev.tokens
-    .map((t) => t.lemma)
-    .filter((l): l is string => l !== null);
-  const missing = expectedLemmas.filter((l) => !recovered.includes(l));
+  // Phase 29-2b: count both the picked lemma AND alternateLemmas as
+  // "recovered". When two seeded meanings share a form (e.g., PIE
+  // it/that both = ["t","o","d"]), the disambiguator picks one as
+  // primary but the other appears in alternateLemmas — the
+  // round-trip still RECOGNISED the meaning, even if it didn't
+  // promote it to the canonical sense.
+  const recovered = new Set<string>();
+  for (const t of rev.tokens) {
+    if (t.lemma !== null) recovered.add(t.lemma);
+    if (t.alternateLemmas) for (const a of t.alternateLemmas) recovered.add(a);
+  }
+  const missing = expectedLemmas.filter((l) => !recovered.has(l));
   return missing;
 }
 

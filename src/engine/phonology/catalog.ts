@@ -951,7 +951,7 @@ export const CATALOG: SoundChange[] = [
       }
       return 0;
     },
-    apply: (word) => {
+    apply: (word, rng) => {
       const sites: number[] = [];
       for (let i = 0; i < word.length - 3; i++) {
         const v = word[i]!;
@@ -962,7 +962,11 @@ export const CATALOG: SoundChange[] = [
         sites.push(i);
       }
       if (sites.length === 0) return word;
-      const idx = sites[Math.floor(Math.random() * sites.length)]!;
+      // Phase 29-2a: was Math.random — broke determinism. Now uses the
+      // seeded rng passed in. Root cause of the long-failing
+      // simulation.test.ts "two sims with identical config produce
+      // identical state" assertion.
+      const idx = sites[rng.int(sites.length)]!;
       const out = word.slice();
       out[idx] = (out[idx] ?? "") + "ː";
       out.splice(idx + 1, 1);

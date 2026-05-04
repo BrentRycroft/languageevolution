@@ -1,8 +1,12 @@
 import type { Language, LanguageNode, LanguageTree, SimulationConfig, SimulationState } from "../engine/types";
-import { migrateSavedRun } from "./migrate";
+import { LATEST_SAVE_VERSION, migrateSavedRun } from "./migrate";
 
 const AUTOSAVE_KEY = "lev.autosave.v2";
-const AUTOSAVE_VERSION = 5;
+// Phase 29-2f: tracks LATEST_SAVE_VERSION instead of being a separate
+// drifting constant. Pre-29-2f this was hard-coded to 5 while
+// LATEST_SAVE_VERSION was 6 — autosaves written at v6 silently
+// failed the future-version check on load.
+const AUTOSAVE_VERSION = LATEST_SAVE_VERSION;
 
 const PERSIST_EVENT_CAP = 30;
 
@@ -53,7 +57,11 @@ function safeGet(key: string): string | null {
   try {
     if (typeof localStorage === "undefined") return null;
     return localStorage.getItem(key);
-  } catch {
+  } catch (e) {
+    // Phase 29-2e: was silent. Surface autosave-read failures so the
+    // user/dev can tell when localStorage is disabled (private mode,
+    // browser quota), or when a chunk is malformed.
+    console.warn(`[autosave] safeGet(${key}) failed:`, e);
     return null;
   }
 }
@@ -81,7 +89,8 @@ function safeRemove(key: string): void {
   try {
     if (typeof localStorage === "undefined") return;
     localStorage.removeItem(key);
-  } catch {
+  } catch (e) {
+    console.warn(`[autosave] safeRemove(${key}) failed:`, e);
   }
 }
 
@@ -111,7 +120,8 @@ export function saveAutosave(
   let serialized: string;
   try {
     serialized = JSON.stringify(body);
-  } catch {
+  } catch (e) {
+    console.warn(`[autosave] JSON.stringify failed (likely circular ref):`, e);
     return { ok: false, reason: "other" };
   }
   return safeSet(AUTOSAVE_KEY, serialized);
@@ -134,7 +144,8 @@ export function loadAutosave(): AutosaveLoadResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
-  } catch {
+  } catch (e) {
+    console.warn(`[autosave] saved payload is not valid JSON:`, e);
     return { ok: false, reason: "corrupt" };
   }
   const obj = (parsed ?? {}) as Record<string, unknown>;

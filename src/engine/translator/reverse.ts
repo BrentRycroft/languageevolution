@@ -26,6 +26,16 @@ export interface ReverseTranslation {
 interface ReverseLexEntry {
   lemmas: Meaning[]; // Phase 21b: multi-meaning support
   source: "open" | "closed";
+  /**
+   * Phase 29-2b: when this entry comes from a SUPPLETIVE form
+   * (e.g., target "saw" mapping to meaning "see" with category
+   * verb.tense.past), we record the category here so the reverse
+   * token can report it without going through the affix-stripping
+   * fallback. Pre-29-2b suppletive forms were never added to the
+   * reverse lex at all, causing the past-tense translator-roundtrip
+   * tests to fail.
+   */
+  suppletiveParadigm?: MorphCategory;
 }
 
 const cache = new WeakMap<Language, Map<string, ReverseLexEntry>>();
@@ -34,12 +44,26 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
   const cached = cache.get(lang);
   if (cached) return cached;
   const map = new Map<string, ReverseLexEntry>();
-  const append = (surface: string, lemma: Meaning, source: "open" | "closed"): void => {
+  const append = (
+    surface: string,
+    lemma: Meaning,
+    source: "open" | "closed",
+    suppletiveParadigm?: MorphCategory,
+  ): void => {
     const existing = map.get(surface);
     if (existing) {
       if (!existing.lemmas.includes(lemma)) existing.lemmas.push(lemma);
+      // Don't overwrite a supplative-paradigm tag with a later one;
+      // first wins when two paradigms share a surface (rare).
+      if (suppletiveParadigm && !existing.suppletiveParadigm) {
+        existing.suppletiveParadigm = suppletiveParadigm;
+      }
     } else {
-      map.set(surface, { lemmas: [lemma], source });
+      map.set(surface, {
+        lemmas: [lemma],
+        source,
+        ...(suppletiveParadigm ? { suppletiveParadigm } : {}),
+      });
     }
   };
   // Prefer the form-centric `words` table when present (Phase 21).
@@ -53,9 +77,34 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
   } else {
     const openLemmas = Object.keys(lang.lexicon).sort();
     for (const lemma of openLemmas) {
-      const surface = lang.lexicon[lemma]!.join("");
+      // Phase 29-2i: null-guard. The `!` was wrong — `Object.keys`
+      // can race with concurrent mutations and a meaning may be
+      // mid-deletion when this runs (the engine never deletes during
+      // a render but defensive code should not assume).
+      const form = lang.lexicon[lemma];
+      if (!form) continue;
+      const surface = form.join("");
       if (!surface) continue;
       append(surface, lemma, "open");
+    }
+  }
+  // Phase 29-2b: seed every suppletive surface form (e.g., "saw" for
+  // meaning "see" + verb.tense.past) BEFORE the affix-stripping
+  // fallback. Otherwise the reverse pipeline would try to peel an
+  // affix off "saw", fail, and emit `kind: "missing"` for irregular
+  // pasts. This is the root cause of the 3 known-failing
+  // translator_roundtrip past-tense tests.
+  if (lang.suppletion) {
+    for (const meaning of Object.keys(lang.suppletion)) {
+      const perCategory = lang.suppletion[meaning];
+      if (!perCategory) continue;
+      for (const cat of Object.keys(perCategory) as MorphCategory[]) {
+        const form = perCategory[cat];
+        if (!form || form.length === 0) continue;
+        const surface = form.join("");
+        if (!surface) continue;
+        append(surface, meaning, "open", cat);
+      }
     }
   }
   const cct = closedClassTable(lang);
@@ -99,6 +148,10 @@ export function reverseLookupForm(
       target: surface,
       lemma: picked,
       kind: direct.source,
+      // Phase 29-2b: forward the suppletive-paradigm tag so callers
+      // (translator UI, glossing) know this is e.g. a past-tense form
+      // even though we matched it as a direct surface lookup.
+      ...(direct.suppletiveParadigm ? { paradigm: direct.suppletiveParadigm } : {}),
       ...(alternates.length > 0 ? { alternateLemmas: alternates } : {}),
     };
   }

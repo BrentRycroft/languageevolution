@@ -2,6 +2,7 @@ import type { Language, GrammarFeatures } from "../types";
 import type { Rng } from "../rng";
 import { proposeOneRule } from "../phonology/propose";
 import { pickNextStressForSplit } from "../grammar/stressTransitions";
+import { setGrammarFeature } from "../grammar/mutate";
 
 type GrammarFlip = {
   feature: keyof GrammarFeatures;
@@ -69,7 +70,7 @@ export function applyFounderInnovation(
     } else if (kind === "grammar") {
       const flip = flipGrammar(child.grammar, rng);
       if (flip) {
-        (child.grammar as unknown as Record<string, unknown>)[flip.feature] = flip.to;
+        setGrammarFeature(child.grammar, flip.feature, flip.to as GrammarFeatures[typeof flip.feature]);
         return {
           kind,
           description: `${flip.feature}: ${String(flip.from)} → ${String(flip.to)}`,

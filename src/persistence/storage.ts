@@ -5,10 +5,16 @@ import { fnv1a } from "../engine/rng";
 const INDEX_KEY = "lev.runs.v1.index";
 const RUN_KEY = (id: string) => `lev.runs.v1.${id}`;
 
+// Phase 29-2e: pre-29 these catch blocks were silent. localStorage
+// failures (quota, disabled, NS_ERROR_FILE_*, private-mode Safari)
+// disappeared without trace. Now they warn — UI-level toasts for the
+// user-facing autosave path live in `state/store.ts`/`autosave.ts`;
+// the lower-level helpers here just surface the error to the console.
 function safeGet(key: string): string | null {
   try {
     return localStorage.getItem(key);
-  } catch {
+  } catch (e) {
+    console.warn(`[persistence] localStorage.getItem(${key}) failed:`, e);
     return null;
   }
 }
@@ -16,14 +22,16 @@ function safeGet(key: string): string | null {
 function safeSet(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
-  } catch {
+  } catch (e) {
+    console.warn(`[persistence] localStorage.setItem(${key}) failed:`, e);
   }
 }
 
 function safeRemove(key: string): void {
   try {
     localStorage.removeItem(key);
-  } catch {
+  } catch (e) {
+    console.warn(`[persistence] localStorage.removeItem(${key}) failed:`, e);
   }
 }
 
@@ -33,7 +41,8 @@ export function listRuns(): SavedRun[] {
   let ids: string[];
   try {
     ids = JSON.parse(raw);
-  } catch {
+  } catch (e) {
+    console.warn(`[persistence] runs index is corrupt:`, e);
     return [];
   }
   const runs: SavedRun[] = [];
@@ -44,7 +53,8 @@ export function listRuns(): SavedRun[] {
       const parsed = JSON.parse(rawRun);
       const migrated = migrateSavedRun(parsed);
       if (migrated) runs.push(migrated);
-    } catch {
+    } catch (e) {
+      console.warn(`[persistence] saved run "${id}" is corrupt:`, e);
     }
   }
   return runs.sort((a, b) => b.createdAt - a.createdAt);
@@ -88,7 +98,8 @@ export function loadRun(id: string): SavedRun | null {
   if (!raw) return null;
   try {
     return migrateSavedRun(JSON.parse(raw));
-  } catch {
+  } catch (e) {
+    console.warn(`[persistence] failed to load run "${id}":`, e);
     return null;
   }
 }
@@ -110,7 +121,8 @@ export function exportRun(run: SavedRun): string {
 export function importRunJson(text: string): SavedRun | null {
   try {
     return migrateSavedRun(JSON.parse(text));
-  } catch {
+  } catch (e) {
+    console.warn(`[persistence] importRunJson failed to parse input:`, e);
     return null;
   }
 }

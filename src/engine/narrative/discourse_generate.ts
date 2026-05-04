@@ -241,28 +241,10 @@ export function generateDiscourseNarrative(
         genreRegister: genreRegisterFor(genre),
       });
       if (composed2.tokens.length > 0) {
-        const andSurface = composed2.tokens[0]!.targetSurface
-          ? composed.surface +
-            " " +
-            (lang.lexicon["and"]
-              ? composed2.tokens[0]!.targetSurface
-                ? ""
-                : ""
-              : "") +
-            ""
-          : "";
-        void andSurface;
-        // Use English "and" between the captions and the target-language
-        // "and" between the surfaces.
-        const andTargetRendered = lang.lexicon["and"]
-          ? composed2.surface
-            ? composed.surface +
-              " " +
-              (lang.lexicon["and"] ? "" : "") +
-              ""
-            : ""
-          : "";
-        void andTargetRendered;
+        // Phase 29-2c: previously this branch built two unused
+        // `andSurface` / `andTargetRendered` strings (both `void`-ed).
+        // Dead refactor leftover. Stripped — the actual coordination
+        // surface is built below using `andForm`.
         finalEnglish = `${composed.english} and ${composed2.english}`;
         finalSurface = composed2.surface
           ? `${composed.surface} ${andForm.join("")} ${composed2.surface}`
