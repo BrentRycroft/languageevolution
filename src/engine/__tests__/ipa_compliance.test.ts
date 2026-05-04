@@ -5,11 +5,20 @@ import { PRESETS } from "../presets";
 import { makeRng } from "../rng";
 
 const TONE_MARKS = ["˥˩", "˧˥", "˥", "˧", "˩"];
+// Phase 30 Tranche 30a: secondary-articulation diacritics that may
+// follow a base segment. Stripped before the canonical check so a
+// pharyngealised /tˤ/ counts as canonical /t/, an aspirated /pʰ/
+// as /p/, etc.
+const SECONDARY_DIACRITICS = ["ˤ", "ʰ", "ʲ", "ʷ", "ʼ", "̃"];
 function isCanonical(p: string): boolean {
   if (p.length === 0) return false;
   if (VOWELS.has(p) || CONSONANTS.has(p)) return true;
   let base = p;
   for (const t of TONE_MARKS) if (base.endsWith(t)) base = base.slice(0, -t.length);
+  if (base.endsWith("ː")) base = base.slice(0, -1);
+  for (const d of SECONDARY_DIACRITICS) {
+    if (base.endsWith(d)) base = base.slice(0, -d.length);
+  }
   if (base.endsWith("ː")) base = base.slice(0, -1);
   return VOWELS.has(base) || CONSONANTS.has(base);
 }

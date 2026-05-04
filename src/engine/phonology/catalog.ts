@@ -1,6 +1,6 @@
 import type { SoundChange, WordForm, Phoneme } from "../types";
 import { isVowel, isConsonant, isSyllabic } from "./ipa";
-import { HIGH, LOW, stripTone, toneOf } from "./tone";
+import { HIGH, LOW, stripTone, toneOf, capToneStacking } from "./tone";
 import { UNSTRESSED_REDUCTION, stressedPositions } from "./stress";
 import {
   ALL_VOICELESS_CONSONANTS,
@@ -658,7 +658,10 @@ export const CATALOG: SoundChange[] = [
       const roll = rng.next();
       const tone = roll < 0.75 ? canonical : roll < 0.95 ? reversed : "˧";
       const out = word.slice();
-      out[out.length - 2] = prev + tone;
+      // Phase 30 Tranche 30a: cap tone stacking. Prev was guarded
+      // against `toneOf` above so this is normally additive on a
+      // bare vowel; the cap is still cheap insurance.
+      out[out.length - 2] = capToneStacking(prev + tone);
       return out;
     },
     enabledByDefault: true, // Phase 25: tonal genesis (Mandarin / Vietnamese pattern)
@@ -779,7 +782,8 @@ export const CATALOG: SoundChange[] = [
       if (stripped === "ə") return w;
       const tone = w[idx]!.length > stripped.length ? w[idx]!.slice(stripped.length) : "";
       const out = w.slice();
-      out[idx] = "ə" + tone;
+      // Phase 30 Tranche 30a: cap tone stacking on the new schwa.
+      out[idx] = capToneStacking("ə" + tone);
       return out;
     },
   },
@@ -813,7 +817,8 @@ export const CATALOG: SoundChange[] = [
       const tone = w[idx]!.length > v.length ? w[idx]!.slice(v.length) : "";
       const glide = v === "e" ? "j" : "w";
       const out = w.slice();
-      out.splice(idx, 1, glide, v + tone);
+      // Phase 30 Tranche 30a: cap tone stacking on the diphthongised vowel.
+      out.splice(idx, 1, glide, capToneStacking(v + tone));
       return out;
     },
   },
@@ -857,7 +862,8 @@ export const CATALOG: SoundChange[] = [
       const v = stripTone(w[idx]!);
       const tone = w[idx]!.length > v.length ? w[idx]!.slice(v.length) : "";
       const out = w.slice();
-      out[idx] = v + "ː" + tone;
+      // Phase 30 Tranche 30a: cap tone stacking on the lengthened vowel.
+      out[idx] = capToneStacking(v + "ː" + tone);
       return out;
     },
   },

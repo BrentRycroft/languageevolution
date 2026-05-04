@@ -147,17 +147,36 @@ function runHomeostasis(
     }
     return anyMerger;
   }
+  // Phase 30 Tranche 30h: collect mergers and emit a single rolled-up
+  // event per generation when 2+ fire. Pre-fix every leaf's last-6
+  // events list was uniformly homeostatic mergers, so chain shifts /
+  // grammaticalisation / productivity events never surfaced.
+  const mergers: Array<{ from: string; to: string; affected: number }> = [];
   for (let i = 0; i < MAX_PRUNE_ATTEMPTS_PER_GEN; i++) {
     const merger = prunePhonemes(lang, rng, generation);
-    if (!merger) return anyMerger;
+    if (!merger) break;
     anyMerger = true;
+    mergers.push({ from: merger.from, to: merger.to, affected: merger.affectedWords });
+    pressure = inventorySizePressure(lang);
+    if (pressure === 0) break;
+  }
+  if (mergers.length === 1) {
+    const m = mergers[0]!;
     pushEvent(lang, {
       generation,
       kind: "sound_change",
-      description: `homeostatic merger (×${pressure.toFixed(2)} pressure): /${merger.from}/ → /${merger.to}/ (${merger.affectedWords} word${merger.affectedWords === 1 ? "" : "s"} affected)`,
+      description: `homeostatic merger (×${pressure.toFixed(2)} pressure): /${m.from}/ → /${m.to}/ (${m.affected} word${m.affected === 1 ? "" : "s"} affected)`,
     });
-    pressure = inventorySizePressure(lang);
-    if (pressure === 0) return anyMerger;
+  } else if (mergers.length > 1) {
+    const totalAffected = mergers.reduce((a, m) => a + m.affected, 0);
+    const summary = mergers
+      .map((m) => `/${m.from}/→/${m.to}/`)
+      .join(", ");
+    pushEvent(lang, {
+      generation,
+      kind: "sound_change",
+      description: `homeostatic pruning: ${mergers.length} mergers this gen (${totalAffected} word${totalAffected === 1 ? "" : "s"} affected) — ${summary}`,
+    });
   }
   return anyMerger;
 }

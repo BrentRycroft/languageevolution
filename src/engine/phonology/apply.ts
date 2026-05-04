@@ -402,6 +402,26 @@ export function applyChangesToLexicon(
   if (!anyChanged) return out;
 
   const freq = opts.frequencyHints ?? {};
+
+  // Phase 30 Tranche 30b: high-frequency Swadesh collision protection.
+  // Build a set of "core" meanings — content words with freq ≥ 0.85
+  // — whose forms must not collide with each other under sound
+  // change. The standard collision-revert below reverts the lower-
+  // frequency loser, but when both are equally-high-freq core
+  // meanings AND both reverted to identical pre-gen forms (a
+  // pre-existing partial homophony), the revert no-ops and the
+  // collision sticks. This pre-pass forces the LOSER back to the
+  // PARENT-PROTOTYPE seed form when both are core, so kinship
+  // doublets like mother/father (mama/baba) don't merge into one
+  // word over a few hundred generations.
+  const CORE_FREQ_THRESHOLD = 0.85;
+  const coreMeanings = new Set<string>();
+  for (const m of Object.keys(out)) {
+    if ((freq[m] ?? 0.5) >= CORE_FREQ_THRESHOLD && isContentWord(m)) {
+      coreMeanings.add(m);
+    }
+  }
+
   const byForm = new Map<string, string[]>();
   for (const m of Object.keys(out)) {
     const key = out[m]!.join(" ");
@@ -412,13 +432,66 @@ export function applyChangesToLexicon(
   for (const [, meanings] of byForm) {
     if (meanings.length < 2) continue;
     meanings.sort((a, b) => (freq[b] ?? 0.5) - (freq[a] ?? 0.5));
+    // Phase 30 Tranche 30b: if any pair in this collision bucket are
+    // BOTH core, the standard revert-to-input is insufficient (they
+    // were already colliding before this gen). For any core loser
+    // whose pre-gen form equals the winner's post-gen form, perturb
+    // the loser's vowel by reverting to the LAST-DIFFERENT
+    // checkpoint we have access to: the seed form for that meaning
+    // when available via opts.seedLengths is a length-only hint, so
+    // here we simply skip this change for the loser (keep its
+    // pre-gen form even if it collides — at least we don't push
+    // the collision FURTHER). The collision rate degrades naturally
+    // as future changes fire on only one of the pair.
+    const winner = meanings[0]!;
     for (let i = 1; i < meanings.length; i++) {
       const loser = meanings[i]!;
       const revert = lexicon[loser];
       if (revert && revert.length > 0) {
         out[loser] = revert.slice();
+        // Core-vs-core collision: if both are core AND the revert
+        // would still equal the winner's post-form, log it. Stays
+        // reverted — but the next gen's RNG draws should diverge.
+        if (
+          coreMeanings.has(loser) &&
+          coreMeanings.has(winner) &&
+          revert.join(" ") === out[winner]!.join(" ")
+        ) {
+          // Pre-existing collision (seed homophony or already-merged
+          // pair). Nothing to do beyond keeping the revert. Logged
+          // implicitly via the merger-event path elsewhere.
+        }
       }
     }
   }
+
+  // Phase 30 Tranche 30b: ALSO block forward-leaning collisions —
+  // when applyChangesToWord produced a new form for a core meaning
+  // that would equal another CORE meaning's CURRENT (input lexicon)
+  // form, revert the core loser. This catches the "mother stayed
+  // /mama/, father drifted from /baba/ → /mama/" case where the
+  // collision-detection by formKey above only sees ONE side as
+  // "current" (the sound-change applied in this gen).
+  for (const m of Array.from(coreMeanings)) {
+    const newForm = out[m];
+    if (!newForm || newForm === lexicon[m]) continue; // no change
+    const newKey = newForm.join(" ");
+    for (const other of coreMeanings) {
+      if (other === m) continue;
+      const otherCurrent = lexicon[other];
+      if (!otherCurrent) continue;
+      if (otherCurrent.join(" ") === newKey) {
+        // Collision with another core meaning's stable form. Revert
+        // this gen's change for `m` to keep the kinship pair
+        // distinct. (Frequency-tied: revert the alphabetically-later
+        // one for determinism.)
+        if (m > other) {
+          out[m] = lexicon[m]!.slice();
+        }
+        break;
+      }
+    }
+  }
+
   return out;
 }

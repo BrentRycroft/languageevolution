@@ -1,6 +1,6 @@
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
-import { HIGH, LOW, MID, RISING, FALLING, isToneBearing, toneOf, stripTone } from "./tone";
+import { HIGH, LOW, MID, RISING, FALLING, isToneBearing, toneOf, stripTone, capToneStacking } from "./tone";
 import { setLexiconForm } from "../lexicon/mutate";
 
 /**
@@ -116,10 +116,13 @@ export function stepToneSandhi(
     const form = lang.lexicon[meaning]!;
     const next: WordForm = form.slice();
     for (const s of list) {
+      // Phase 30 Tranche 30a: stripTone now strips recursively, so a
+      // base accumulated from prior gens won't carry residual tone.
+      // capToneStacking keeps the result at MAX_TONE_MARKS=1 token.
       const baseA = stripTone(next[s.posA]!);
       const baseB = stripTone(next[s.posB]!);
-      next[s.posA] = baseA + s.newToneA;
-      next[s.posB] = baseB + s.newToneB;
+      next[s.posA] = capToneStacking(baseA + s.newToneA);
+      next[s.posB] = capToneStacking(baseB + s.newToneB);
     }
     // Phase 29 Tranche 5g + Tranche 1: route through chokepoint so
     // lang.words tracks the post-sandhi form.

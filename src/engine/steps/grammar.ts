@@ -1,5 +1,5 @@
 import type { Language, SimulationConfig } from "../types";
-import { driftGrammar } from "../grammar/evolve";
+import { driftGrammar, maybeDriftWordOrder } from "../grammar/evolve";
 import { enforceTypologicalUniversals } from "../grammar/universals";
 import { pickNextStressForDrift } from "../grammar/stressTransitions";
 import {
@@ -32,6 +32,18 @@ export function stepGrammar(
       generation,
       kind: "grammar_shift",
       description: `${s.feature}: ${String(s.from)} → ${String(s.to)}`,
+    });
+  }
+  // Phase 30 Tranche 30c: gated word-order drift — tier + synthetic-
+  // index aware, with a 50-gen cooldown. Pre-fix, English-tier-3
+  // languages flipped SVO → SOV in 60 gens. Now they flip ~1/10 as
+  // often as a tier-0 inflecting language.
+  const orderShift = maybeDriftWordOrder(lang, rng, generation);
+  if (orderShift) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `${orderShift.feature}: ${String(orderShift.from)} → ${String(orderShift.to)}`,
     });
   }
   // Soft typological-consistency repair: low-probability nudge of features

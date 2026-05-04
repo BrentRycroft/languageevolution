@@ -1,5 +1,5 @@
 import type { Language, WordForm } from "../types";
-import { rhymesWith, rhymeSyllable } from "../phonology/rhyme";
+import { rhymesWith, rhymeSyllable, assonatesWith } from "../phonology/rhyme";
 import { lineMeterPattern, meterScore, METER_TARGETS, type MeterName } from "../phonology/meter";
 
 /**
@@ -86,10 +86,18 @@ export function pickStanza(
   for (let lineIdx = 0; lineIdx < options.lineCount; lineIdx++) {
     const group = schemeMap[lineIdx]!;
     const constraint = constraintForGroup(group, lineIdx, selected, schemeMap);
+    // Phase 30 Tranche 30e: three-tier match — strict rhyme first,
+    // then assonance (same stressed vowel), then meter-only. Pre-fix
+    // the strict rhyme rarely matched and almost every line was the
+    // meter-only fallback, so AABB schemes virtually never produced
+    // intentional rhymes.
     let pick = scored.find((c) => !selected.includes(c) && satisfies(c, constraint, lang));
+    if (!pick && constraint) {
+      pick = scored.find(
+        (c) => !selected.includes(c) && assonatesWith(c.rhymeWord, constraint, lang.stressPattern),
+      );
+    }
     if (!pick) {
-      // Graceful fallback: take the next-best by meter score, ignoring
-      // rhyme.
       pick = scored.find((c) => !selected.includes(c));
     }
     if (!pick) break;

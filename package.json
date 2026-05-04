@@ -13,6 +13,7 @@
     "test:coverage": "vitest run --coverage",
     "audit:divergence": "tsx scripts/audit-divergence.ts",
     "audit:length": "tsx scripts/audit-length.ts",
+    "audit:narrative": "tsx scripts/audit-narrative.ts",
     "bench": "tsx scripts/bench-sim.ts"
   },
   "dependencies": {

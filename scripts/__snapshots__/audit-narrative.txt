@@ -1,0 +1,447 @@
+
+========================================================================
+PRESET: DEFAULT  (leaf L-1 after 60 gens, seed=audit-default)
+========================================================================
+name=Safoen  speakers=8643  tier=1  conservatism=1.05  alive-leaves=5
+stress=penult  word-order=SOV  case=case  art=none
+adj=pre  neg=pre-verb  hasCase=false
+phonemes (38, target 28, ratio 1.36×): a aː b d dʒ e eː f g h iː j k l n o oː p pʼ r s t tʃ tʼ u uː v w z ɔ ɖ ɯ ɯː ɾ ʂ ʈ ʔt θ
+tones (4): ˥ ˧ ˧˥ ˩
+tone-stack diagnostics: stacked-segments=0  max-stack=0
+active sound rules: 7  retired: 0
+words: 715  lexicon meanings: 745
+
+Sample lexicon (12 core words):
+  water      /beːded/
+  fire       /ded/
+  father     /deːded/
+  sun        /hed/
+  moon       /dʒed/
+  go         /deːd/
+  see        /bed/
+  eat        /ed/
+  big        /deːd/
+  i          /dʒeːdʒe/
+  you        /tede/
+
+Last 6 events:
+  g60  actuation       social-contagion actuation: "game" /dʒigeːtʃe/ → /dʒiːweːwe/ [from pho
+  g60  actuation       social-contagion actuation: "ten" /fifoː/ → /fiːpoː/ [from phonology] 
+  g60  actuation       social-contagion actuation: "coal" /dʒiʈdʒiɾ/ → /dʒiːʈdʒiːɾiː/ [from p
+  g60  actuation       social-contagion actuation: "suckle" /feːɾeː/ → /ʂeɾeː/ [from phonolog
+  g60  sound_change    58 forms shifted (×1.01)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (146 words affected) — /ə/→/a/
+
+[MYTH]
+  daughter knew priest with village        → deːteː boːfoːuːboː ddoedʒe dʒeː˥ɖ dʒeːθadʒe
+  bear not went at road and bull came to road → ɖodʒeːtʃet dʒeːθ ɖoɖoɾe ho deːdedʒe tʼeː deːda dbededʒe tʃeː ɖoɖoɾe
+  it came                                  → dʒaza dbededʒe
+  it held heart                            → dʒaza dʒedd pʼeddʒeːedʒe
+
+[LEGEND]
+  stranger not at home                     → tʃaɾeːh dʒeːθ hoːθpoːɖoː ho
+  he walked                                → dede dodoedʒe
+  heavy daughter ran                       → fodʒe deːteː dedebetedʒe
+  fox knew sister                          → eːɾatʃebeː hoːdʒe ddoedʒe
+
+[DAILY]
+  uncle holds knife and fish sleeps at sea → dʒeːɾe ɖodbedde pʼeddʒeːs tʼeː dʒefd dʒeːθ dede hbeds
+  it eats fruit                            → dʒaza heːdʒeː eds
+  in autumn it comes and husband goes      → dʒeː feddʒefe dʒaza dbeds tʼeː dade deːds
+  in hour it dies                          → dʒeː dʒeθatfeːtʃ dʒaza dods
+
+[DIALOGUE]
+  deer drinks milk                         → dedset doːeːheːd des
+  it runs                                  → dʒaza dedebets
+  it falls                                 → dʒaza deθeːs
+  it not dies                              → dʒaza ho dods
+
+[POETRY]
+  lord drinks water                        → θeɖohe beːded des
+  bird drinks full milk                    → eːbe bodod doːeːheːd des
+  sharp father goes                        → tedehe deːded deːds
+  bear eats grain                          → ɖodʒeːtʃet teɖe eds
+
+========================================================================
+PRESET: PIE  (leaf L-1 after 60 gens, seed=audit-pie)
+========================================================================
+name=Pekil  speakers=3012  tier=0  conservatism=0.79  alive-leaves=3
+stress=penult  word-order=SOV  case=case  art=none
+adj=pre  neg=pre-verb  hasCase=true
+phonemes (26, target 22, ratio 1.18×): aː d dʰ e f g gʰ gʲ gʲʰ gʷʰ h₂ i iː kʲ kʷ o oː p t tʃʷ w æ ī īː ʈ θ
+tones (2): ˥ ˩
+tone-stack diagnostics: stacked-segments=0  max-stack=0
+active sound rules: 5  retired: 0
+words: 368  lexicon meanings: 412
+
+Sample lexicon (12 core words):
+  water      /giːdʰdʰ/
+  fire       /tīfgdʰ/
+  mother     /gʰiːftiːdʰ/
+  father     /tftiːdʰ/
+  sun        /fæfgiːdʰ/
+  moon       /gʰīfdf/
+  go         /giːgʰ/
+  see        /giːiːdʰ/
+  eat        /fiːdʰ/
+  big        /gʰiːgʲf/
+  i          /fīgʲf/
+  you        /tiː/
+
+Last 6 events:
+  g60  actuation       social-contagion actuation: "metal" /egīh₂e/ → /əgīh₂e/ [from phonolog
+  g60  actuation       social-contagion actuation: "dusk" /gīh₂eʈiː˩dʰ/ → /gīh₂ətiː˩dʰ/ [from
+  g60  sound_change    13 forms shifted (×0.66)
+  g60  merger          merger: /gʲīdʰd/ — "horn" fell together with "hill", now one word with
+  g60  merger          merger: /gʰīː/ — "mind" fell together with "die", now one word with mu
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (74 words affected) — /ə/→/aː/
+
+[MYTH]
+  bear take fox                            → fdʰtgʲī gdʰtīgʲm gʰiːddʰ
+  it drank wine                            → θīdʰ gīgdm itiːf
+  in yesterday child flied and it saw he   → iːd dgʰwīː tiːtdʰiːf itīth₂ gī θīdʰ fiːm wēid
+  it knew elder                            → θīdʰ gʲiːdʰfm igʲdiːf
+
+[LEGEND]
+  woman did not walk at path and full king ran → gīth₂ gʲʰīː ftiːgʰ idīː tī ftiːiːgʰ gī pdfd ftīddʰ idʰdʰiːgʰ
+  she slept                                → fiːf ifgiːt
+  bear walked from river                   → fdʰtgʲī iftiːiːgʰ gʰīwī fiːt
+  weak baby fell                           → giːggʲ fiːdiː iθiːdʰ
+
+[DAILY]
+  woman eats bread                         → gīth₂ gʰdʰiːgm fiːdʰtī
+  it gives foot                            → θīdʰ tiːdʰfm dʰiːftī
+  dog does not go                          → gʲgīd dīː tī giːgʰ
+  in morning it sleeps                     → iːd fīwaːfīf θīdʰ fgiːttī
+
+[DIALOGUE]
+  king did not take new head               → ftīddʰ diːgiːf gʲīdʰfm idīː tī gʰiːddʰ
+  it does not sleep and it flies           → θīdʰ dīːtī tī fgiːt gī θīdʰ tīth₂tī
+  man drinks blood                         → giːfdʰiː gʲdʰīgfm tiːftī
+  it runs                                  → θīdʰ dʰdʰiːgʰtī
+
+[POETRY]
+  cow takes sun                            → giːgf fæfgiːdʰm gʰiːddʰtī
+  mouse takes new king                     → gʰīf diːgiːf ftīddʰm gʰiːddʰtī
+  fox gave meat                            → gdʰtīgʲ gʰiːgʰfiːm idʰiːf
+  mother drank milk                        → gʰiːftiːdʰ dʰægʲtm itiːf
+
+========================================================================
+PRESET: GERMANIC  (leaf L-1 after 60 gens, seed=audit-germanic)
+========================================================================
+name=Sawiene  speakers=7322  tier=1  conservatism=0.83  alive-leaves=3
+stress=initial  word-order=SVO  case=preposition  art=free
+adj=pre  neg=pre-verb  hasCase=true
+phonemes (31, target 28, ratio 1.11×): a aː d e eː f g h i iː k kʷ l m n r s t tʃʷ u uː ũ w xʷ æː ŋ ɖ ə ɛ ɯː ɾ
+tones (3): ˥ ˧ ˩
+tone-stack diagnostics: stacked-segments=0  max-stack=0
+active sound rules: 5  retired: 1
+words: 315  lexicon meanings: 327
+
+Sample lexicon (12 core words):
+  water      /daːdaːd/
+  fire       /huːd/
+  mother     /nuːdeːd/
+  father     /haːdeːd/
+  sun        /huːnnuː/
+  moon       /neːnuː/
+  go         /daːnd/
+  see        /heːkʷ/
+  eat        /eːd/
+  big        /niːkʷiːdaːd/
+  i          /eːkʷ/
+  you        /huː/
+
+Last 6 events:
+  g60  actuation       social-contagion actuation: "through" /tʃʷidɛ/ → /xʷirɛ/ [from phonolo
+  g60  actuation       social-contagion actuation: "four" /fikfuk/ → /fikhug/ [from phonology
+  g60  actuation       social-contagion actuation: "lung" /ɖuːnd/ → /luːnl/ [from phonology] 
+  g60  actuation       social-contagion actuation: "meat" /laːifkʷaː/ → /hlæːihkʷaː/ [from ph
+  g60  sound_change    13 forms shifted (×0.62)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (24 words affected) — /yː/→/iː
+
+[MYTH]
+  long-ago the father knew the strong brother and long-ago the sister held the small earth → dæːɾi hɛ haːdeːd kʷuːnnda hɛ hdaːdhaːd dduːheːdaː uːnd dæːɾi hɛ hdeːhdeːd kʷaːddda hɛ diːdiːdaːd eːdhuːaː
+  the king knew the blue child             → hɛ kuniːnəgag kʷuːnnda hɛ ddeːdaːd daːdnaːaː
+  the mother came at the river             → hɛ nuːdeːd kʷam fuɾə hɛ aːkʷuː
+  it knew the eagle                        → faː kʷuːnnda hɛ aːdnuːtaː
+
+[LEGEND]
+  the pig did not go at the house          → hɛ hdiːnaː ɖunda neː daːnd fuɾə hɛ kʷuːhaː
+  it fell and it flied                     → faː faːgkda uːnd faː hdiːuːdda
+  it gave the bread                        → faː dada hɛ ddaːuːhaːaː
+  it knew the she                          → faː kʷuːnnda hɛ huːaː
+
+[DAILY]
+  the brother sees the she                 → hɛ dduːheːd heːkʷθi hɛ huːaː
+  the child speaks the he                  → hɛ daːdnaː kʷdekʷθi hɛ haːaː
+  the mother falls                         → hɛ nuːdeːd faːgkθi
+  the friend drinks the blood for the river → h'əhdeɾuːdh ddiːnkʷθi hɛ dduːhaːaː fuːɾe h'aːkʷuː
+
+[DIALOGUE]
+  the baby does not break the rope and the deer drank the light water → hɛ kʷiːnhaː ɖunθi neː ddeːkʷ hɛ daːiːkʷaːaː uːnd hɛ giːiːgæː draɳk hɛ diːkʷdaːd daːdaːdaː
+  the bear the good king and he drink the water → hɛ gegæːn hɛ duːdaːd kuniːnəgagaː uːnd haː ddiːnkʷ hɛ daːdaːdaː
+  the eagle held the fast mountain         → h'aːdnuːt kʷaːddda hɛ fneːgga˩g geːgkagaː
+  it falls                                 → faː faːgkθi
+
+[POETRY]
+  the white man runs                       → hɛ kʷidaːt diɾaːɖ diːnnθi
+  the king speaks the fish                 → hɛ kuniːnəgag kʷdekʷθi hɛ hiːhkʷaːdaː
+  the full brother goes                    → hɛ hukgaːg dduːheːd daːndθi
+  the empty horse falls                    → hɛ duːnaːd kʷɖuːhhaː faːgkθi
+
+========================================================================
+PRESET: ROMANCE  (leaf L-1 after 60 gens, seed=audit-romance)
+========================================================================
+name=Kaluon  speakers=6026  tier=2  conservatism=1.20  alive-leaves=5
+stress=antepenult  word-order=SVO  case=case  art=none
+adj=pre  neg=pre-verb  hasCase=true
+phonemes (35, target 34, ratio 1.03×): a aː ã b d e f g i iː ĩ j k l m n oː p pʼ r s t tʃ tʼ u uː w yː æ æː ə ɛ ɾ ʃ θ
+tones (2): ˥ ˩
+tone-stack diagnostics: stacked-segments=0  max-stack=0
+active sound rules: 11  retired: 0
+words: 343  lexicon meanings: 351
+
+Sample lexicon (12 core words):
+  water      /adda/
+  fire       /foːdu/
+  mother     /datʼdi/
+  father     /patʼdi/
+  sun        /foːdi/
+  moon       /duda/
+  go         /id/
+  see        /fididi/
+  eat        /doːtʃitʃitʃi/
+  big        /ddaddi/
+  i          /iːjoː/
+  you        /tuː/
+
+Last 6 events:
+  g60  actuation       social-contagion actuation: "two" /juːoː/ → /ðuːo/ [from phonology] @ 
+  g60  actuation       social-contagion actuation: "mountain" /joːjtʼi/ → /ðoðtʼi/ [from phon
+  g60  sound_change    27 forms shifted (×1.08)
+  g60  sound_change    learner-driven markedness loss: /ʈ/ → /t/ (8 words)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (178 words affected) — /v/→/f/
+  g60  grammar_shift   morphological type drifted: fusional → polysynthetic (synth 3.03, fusi
+
+[MYTH]
+  fish flied at path                       → pʼiːfd woːbaːbiːɛwø naːboː fibida
+  it went                                  → ellu ii
+  son held long snow                       → fiːju tiːdiːɾiːɛwø doːtdu tʃifium
+  long-ago husband took big brother        → faː babiːtu pdididiɛwø ddaddi fdatʼdium
+
+[LEGEND]
+  woman flied from valley                  → tuddiːdiː woːbaːbiːɛwø θaː wajjiː
+  it held rain and it slept                → ellu tiːdiːɾiːɛwø fduːfdaum eθ ellu doːddidiɛwø
+  it walked                                → ellu addudadiɛwø
+  it took mountain                         → ellu pdididiɛwø θoːθtʼium
+
+[DAILY]
+  fish gives boat for path and sheep drinks wine → pʼiːfd daditʼ daddaum pʼdoː fibida eθ oːwiːbuːba θiθiθitʼ fiduum
+  it drinks blood                          → ellu θiθiθitʼ fadddium
+  daughter come                            → fiːbɛ fididiawo
+  it sees ear                              → ellu fididitʼ audidudaum
+
+[DIALOGUE]
+  brother ate straight meat                → fdatʼdi doːtʃitʃitʃiɛwø fiːθiː barθium
+  it runs                                  → ellu duddiditʼ
+  sister held green bear                   → foːdoːdi tiːdiːɾiːɛwø wiːθiːθiː udfuum
+  it know deer and it take ear             → ellu fdidiawo piːbfuum eθ ellu pdididiawo audidudaum
+
+[POETRY]
+  fish gives tall rope                     → pʼiːfd daditʼ adθuː boːbbum
+  man sleeps                               → oːɾidi doːddiditʼ
+  old deer runs                            → fitʼuːθuː piːbfu duddiditʼ
+  father runs                              → patʼdi duddiditʼ
+
+========================================================================
+PRESET: BANTU  (leaf L-1 after 60 gens, seed=audit-bantu)
+========================================================================
+name=Kaa  speakers=13794  tier=1  conservatism=1.27  alive-leaves=9
+stress=penult  word-order=SVO  case=preposition  art=none
+adj=post  neg=pre-verb  hasCase=true
+phonemes (34, target 28, ratio 1.21×): a b d dʒ e f g h i iː m n o oː˥ː p s t tʃ u uː uː˧˥ː ỹ z æ ē ī ə əː ɯː ɾ ʃ ʔk ʔt ⁿg
+tones (4): ˥ ˧ ˧˥ ˩
+tone-stack diagnostics: stacked-segments=0  max-stack=0
+active sound rules: 12  retired: 0
+words: 280  lexicon meanings: 300
+
+Sample lexicon (12 core words):
+  water      /diːmiː/
+  fire       /dodiːdo/
+  mother     /diː˧˥diː˩/
+  father     /diː˧˥diː˩/
+  sun        /iːmodiː/
+  moon       /əddiː˧˥diː˩/
+  go         /iːdiː/
+  see        /odiː/
+  eat        /diːiː/
+  big        /dodo/
+  i          /məm/
+  you        /gə˩g/
+
+Last 6 events:
+  g60  actuation       social-contagion actuation: "cloth" /dtʃī˩/ → /btʃī˩/ [from phonology]
+  g60  actuation       social-contagion actuation: "heart" /iːdəːəe/ → /iːɾətəe/ [from phonol
+  g60  sound_change    15 forms shifted (×1.07)
+  g60  sound_change    tone spread to 1 word
+  g60  sound_change    tone sandhi: 1 adjacent-tone pair resolved
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (110 words affected) — /ɲ/→/m/
+
+[MYTH]
+  brother drank milk new                   → diː˧˥diː˩ ɨəmdiː biː˧˥fiː˧˥ⁿgiː˩ miːiː
+  it drank blood                           → iː˧˥diː˩ ɨəmdiː dodiːdiː
+  it went and it broke water               → iː˧˥diː˩ enɨɖɨle diː iː˧˥diː˩ ɨhəbmī diːmiː
+  in fall goat walked                      → bəːʔtī iːgəg iːbbəbiː ɨʔtiːddiːiː
+
+[LEGEND]
+  goat spoke he                            → iːbbəbiː ɨfiːdiː iːiːiː
+  it died                                  → iː˧˥diː˩ ɨfəe
+  king new went                            → bo˥ⁿgəbo miːiː enɨɖɨle
+  it ate grain                             → iː˧˥diː˩ ɨdiːiː ītobī
+
+[DAILY]
+  guest drinks milk for forest             → muⁿgiːpiː ɨəmdiː biː˧˥fiː˧˥ⁿgiː˩ gtʃē doʔtiːʔto
+  in night it walks                        → bəːʔtī dofiːdo iː˧˥diː˩ ɨʔtiːddiːiː
+  mother does not go                       → diː˧˥diː˩ hetətd fiː˩ iːdiː
+  it holds meat                            → iː˧˥diː˩ ɨhiːtʃiː miː˧˥diː˩
+
+[DIALOGUE]
+  child gave rope thin                     → əddiː˧˥diː˩ ɨtiːiː giː˧˥bb iːbbiː˩bpiː
+  it hold rope                             → iː˧˥diː˩ hehiːtʃiː giː˧˥bb
+  woman makes rope and it eat meat         → bo˥iː˧˥biː˩bⁿgī ɨʔtiːddiːdiːdiː giː˧˥bb diː iː˧˥diː˩ hediːiː miː˧˥diː˩
+  daughter ate milk young                  → əddiː˧˥diː˩ddiː ɨdiːiː biː˧˥fiː˧˥ⁿgiː˩ tʃiːmiː˩biː
+
+[POETRY]
+  child speaks king tall                   → əddiː˧˥diː˩ ɨfiːdiː bo˥ⁿgəbo diː˥diː˧
+  fish small goes                          → iːbfəiː do˧˥do˩ ɨiːdiː
+  snake comes                              → moⁿg ɨmiː
+  child strong sleeps                      → əddiː˧˥diː˩ iː˧˥biː˧˥ ɨdiː˧˥diː˩
+
+========================================================================
+PRESET: TOKIPONA  (leaf L-1 after 60 gens, seed=audit-tokipona)
+========================================================================
+name=Mamaay  speakers=7148  tier=1  conservatism=1.16  alive-leaves=5
+stress=initial  word-order=SVO  case=preposition  art=none
+adj=pre  neg=pre-verb  hasCase=false
+phonemes (30, target 28, ratio 1.07×): a aː e eː eː̃ f h k l m n oː õ p s tʃ u uː v w x y z ø ɔ ɔː ə ɛ ɛː θ
+tones (1): ˥
+tone-stack diagnostics: stacked-segments=0  max-stack=0
+active sound rules: 8  retired: 1
+words: 151  lexicon meanings: 181
+
+Sample lexicon (12 core words):
+  water      /pel/
+  fire       /fel/
+  mother     /mem/
+  father     /mem/
+  sun        /fuːn/
+  moon       /muːn/
+  go         /pek/
+  see        /luːfen/
+  eat        /muːp/
+  big        /fuːl/
+  i          /me/
+  you        /syn/
+
+Last 6 events:
+  g60  actuation       actuation: "wolf" /fuːfel/ → /fuːtʃel/ (minority variant prevailed)
+  g60  actuation       actuation: "stand" /fən/ → /fan/ (minority variant prevailed)
+  g60  sound_change    2 forms shifted (×1.01)
+  g60  sound_change    tone spread to 1 word
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (18 words affected) — /ɳ/→/m/,
+  g60  coinage         compound: fermented
+
+[MYTH]
+  long-ago child not sea                   → feːfe ken ele pel
+  it saw eagle                             → ne luːfen uːoːl
+  it came                                  → ne pek
+  husband will sea                         → mehe len pel
+
+[LEGEND]
+  horse came at home                       → hukeːl pek fehe huːmuː
+  it came                                  → ne pek
+  it saw heart                             → ne luːfen felen
+  it came                                  → ne pek
+
+[DAILY]
+  bear not sky                             → huːtʃeːl ele fe˥k
+  in winter it                             → luːn heːlaː˥h ne
+  friend knows dog                         → tʃeːm fuːn suːkel
+  in winter it goes                        → luːn heːlaː˥h ne pek
+
+[DIALOGUE]
+  wife not ate old fish                    → mel ele muːp penp pel
+  it dies                                  → ne muːl
+  horse not eats fish                      → hukeːl ele muːp pel
+  child saw black heart                    → ken luːfen peme˥k felen
+
+[POETRY]
+  wife fought bear                         → mel uːpeːl huːtʃeːl
+  small bear                               → lel huːtʃeːl
+  mother sees dog                          → mem luːfen suːkel
+  snake speaks green dog                   → pep puːpeːf lef suːkel
+
+========================================================================
+PRESET: ENGLISH  (leaf L-11 after 60 gens, seed=audit-english)
+========================================================================
+name=Fɪfay  speakers=2146  tier=3  conservatism=0.74  alive-leaves=8
+stress=final  word-order=SVO  case=preposition  art=free
+adj=pre  neg=pre-verb  hasCase=true
+phonemes (43, target 40, ratio 1.07×): a ã b d dʒ e eː g h i iː k l m n p r s t tʃ u uː v w z æ ð ɔ ə əː ɛ ɛː ɪ ɪː ɯː ɳ ɾ ʂ ʃ ʊ ʊː ʌ θ
+tones (2): ˥ ˩
+tone-stack diagnostics: stacked-segments=0  max-stack=0
+active sound rules: 8  retired: 0
+words: 591  lexicon meanings: 639
+
+Sample lexicon (12 core words):
+  water      /gʊdəd/
+  fire       /həwəd/
+  mother     /mʊhəd/
+  father     /həhəd/
+  sun        /hʊn/
+  moon       /mun/
+  go         /gʊ/
+  see        /hɪː/
+  eat        /ɪːd/
+  big        /biːg/
+  i          /əː/
+  you        /wʊ/
+
+Last 6 events:
+  g60  actuation       social-contagion actuation: "weight" /tʃewf/ → /dʒejθ/ [from phonology
+  g60  actuation       social-contagion actuation: "decision" /deːfæwəːri/ → /deːvæwəːri/ [fr
+  g60  actuation       social-contagion actuation: "electrify" /fiːfɪ̃tʃ/ → /fiːfɪ̃dʒiː/ [fro
+  g60  sound_change    15 forms shifted (×0.50)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (311 words affected) — /f/→/h/
+  g60  coinage         ideophone: feast
+
+[MYTH]
+  the aunt saw the father with the bridge  → hə ænθ sɔ hə həhəd kiːh hə pdiːdʒ
+  the father did not make the thin tree    → hə həhəd dʒɪt nəd miːwk hə hiːn ddɪː
+  it had come                              → iːd hah kʊm
+  it went and it knew the warrior          → iːd wen anb iːd nuː hə hʊdəəd
+
+[LEGEND]
+  the light wolf flied and the bear ran from the village → hə bəwd gʊbh hbəwəː anb hə bɛd ræːn dʊm hə hiːbiːtʃ
+  the full queen fell                      → hə hʊb gɪːn fɛː
+  the bad aunt died                        → hə bab ænθ bəwəː
+  it flied                                 → iːd hbəwəː
+
+[DAILY]
+  the daughter goes at the forest          → hə bʊdəd gʊs at hə hʊdəhd
+  in the hour she does not die             → iːn h'əːgəːt hɪː ɖʌz nəd bəw
+  it does not make the mountain            → iːd ɖʌz nəd miːwk hə məgndən
+  the bear has eaten the milk              → hə bɛd hah ɪːd hə miːbk
+
+[DIALOGUE]
+  the stranger did not eat the new grain and the teacher makes the moon → hə dətʃiːwntʃəθ dʒɪt nəd ɪːd hə nʊ gdiːwn anb hə dɪːʃəd miːwks hə mun
+  it dies                                  → iːd bəws
+  it does not go and the doctor drank the thick blood → iːd ɖʌz nəd gʊ anb hə dʒekθəːd ræŋk hə hiːk bbʊb
+  the cat knows the father                 → hə tʃæd nʊs hə həhəd
+
+[POETRY]
+  the son drinks the narrow water          → hə hʊn bdiːgks hə nadʊ gʊdəd
+  the cow takes the mother                 → hə kəg diːwks hə mʊhəd
+  the queen gave the heart                 → hə gɪːn ɣøjəv hə hədd
+  the snake spoke the eagle                → hə hniːwk espok hə ɪːgəb

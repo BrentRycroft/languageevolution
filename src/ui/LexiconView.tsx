@@ -350,6 +350,32 @@ export function LexiconView() {
                 <tr key={meaning}>
                   <td className="meaning" onClick={() => selectMeaning(meaning)}>
                     {meaning}
+                    {(() => {
+                      // Phase 30 Tranche 30i: inflection-class badge
+                      // sourced from the root proto's classification
+                      // (stable across the family). Class numbers
+                      // 1/2/3/4 render as I/II/III/IV.
+                      const proto = state.tree[state.rootId]?.language;
+                      const cls = proto?.inflectionClass?.[meaning];
+                      if (!cls) return null;
+                      const NUMERAL = { 1: "I", 2: "II", 3: "III", 4: "IV" } as const;
+                      return (
+                        <span
+                          className="origin-glyph"
+                          style={{
+                            marginLeft: 4,
+                            fontSize: 9,
+                            color: "var(--muted)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 3,
+                            padding: "0 3px",
+                          }}
+                          title={`Inflection class ${NUMERAL[cls]} (Latin-style ${cls})`}
+                        >
+                          {NUMERAL[cls]}
+                        </span>
+                      );
+                    })()}
                   </td>
                   {visibleLeaves.map((lid) => {
                     const key = `${lid}|${meaning}`;
