@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { setLexiconForm } from "./mutate";
 
 const MAX_VARIANTS = 3;
 const DEFAULT_DECAY = 0.85;
@@ -92,7 +93,8 @@ export function decayAndActuate(
     const top = survivors[0]!;
     if (canonical && !formsEqual(top.form, canonical) && top.weight > 0.5 && generation - top.bornGeneration >= 2) {
       actuations.push({ meaning: m, fromForm: canonical.slice(), toForm: top.form.slice() });
-      lang.lexicon[m] = top.form.slice();
+      // Phase 29 Tranche 1 round 2: route through chokepoint.
+      setLexiconForm(lang, m, top.form.slice(), { bornGeneration: generation, origin: "variant-actuation" });
     }
     lang.variants[m] = survivors;
   }

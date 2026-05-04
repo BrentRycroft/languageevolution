@@ -17,6 +17,16 @@ const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   chain_shift: "#ff8fd4",
   taboo: "#ff6363",
   actuation: "#9bdcff",
+  // Phase 29 Tranche 3a: new kinds previously squashed under the above.
+  volatility: "#ff8fa3",
+  areal: "#a0d8ff",
+  creolization: "#ffd166",
+  lexical_replacement: "#bb86fc",
+  productivity: "#80ffd4",
+  suppletion: "#ffb3c1",
+  merger: "#ffaaaa",
+  tier_transition: "#ffd07a",
+  kinship_simplification: "#d6c1ff",
 };
 
 const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
@@ -29,6 +39,15 @@ const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
   chain_shift: "chain",
   taboo: "taboo",
   actuation: "actuate",
+  volatility: "volatility",
+  areal: "areal",
+  creolization: "creole",
+  lexical_replacement: "replace",
+  productivity: "productive",
+  suppletion: "supp",
+  merger: "merger",
+  tier_transition: "tier",
+  kinship_simplification: "kinship",
 };
 
 export function EventsLog() {

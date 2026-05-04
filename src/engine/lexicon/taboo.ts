@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { relatedMeanings } from "../semantics/clusters";
 import { neighborsOf } from "../semantics/neighbors";
 import { isFormLegal } from "../phonology/wordShape";
+import { setLexiconForm } from "./mutate";
 import { isClosedClass, posOf } from "./pos";
 
 export interface TabooEvent {
@@ -57,8 +58,11 @@ export function maybeTabooReplace(
   if (newForm.length > 9) newForm = newForm.slice(0, 9);
   if (!isFormLegal(target, newForm)) return null;
 
-  delete lang.lexicon[target];
-  lang.lexicon[target] = newForm;
+  // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
+  setLexiconForm(lang, target, newForm, {
+    bornGeneration: 0,
+    origin: donor ? `taboo:${donor}` : "taboo:self",
+  });
   lang.wordOrigin[target] = donor ? `taboo:${donor}` : "taboo:self";
   lang.wordFrequencyHints[target] = 0.55;
 

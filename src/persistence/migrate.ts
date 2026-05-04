@@ -17,7 +17,7 @@ import { syncWordsFromLexicon } from "../engine/lexicon/word";
  * get default values without needing an explicit migration. Migrations
  * therefore only need to handle field renames, type changes, or removals.
  */
-export const LATEST_SAVE_VERSION = 6;
+export const LATEST_SAVE_VERSION = 7;
 
 type RawObj = Record<string, unknown>;
 
@@ -54,6 +54,27 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
       }
     }
     return { ...raw, version: 6 };
+  },
+  // Phase 29 Tranche 1b: drop the duplicate `Language.speakerCount` field.
+  // Pre-v7 saves carrying speakerCount get its value copied into
+  // `speakers` if speakers is undefined, then speakerCount is removed.
+  6: (raw) => {
+    const snapshot = raw.stateSnapshot as RawObj | undefined;
+    if (snapshot && snapshot.tree && typeof snapshot.tree === "object") {
+      const tree = snapshot.tree as Record<string, RawObj>;
+      for (const node of Object.values(tree)) {
+        const langRaw = node.language as RawObj | undefined;
+        if (!langRaw) continue;
+        if (
+          typeof langRaw.speakerCount === "number" &&
+          typeof langRaw.speakers !== "number"
+        ) {
+          langRaw.speakers = langRaw.speakerCount;
+        }
+        delete langRaw.speakerCount;
+      }
+    }
+    return { ...raw, version: 7 };
   },
 };
 
@@ -97,6 +118,15 @@ function coerceLatest(obj: RawObj): SavedRun | null {
       death: pickBool(oldModes.death, defaults.modes.death),
       grammar: pickBool(oldModes.grammar, defaults.modes.grammar),
       semantics: pickBool(oldModes.semantics, defaults.modes.semantics),
+      // Phase 29 Tranche 3b: defaulted true so old saves behave as before.
+      contact: pickBool(oldModes.contact, defaults.modes.contact),
+      volatility: pickBool(oldModes.volatility, defaults.modes.volatility),
+      areal: pickBool(oldModes.areal, defaults.modes.areal),
+      creolization: pickBool(oldModes.creolization, defaults.modes.creolization),
+      learner: pickBool(oldModes.learner, defaults.modes.learner),
+      obsolescence: pickBool(oldModes.obsolescence, defaults.modes.obsolescence),
+      taboo: pickBool(oldModes.taboo, defaults.modes.taboo),
+      copula: pickBool(oldModes.copula, defaults.modes.copula),
     },
     tree: {
       ...defaults.tree,

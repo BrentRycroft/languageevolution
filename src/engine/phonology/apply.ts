@@ -25,6 +25,12 @@ const EROSIVE_CATEGORIES: ReadonlySet<SoundChangeCategory> = new Set<SoundChange
   "lenition",
   "deletion",
   "gemination",
+  // Phase 29 Tranche 3a: stress-conditioned apocope / syncope (formerly
+  // tagged "deletion") and compensatory mergers (former "deletion") are
+  // also net-erosive in length terms. Include them so the soft floor
+  // applies symmetrically.
+  "stress",
+  "compensatory",
 ]);
 
 const ABSOLUTE_FLOOR_LEN = 2;
@@ -113,11 +119,22 @@ const CATEGORY_PRIORITY: Record<SoundChange["category"], number> = {
   lenition: 2.0,
   voicing: 1.8,
   palatalization: 1.6,
+  harmony: 1.5,
+  umlaut: 1.5,
   assimilation: 1.4,
+  monophthongization: 1.3,
   deletion: 1.2,
+  compensatory: 1.2,
+  stress: 1.2,
   insertion: 1.0,
+  tonogenesis: 1.0,
+  detonogenesis: 0.95,
   metathesis: 0.9,
   gemination: 0.8,
+  glottalization: 0.7,
+  retroflex: 0.6,
+  devoicing: 0.6,
+  inventory: 0.55,
   fortition: 0.5,
 };
 
@@ -137,13 +154,24 @@ const CATEGORY_NATURAL_BIAS: Record<SoundChange["category"], number> = {
   lenition: 1.5,
   assimilation: 1.5,
   palatalization: 1.5,
+  harmony: 1.4,
+  umlaut: 1.4,
   voicing: 1.2,
+  monophthongization: 1.1,
+  compensatory: 1.1,
+  stress: 1.0,
   deletion: 1.0,
   insertion: 1.0,
   vowel: 1.0,
   gemination: 1.0,
+  tonogenesis: 1.0,
+  detonogenesis: 0.9,
+  glottalization: 0.85,
+  devoicing: 0.85,
   metathesis: 0.6,
+  retroflex: 0.55,
   fortition: 0.5,
+  inventory: 0.4,
 };
 
 function priorityFor(change: SoundChange): number {

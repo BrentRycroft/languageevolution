@@ -1,6 +1,7 @@
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isToneBearing, stripTone, toneOf } from "./tone";
+import { setLexiconForm } from "../lexicon/mutate";
 
 export function maybeSpreadTone(
   lang: Language,
@@ -14,7 +15,8 @@ export function maybeSpreadTone(
     if (!rng.chance(probability)) continue;
     const next = spreadOnce(form, rng);
     if (next !== form) {
-      lang.lexicon[m] = next;
+      // Phase 29 Tranche 1 round 2: route through chokepoint.
+      setLexiconForm(lang, m, next, { bornGeneration: 0, origin: "tone-spread" });
       changed++;
     }
   }

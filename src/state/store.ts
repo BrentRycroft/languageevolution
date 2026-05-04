@@ -50,9 +50,11 @@ function fnv1aTinyHash(s: string): number {
 const ACHIEVEMENTS_KEY = "lev-achievements-v1";
 
 /**
- * Returns a still-valid leaf id for the selection. Keeps the current
- * selection if it points to an alive leaf; otherwise picks any alive leaf;
- * otherwise falls back to the root id (which always exists in a valid state).
+ * Returns a still-valid leaf id for the selection, or null when no
+ * alive leaf exists (full extinction). Phase 29-2g: previously fell
+ * back to the rootId so the UI silently selected an extinct
+ * non-leaf root — masking total extinction. Now the UI gets a clear
+ * "all extinct" signal it can render.
  */
 function reconcileSelection(
   selectedLangId: string | null,
@@ -68,7 +70,7 @@ function reconcileSelection(
     const node = state.tree[id]!;
     if (node.childrenIds.length === 0 && !node.language.extinct) return id;
   }
-  return state.rootId;
+  return null;
 }
 
 function loadPersistedAchievements(): string[] {

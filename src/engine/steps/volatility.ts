@@ -67,7 +67,7 @@ function rollPhase(
     };
     pushEvent(lang, {
       generation,
-      kind: "grammar_shift",
+      kind: "volatility",
       description: `volatility upheaval begins (×${multiplier.toFixed(1)} for ${duration} gens${trigger ? `, trigger: ${trigger}` : ""})`,
     });
   } else {
@@ -84,7 +84,7 @@ function rollPhase(
     if (wasUpheavalPhase) {
       pushEvent(lang, {
         generation,
-        kind: "grammar_shift",
+        kind: "volatility",
         description: `volatility upheaval ends → stable (×${multiplier.toFixed(2)} for ${duration} gens)`,
       });
     }

@@ -1,5 +1,6 @@
 import type { Language } from "../types";
 import type { Rng } from "../rng";
+import { deleteMeaning } from "../lexicon/mutate";
 
 const BLEACH_CADENCE = 6;
 const DROP_THRESHOLD = 0.18;
@@ -35,12 +36,8 @@ export function stepSemanticBleaching(
   lang.wordFrequencyHints[meaning] = next;
 
   if (next < DROP_THRESHOLD && rng.chance(0.35)) {
-    delete lang.lexicon[meaning];
-    delete lang.wordFrequencyHints[meaning];
-    delete lang.wordOrigin[meaning];
-    delete lang.lastChangeGeneration[meaning];
-    if (lang.registerOf) delete lang.registerOf[meaning];
-    if (lang.variants) delete lang.variants[meaning];
+    // Phase 29 Tranche 1a: route through chokepoint.
+    deleteMeaning(lang, meaning);
     return { meaning, bleached: true, dropped: true, newFrequency: 0 };
   }
   return { meaning, bleached: true, dropped: false, newFrequency: next };

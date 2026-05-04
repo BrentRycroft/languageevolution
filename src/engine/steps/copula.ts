@@ -1,6 +1,7 @@
 import type { Language, SimulationConfig } from "../types";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
+import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
 
 export function stepCopulaErosion(
   lang: Language,
@@ -13,12 +14,8 @@ export function stepCopulaErosion(
   const p = Math.min(1, baseP / Math.max(0.3, lang.conservatism));
   if (!rng.chance(p)) return;
   const oldForm = lang.lexicon["be"]!.join("");
-  delete lang.lexicon["be"];
-  delete lang.wordFrequencyHints["be"];
-  if (lang.registerOf) delete lang.registerOf["be"];
-  delete lang.localNeighbors["be"];
-  delete lang.wordOrigin["be"];
-  delete lang.lastChangeGeneration["be"];
+  // Phase 29 Tranche 1 round 2: route through chokepoint.
+  deleteMeaning(lang, "be");
   pushEvent(lang, {
     generation,
     kind: "semantic_drift",
@@ -60,7 +57,11 @@ export function stepCopulaGenesis(
   }
   if (!donor || !pathway) return;
 
-  lang.lexicon["be"] = lang.lexicon[donor]!.slice();
+  // Phase 29 Tranche 1 round 2: route through chokepoint.
+  setLexiconForm(lang, "be", lang.lexicon[donor]!.slice(), {
+    bornGeneration: 0,
+    origin: `grammaticalization:${pathway}:${donor}`,
+  });
   lang.wordOrigin["be"] = `grammaticalization:${pathway}:${donor}`;
   lang.wordFrequencyHints["be"] = 0.95;
   lang.lastChangeGeneration["be"] = generation;

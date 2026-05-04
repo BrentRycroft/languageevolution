@@ -229,7 +229,7 @@ export function stepPhonology(
       const survivors = ev.preExistingMeanings.map((m) => `"${m}"`).join(", ");
       pushEvent(lang, {
         generation,
-        kind: "sound_change",
+        kind: "merger",
         description: `merger: /${ev.formKey}/ — ${absorbed} fell together with ${survivors}, now one word with multiple meanings`,
       });
     }

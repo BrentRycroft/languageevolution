@@ -161,7 +161,7 @@ export function createSimulation(
           lang.culturalTier = nextTier;
           pushEvent(lang, {
             generation: nextGen,
-            kind: "grammar_shift",
+            kind: "tier_transition",
             description: `cultural tier: ${TIER_LABELS[priorTier]} → ${TIER_LABELS[nextTier]}`,
           });
           // Phase 25: tier transitions historically trigger phonological
@@ -178,7 +178,7 @@ export function createSimulation(
             for (const m of merges) {
               pushEvent(lang, {
                 generation: nextGen,
-                kind: "semantic_drift",
+                kind: "kinship_simplification",
                 description: `kinship merge (urbanisation): "${m.winner}" absorbs "${m.loser}"`,
               });
             }
@@ -200,19 +200,22 @@ export function createSimulation(
       }
       // Phase 25: tick the per-language volatility regime so its
       // multiplier is fresh before phonology / grammar steps consume it.
-      stepVolatility(lang, nextGen, rng);
+      // Phase 29 Tranche 3b: gated on `modes.volatility`; default true.
+      if (config.modes.volatility) stepVolatility(lang, nextGen, rng);
       if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
-      if (config.modes.phonology) stepLearner(lang, config, rng, nextGen);
+      if (config.modes.phonology && config.modes.learner) stepLearner(lang, config, rng, nextGen);
       // Phase 28a: post-phonology inventory management. Folds the
       // former stepPhonotacticRepair (Phase 27c) and
       // stepInventoryHomeostasis (Phase 27b/27.1) into one step:
       // 1. repair forms violating the language's syllable profile
       // 2. prune phonemes when over the tier-target inventory size.
       if (config.modes.phonology) stepInventoryManagement(lang, rng, nextGen);
-      stepObsolescence(lang, config, rng, nextGen);
-      stepCopulaErosion(lang, config, rng, nextGen);
-      stepCopulaGenesis(lang, config, rng, nextGen);
-      stepTaboo(lang, config, rng, nextGen);
+      if (config.modes.obsolescence) stepObsolescence(lang, config, rng, nextGen);
+      if (config.modes.copula) {
+        stepCopulaErosion(lang, config, rng, nextGen);
+        stepCopulaGenesis(lang, config, rng, nextGen);
+      }
+      if (config.modes.taboo) stepTaboo(lang, config, rng, nextGen);
       if (config.modes.genesis) {
         stepGenesis(lang, config, state, rng, nextGen);
         bootstrapNeologismNeighbors(lang);
@@ -222,14 +225,14 @@ export function createSimulation(
         stepMorphology(lang, config, rng, nextGen);
       }
       if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
-      stepContact(state, lang, config, rng, nextGen);
-      stepArealTypology(state, lang, rng, nextGen);
+      if (config.modes.contact) stepContact(state, lang, config, rng, nextGen);
+      if (config.modes.areal) stepArealTypology(state, lang, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
       const stillLeaf = (state.tree[leafId]?.childrenIds.length ?? 0) === 0;
       if (config.modes.death && stillLeaf) stepDeath(state, lang, config, rng, closenessCache);
     }
-    stepArealWaves(state, nextGen, rng);
-    if (config.modes.tree) {
+    if (config.modes.areal) stepArealWaves(state, nextGen, rng);
+    if (config.modes.tree && config.modes.creolization) {
       stepCreolization(state, config, rng, nextGen);
     }
     const aliveAfter = leafIds(state.tree).filter(

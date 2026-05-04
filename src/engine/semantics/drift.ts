@@ -6,6 +6,7 @@ import { nearestMeanings, embed, cosine } from "./embeddings";
 import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS, isClosedClass, posOf } from "../lexicon/pos";
+import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 // Phase 26e: corenessResistance import removed. Swadesh-membership-based
 // drift protection was redundant with Phase 24c's frequency-direction
 // split (high-freq content words are already conservative via
@@ -168,7 +169,8 @@ export function driftOneMeaning(
         !targetOccupied &&
         (kind === "metaphor" || kind === "metonymy") &&
         rng.chance(0.3);
-      lang.lexicon[target] = form;
+      // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
+      setLexiconForm(lang, target, form, { bornGeneration: 0, origin: lang.wordOrigin[m] ?? "drift" });
       const oldFreq = lang.wordFrequencyHints[m];
       if (oldFreq !== undefined) {
         lang.wordFrequencyHints[target] = oldFreq;
@@ -186,10 +188,7 @@ export function driftOneMeaning(
         lang.lastChangeGeneration[target] = lastChange;
       }
       if (!polysemous) {
-        delete lang.wordOrigin[m];
-        delete lang.localNeighbors[m];
-        delete lang.lastChangeGeneration[m];
-        delete lang.lexicon[m];
+        deleteMeaning(lang, m);
       } else {
         // Both meanings now share the same form. Persist the relationship
         // so the UI / reconstruction can surface "concept m is colexified

@@ -1,6 +1,7 @@
 import type { Language, SimulationState } from "../types";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
+import { setGrammarFeature } from "../grammar/mutate";
 
 const TYPOLOGY_CADENCE = 6;
 const BASE_ADOPTION = 0.12;
@@ -71,10 +72,18 @@ export function stepArealTypology(
     if (!rng.chance(adoptionProb)) continue;
 
     const before = String(myValue);
-    (lang.grammar as unknown as Record<string, unknown>)[key] = topValue;
+    // Phase 29-2d: routed through setGrammarFeature so the assignment
+    // type-checks. `topValue` was tallied from sibling languages'
+    // `grammar[key]`, so its runtime shape matches the field type;
+    // the cast inside the helper makes that explicit in one place.
+    setGrammarFeature(
+      lang.grammar,
+      key,
+      topValue as import("../types").GrammarFeatures[typeof key],
+    );
     pushEvent(lang, {
       generation,
-      kind: "grammar_shift",
+      kind: "areal",
       description: `areal typological diffusion: ${key} ${before} → ${String(topValue)} (Sprachbund pull from ${strongLinks.length} bilingual neighbour${strongLinks.length === 1 ? "" : "s"})`,
     });
     return;

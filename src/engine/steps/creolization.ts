@@ -90,12 +90,12 @@ export function stepCreolization(
 
   pushEvent(substrate, {
     generation,
-    kind: "borrow",
+    kind: "creolization",
     description: `creolization with ${lexifier.name}: word order → SVO; morphology pruned ${before}→${after} paradigms; suppletion + gender + tone dropped; ${borrowed} loanwords absorbed`,
   });
   pushEvent(lexifier, {
     generation,
-    kind: "borrow",
+    kind: "creolization",
     description: `served as lexifier in ${substrate.name}'s creolization event`,
   });
 }

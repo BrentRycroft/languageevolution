@@ -13,6 +13,11 @@ export type ClosedClassLemma =
   | "my" | "your" | "his" | "her" | "its" | "our" | "their"
   | "who" | "whom" | "whose" | "what" | "which"
   | "where" | "when" | "why" | "how"
+  // Phase 29-2b: personal pronouns. Pre-29-2b "it", "I", "you" etc.
+  // weren't in the closed-class table, so the reverse translator
+  // emitted `kind:"missing"` for them on round-trips. Source of two
+  // failing translator_roundtrip tests.
+  | "i" | "me" | "you" | "he" | "him" | "she" | "we" | "us" | "they" | "them" | "it"
   | "CLF"
   | "Q";
 
@@ -28,6 +33,7 @@ const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "my", "your", "his", "her", "its", "our", "their",
   "who", "whom", "whose", "what", "which",
   "where", "when", "why", "how",
+  "i", "me", "you", "he", "him", "she", "we", "us", "they", "them", "it",
   "CLF", "Q",
 ];
 
