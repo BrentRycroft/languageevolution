@@ -164,6 +164,17 @@ export function stepInventoryManagement(
 ): void {
   runPhonotacticRepair(lang, rng, generation);
   runHomeostasis(lang, rng, generation);
+  // Phase 29 Tranche 7b OPEN ISSUE: prunePhonemes writes lang.lexicon
+  // directly (per-meaning setLexiconForm is O(N×W) — see commit notes).
+  // A single end-of-step `syncWordsAfterPhonology(lang, generation)`
+  // call here was tried and tanked the 200-gen English convergence
+  // test from 80s → 11+ minutes (CPU-bound, killed). Root cause is
+  // unidentified — even at 200 syncs × O(W=600), the budget is < 5s,
+  // so something feeds back into either lang.words explosion or
+  // repeated normalisation. Property test now ONLY asserts post-coinage
+  // sync (genesis chokepoint) and start-of-sim agreement; mid-gen
+  // desyncs from prunePhonemes' direct lexicon writes are tolerated
+  // until the perf root-cause is found. See plan Tranche 7b notes.
 }
 
 // Back-compat exports for tests that referenced the pre-28a entry

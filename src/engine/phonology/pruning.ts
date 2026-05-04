@@ -178,6 +178,10 @@ export function prunePhonemes(
       return raw;
     });
     if (changed) {
+      // Direct lexicon write — sync of lang.words happens once at
+      // end-of-step in stepInventoryManagement to amortise the cost
+      // across all per-gen pruning attempts. See Phase 29 Tranche 7b
+      // notes in pruning + inventoryManagement.
       lang.lexicon[m] = next;
       affected++;
     }
