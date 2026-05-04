@@ -143,20 +143,33 @@ describe("§1.6 — closed-class lookup determinism", () => {
     expect(t1["and"]).toEqual(t2["and"]);
   });
 
-  it("two languages with different ids produce different closed-class forms", () => {
+  // Phase 29 Tranche 5k: closed-class lemmas are now seeded into
+  // lang.lexicon at language birth and evolve through normal
+  // phonology. The synthesised fallback path is only hit when a
+  // lemma is missing from the lexicon, so this test now constructs
+  // a sister with the seeded entries removed, forcing both
+  // languages onto the synthesis path so the per-id divergence in
+  // closedClass.ts can still be exercised.
+  it("two languages with different ids produce different closed-class forms (synthesis fallback)", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "cc-divergence" });
     sim.step();
     const proto = sim.getState().tree["L-0"]!.language;
+    const stripped: Language["lexicon"] = {};
+    for (const m of Object.keys(proto.lexicon)) {
+      if (!isClosedClass(posOf(m))) stripped[m] = proto.lexicon[m]!;
+    }
     const sister: Language = {
       ...proto,
       id: "L-0-X",
       name: "Sister",
+      lexicon: stripped,
       phonemeInventory: {
         ...proto.phonemeInventory,
         segmental: [...proto.phonemeInventory.segmental, "θ", "ð"],
       },
     };
-    const tA = closedClassTable(proto);
+    const protoStripped: Language = { ...proto, lexicon: stripped };
+    const tA = closedClassTable(protoStripped);
     const tB = closedClassTable(sister);
     let differs = 0;
     for (const lemma of Object.keys(tA)) {
