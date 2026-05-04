@@ -385,6 +385,13 @@ export function LexiconView() {
                     const suppletiveSlots = lang.suppletion?.[meaning]
                       ? Object.keys(lang.suppletion[meaning] ?? {})
                       : [];
+                    // Phase 29 Tranche 4c: social-contagion sparkline.
+                    // Renders the per-meaning variant trace as a tiny
+                    // bar — taller bars = more variants alive at that
+                    // generation, capped at 6 to keep the inline cell
+                    // dense. Empty when the meaning has no variant
+                    // history (the common case).
+                    const variantBars = renderVariantSparkline(lang, meaning);
                     return (
                       <td
                         key={lid}
@@ -433,6 +440,7 @@ export function LexiconView() {
                             ✦
                           </span>
                         )}
+                        {variantBars}
                       </td>
                     );
                   })}
@@ -446,6 +454,62 @@ export function LexiconView() {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Phase 29 Tranche 4c: tiny inline social-contagion sparkline. For
+ * any meaning with a variants history, render up to 8 bars whose
+ * height encodes "how many variants were alive in this generation
+ * window." Returns null for the common case of no variants so the
+ * lexicon cell stays clean.
+ */
+function renderVariantSparkline(
+  lang: import("../engine/types").Language,
+  meaning: string,
+): import("react").ReactNode {
+  const variants = lang.variants?.[meaning];
+  if (!variants || variants.length === 0) return null;
+  // Bin the last 8 generation windows of activity. Use bornGeneration
+  // as the sole timestamp; weights act as a stand-in for currentness.
+  const sorted = variants.slice().sort((a, b) => a.bornGeneration - b.bornGeneration);
+  const last = sorted[sorted.length - 1]!.bornGeneration;
+  const first = sorted[0]!.bornGeneration;
+  const bins = 8;
+  const span = Math.max(1, last - first);
+  const heights: number[] = new Array(bins).fill(0);
+  for (const v of sorted) {
+    const idx = Math.min(bins - 1, Math.max(0, Math.floor(((v.bornGeneration - first) / span) * (bins - 1))));
+    heights[idx] = (heights[idx] ?? 0) + Math.max(0.1, v.weight);
+  }
+  const maxH = Math.max(...heights, 1);
+  const numVariants = variants.length;
+  return (
+    <span
+      className="origin-glyph"
+      title={`${numVariants} variant${numVariants === 1 ? "" : "s"} tracked (Phase 29 social-contagion view)`}
+      aria-label={`${numVariants} variants in social-contagion history`}
+      style={{
+        display: "inline-flex",
+        alignItems: "flex-end",
+        gap: 1,
+        height: 8,
+        marginLeft: 4,
+      }}
+    >
+      {heights.map((h, i) => (
+        <span
+          key={i}
+          style={{
+            display: "inline-block",
+            width: 1.5,
+            height: `${Math.max(1, (h / maxH) * 8)}px`,
+            background: "var(--accent, #7be0b5)",
+            opacity: 0.7,
+          }}
+        />
+      ))}
+    </span>
   );
 }
 

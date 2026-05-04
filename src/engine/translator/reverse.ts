@@ -216,6 +216,38 @@ export function reverseLookupForm(
       if (hit) return reportHit(hit, catSuf);
     }
   }
+  // Phase 29 Tranche 2j: 3-affix peel for Romance-style stacked verb
+  // forms (root + tense + person + voice). Recursively peels suffixes
+  // up to MAX_PEEL_DEPTH layers and reports the outermost matched
+  // category. Defensive cap prevents pathological exponential walks.
+  const MAX_PEEL_DEPTH = 4;
+  const suffixParadigms = paradigms.filter(([, p]) => p.position === "suffix");
+  const stack: Array<{ stem: string; outerCat: MorphCategory; depth: number }> = [];
+  for (const [cat, p] of suffixParadigms) {
+    const affix = p.affix.join("");
+    if (!affix || !surface.endsWith(affix) || surface.length <= affix.length) continue;
+    stack.push({
+      stem: surface.slice(0, surface.length - affix.length),
+      outerCat: cat,
+      depth: 1,
+    });
+  }
+  while (stack.length > 0) {
+    const cur = stack.pop()!;
+    if (cur.depth > MAX_PEEL_DEPTH) continue;
+    const direct = lex.get(cur.stem);
+    if (direct) return reportHit(direct, cur.outerCat);
+    if (cur.depth >= MAX_PEEL_DEPTH) continue;
+    for (const [, p] of suffixParadigms) {
+      const affix = p.affix.join("");
+      if (!affix || !cur.stem.endsWith(affix) || cur.stem.length <= affix.length) continue;
+      stack.push({
+        stem: cur.stem.slice(0, cur.stem.length - affix.length),
+        outerCat: cur.outerCat,
+        depth: cur.depth + 1,
+      });
+    }
+  }
   return { target: surface, lemma: null, kind: "missing" };
 }
 

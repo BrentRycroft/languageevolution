@@ -8,6 +8,7 @@ import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
 import { stepInventoryManagement } from "./steps/inventoryManagement";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
+import { rebuildFormKeyIndex } from "./lexicon/word";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
 import { stepCopulaErosion, stepCopulaGenesis } from "./steps/copula";
@@ -265,6 +266,13 @@ export function createSimulation(
         typeof structuredClone === "function"
           ? structuredClone(snapshot.tree)
           : (JSON.parse(JSON.stringify(snapshot.tree)) as typeof snapshot.tree);
+      // Phase 29 Tranche 1e: the form-key index is a Map, not JSON-
+      // serialisable. Saved snapshots strip it, so rebuild after
+      // restore so the next findWordByForm hits the index path.
+      for (const id of Object.keys(cloneTree)) {
+        const lang = cloneTree[id]?.language;
+        if (lang && lang.words) rebuildFormKeyIndex(lang);
+      }
       state = {
         generation: snapshot.generation,
         rootId: snapshot.rootId,

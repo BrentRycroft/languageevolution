@@ -357,6 +357,15 @@ export interface Language {
    * When undefined, callers should treat `lexicon` as the source of truth.
    */
   words?: Word[];
+  /**
+   * Phase 29 Tranche 1e: O(1) form-key → Word lookup index, rebuilt
+   * by `rebuildFormKeyIndex` (called after syncWordsAfterPhonology,
+   * init, and tree split) and updated incrementally by setLexiconForm.
+   * Not persisted — `migrateSavedRun` rebuilds it from `words` on
+   * load. Optional for back-compat with v6 saves that haven't been
+   * touched yet.
+   */
+  wordsByFormKey?: Map<string, Word>;
 }
 
 /**

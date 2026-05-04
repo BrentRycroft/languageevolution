@@ -10,13 +10,19 @@ interface Options {
   reset: () => void;
   setActiveTab: (tab: TabId) => void;
   /**
+   * Phase 29 Tranche 8c: current active tab. Used by Shift+Arrow
+   * keys to cycle through the tab bar without taking focus.
+   * Optional for back-compat with callers that don't track it.
+   */
+  activeTab?: TabId;
+  /**
    * Optional global-search opener. When provided, ⌘/Ctrl-K opens it.
    */
   openGlobalSearch?: () => void;
 }
 
 export function useKeyboardShortcuts(options: Options): void {
-  const { playing, togglePlay, step, stepN, reset, setActiveTab, openGlobalSearch } = options;
+  const { playing, togglePlay, step, stepN, reset, setActiveTab, activeTab, openGlobalSearch } = options;
   const showConfirm = useSimStore((s) => s.showConfirm);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -42,6 +48,16 @@ export function useKeyboardShortcuts(options: Options): void {
       if (e.key === " ") {
         e.preventDefault();
         togglePlay();
+      } else if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft") && activeTab) {
+        // Phase 29 Tranche 8c: Shift+Arrow cycles through tabs.
+        // Shift-modified so plain ArrowRight still steps a generation.
+        e.preventDefault();
+        const idx = TABS.findIndex((t) => t.id === activeTab);
+        if (idx >= 0) {
+          const delta = e.key === "ArrowRight" ? 1 : -1;
+          const next = TABS[(idx + delta + TABS.length) % TABS.length];
+          if (next) setActiveTab(next.id);
+        }
       } else if (e.key === "ArrowRight" && !playing) {
         e.preventDefault();
         step();
@@ -68,5 +84,5 @@ export function useKeyboardShortcuts(options: Options): void {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [playing, togglePlay, step, stepN, reset, setActiveTab, showConfirm, openGlobalSearch]);
+  }, [playing, togglePlay, step, stepN, reset, setActiveTab, activeTab, showConfirm, openGlobalSearch]);
 }

@@ -279,7 +279,9 @@ export const CATALOG: SoundChange[] = [
     id: "deletion.h_initial",
     label: "h → ∅ / #_",
     category: "deletion",
-    description: "Drop word-initial h.",
+    description:
+      "Drop word-initial h. Phase 29 Tranche 5e: unstressed-only — Romance h-loss attested mostly in unstressed function words first, content-word stressed h survives longer.",
+    stressFilter: "unstressed",
     probabilityFor: (w) => (w.length > 1 && w[0] === "h" ? 0.05 : 0),
     apply: (word) => (word[0] === "h" && word.length > 1 ? word.slice(1) : word),
     enabledByDefault: false,
@@ -412,7 +414,9 @@ export const CATALOG: SoundChange[] = [
     label: "∅ → ə / C_C",
     category: "insertion",
     positionBias: "internal",
-    description: "Break up heavy internal CC clusters with a schwa.",
+    description:
+      "Break up heavy internal CC clusters with a schwa. Phase 29 Tranche 5e: stress filter — anaptyxis tracks unstressed environments where epenthesis is salvaging an over-heavy onset.",
+    stressFilter: "unstressed",
     probabilityFor: (w) => {
       let n = 0;
       for (let i = 1; i < w.length - 1; i++) {
@@ -495,7 +499,9 @@ export const CATALOG: SoundChange[] = [
     label: "C → CC / V_V",
     category: "gemination",
     positionBias: "internal",
-    description: "Double an intervocalic consonant (emphatic gemination).",
+    description:
+      "Double an intervocalic consonant (emphatic gemination). Phase 29 Tranche 5e: stress filter — emphatic gemination is canonical in stressed syllables (Italian-style stress-tracked geminate).",
+    stressFilter: "stressed",
     probabilityFor: (w) => {
       let n = 0;
       for (let i = 1; i < w.length - 1; i++) {
@@ -519,7 +525,9 @@ export const CATALOG: SoundChange[] = [
     id: "gemination.degemination",
     label: "CC → C",
     category: "gemination",
-    description: "Collapse a double consonant to a single.",
+    description:
+      "Collapse a double consonant to a single. Phase 29 Tranche 5e: unstressed-only — geminates are preserved in stressed environments (Italian-style preservation pattern).",
+    stressFilter: "unstressed",
     probabilityFor: (w) => {
       let n = 0;
       for (let i = 0; i < w.length - 1; i++) {
@@ -544,7 +552,9 @@ export const CATALOG: SoundChange[] = [
     id: "monophthongization.au_to_o",
     label: "au → o / ai → e",
     category: "monophthongization",
-    description: "Diphthongs collapse, re-seeding mid vowels lost to raising.",
+    description:
+      "Diphthongs collapse, re-seeding mid vowels lost to raising. Phase 29 Tranche 5e: typologically more common in stressed syllables (Greek diphthongs collapsed under stress).",
+    stressFilter: "stressed",
     probabilityFor: (w) => {
       let n = 0;
       for (let i = 0; i < w.length - 1; i++) {
@@ -911,7 +921,8 @@ export const CATALOG: SoundChange[] = [
     label: "VC# → Vː#",
     category: "compensatory",
     description:
-      "Word-final consonant deletes and lengthens the preceding short vowel (Phase 24: weight bumped to compete against bare deletion).",
+      "Word-final consonant deletes and lengthens the preceding short vowel (Phase 24: weight bumped to compete against bare deletion). Phase 29 Tranche 5e: stressed-only — compensatory lengthening rarely fires on unstressed finals.",
+    stressFilter: "stressed",
     enabledByDefault: true,
     baseWeight: 1.4,
     probabilityFor: (w) => {
@@ -939,7 +950,8 @@ export const CATALOG: SoundChange[] = [
     label: "VCC → VːC (medial)",
     category: "compensatory",
     description:
-      "Phase 24: a medial coda consonant in V₁CC₂… deletes and the preceding V₁ lengthens. Models Latin factum → Italian fatto-style mora preservation and English night /nixt/ → /naɪt/ where coda /x/ loss maintains length-by-quality.",
+      "Phase 24: a medial coda consonant in V₁CC₂… deletes and the preceding V₁ lengthens. Models Latin factum → Italian fatto-style mora preservation and English night /nixt/ → /naɪt/ where coda /x/ loss maintains length-by-quality. Phase 29 Tranche 5e: stress filter — mora preservation tracks stress.",
+    stressFilter: "stressed",
     enabledByDefault: true,
     baseWeight: 1.0,
     probabilityFor: (w) => {
@@ -1184,7 +1196,8 @@ export const CATALOG: SoundChange[] = [
     category: "devoicing",
     positionBias: "final",
     description:
-      "Final-obstruent devoicing (Auslautverhärtung): word-final b/d/g/v/z → p/t/k/f/s. German, Russian, Polish, Catalan, Turkish.",
+      "Final-obstruent devoicing (Auslautverhärtung): word-final b/d/g/v/z → p/t/k/f/s. German, Russian, Polish, Catalan, Turkish. Phase 29 Tranche 5e: predominantly fires in unstressed final syllables (German Tag /taːk/ stress on first syllable, final devoiced).",
+    stressFilter: "unstressed",
     enabledByDefault: true,
     baseWeight: 1,
     probabilityFor: (w) => {
@@ -1213,7 +1226,8 @@ export const CATALOG: SoundChange[] = [
     category: "vowel",
     positionBias: "any",
     description:
-      "Vowel nasalization: a vowel before a nasal consonant gains a nasalised allophone (French sang, Portuguese mão, many Niger-Congo).",
+      "Vowel nasalization: a vowel before a nasal consonant gains a nasalised allophone (French sang, Portuguese mão, many Niger-Congo). Phase 29 Tranche 5e: stressed-only — French/Portuguese show contrastive nasalisation primarily in stressed syllables.",
+    stressFilter: "stressed",
     enabledByDefault: true,
     baseWeight: 0.6,
     probabilityFor: (w) => {
@@ -1302,6 +1316,162 @@ export const CATALOG: SoundChange[] = [
       const out = word.slice();
       out[0] = first + "ʰ";
       return out;
+    },
+  },
+
+  // Phase 29 Tranche 5a: missing rule families flagged by audit.
+  {
+    id: "metathesis.liquid_swap",
+    label: "VRC ↔ VRC (liquid metathesis)",
+    category: "metathesis",
+    description:
+      "Liquid (l, r) swaps with adjacent vowel — Old English brid → bird, hros → horse. Common in liquid + obstruent neighbourhoods.",
+    enabledByDefault: false,
+    baseWeight: 0.6,
+    probabilityFor: (w) => {
+      for (let i = 1; i < w.length - 1; i++) {
+        const c = w[i]!;
+        if (c !== "l" && c !== "r") continue;
+        const prev = w[i - 1]!;
+        if (!isVowel(prev)) continue;
+        return 0.04;
+      }
+      return 0;
+    },
+    apply: (word) => {
+      for (let i = 1; i < word.length - 1; i++) {
+        const c = word[i]!;
+        if (c !== "l" && c !== "r") continue;
+        const prev = word[i - 1]!;
+        if (!isVowel(prev)) continue;
+        const out = word.slice();
+        out[i - 1] = c;
+        out[i] = prev;
+        return out;
+      }
+      return word;
+    },
+  },
+
+  {
+    id: "lenition.trill_simplification",
+    label: "r → ɾ / V_V",
+    category: "lenition",
+    description:
+      "Trill simplifies to a tap or flap intervocalically. Spanish caro/carro split, Brazilian Portuguese -r weakening. Phase 29 Tranche 5e: unstressed-context preferred — stressed trills resist (Spanish 'carro' /r/ vs unstressed 'pero' /ɾ/).",
+    stressFilter: "unstressed",
+    enabledByDefault: false,
+    baseWeight: 0.7,
+    probabilityFor: (w) => {
+      for (let i = 1; i < w.length - 1; i++) {
+        if (w[i] !== "r") continue;
+        if (!isVowel(w[i - 1]!) || !isVowel(w[i + 1]!)) continue;
+        return 0.05;
+      }
+      return 0;
+    },
+    apply: (word) => {
+      for (let i = 1; i < word.length - 1; i++) {
+        if (word[i] !== "r") continue;
+        if (!isVowel(word[i - 1]!) || !isVowel(word[i + 1]!)) continue;
+        const out = word.slice();
+        out[i] = "ɾ";
+        return out;
+      }
+      return word;
+    },
+  },
+
+  {
+    id: "inventory.sibilant_merger",
+    label: "ʃ ↔ s collapse",
+    category: "inventory",
+    description:
+      "Sibilants merge under contact pressure or featural simplification. Greek-style /sj/ → /s/, late Latin /ʃ/ → /s/.",
+    enabledByDefault: false,
+    baseWeight: 0.5,
+    probabilityFor: (w) => {
+      let hasSh = false;
+      for (const p of w) {
+        if (p === "ʃ" || p === "ʒ") { hasSh = true; break; }
+      }
+      return hasSh ? 0.04 : 0;
+    },
+    apply: (word) => {
+      const out = word.slice();
+      let changed = false;
+      for (let i = 0; i < out.length; i++) {
+        if (out[i] === "ʃ") { out[i] = "s"; changed = true; }
+        else if (out[i] === "ʒ") { out[i] = "z"; changed = true; }
+      }
+      return changed ? out : word;
+    },
+  },
+
+  {
+    id: "lenition.consonant_gradation",
+    label: "C → C̆ (Finnish-style weak grade)",
+    category: "lenition",
+    description:
+      "Finnish-style consonant gradation: closed-syllable triggers a weak grade for stem-internal stops (kk → k, pp → p, tt → t). Phase 29 Tranche 5e: stress-conditioned (weak grade typical in unstressed contexts).",
+    stressFilter: "unstressed",
+    enabledByDefault: false,
+    baseWeight: 0.5,
+    probabilityFor: (w) => {
+      for (let i = 1; i < w.length; i++) {
+        const a = w[i - 1]!;
+        const b = w[i]!;
+        if (a === b && (a === "k" || a === "p" || a === "t")) return 0.05;
+      }
+      return 0;
+    },
+    apply: (word) => {
+      for (let i = 1; i < word.length; i++) {
+        const a = word[i - 1]!;
+        const b = word[i]!;
+        if (a === b && (a === "k" || a === "p" || a === "t")) {
+          const out = word.slice();
+          out.splice(i - 1, 1);
+          return out;
+        }
+      }
+      return word;
+    },
+  },
+
+  {
+    id: "fortition.pharyngealisation",
+    label: "C → Cˤ / a_",
+    category: "fortition",
+    description:
+      "Adjacent low/back vowels trigger pharyngealisation on coronals. Arabic-style emphatic spread (sˤ, dˤ, tˤ, ðˤ).",
+    enabledByDefault: false,
+    baseWeight: 0.4,
+    probabilityFor: (w) => {
+      for (let i = 0; i < w.length; i++) {
+        const c = w[i]!;
+        if (c !== "s" && c !== "d" && c !== "t") continue;
+        const prev = i > 0 ? w[i - 1]! : "";
+        const next = i + 1 < w.length ? w[i + 1]! : "";
+        if (prev === "a" || prev === "ɑ" || next === "a" || next === "ɑ") {
+          return 0.03;
+        }
+      }
+      return 0;
+    },
+    apply: (word) => {
+      for (let i = 0; i < word.length; i++) {
+        const c = word[i]!;
+        if (c !== "s" && c !== "d" && c !== "t") continue;
+        const prev = i > 0 ? word[i - 1]! : "";
+        const next = i + 1 < word.length ? word[i + 1]! : "";
+        if (prev === "a" || prev === "ɑ" || next === "a" || next === "ɑ") {
+          const out = word.slice();
+          out[i] = c + "ˤ";
+          return out;
+        }
+      }
+      return word;
     },
   },
 ];
