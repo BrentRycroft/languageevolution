@@ -103,7 +103,7 @@ export function stepGenesis(
             if (justBecameProductive) {
               pushEvent(lang, {
                 generation,
-                kind: "grammaticalize",
+                kind: "productivity",
                 description:
                   `productive rule established: V + ${suffix.tag} = ${categoryLabel(suffix.category)} (after ${suffix.usageCount} attestations)`,
               });
@@ -177,7 +177,7 @@ export function stepGenesis(
     }
     pushEvent(lang, {
       generation,
-      kind: "coinage",
+      kind: isReplacement ? "lexical_replacement" : "coinage",
       description: isReplacement
         ? `lexical-replacement: ${outcome.meaning} (${oldFormStr} → ${outcome.form.join("")}) via ${outcome.originTag}`
         : commit.viaPolysemy

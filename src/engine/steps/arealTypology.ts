@@ -83,7 +83,7 @@ export function stepArealTypology(
     );
     pushEvent(lang, {
       generation,
-      kind: "grammar_shift",
+      kind: "areal",
       description: `areal typological diffusion: ${key} ${before} → ${String(topValue)} (Sprachbund pull from ${strongLinks.length} bilingual neighbour${strongLinks.length === 1 ? "" : "s"})`,
     });
     return;

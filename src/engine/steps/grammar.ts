@@ -155,7 +155,7 @@ export function stepMorphology(
     if (sup) {
       pushEvent(lang, {
         generation,
-        kind: "grammar_shift",
+        kind: "suppletion",
         description: `suppletion: "${sup.meaning}" (${sup.category}) adopts root of "${sup.donorMeaning}"`,
         meta: { meaning: sup.meaning, category: sup.category },
       });
@@ -164,7 +164,7 @@ export function stepMorphology(
     if (ablaut) {
       pushEvent(lang, {
         generation,
-        kind: "grammar_shift",
+        kind: "suppletion",
         description: `ablaut irregular: "${ablaut.meaning}" (${ablaut.category}) gains a vowel-mutated form`,
         meta: { meaning: ablaut.meaning, category: ablaut.category },
       });

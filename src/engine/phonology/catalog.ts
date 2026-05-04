@@ -157,7 +157,7 @@ export const CATALOG: SoundChange[] = [
   mappingSub(
     "devoicing.bdg",
     "b/d/g → p/t/k",
-    "fortition",
+    "devoicing",
     [
       ["b", "p"],
       ["d", "t"],
@@ -538,7 +538,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "monophthongization.au_to_o",
     label: "au → o / ai → e",
-    category: "vowel",
+    category: "monophthongization",
     description: "Diphthongs collapse, re-seeding mid vowels lost to raising.",
     probabilityFor: (w) => {
       let n = 0;
@@ -616,7 +616,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "tonogenesis.voiced_coda",
     label: "V → V˩ / _[+voiced]#",
-    category: "vowel",
+    category: "tonogenesis",
     description:
       "Tonogenesis: a word-final voiced obstruent lowers the preceding vowel (tone split). Disabled by default — branches can pick it up via rule-set perturbation on split.",
     probabilityFor: (w) => {
@@ -652,7 +652,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "tonogenesis.voiced_coda_loss",
     label: "Cvoiced → ∅ / V˩_#",
-    category: "deletion",
+    category: "tonogenesis",
     description:
       "After tonogenesis: the now-redundant voiced coda drops, leaving only the tone on the vowel.",
     probabilityFor: (w) => {
@@ -675,7 +675,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "detonogenesis.tone_loss",
     label: "V˥/V˩ → V (sporadic)",
-    category: "vowel",
+    category: "detonogenesis",
     description:
       "Detonogenesis (rare): each toned vowel independently rolls to lose its tone. Some words keep tones longer than others.",
     probabilityFor: (w) => {
@@ -691,7 +691,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "inventory.click_introduction",
     label: "C → click (rare)",
-    category: "fortition",
+    category: "inventory",
     description:
       "Very rare: a stop consonant is reanalyzed as a click, typically spreading via prestige vocabulary.",
     probabilityFor: (w) => {
@@ -730,7 +730,7 @@ export const CATALOG: SoundChange[] = [
   mappingSub(
     "retroflex.series",
     "s → ʂ, t → ʈ, d → ɖ, n → ɳ",
-    "fortition",
+    "retroflex",
     [
       ["s", "ʂ"],
       ["t", "ʈ"],
@@ -746,7 +746,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "stress.pretonic_weakening",
     label: "V → ə / pretonic",
-    category: "vowel",
+    category: "stress",
     description:
       "Pretonic vowels (immediately before the stressed syllable) weaken toward schwa. Russian akanye and Romance pretonic reductions are the canonical examples.",
     stressFilter: "pretonic",
@@ -772,7 +772,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "stress.stressed_diphthongization",
     label: "V[ + stress, mid] → diph",
-    category: "vowel",
+    category: "stress",
     description:
       "Stressed short mid vowels diphthongise (e → je, o → wo). Mediterranean Romance development; rare elsewhere but plausible in any language with a strong stress accent.",
     stressFilter: "stressed",
@@ -806,7 +806,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "stress.open_syllable_lengthening",
     label: "V → Vː / σ̌_open",
-    category: "vowel",
+    category: "stress",
     description:
       "Stressed short vowels in open syllables lengthen. Middle English `stān` → `stoːn`; Old High German `tag` → `tāg`. Skips already-long vowels and closed-syllable nuclei.",
     stressFilter: "stressed",
@@ -850,7 +850,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "stress.unstressed_final_apocope",
     label: "V[ - stress]# → ∅",
-    category: "deletion",
+    category: "stress",
     description:
       "Word-final unstressed vowels delete. The mechanism behind Old → Middle English ending erosion. Skips monosyllables (the language already keeps the stressed nucleus).",
     stressFilter: "unstressed",
@@ -877,7 +877,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "stress.unstressed_medial_syncope",
     label: "V[ - stress] → ∅ / V_C…",
-    category: "deletion",
+    category: "stress",
     description:
       "Medial unstressed vowels delete in word-internal position. Drives the Latin-to-Romance simplification of multi-syllable roots. Word-final apocope is handled by a separate rule.",
     stressFilter: "unstressed",
@@ -904,7 +904,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "compensatory.final_coda_lengthening",
     label: "VC# → Vː#",
-    category: "deletion",
+    category: "compensatory",
     description:
       "Word-final consonant deletes and lengthens the preceding short vowel (Phase 24: weight bumped to compete against bare deletion).",
     enabledByDefault: true,
@@ -932,7 +932,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "compensatory.medial_coda_lengthening",
     label: "VCC → VːC (medial)",
-    category: "deletion",
+    category: "compensatory",
     description:
       "Phase 24: a medial coda consonant in V₁CC₂… deletes and the preceding V₁ lengthens. Models Latin factum → Italian fatto-style mora preservation and English night /nixt/ → /naɪt/ where coda /x/ loss maintains length-by-quality.",
     enabledByDefault: true,
@@ -1016,7 +1016,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "harmony.backness",
     label: "V harmony by backness",
-    category: "assimilation",
+    category: "harmony",
     description:
       "Every vowel in a word aligns its backness with the first vowel " +
       "(Turkish-style harmony).",
@@ -1057,7 +1057,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "umlaut.front_before_front_vowel",
     label: "V → V̈ / _…[i,j]",
-    category: "assimilation",
+    category: "umlaut",
     description:
       "Back vowels front when followed by /i/ or /j/ within two " +
       "segments — classic umlaut / i-mutation.",
@@ -1094,7 +1094,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "glottalization.preglottal_final_stop",
     label: "p/t/k → ʔp/ʔt/ʔk / _#",
-    category: "fortition",
+    category: "glottalization",
     description:
       "Word-final voiceless stops gain a glottal onset (preglottalisation).",
     enabledByDefault: false,
@@ -1116,7 +1116,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "glottalization.initial_ejective",
     label: "p/t/k → pʼ/tʼ/kʼ / #_",
-    category: "fortition",
+    category: "glottalization",
     description:
       "Word-initial voiceless stops become ejectives (glottalic egressive).",
     enabledByDefault: false,
@@ -1138,7 +1138,7 @@ export const CATALOG: SoundChange[] = [
   {
     id: "glottalization.debuccalise_to_glottal",
     label: "ʔp/ʔt/ʔk/pʼ/tʼ/kʼ → ʔ",
-    category: "lenition",
+    category: "glottalization",
     description:
       "Glottalised stops debuccalise to bare /ʔ/ (loss of oral closure).",
     enabledByDefault: true, // Phase 25: useful in language families that have ejectives

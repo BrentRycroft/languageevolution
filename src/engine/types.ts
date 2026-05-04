@@ -7,13 +7,24 @@ export type SoundChangeCategory =
   | "lenition"
   | "fortition"
   | "voicing"
+  | "devoicing"
   | "deletion"
   | "insertion"
   | "assimilation"
   | "vowel"
   | "metathesis"
   | "palatalization"
-  | "gemination";
+  | "gemination"
+  | "tonogenesis"
+  | "detonogenesis"
+  | "harmony"
+  | "umlaut"
+  | "monophthongization"
+  | "compensatory"
+  | "glottalization"
+  | "stress"
+  | "inventory"
+  | "retroflex";
 
 export type PositionBias = "initial" | "final" | "internal" | "any";
 
@@ -42,7 +53,18 @@ export interface LanguageEvent {
     | "grammaticalize"
     | "chain_shift"
     | "taboo"
-    | "actuation";
+    | "actuation"
+    // Phase 29 Tranche 3a: previously squashed under sound_change /
+    // grammar_shift / semantic_drift. Filterable per-kind in EventsLog.
+    | "volatility"
+    | "areal"
+    | "creolization"
+    | "lexical_replacement"
+    | "productivity"
+    | "suppletion"
+    | "merger"
+    | "tier_transition"
+    | "kinship_simplification";
   description: string;
   meta?: {
     donorId?: string;
@@ -398,6 +420,18 @@ export interface SimulationConfig {
     death: boolean;
     grammar: boolean;
     semantics: boolean;
+    /**
+     * Phase 29 Tranche 3b: previously-unconditional steps now gated.
+     * Default true so existing saves and presets behave identically.
+     */
+    contact: boolean;
+    volatility: boolean;
+    areal: boolean;
+    creolization: boolean;
+    learner: boolean;
+    obsolescence: boolean;
+    taboo: boolean;
+    copula: boolean;
   };
   phonology: {
     globalRate: number;
