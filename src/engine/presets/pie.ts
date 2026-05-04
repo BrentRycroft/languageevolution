@@ -493,6 +493,13 @@ export function presetPIE(): SimulationConfig {
       fusionIndex: 0.7,
       hasCase: true,
     },
+    // Phase 31 Tranche 31d: Proto-Indo-European is typologically
+    // pitch-accent (Vedic / Greek / Lithuanian retain traces of
+    // mobile accent), but the simulator models lexical-stress
+    // explicitly via seedLexicalStress and doesn't seed actual tone
+    // marks. So PIE is non-tonal here — pitch-accent realisation is
+    // Phase 32+.
+    seedToneRegime: "non-tonal",
     preset: "pie",
   };
 }

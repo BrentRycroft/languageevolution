@@ -770,6 +770,10 @@ export function presetEnglish(): SimulationConfig {
       serialVerbConstructions: false,
       politenessRegister: "none",
     },
+    // Phase 31 Tranche 31d: English has no contrastive tone. Stays
+    // non-tonal unless explicit areal contact triggers a tonogenesis
+    // cascade (out of scope for Phase 31).
+    seedToneRegime: "non-tonal",
     preset: "english",
   };
 }

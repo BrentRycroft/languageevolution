@@ -379,6 +379,8 @@ export function presetRomance(): SimulationConfig {
       adjectivePosition: "pre",
       possessorPosition: "post",
     },
+    // Phase 31 Tranche 31d: Latin non-tonal.
+    seedToneRegime: "non-tonal",
     preset: "romance",
   };
 }

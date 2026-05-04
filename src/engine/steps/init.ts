@@ -15,6 +15,7 @@ import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { assignAllGenders } from "../morphology/gender";
 import { classifyLexicon } from "../morphology/inflectionClass";
+import { isToneBearing, toneOf, MID } from "../phonology/tone";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
 import { syncWordsFromLexicon } from "../lexicon/word";
 import {
@@ -27,6 +28,30 @@ import {
   suggestedEarthOrigin,
   territoryCentroid,
 } from "../geo/map";
+
+/**
+ * Phase 31 Tranche 31d: one-shot tonalisation. Fills every
+ * tone-bearing position in every seed-lexicon word with a tone —
+ * keep the existing tone if present (preset-supplied), otherwise
+ * default to MID. Called at language birth when the preset declares
+ * `seedToneRegime: "tonal"` so the proto starts genuinely tonal
+ * instead of partly-tonal.
+ */
+function tonaliseLexicon(lang: Language): void {
+  for (const m of Object.keys(lang.lexicon)) {
+    const f = lang.lexicon[m]!;
+    let needsRewrite = false;
+    for (const p of f) {
+      if (isToneBearing(p) && !toneOf(p)) { needsRewrite = true; break; }
+    }
+    if (!needsRewrite) continue;
+    lang.lexicon[m] = f.map((p) => {
+      if (!isToneBearing(p)) return p;
+      if (toneOf(p)) return p;
+      return p + MID;
+    });
+  }
+}
 
 function initialLexicalCapacity(lang: Language): number {
   return computeCapacity(lang, lang.birthGeneration);
@@ -118,6 +143,10 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},
     stressPattern: config.seedStressPattern ?? "penult",
+    // Phase 31 Tranche 31d: tonal regime declared by preset; defaults
+    // to non-tonal. `refreshInventory` reclassifies each gen so the
+    // seed value just sets the proto-language's starting state.
+    toneRegime: config.seedToneRegime ?? "non-tonal",
     infinitiveStrategy: config.seedInfinitiveStrategy ?? { kind: "bare" },
     // Phase 27a: phonotactic profile defaults to permissive (English-like)
     // when no preset specifies — preserves pre-Phase-27 behavior.
@@ -149,6 +178,15 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // analogy + drift gates already exclude these meanings, so they
   // erode but don't reshape.)
   seedClosedClassLexicon(rootLang);
+  // Phase 31 Tranche 31d: if the preset declares the language tonal,
+  // run a one-shot tonalisation pass that fills every tone-bearing
+  // position in every seed-lexicon word with a default tone (MID).
+  // This makes the proto-language fully tonal at gen 0 instead of
+  // relying on per-word tonogenesis to slowly cover the lexicon
+  // (which left languages in inconsistent partial-tonal states).
+  if (rootLang.toneRegime === "tonal") {
+    tonaliseLexicon(rootLang);
+  }
   assignAllGenders(rootLang);
   // Phase 29 Tranche 5e: bucket every seed meaning into an inflection
   // class (Latin-style 1/2/3/4) biased by phonological shape. The

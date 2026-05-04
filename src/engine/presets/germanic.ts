@@ -350,6 +350,10 @@ export function presetGermanic(): SimulationConfig {
       adjectivePosition: "pre",
       possessorPosition: "pre",
     },
+    // Phase 31 Tranche 31d: Germanic non-tonal (Norwegian + Swedish
+    // are pitch-accent but the proto here is plain non-tonal Common
+    // Germanic).
+    seedToneRegime: "non-tonal",
     preset: "germanic",
   };
 }

@@ -74,6 +74,34 @@ export function SelectedLanguageBar() {
       </span>
       <span>{speakers.toLocaleString()} speakers</span>
       <span>{Object.keys(selected.lexicon).length} words</span>
+      {selected.toneRegime === "tonal" && (
+        <span
+          title="Tonal language — every tone-bearing syllable carries a tone"
+          style={{
+            fontSize: 10,
+            padding: "0 4px",
+            borderRadius: 3,
+            border: "1px solid var(--border)",
+            color: "var(--accent)",
+          }}
+        >
+          T
+        </span>
+      )}
+      {selected.toneRegime === "pitch-accent" && (
+        <span
+          title="Pitch-accent language — one syllable per word marked"
+          style={{
+            fontSize: 10,
+            padding: "0 4px",
+            borderRadius: 3,
+            border: "1px solid var(--border)",
+            color: "var(--muted)",
+          }}
+        >
+          PA
+        </span>
+      )}
       {selected.volatilityPhase?.kind === "upheaval" && (
         <span
           className="t-danger"
