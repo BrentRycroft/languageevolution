@@ -781,6 +781,13 @@ export interface SimulationConfig {
    * class prefix and drives verb-class agreement.
    */
   seedNounClassSystem?: boolean;
+  /**
+   * Phase 36 Tranche 36o: declarative tone-sandhi rule selection. Set
+   * by tonal presets (e.g., Bantu's ["meeussen","spread"]) to filter
+   * which sandhi rules can fire on the proto language. Daughter
+   * languages inherit unless overridden.
+   */
+  seedToneSandhiRules?: ReadonlyArray<"meeussen" | "dissimilate" | "spread" | "downstep">;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;

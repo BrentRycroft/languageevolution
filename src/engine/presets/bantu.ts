@@ -351,6 +351,7 @@ export function presetBantu(): SimulationConfig {
     // begins tonal; non-tonal daughters can still emerge via
     // detonogenesis if it pushes coverage below threshold.
     seedToneRegime: "tonal",
+    seedToneSandhiRules: ["meeussen", "spread"],
     // Phase 36 Tranche 36b: Bantu noun-class system. Activates the
     // class-prefix realiser and verb-agreement pathway.
     seedNounClassSystem: true,

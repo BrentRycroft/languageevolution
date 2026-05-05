@@ -639,6 +639,17 @@ function realiseVerb(
     const cat = `verb.cls.${subjClass}` as MorphCategory;
     if (lang.morphology.paradigms[cat]) stack.push(cat);
   }
+  // Phase 36 Tranche 36j: switch-reference marker. When the language
+  // tracks SR and the VP is flagged as a subordinate clause, push
+  // verb.subord.ss / verb.subord.ds depending on subject-coreference.
+  const refTrack = lang.grammar.referenceTracking ?? "none";
+  if (
+    (refTrack === "switch-reference" || refTrack === "both") &&
+    vp.subordSubjectCoreference !== undefined
+  ) {
+    const cat = vp.subordSubjectCoreference === "same" ? "verb.subord.ss" : "verb.subord.ds";
+    if (lang.morphology.paradigms[cat]) stack.push(cat);
+  }
 
   const ps = vp.verb.subjectPerson;
   const ns = vp.verb.subjectNumber;

@@ -722,7 +722,45 @@ function applyMoodOverrides(
     }
     if (moodMarking === "subjunctive" && s.leadingConj && SUBJUNCTIVE_TRIGGERS.has(s.leadingConj.lemma)) {
       verb.mood = "subjunctive";
+      continue;
     }
+    // Phase 36 Tranche 36l: opportunistic jussive/hortative emission
+    // when the language allows. Jussive triggers on 3rd-person
+    // directive sentences containing "let" or "may" as a leading
+    // particle; hortative triggers on 1pl with "let us" or "let's".
+    if (s.leadingConj && (s.leadingConj.lemma === "let" || s.leadingConj.lemma === "may")) {
+      const subjPerson = s.subject?.head.person;
+      const subjNum = s.subject?.head.number;
+      if (subjPerson === "1" && subjNum === "pl") verb.mood = "hortative";
+      else if (subjPerson === "3") verb.mood = "jussive";
+    }
+  }
+}
+
+/**
+ * Phase 36 Tranche 36j: opportunistic switch-reference flagging.
+ * Walks each parsed Sentence; for languages that track SR, when the
+ * sentence has a subordinator (`if`, `when`, `because`, `while`,
+ * `that`), set `predicate.subordSubjectCoreference` based on whether
+ * the subject is a pronoun (assumed coreferential with matrix → SS)
+ * or a full noun (assumed disjoint reference → DS). Heuristic but
+ * produces visible morphological contrast in narrative output.
+ */
+const SUBORDINATOR_TRIGGERS = new Set([
+  "if", "when", "because", "while", "though", "although", "that",
+  "unless", "lest", "until",
+]);
+function applySwitchReference(
+  sentences: import("./syntax").Sentence[],
+  lang: Language,
+): void {
+  const refTrack = lang.grammar.referenceTracking ?? "none";
+  if (refTrack === "none" || refTrack === "logophoric") return;
+  for (const s of sentences) {
+    if (!s.leadingConj || !SUBORDINATOR_TRIGGERS.has(s.leadingConj.lemma)) continue;
+    const subj = s.subject?.head;
+    if (!subj) continue;
+    s.predicate.subordSubjectCoreference = subj.isPronoun ? "same" : "different";
   }
 }
 
@@ -882,6 +920,7 @@ function translateViaTree(
   // is a no-op.
   applyAspectOverrides(parsedAll, lang);
   applyMoodOverrides(parsedAll, lang);
+  applySwitchReference(parsedAll, lang);
   const missing: string[] = [];
   const resolveOpen = (lemma: string) => {
     const r = resolveLemma(lang, lemma);

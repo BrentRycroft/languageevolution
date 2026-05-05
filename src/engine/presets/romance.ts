@@ -406,6 +406,9 @@ export function presetRomance(): SimulationConfig {
       // Phase 36 Tranche 36e: Latin/Romance subjunctive in subordinate
       // clauses ("quiero que venga", "veuille qu'il vienne").
       moodMarking: "subjunctive",
+      // Phase 36 Tranche 36k: Romance languages have T-V (tu/vous,
+      // tú/usted, tu/Lei). Seed at the proto so daughters inherit.
+      politenessRegister: "T-V",
     },
     // Phase 31 Tranche 31d: Latin non-tonal.
     seedToneRegime: "non-tonal",

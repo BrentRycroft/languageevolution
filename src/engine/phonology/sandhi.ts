@@ -34,28 +34,40 @@ interface SandhiRule {
 
 const SANDHI_RULES: ReadonlyArray<SandhiRule> = [
   {
-    // Mandarin third-tone sandhi: T3 + T3 → T2 + T3.
-    // We model T3 as LOW and T2 as RISING.
+    // Mandarin third-tone sandhi: T3 + T3 → T2 + T3 (dissimilate).
     id: "sandhi.low_low_to_rising_low",
     description: "Adjacent low tones — first dissimilates to rising (Mandarin tone-3 sandhi).",
     match: (a, b) => (a === LOW && b === LOW ? [RISING, LOW] : null),
     perSiteProb: 0.35,
   },
   {
-    // High-tone OCP: H + H → H + Mid (avoid violating the OCP on tone tier).
+    // High-tone OCP: H + H → H + Mid (Bantu Meeussen's-rule shape).
     id: "sandhi.high_high_to_high_mid",
     description: "Two adjacent high tones — second drops to mid (OCP on tone tier).",
     match: (a, b) => (a === HIGH && b === HIGH ? [HIGH, MID] : null),
     perSiteProb: 0.25,
   },
   {
-    // Falling-then-rising contour smoothing.
+    // Falling-then-rising contour smoothing (downstep).
     id: "sandhi.falling_rising_to_falling_high",
     description: "A falling contour followed by a rising contour smooths to falling-high.",
     match: (a, b) => (a === FALLING && b === RISING ? [FALLING, HIGH] : null),
     perSiteProb: 0.2,
   },
 ];
+
+/**
+ * Phase 36 Tranche 36o: per-language rule selection. Each catalog
+ * rule maps to one of the family tags exposed via
+ * `Language.toneSandhiRules`. When the language opts into a subset,
+ * only rules tagged with that family run; languages without the
+ * field run the full default catalog (back-compat).
+ */
+const RULE_FAMILY: Record<string, "meeussen" | "dissimilate" | "spread" | "downstep"> = {
+  "sandhi.low_low_to_rising_low": "dissimilate",
+  "sandhi.high_high_to_high_mid": "meeussen",
+  "sandhi.falling_rising_to_falling_high": "downstep",
+};
 
 interface SandhiSite {
   meaning: string;
@@ -88,7 +100,12 @@ export function stepToneSandhi(
       const tA = toneOf(form[i]!);
       const tB = toneOf(form[j]!);
       if (!tA || !tB) continue;
+      const families = lang.toneSandhiRules;
       for (const rule of SANDHI_RULES) {
+        if (families && families.length > 0) {
+          const fam = RULE_FAMILY[rule.id];
+          if (!fam || !families.includes(fam)) continue;
+        }
         const repl = rule.match(tA, tB);
         if (!repl) continue;
         if (!rng.chance(rule.perSiteProb)) continue;

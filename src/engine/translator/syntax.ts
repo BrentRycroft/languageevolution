@@ -103,6 +103,14 @@ export interface VP {
    * verb-class agreement paradigm.
    */
   subjectNounClass?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  /**
+   * Phase 36 Tranche 36j: switch-reference flag. Set on subordinate
+   * clauses when the language tracks SR; "same" → verb.subord.ss,
+   * "different" → verb.subord.ds. Heuristically derived from subject
+   * pronoun-vs-full-noun status when no upstream coreference data
+   * is available.
+   */
+  subordSubjectCoreference?: "same" | "different";
 }
 
 export interface Sentence {

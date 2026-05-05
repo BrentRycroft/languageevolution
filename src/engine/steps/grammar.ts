@@ -7,6 +7,8 @@ import {
   maybeMergeParadigms,
   maybeCliticize,
   maybeAffixReplacement,
+  maybeBackformation,
+  maybeMoodEmergence,
   maybeSuppletion,
   maybeSplitParadigm,
   maybeVowelMutationIrregular,
@@ -127,6 +129,18 @@ export function stepMorphology(
       });
     }
   }
+  // Phase 36 Tranche 36l: mood-emergence pathway.
+  if ((lang.grammar.moodMarking ?? "declarative") === "declarative") {
+    const moodShift = maybeMoodEmergence(lang, rng);
+    if (moodShift) {
+      pushEvent(lang, {
+        generation,
+        kind: "grammaticalize",
+        description: moodShift.description,
+        meta: { meaning: moodShift.source?.meaning, pathway: moodShift.source?.pathway },
+      });
+    }
+  }
   // Phase 36 Tranche 36h: derivational morpheme replacement.
   if (lang.boundMorphemes && lang.boundMorphemes.size >= 2) {
     const repl = maybeAffixReplacement(lang, rng, 0.002 * lang.conservatism);
@@ -138,6 +152,20 @@ export function stepMorphology(
         kind: "grammar_shift",
         description: `affix replacement: "${repl.meaning}" obsolescent → "${repl.replacedBy}"`,
         meta: { meaning: repl.meaning },
+      });
+    }
+  }
+  // Phase 36 Tranche 36s: back-formation. When a fossilised compound
+  // ends in a recognised productive bound morpheme, speakers may
+  // re-extract the base as a new lexeme (editor → edit pattern).
+  if (lang.compounds && lang.boundMorphemes && lang.boundMorphemes.size > 0) {
+    const bf = maybeBackformation(lang, rng, 0.001 * lang.conservatism);
+    if (bf) {
+      pushEvent(lang, {
+        generation,
+        kind: "lexical_replacement",
+        description: `back-formation: extracted "${bf.newLemma}" from "${bf.from}" (/${bf.base.join("")}/)`,
+        meta: { meaning: bf.newLemma, donorId: bf.from },
       });
     }
   }
