@@ -9,7 +9,7 @@ export type ClosedClassLemma =
   | "because" | "when" | "while" | "if"
   | "not"
   | "very" | "now" | "then"
-  | "this" | "that"
+  | "this" | "that" | "that_near" | "that_far" | "that_remote"
   | "my" | "your" | "his" | "her" | "its" | "our" | "their"
   | "who" | "whom" | "whose" | "what" | "which"
   | "where" | "when" | "why" | "how"
@@ -29,7 +29,7 @@ export const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "because", "when", "while", "if",
   "not",
   "very", "now", "then",
-  "this", "that",
+  "this", "that", "that_near", "that_far", "that_remote",
   "my", "your", "his", "her", "its", "our", "their",
   "who", "whom", "whose", "what", "which",
   "where", "when", "why", "how",
@@ -94,7 +94,22 @@ export function closedClassForm(
   lang: Language,
   lemma: string,
 ): WordForm | undefined {
-  const direct = closedClassTable(lang)[lemma];
+  const remapped = remapDemonstrative(lang, lemma);
+  const direct = closedClassTable(lang)[remapped];
   if (direct) return direct;
-  return synthesise(lang, lemma);
+  return synthesise(lang, remapped);
+}
+
+/**
+ * Phase 36 Tranche 36c/36i: when the language has a three-way or
+ * four-way demonstrative system, a generic English "that" maps to
+ * `that_near` (the medial/hearer-proximal slot). Distance lemmas
+ * passed in directly (`that_far`, `that_remote`) pass through. A
+ * two-way language receives the bare `"that"` form regardless.
+ */
+function remapDemonstrative(lang: Language, lemma: string): string {
+  if (lemma !== "that") return lemma;
+  const d = lang.grammar.demonstrativeDistance ?? "two-way";
+  if (d === "three-way" || d === "four-way") return "that_near";
+  return "that";
 }

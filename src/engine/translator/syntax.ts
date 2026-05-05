@@ -92,6 +92,12 @@ export interface VP {
   pps: PP[];
   adverbs: AdjRef[];
   complement?: AdjRef[];
+  /**
+   * Phase 36 Tranche 36b: subject's noun-class. Set after the
+   * subject NP is realised so the VP realiser can pick the matching
+   * verb-class agreement paradigm.
+   */
+  subjectNounClass?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 }
 
 export interface Sentence {

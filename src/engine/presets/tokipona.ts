@@ -196,6 +196,11 @@ export function presetTokipona(): SimulationConfig {
       possessorPosition: "pre",
       synthesisIndex: 1.0,
       hasCase: false,
+      // Phase 36 Tranche 36a: Toki Pona has no native plural marker
+      // (mute "many" is a separate word). For simulator purposes use
+      // partial-initial reduplication — small, vowel-rich syllables
+      // accept reduplicated marking cleanly.
+      pluralMarking: "reduplication",
     },
     // Phase 31 Tranche 31d: Toki Pona is non-tonal by design.
     seedToneRegime: "non-tonal",

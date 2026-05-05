@@ -159,6 +159,51 @@ function maybeArticleEmergence(
   };
 }
 
+/**
+ * Phase 36 Tranche 36h: derivational suffix replacement / obsolescence.
+ *
+ * With low probability per generation, an established bound morpheme
+ * (e.g., `-er.agt`, `-ness`) can be marked obsolescent — new
+ * productive coinages stop using it and prefer either a fresh donor
+ * from the lexicon or a competitor already in the bound-morpheme
+ * pool.
+ *
+ * Real-world models: Latin `-tor` displaced Germanic `-er` in
+ * scholastic Romance registers; Old English `-end` (agentive) was
+ * replaced by Middle English `-er`.
+ */
+export function maybeAffixReplacement(
+  lang: Language,
+  rng: Rng,
+  probability: number = 0.002,
+): { meaning: string; replacedBy?: string } | null {
+  if (!rng.chance(probability)) return null;
+  if (!lang.boundMorphemes || lang.boundMorphemes.size < 2) return null;
+  const candidates: string[] = [];
+  for (const m of lang.boundMorphemes) {
+    const origin = lang.boundMorphemeOrigin?.[m];
+    if (origin?.obsolescentGen !== undefined) continue;
+    const f = lang.lexicon[m];
+    if (!f || f.length === 0) continue;
+    candidates.push(m);
+  }
+  if (candidates.length < 2) return null;
+  const target = candidates[rng.int(candidates.length)]!;
+  const others = candidates.filter((m) => m !== target);
+  const replacement = others[rng.int(others.length)]!;
+  if (!lang.boundMorphemeOrigin) lang.boundMorphemeOrigin = {};
+  const prior = lang.boundMorphemeOrigin[target] ?? {
+    introducedGen: 0,
+    pathway: "preset-seed",
+  };
+  lang.boundMorphemeOrigin[target] = {
+    ...prior,
+    obsolescentGen: 0, // caller can set if it knows current gen
+    replacedBy: replacement,
+  };
+  return { meaning: target, replacedBy: replacement };
+}
+
 export function maybeCliticize(
   lang: Language,
   rng: Rng,

@@ -46,17 +46,21 @@ function fireCount(
 
 describe("Phase 28d — lexical diffusion", () => {
   it("neighbour momentum boosts firing rate", () => {
+    // Phase 36 Tranche 36g bumped trial count 500 → 2000 because the
+    // GENERATION_RATE_SCALE halving cut absolute fire rate enough that
+    // the 50% momentum boost was occasionally lost in stochastic
+    // noise at 500 trials. Larger trial pool, same expectation.
     const baseline = fireCount(
       "lenition.p_to_f",
       ["b", "a", "p", "a"],
-      500,
+      2000,
       1.0,
       "diff-base",
     );
     const boosted = fireCount(
       "lenition.p_to_f",
       ["b", "a", "p", "a"],
-      500,
+      2000,
       1.5,
       "diff-boost",
     );

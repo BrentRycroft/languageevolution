@@ -40,6 +40,28 @@ export interface SoundChange {
   enabledByDefault: boolean;
   baseWeight: number;
   priority?: number;
+  /**
+   * Phase 36 Tranche 36g: cross-linguistic actuation frequency.
+   * Lenitions, vowel reductions, palatalisation are "common"
+   * (×1.5). Metathesis, dissimilation, marked fortition are "rare"
+   * (×0.4). Most others land on "ordinary" (×1.0). Default ordinary.
+   */
+  frequency?: "common" | "ordinary" | "rare";
+  /**
+   * Phase 36 Tranche 36g: actuation regime.
+   * - "diffuse" (default): Wang-style lexical diffusion; rule fires
+   *   word-by-word over many generations as adoption ramps via the
+   *   sigmoid in apply.ts.
+   * - "blanket": Neogrammarian. When the rule actuates in a
+   *   language, every applicable site flips in a single generation.
+   *   Used for major obstruent shifts and chain-shifts.
+   */
+  regime?: "blanket" | "diffuse";
+  /**
+   * Phase 36 Tranche 36r: short rationale for frequency/regime
+   * choices. One sentence, surfaces in the rule-catalog UI tooltip.
+   */
+  rationale?: string;
 }
 
 export interface LanguageEvent {
@@ -344,6 +366,32 @@ export interface Language {
     fossilizedGen?: number;
     /** Generation when the compound was originally formed. */
     bornGeneration: number;
+  }>;
+  /**
+   * Phase 36 Tranche 36f/36h: bound morphemes living as lexicon
+   * entries. These are derivational suffixes/prefixes (e.g., `-er.agt`,
+   * `-ness`, `-dom`) stored as form entries so they evolve with
+   * sound change like any word, but flagged here so the lexicon UI
+   * and the translator skip them in standalone-form contexts. Their
+   * forms feed into derivational compounds via the `compounds` map.
+   */
+  boundMorphemes?: Set<Meaning>;
+  /**
+   * Phase 36 Tranche 36b: Bantu-style noun-class assignment per
+   * meaning. Class 1-8. Singular/plural classes are paired; the
+   * realiser picks the plural counterpart when number === "pl".
+   * Languages without a class system leave this undefined.
+   */
+  nounClassAssignments?: Record<Meaning, 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8>;
+  /**
+   * Phase 36 Tranche 36h: track when each bound morpheme was
+   * introduced, and any replacement events. Powers etymology trace.
+   */
+  boundMorphemeOrigin?: Record<Meaning, {
+    introducedGen: number;
+    pathway: string;
+    obsolescentGen?: number;
+    replacedBy?: Meaning;
   }>;
   /**
    * Generation deadline for the abstract-vocabulary catch-up window.
@@ -678,6 +726,21 @@ export interface SimulationConfig {
     parts: Meaning[];
     linker?: WordForm;
   }>;
+  /**
+   * Phase 36 Tranche 36f: bound-morpheme set. At language birth the
+   * preset hands a Set of meanings that are bound morphemes (e.g.,
+   * `-er.agt`, `-ness`) so the lexicon UI / translator skip them
+   * as standalone surface words. The forms still live in
+   * `seedLexicon` and evolve under sound change.
+   */
+  seedBoundMorphemes?: ReadonlySet<Meaning>;
+  /**
+   * Phase 36 Tranche 36b: opt the proto language into a Bantu-style
+   * noun-class system. When true, `assignAllNounClasses` runs at
+   * language birth and the realiser inflects every noun with its
+   * class prefix and drives verb-class agreement.
+   */
+  seedNounClassSystem?: boolean;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;

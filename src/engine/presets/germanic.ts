@@ -255,7 +255,21 @@ const LEXICON: Lexicon = {
   to: ["t", "oː"],
   for: ["f", "u", "r", "i"],
   by: ["b", "i"],
+  // Phase 36 Tranche 36n: Proto-Germanic derivational morphemes.
+  // -arja agentive (PGmc *bakarjaz "baker"), -iþō abstract noun
+  // (*frijaþō → freedom), -uŋgō nominalisation (*dengwuŋgō →
+  // -ing), -laikaz adjectival (*frijalaikaz → -ly), -skapiz
+  // collective (*friundskapiz → -ship).
+  "-arja.agt": ["a", "r", "j", "a"],
+  "-iþō.abs": ["i", "θ", "oː"],
+  "-uŋgō.nmlz": ["u", "ŋ", "ɡ", "oː"],
+  "-laikaz.adj": ["l", "a", "j", "k", "a", "z"],
+  "-skapiz.coll": ["s", "k", "a", "p", "i", "z"],
 };
+
+const GERMANIC_BOUND_MORPHEMES = new Set<string>([
+  "-arja.agt", "-iþō.abs", "-uŋgō.nmlz", "-laikaz.adj", "-skapiz.coll",
+]);
 
 // Phase 29 Tranche 5s: deepened Germanic frequency hints.
 const FREQ: Record<Meaning, number> = {
@@ -354,6 +368,7 @@ export function presetGermanic(): SimulationConfig {
     // are pitch-accent but the proto here is plain non-tonal Common
     // Germanic).
     seedToneRegime: "non-tonal",
+    seedBoundMorphemes: GERMANIC_BOUND_MORPHEMES,
     preset: "germanic",
   };
 }

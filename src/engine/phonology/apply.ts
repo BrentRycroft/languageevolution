@@ -38,6 +38,28 @@ const EROSIVE_CATEGORIES: ReadonlySet<SoundChangeCategory> = new Set<SoundChange
 const ABSOLUTE_FLOOR_LEN = 2;
 
 /**
+ * Phase 36 Tranche 36g: global slowdown. Multiplies every rule's
+ * lambda. Pre-36g the simulator showed 3-5 strata of sound change in
+ * 100 generations — too fast relative to attested diachrony where a
+ * single complete shift takes ~40-100 sim-gens (assuming 10y/gen).
+ * 0.4 is calibrated against the audit baseline; tune at this knob
+ * rather than per-rule.
+ */
+const GENERATION_RATE_SCALE = 0.4;
+
+/**
+ * Phase 36 Tranche 36g: per-rule frequency-tier multiplier.
+ * Common changes (lenitions, vowel reductions, palatalisation) fire
+ * 1.5× ordinary; rare changes (metathesis, marked fortition,
+ * dissimilation) fire 0.4×. Default ordinary.
+ */
+const FREQUENCY_MULT: Record<NonNullable<SoundChange["frequency"]>, number> = {
+  common: 1.5,
+  ordinary: 1.0,
+  rare: 0.4,
+};
+
+/**
  * Phase 24: smooth erosion-resistance curve, gated by a per-seed floor.
  * Returns 1.0 at full seed length (no resistance — rule fires at full
  * rate) and decays toward 0 as the word approaches `seedFloor`, where
@@ -313,16 +335,19 @@ export function applyChangesToWord(
         wangBoost = 1 / (1 + Math.exp(-k * (age - t0)));
       }
     }
+    const freqTier = FREQUENCY_MULT[change.frequency ?? "ordinary"];
     const lambda = Math.min(
       3,
       adjusted *
         weight *
         naturalBias *
+        freqTier *
         momentum *
         wangBoost *
         opts.globalRate *
         mult *
         ageMult *
+        GENERATION_RATE_SCALE *
         // Phase 26e: removed coreMult — see header comment.
         lenFactor *
         resistance,

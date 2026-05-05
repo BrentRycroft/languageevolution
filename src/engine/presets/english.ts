@@ -138,7 +138,10 @@ const LEXICON: Lexicon = {
   husband: ["h", "ʌ", "z", "b", "ə", "n", "d"],
   wife: ["w", "a", "j", "f"],
   friend: ["f", "r", "ɛ", "n", "d"],
-  stranger: ["s", "t", "r", "e", "j", "n", "dʒ", "ə", "r"],
+  // Phase 36 Tranche 36f: 'stranger' is now expressed as a derivational
+  // compound of 'strange' + agentive '-er.agt', rebuilt at language
+  // birth via seedCompounds. See seedCompounds below for the chain.
+  strange: ["s", "t", "r", "e", "j", "n", "dʒ"],
   king: ["k", "ɪ", "ŋ"],
   queen: ["k", "w", "iː", "n"],
   warrior: ["w", "ɔ", "r", "i", "ə", "r"],
@@ -307,7 +310,9 @@ const LEXICON: Lexicon = {
   bridge: ["b", "r", "ɪ", "dʒ"],
   hospital: ["h", "a", "s", "p", "ɪ", "t", "ə", "l"],
   doctor: ["d", "a", "k", "t", "ə", "r"],
-  teacher: ["t", "iː", "tʃ", "ə", "r"],
+  // Phase 36 Tranche 36f: now a derivational compound (teach + -er.agt).
+  // The teach + agentive form is recomposed via seedCompounds at birth.
+  // The bare entry below is kept as a fallback for tests/boot-strap.
   student: ["s", "t", "uː", "d", "ə", "n", "t"],
   book: ["b", "ʊ", "k"],
   paper: ["p", "e", "j", "p", "ə", "r"],
@@ -340,7 +345,7 @@ const LEXICON: Lexicon = {
   system: ["s", "ɪ", "s", "t", "ə", "m"],
   technology: ["t", "ɛ", "k", "n", "a", "l", "ə", "dʒ", "i"],
   internet: ["ɪ", "n", "t", "ə", "r", "n", "ɛ", "t"],
-  freedom: ["f", "r", "iː", "d", "ə", "m"],
+  // Phase 36 Tranche 36f: now a derivational compound (free + -dom).
   justice: ["dʒ", "ʌ", "s", "t", "ə", "s"],
   rule: ["r", "uː", "l"],
   goose: ["g", "uː", "s"],
@@ -611,7 +616,25 @@ const LEXICON: Lexicon = {
   high: ["h", "a", "j"],
   low: ["l", "o"],
   far: ["f", "a", "r"],
+  // Phase 36 Tranche 36f: bound derivational morphemes. These flow
+  // through phonological evolution like any other lexicon entry; the
+  // seedCompounds map below references them as suffixed parts. Marked
+  // as such via boundMorphemes so the lexicon UI / translator do not
+  // surface them as standalone words.
+  "-er.agt": ["ə", "r"],
+  "-ness": ["n", "ə", "s"],
+  "-dom": ["d", "ə", "m"],
+  "-ship": ["ʃ", "ɪ", "p"],
+  "-hood": ["h", "ʊ", "d"],
 };
+
+/**
+ * Phase 36 Tranche 36f: bound morphemes flagged so they don't appear
+ * as standalone words in surface output.
+ */
+const BOUND_MORPHEMES = new Set<string>([
+  "-er.agt", "-ness", "-dom", "-ship", "-hood",
+]);
 
 const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
   be: {
@@ -802,7 +825,25 @@ export function presetEnglish(): SimulationConfig {
       waterfall: { parts: ["water", "fall"] },
       homework: { parts: ["home", "work"] },
       riverside: { parts: ["river", "side"] },
+      // Phase 36 Tranche 36f: derivational compounds. Each rebuilt
+      // at language birth from base + bound morpheme. The base and
+      // suffix evolve independently; sound-change drift on `dark`
+      // automatically propagates to `darkness` until the compound
+      // fossilises.
+      stranger: { parts: ["strange", "-er.agt"] },
+      teacher: { parts: ["teach", "-er.agt"] },
+      runner: { parts: ["run", "-er.agt"] },
+      singer: { parts: ["sing", "-er.agt"] },
+      darkness: { parts: ["dark", "-ness"] },
+      happiness: { parts: ["happy", "-ness"] },
+      sadness: { parts: ["sad", "-ness"] },
+      goodness: { parts: ["good", "-ness"] },
+      kingdom: { parts: ["king", "-dom"] },
+      freedom: { parts: ["free", "-dom"] },
+      friendship: { parts: ["friend", "-ship"] },
+      childhood: { parts: ["child", "-hood"] },
     },
+    seedBoundMorphemes: BOUND_MORPHEMES,
     preset: "english",
   };
 }

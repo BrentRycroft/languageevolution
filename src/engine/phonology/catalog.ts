@@ -171,6 +171,8 @@ export const CATALOG: SoundChange[] = [
     label: "s → z / V_V",
     category: "voicing",
     description: "s voices between vowels.",
+    frequency: "common",
+    rationale: "Intervocalic voicing is one of the commonest lenitions cross-linguistically — Spanish, Italian, all Celtic.",
     probabilityFor: (w) => {
       let n = 0;
       for (let i = 1; i < w.length - 1; i++) {
@@ -192,6 +194,8 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "deletion.final_vowel",
+    frequency: "common",
+    rationale: "Final-vowel apocope — Old English vowel loss, French final-e silencing, Romanian short-vowel apocope.",
     label: "V → ∅ / _#  [unstressed]",
     category: "deletion",
     stressFilter: "unstressed",
@@ -289,6 +293,8 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "palatalization.k_before_front_V",
+    frequency: "common",
+    rationale: "Velar palatalisation before front vowels — pan-Romance, Slavic, Bantu, English /k/→/tʃ/ in 'church'.",
     label: "K → tʃ / _front-V",
     category: "palatalization",
     description: "Velar stop palatalizes before any front vowel.",
@@ -341,6 +347,8 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "metathesis.r_swap",
+    frequency: "rare",
+    rationale: "Metathesis is typologically marked — only sporadic in most lineages (Romance ask~aks, Slavic Cr-/Cl- alternations).",
     label: "VrC → rVC",
     category: "metathesis",
     description: "Metathesis of r with preceding vowel in VrC clusters.",
@@ -496,6 +504,8 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "gemination.emphatic",
+    frequency: "rare",
+    rationale: "Emphatic gemination as a productive process is uncommon outside Italic, Finnish, and Japanese sokuon.",
     label: "C → CC / V_V",
     category: "gemination",
     positionBias: "internal",

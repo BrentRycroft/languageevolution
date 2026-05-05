@@ -4,6 +4,7 @@ import { leafIds } from "../engine/tree/split";
 import { formatForm } from "../engine/phonology/display";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 import { topRegularCorrespondences } from "../engine/phonology/soundLaws";
+import { closedClassForm } from "../engine/translator/closedClass";
 
 /**
  * Phase 32 Tranche 32d: language profile card. The TL;DR view —
@@ -133,6 +134,10 @@ export function LanguageProfile() {
         <PronounParadigm lang={lang} />
       </Section>
 
+      <Section title="Demonstratives">
+        <DemonstrativeParadigm lang={lang} />
+      </Section>
+
       <Section title="Phonology">
         <Row label="Segmental inventory">
           {lang.phonemeInventory.segmental.length} phonemes — {lang.phonemeInventory.segmental.slice(0, 16).join(" ")}
@@ -260,6 +265,45 @@ function PronounParadigm({
                   </td>
                 );
               })}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * Phase 36 Tranche 36c/36i: demonstrative paradigm panel. Shows the
+ * proximal / medial / distal / remote forms reachable in this
+ * language under its `demonstrativeDistance` setting. Forms are
+ * synthesised via the closed-class table — each lemma carries its
+ * own per-language phoneme-hash so the surface forms differ.
+ */
+function DemonstrativeParadigm({
+  lang,
+}: {
+  lang: import("../engine/types").Language;
+}) {
+  const distance = lang.grammar.demonstrativeDistance ?? "two-way";
+  const ROWS: Array<{ label: string; lemma: string; visible: boolean }> = [
+    { label: "proximal (this)", lemma: "this", visible: true },
+    { label: distance === "two-way" ? "distal (that)" : "medial (that-near)", lemma: distance === "two-way" ? "that" : "that_near", visible: true },
+    { label: "distal (that-far)", lemma: "that_far", visible: distance === "three-way" || distance === "four-way" },
+    { label: "remote (yonder)", lemma: "that_remote", visible: distance === "four-way" },
+  ];
+  const script = useSimStore.getState().displayScript;
+  return (
+    <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
+      <tbody>
+        {ROWS.filter((r) => r.visible).map((r) => {
+          const f = closedClassForm(lang, r.lemma);
+          return (
+            <tr key={r.lemma}>
+              <td style={{ color: "var(--muted)", width: 180 }}>{r.label}</td>
+              <td style={{ fontFamily: "var(--font-mono)" }}>
+                {f && f.length > 0 ? formatForm(f, lang, script, r.lemma) : <span className="t-muted">—</span>}
+              </td>
             </tr>
           );
         })}
