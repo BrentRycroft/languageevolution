@@ -134,6 +134,12 @@ export function maybeSuppressHomonym(
       if (sense.synonym) continue;
       const m = sense.meaning;
       if (isClosedClass(posOf(m))) continue;
+      // Phase 37: leave high-frequency core meanings alone — Swadesh-grade
+      // words (freq ≥ 0.85) carry historical reconstruction signal.
+      // Vacating their primary form to a synonym would muddy comparative
+      // reconstruction with no real-language counterpart.
+      const freq = lang.wordFrequencyHints[m] ?? 0.5;
+      if (freq >= 0.85) continue;
       const synonyms = selectSynonyms(lang, m).filter((sw) => sw !== w);
       if (synonyms.length === 0) continue;
       // Found a candidate. Pick the highest-weighted synonym as the
