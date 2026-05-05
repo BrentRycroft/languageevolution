@@ -4,6 +4,7 @@ import { ControlsPanel } from "./ControlsPanel";
 import { DictionaryView } from "./DictionaryView";
 import { WordMapView } from "./WordMapView";
 import { GrammarView } from "./GrammarView";
+import { LanguageProfile } from "./LanguageProfile";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
 import { CompareView } from "./CompareView";
@@ -389,6 +390,12 @@ export function App() {
           <div className="panel panel-single" role="tabpanel" id="tabpanel-map" aria-labelledby="tab-map">
             <h3>World Map</h3>
             <MapView />
+          </div>
+        )}
+        {activeTab === "profile" && (
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-profile" aria-labelledby="tab-profile">
+            <h3>Language Profile</h3>
+            <LanguageProfile />
           </div>
         )}
       </main>

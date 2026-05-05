@@ -57,6 +57,19 @@ export function isToneBearing(p: Phoneme): boolean {
 }
 
 /**
+ * Phase 32 Tranche 32b: detect whether a segment carries a length
+ * marker (ː) anywhere — not just trailing. Pre-fix `endsWith("ː")`
+ * missed segments where tone was placed AFTER length, like `aː˧`,
+ * letting lengthening rules re-apply and produce `aː˧ː` (double
+ * length). After Phase 32b, length-adding rules check `hasLength`
+ * instead, blocking re-application and keeping vowel mora-count to
+ * at most 2 (short vs long).
+ */
+export function hasLength(p: Phoneme): boolean {
+  return stripTone(p).includes("ː");
+}
+
+/**
  * Phase 30 Tranche 30a: cap tone-mark stacking on a segment. Any
  * tone-bearing segment with > MAX_TONE_MARKS contour tokens collapses
  * to a single canonical tone (the rightmost matched). Used by
