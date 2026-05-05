@@ -528,6 +528,42 @@ export interface GrammarFeatures {
    * Default synthetic.
    */
   perfectRealisation?: "synthetic" | "have-perfect" | "be-perfect";
+  /**
+   * Phase 35 Tranche 35c: demonstrative depth. Languages cluster on
+   * how many distance contrasts they make on demonstratives:
+   *   - **two-way**: this/that (English, French, Russian).
+   *   - **three-way**: this / that-near-you / that-yonder (Spanish
+   *     este/ese/aquel, Japanese kore/sore/are, Korean i/geu/jeo).
+   *   - **four-way**: adds visibility or elevation (some Salishan,
+   *     Tibetan).
+   * Default two-way.
+   */
+  demonstrativeDistance?: "two-way" | "three-way" | "four-way";
+  /**
+   * Phase 35 Tranche 35d: number axis. Beyond singular vs plural,
+   * many languages distinguish dual (Slovenian, Arabic, Hebrew,
+   * Sami, Sanskrit-style) and a few have paucal (Russian-historical
+   * "few", Hopi).
+   *   - **sg-pl**: two-way.
+   *   - **sg-du-pl**: three-way with dual.
+   *   - **sg-du-pa-pl**: four-way with dual + paucal.
+   * Default sg-pl.
+   */
+  numberSystem?: "sg-pl" | "sg-du-pl" | "sg-du-pa-pl";
+  /**
+   * Phase 35 Tranche 35e: aspect richness beyond perfect. Real
+   * languages differ on which aspectual oppositions are
+   * grammaticalised:
+   *   - **simple**: tense without overt aspect (English-style
+   *     simple-present).
+   *   - **pfv-ipfv**: perfective vs imperfective pairing on every
+   *     verb (Russian, Polish).
+   *   - **prog**: progressive vs simple (English, Spanish).
+   *   - **rich**: perfective + imperfective + progressive + habitual
+   *     overtly marked (Mandarin, Hindi).
+   * Default simple.
+   */
+  aspectSystem?: "simple" | "pfv-ipfv" | "prog" | "rich";
   interrogativeParticle?: "initial" | "final";
   alignment?: "nom-acc" | "erg-abs" | "tripartite" | "split-S";
   harmony?: "none" | "front-back" | "rounding" | "atr";

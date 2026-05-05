@@ -754,6 +754,12 @@ export function presetEnglish(): SimulationConfig {
       // periphrastic ("have + V"). Seed both as periphrastic.
       futureRealisation: "will-future",
       perfectRealisation: "have-perfect",
+      // Phase 35 Tranche 35c/d/e: English typology — two-way
+      // demonstrative (this/that), sg/pl number, progressive aspect
+      // (be V-ing) overtly marked in addition to simple.
+      demonstrativeDistance: "two-way",
+      numberSystem: "sg-pl",
+      aspectSystem: "prog",
       hasCase: false,
       genderCount: 0,
       articlePresence: "free",

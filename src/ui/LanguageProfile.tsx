@@ -122,6 +122,15 @@ export function LanguageProfile() {
         <Row label="Adjective position">{lang.grammar.adjectivePosition ?? "—"}</Row>
         <Row label="Negation">{lang.grammar.negationPosition ?? "—"}</Row>
         <Row label="Stress">{lang.stressPattern ?? "—"}</Row>
+        <Row label="Demonstrative">{lang.grammar.demonstrativeDistance ?? "two-way"}</Row>
+        <Row label="Number">{lang.grammar.numberSystem ?? "sg-pl"}</Row>
+        <Row label="Aspect">{lang.grammar.aspectSystem ?? "simple"}</Row>
+        <Row label="Future">{lang.grammar.futureRealisation ?? "synthetic"}</Row>
+        <Row label="Perfect">{lang.grammar.perfectRealisation ?? "synthetic"}</Row>
+      </Section>
+
+      <Section title="Pronouns">
+        <PronounParadigm lang={lang} />
       </Section>
 
       <Section title="Phonology">
@@ -193,6 +202,69 @@ export function LanguageProfile() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Phase 35 Tranche 35b: pronoun paradigm panel. Surfaces all
+ * pronoun lemmas (i/me/my/mine, you/your, he/him/his, etc.) in a
+ * single grid keyed by person × case. Reads from lang.lexicon
+ * directly — currently the simulator stores each pronoun lemma as
+ * a separate entry rather than a paradigm. The panel pulls them
+ * back together.
+ */
+function PronounParadigm({
+  lang,
+}: {
+  lang: import("../engine/types").Language;
+}) {
+  const ROWS: Array<{
+    label: string;
+    nom?: string;
+    acc?: string;
+    poss?: string;
+  }> = [
+    { label: "1sg", nom: "i", acc: "me", poss: "my" },
+    { label: "2sg", nom: "you", acc: "you", poss: "your" },
+    { label: "3sg.m", nom: "he", acc: "him", poss: "his" },
+    { label: "3sg.f", nom: "she", acc: "her", poss: "her" },
+    { label: "3sg.n", nom: "it", acc: "it", poss: "its" },
+    { label: "1pl", nom: "we", acc: "us", poss: "our" },
+    { label: "2pl", nom: "you", acc: "you", poss: "your" },
+    { label: "3pl", nom: "they", acc: "them", poss: "their" },
+  ];
+  const script = useSimStore.getState().displayScript;
+  return (
+    <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
+      <thead>
+        <tr>
+          <th style={{ width: 60, textAlign: "left" }}></th>
+          <th style={{ textAlign: "left" }}>NOM</th>
+          <th style={{ textAlign: "left" }}>ACC/OBJ</th>
+          <th style={{ textAlign: "left" }}>POSS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {ROWS.map((r) => {
+          const lemmas = [r.nom, r.acc, r.poss];
+          const present = lemmas.some((l) => l && lang.lexicon[l]);
+          if (!present) return null;
+          return (
+            <tr key={r.label}>
+              <td style={{ color: "var(--muted)", width: 60 }}>{r.label}</td>
+              {lemmas.map((l, i) => {
+                const f = l ? lang.lexicon[l] : null;
+                return (
+                  <td key={i} style={{ fontFamily: "var(--font-mono)" }}>
+                    {f ? formatForm(f, lang, script, l ?? undefined) : <span className="t-muted">—</span>}
+                  </td>
+                );
+              })}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 

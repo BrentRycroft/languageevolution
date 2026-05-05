@@ -378,6 +378,16 @@ export function presetRomance(): SimulationConfig {
       caseStrategy: "case",
       adjectivePosition: "pre",
       possessorPosition: "post",
+      // Phase 35 Tranche 35c/d/e: Latin had three-way demonstrative
+      // (hic/iste/ille), sg-pl number, and rich aspect (perfective
+      // / imperfective opposition pervasive in the verbal system).
+      demonstrativeDistance: "three-way",
+      numberSystem: "sg-pl",
+      aspectSystem: "pfv-ipfv",
+      // Latin perfect was synthetic (amavit), but the
+      // post-Classical "habere + past participle" periphrasis
+      // started spreading. Seed synthetic; daughters can flip.
+      perfectRealisation: "synthetic",
     },
     // Phase 31 Tranche 31d: Latin non-tonal.
     seedToneRegime: "non-tonal",

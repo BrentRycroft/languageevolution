@@ -5,6 +5,7 @@ import { DictionaryView } from "./DictionaryView";
 import { WordMapView } from "./WordMapView";
 import { GrammarView } from "./GrammarView";
 import { LanguageProfile } from "./LanguageProfile";
+import { LexicostatView } from "./LexicostatView";
 import { EventsLog } from "./EventsLog";
 import { Translator } from "./Translator";
 import { CompareView } from "./CompareView";
@@ -396,6 +397,12 @@ export function App() {
           <div className="panel panel-single" role="tabpanel" id="tabpanel-profile" aria-labelledby="tab-profile">
             <h3>Language Profile</h3>
             <LanguageProfile />
+          </div>
+        )}
+        {activeTab === "lexicostat" && (
+          <div className="panel panel-single" role="tabpanel" id="tabpanel-lexicostat" aria-labelledby="tab-lexicostat">
+            <h3>Lexicostatistics &amp; Glottochronology</h3>
+            <LexicostatView />
           </div>
         )}
       </main>
