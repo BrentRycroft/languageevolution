@@ -54,14 +54,17 @@ describe("Phase 25 — volatility regimes", () => {
     expect(lang.volatilityPhase!.until).toBeGreaterThan(0);
   });
 
-  it("stable phase multiplier is in 0.4–0.7 range", () => {
+  it("stable phase multiplier is in 0.08–0.23 range (Phase 38a)", () => {
     // Force stable by using an rng seed where the upheaval roll fails.
     const lang = makeLang();
     const rng = makeRng("vol-stable-seed");
     stepVolatility(lang, 0, rng);
     if (lang.volatilityPhase?.kind === "stable") {
-      expect(lang.volatilityPhase!.multiplier).toBeGreaterThan(0.39);
-      expect(lang.volatilityPhase!.multiplier).toBeLessThan(0.71);
+      // Phase 38a sharpened the contrast: stable eras now genuinely
+      // freeze (0.08-0.23×) so 1500-3000 yr quiet plateaus emerge,
+      // matching real diachrony (Latin as literary medium).
+      expect(lang.volatilityPhase!.multiplier).toBeGreaterThan(0.07);
+      expect(lang.volatilityPhase!.multiplier).toBeLessThan(0.24);
     }
   });
 

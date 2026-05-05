@@ -8,6 +8,7 @@ import { maybeSpreadTone } from "../phonology/tone_spread";
 import { stepToneSandhi } from "../phonology/sandhi";
 import { recordCorrespondences } from "../phonology/soundLaws";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
+import { literaryStabilityFor } from "../lexicon/literacy";
 import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../phonology/propose";
 import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
 import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/variants";
@@ -36,6 +37,21 @@ export function stepPhonology(
   generation: number,
   state?: SimulationState,
 ): void {
+  // Phase 38a: stable-era freeze gate. When a language is in deep
+  // stable phase (multiplier ≤ 0.15 after Phase 38a's contrast
+  // sharpening), skip phonology entirely 30% of the time. The
+  // remaining 70% still run but score lambda below threshold for
+  // most rules. Net result: many gens with zero phonological events.
+  const vm = volatilityMultiplier(lang);
+  if (vm <= 0.15 && rng.chance(0.3)) {
+    return;
+  }
+  // Phase 38b: literary brake. Tier-2+ literate languages with a
+  // developed orthography resist phonological change — Latin barely
+  // moved as a literary medium. literaryStability ∈ [0, 1].
+  const literary = literaryStabilityFor(lang);
+  lang.literaryStability = literary;
+  const literaryBrake = 1 - 0.6 * literary;
   const before = lang.lexicon;
   const changes = changesForLang(lang);
   const mult =
@@ -46,7 +62,8 @@ export function stepPhonology(
     // Phase 25: time-varying volatility regime — multiplies rate during
     // upheaval periods (Norman conquest / Great Vowel Shift bursts) and
     // dampens it during stable centuries.
-    volatilityMultiplier(lang);
+    vm *
+    literaryBrake;
   const ages: Record<string, number> = {};
   for (const m of Object.keys(before)) {
     const last = lang.lastChangeGeneration[m];
@@ -101,6 +118,15 @@ export function stepPhonology(
     for (const m of lexiconKeys) {
       if (change.probabilityFor(before[m]!) > 0) {
         lang.diffusionState[change.id] = { actuatedAt: generation };
+        // Phase 38e: actuation seeds category momentum. Sister rules
+        // in the same category get a 1.4× boost for 15 gens — chain-
+        // shift clusters (Grimm's Law affected the entire obstruent
+        // series; the Great Vowel Shift moved every long vowel).
+        if (!lang.categoryMomentum) lang.categoryMomentum = {};
+        lang.categoryMomentum[change.category] = {
+          boost: 1.4,
+          until: generation + 15,
+        };
         break;
       }
     }

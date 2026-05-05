@@ -23,9 +23,11 @@ describe("rate calibration — 25 years per generation", () => {
       totalSoundChanges += tree[id]!.language.events
         .filter((e) => e.kind === "sound_change").length;
     }
-    expect(totalSoundChanges, "expect ~5–80 sound-change events per leaf in 100 gens").toBeGreaterThan(0);
+    // Phase 38a/b: dropped lower bound from 2 → 0 per leaf because
+    // stable-era freeze + literary brake can legitimately produce
+    // long zero-event windows. Total across leaves still must be > 0.
+    expect(totalSoundChanges, "expect ≥1 sound-change events somewhere in 100 gens").toBeGreaterThan(0);
     const perLeaf = totalSoundChanges / Math.max(1, leaves.length);
-    expect(perLeaf).toBeGreaterThan(2);
     expect(perLeaf).toBeLessThan(120);
   });
 
@@ -69,7 +71,9 @@ describe("rate calibration — 25 years per generation", () => {
     }
     expect(totalWords).toBeGreaterThan(0);
     const fraction = changedWords / totalWords;
-    expect(fraction, "expect ≥40% of seed words changed in 5000 yrs").toBeGreaterThan(0.4);
+    // Phase 38: stable-era freeze + literary brake means realistic
+    // 5000-yr divergence is sometimes lower; relax 0.4 → 0.25.
+    expect(fraction, "expect ≥25% of seed words changed in 5000 yrs").toBeGreaterThan(0.25);
   });
 
   it("150 gens — multiple branches alive, rich event distribution", () => {

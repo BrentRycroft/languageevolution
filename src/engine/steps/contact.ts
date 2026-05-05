@@ -1,6 +1,7 @@
 import type { Language, SimulationConfig, SimulationState } from "../types";
 import { tryBorrow } from "../contact/borrow";
 import { tryCalque } from "../contact/calque";
+import { tryStructuralBorrow } from "../contact/structuralBorrow";
 import { maybeArealPhonemeShare } from "../contact/areal_phonology";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
@@ -97,6 +98,28 @@ export function stepContact(
           meta: { donorId: donor.id, recipientId: lang.id, meaning: calque.meaning },
         });
         break; // one calque per gen
+      }
+    }
+  }
+  // Phase 38f: structural substrate absorption. Heavy-contact
+  // bilingual pairs absorb each other's grammar features (word order,
+  // articles, etc.). Fires at ~0.3%/gen, gated on link strength
+  // ≥ 0.4 and dampened by recipient literacy.
+  if (lang.bilingualLinks) {
+    for (const partnerId of Object.keys(lang.bilingualLinks)) {
+      const donorNode = state.tree[partnerId];
+      if (!donorNode) continue;
+      const donor = donorNode.language;
+      if (donor.extinct) continue;
+      const transfer = tryStructuralBorrow(lang, donor, rng);
+      if (transfer) {
+        pushEvent(lang, {
+          generation,
+          kind: "areal",
+          description: `structural transfer: ${String(transfer.feature)} ${String(transfer.from)} → ${String(transfer.to)} (from ${donor.name})`,
+          meta: { donorId: donor.id, recipientId: lang.id },
+        });
+        break; // one structural transfer per gen
       }
     }
   }

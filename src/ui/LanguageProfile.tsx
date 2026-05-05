@@ -376,6 +376,20 @@ function LexiconStats({
       <span>{homonymPairs} pairs ({(homonymRate * 100).toFixed(0)}% of forms)</span>
       <span className="t-muted">Forms / meanings</span>
       <span>{totalForms} forms / {totalMeanings} meanings</span>
+      <span className="t-muted">Coinages</span>
+      <span>{lang.totalCoinages ?? 0} since gen {lang.birthGeneration}</span>
+      {lang.literaryStability !== undefined && lang.literaryStability > 0 && (
+        <>
+          <span className="t-muted">Literary stability</span>
+          <span>{(lang.literaryStability * 100).toFixed(0)}% (slows phonology + grammar)</span>
+        </>
+      )}
+      {lang.grammaticalisationCascade && (
+        <>
+          <span className="t-muted">Cascade</span>
+          <span style={{ color: "var(--accent)" }}>×{lang.grammaticalisationCascade.multiplier.toFixed(1)} until gen {lang.grammaticalisationCascade.until}</span>
+        </>
+      )}
     </div>
   );
 }

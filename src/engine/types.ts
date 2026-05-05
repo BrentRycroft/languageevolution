@@ -86,7 +86,8 @@ export interface LanguageEvent {
     | "suppletion"
     | "merger"
     | "tier_transition"
-    | "kinship_simplification";
+    | "kinship_simplification"
+    | "grammar_cascade";
   description: string;
   meta?: {
     donorId?: string;
@@ -310,6 +311,38 @@ export interface Language {
     establishedGeneration?: number;
   }>;
   culturalTier?: 0 | 1 | 2 | 3;
+  /**
+   * Phase 38b: literary stability score ∈ [0, 1]. Computed each gen
+   * from culturalTier + orthography presence. Tier-2+ literacy with
+   * an orthography drags the language toward stability:
+   * - phonological lambda × (1 - 0.6 × literaryStability)
+   * - grammaticalisation × (1 - 0.4 × literaryStability)
+   * - upheaval-vs-stable phase pick biased toward stable
+   * Models Latin (1500y of near-zero change as literary medium),
+   * Old Church Slavonic, Sanskrit. Tier 0-1 → ~0; tier 2 → ~0.7-1.0.
+   */
+  literaryStability?: number;
+  /**
+   * Phase 38c: grammaticalisation-cascade window. When set and
+   * `state.generation < until`, every grammaticalisation roll has
+   * its rate × `multiplier` (typically 3.0). Outside the window,
+   * rates × 0.3. Cascades trigger on tier transitions, creolisation,
+   * and at random ~0.4%/gen.
+   */
+  grammaticalisationCascade?: { until: number; multiplier: number; trigger?: string };
+  /**
+   * Phase 38e: per-category rule-level momentum. When a sound change
+   * actuates, the rule's category gets a boost for ~15 gens so
+   * sister rules in the same category fire faster — modelling
+   * Grimm's-Law / Great-Vowel-Shift chain reactions.
+   */
+  categoryMomentum?: Record<string, { boost: number; until: number }>;
+  /**
+   * Phase 38g: total coinages this language has produced beyond its
+   * seed lexicon. Tier-scaled accretion grows tier-3 lexicons to
+   * ~5-10× seed size over a 200-gen run.
+   */
+  totalCoinages?: number;
   /**
    * Hysteresis counter for tier transitions. Increments on every tier-check
    * tick (every 20 gens) where the language is eligible for a higher tier,
