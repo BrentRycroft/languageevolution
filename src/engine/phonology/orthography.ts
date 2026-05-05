@@ -233,6 +233,35 @@ const ALT_SPELLINGS: Record<Phoneme, readonly string[]> = {
   "u": ["u", "ou"],
 };
 
+/**
+ * Phase 34 Tranche 34e: at the moment a language crosses into tier
+ * 2 (literacy), its scribes commit to a writing convention by
+ * picking an alternative for each phoneme that has multiple options
+ * in ALT_SPELLINGS. This is what makes English's "sh" different
+ * from German's "sch" different from French's "ch" different from
+ * Polish's "sz" — same phoneme /ʃ/, different scribal traditions.
+ * Pre-Phase-34 every language used the same DEFAULT_ORTHOGRAPHY
+ * forever; only sporadic per-gen drift could create variance, and
+ * only after tier 2 (which then ALREADY had no orthography seeded).
+ */
+export function seedTierTwoOrthography(
+  lang: { orthography: Record<Phoneme, string>; phonemeInventory: { segmental: readonly Phoneme[] } },
+  rng: { int: (n: number) => number },
+): { adoptions: Array<{ phoneme: Phoneme; spelling: string }> } {
+  const adoptions: Array<{ phoneme: Phoneme; spelling: string }> = [];
+  const phonemes = Object.keys(ALT_SPELLINGS) as Phoneme[];
+  for (const phoneme of phonemes) {
+    if (!lang.phonemeInventory.segmental.includes(phoneme)) continue;
+    if (lang.orthography[phoneme]) continue; // already settled
+    const options = ALT_SPELLINGS[phoneme]!;
+    if (options.length === 0) continue;
+    const choice = options[rng.int(options.length)]!;
+    lang.orthography[phoneme] = choice;
+    adoptions.push({ phoneme, spelling: choice });
+  }
+  return { adoptions };
+}
+
 export interface OrthographyShift {
   phoneme: Phoneme;
   from: string;

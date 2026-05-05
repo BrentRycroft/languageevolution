@@ -68,3 +68,76 @@ export function recordDerivationChain(
     via: result.suffixTag,
   };
 }
+
+/**
+ * Phase 34 Tranche 34b: opportunistic productive derivation. When a
+ * derivational suffix has crossed PRODUCTIVITY_THRESHOLD, it should
+ * be applicable to ANY semantically-compatible open-class root, not
+ * just the meanings hard-coded in DERIVATION_TARGETS. Pre-Phase-34
+ * "speaker" (= speak + -er) could only be coined if the user pre-
+ * registered "speaker" in the targets table. Now once -er is
+ * productive, the genesis loop can coin "speaker", "writer",
+ * "runner", etc. as ad-hoc derivations from any verb.
+ *
+ * Picks a productive suffix, picks a compatible root, and synthesises
+ * a new meaning name `${root}-${suffix.tag}`. Returns null if no
+ * productive suffix exists, no compatible root, or the meaning
+ * already exists in the lexicon.
+ */
+export function attemptProductiveDerivation(
+  lang: Language,
+  rng: Rng,
+): TargetedDerivationResult | null {
+  const suffixes = (lang.derivationalSuffixes ?? []).filter((s) => s.productive);
+  if (suffixes.length === 0) return null;
+
+  // Pick a random productive suffix.
+  const suffix = suffixes[rng.int(suffixes.length)]!;
+
+  // Filter potential roots by suffix category. agentive/nominalisation
+  // wants verb roots; adjectival wants noun roots; abstractNoun wants
+  // adjective roots (freedom < free); etc.
+  const allMeanings = Object.keys(lang.lexicon);
+  const wantsVerb = suffix.category === "agentive" || suffix.category === "nominalisation";
+  const wantsAdj = suffix.category === "abstractNoun";
+  const wantsNoun =
+    suffix.category === "diminutive" ||
+    suffix.category === "adjectival" ||
+    suffix.category === "denominal" ||
+    suffix.category === "dominionAbstract";
+
+  const candidates: string[] = [];
+  for (const m of allMeanings) {
+    // Skip if already derived (avoid recursive -er-er pyramids).
+    if (m.includes("-")) continue;
+    // Skip if the derived meaning would already exist.
+    if (lang.lexicon[`${m}-${suffix.tag}`]) continue;
+    // Skip closed-class.
+    if (m.length <= 1) continue;
+    // POS-match heuristic by simple word lists. The simulator's
+    // posOf is in lexicon/pos.ts but importing here would create a
+    // cycle; the heuristic below is good enough for the productive
+    // path.
+    const looksVerb = ["go", "see", "eat", "drink", "speak", "make", "take", "give", "run", "walk", "sleep", "write", "read", "fight", "kill", "build", "find", "lose", "throw", "catch", "hold", "carry", "bring", "send"].includes(m);
+    const looksAdj = ["big", "small", "good", "bad", "new", "old", "long", "short", "hot", "cold", "wet", "dry", "young", "happy", "sad", "free", "kind", "wise"].includes(m);
+    const looksNoun = !looksVerb && !looksAdj;
+    if (wantsVerb && !looksVerb) continue;
+    if (wantsAdj && !looksAdj) continue;
+    if (wantsNoun && !looksNoun) continue;
+    candidates.push(m);
+  }
+  if (candidates.length === 0) return null;
+  const rootMeaning = candidates[rng.int(candidates.length)]!;
+  const root = lang.lexicon[rootMeaning]!;
+  const form: WordForm = [...root, ...suffix.affix];
+  // Phase 34 Tranche 34b: tag is sometimes "-hood" (leading dash);
+  // strip it so the meaning is "dry-hood" not "dry--hood".
+  const tagSlug = suffix.tag.replace(/^-+/, "");
+  const newMeaning = `${rootMeaning}-${tagSlug}`;
+  return {
+    meaning: newMeaning,
+    form,
+    rootMeaning,
+    suffixTag: suffix.tag,
+  };
+}

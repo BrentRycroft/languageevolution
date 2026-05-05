@@ -7,6 +7,8 @@ import { effectiveTier } from "../defaults";
 import { setLexiconForm } from "../lexicon/mutate";
 import { syncWordsAfterPhonology } from "../lexicon/word";
 import { disambiguateCoreCollisions } from "../lexicon/disambiguate";
+import { updateCompounds } from "../lexicon/compound";
+import { tryUniverbation } from "../lexicon/univerbation";
 import { pushEvent } from "./helpers";
 
 /**
@@ -188,6 +190,32 @@ export function stepInventoryManagement(
   generation: number,
 ): void {
   runPhonotacticRepair(lang, rng, generation);
+  // Phase 34 Tranche 34a: recompose transparent compounds before
+  // pruning + collision repair so any drift in the parts propagates
+  // to the compound surface AND the disambiguator sees the up-to-
+  // date forms.
+  const compoundUpdate = updateCompounds(lang, rng, generation);
+  if (compoundUpdate.fossilized > 0) {
+    pushEvent(lang, {
+      generation,
+      kind: "lexical_replacement",
+      description: `${compoundUpdate.fossilized} compound${compoundUpdate.fossilized === 1 ? "" : "s"} fossilised this gen`,
+    });
+  }
+  // Phase 34 Tranche 34f: univerbation — multi-word collocations
+  // collapse into single morphological units (good-bye < God-be-
+  // with-ye, today < this-day, French aujourd'hui < au jour de
+  // hui). The new word registers as a fossilised compound so the
+  // parts stay queryable for etymology UI but the surface drifts
+  // independently.
+  const univ = tryUniverbation(lang, rng, generation);
+  if (univ) {
+    pushEvent(lang, {
+      generation,
+      kind: "lexical_replacement",
+      description: `univerbation: "${univ.meaning}" < ${univ.parts.join(" + ")}`,
+    });
+  }
   const merged = runHomeostasis(lang, rng, generation);
   // Phase 32 Tranche 32a: end-of-step core-collision repair. Walks
   // the lexicon for cases where 2+ high-frequency Swadesh meanings
@@ -209,7 +237,9 @@ export function stepInventoryManagement(
   // no merger fired — most generations don't trigger pruning.
   // runPhonotacticRepair already routes through setLexiconForm so its
   // changes are already reflected in lang.words.
-  if ((merged || resolved > 0) && lang.words) syncWordsAfterPhonology(lang, generation);
+  if ((merged || resolved > 0 || compoundUpdate.recomposed > 0) && lang.words) {
+    syncWordsAfterPhonology(lang, generation);
+  }
 }
 
 // Back-compat exports for tests that referenced the pre-28a entry

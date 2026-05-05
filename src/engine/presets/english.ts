@@ -749,6 +749,11 @@ export function presetEnglish(): SimulationConfig {
       affixPosition: "suffix",
       pluralMarking: "affix",
       tenseMarking: "past",
+      // Phase 34 Tranche 34c: English future is periphrastic
+      // ("will + V" / "going to + V") and English perfect is
+      // periphrastic ("have + V"). Seed both as periphrastic.
+      futureRealisation: "will-future",
+      perfectRealisation: "have-perfect",
       hasCase: false,
       genderCount: 0,
       articlePresence: "free",
@@ -774,6 +779,24 @@ export function presetEnglish(): SimulationConfig {
     // non-tonal unless explicit areal contact triggers a tonogenesis
     // cascade (out of scope for Phase 31).
     seedToneRegime: "non-tonal",
+    // Phase 34 Tranche 34g: declare common English compounds.
+    // Initial form is recomposed from parts; transparent until
+    // fossilisation. Real-world: many of these started transparent
+    // (Old English compound) and gradually fossilised (modern
+    // "lord" < hlafweard, "daisy" < dæges-ēage = "day's eye").
+    seedCompounds: {
+      // All parts must already exist in seedLexicon. Validated at
+      // language birth via addCompound which falls back to the bare
+      // meaning when a part is missing.
+      daylight: { parts: ["day", "light"] },
+      moonlight: { parts: ["moon", "light"] },
+      sunlight: { parts: ["sun", "light"] },
+      sunrise: { parts: ["sun", "rise"] },
+      nightfall: { parts: ["night", "fall"] },
+      waterfall: { parts: ["water", "fall"] },
+      homework: { parts: ["home", "work"] },
+      riverside: { parts: ["river", "side"] },
+    },
     preset: "english",
   };
 }

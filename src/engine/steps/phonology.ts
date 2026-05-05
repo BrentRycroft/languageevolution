@@ -211,25 +211,55 @@ export function stepPhonology(
     }
   }
   decayFrequencies(lang);
+  // Phase 33 Tranche 33a: actuation events used to fire 1 per
+  // adopted variant, drowning the log (74-78/gen). Now we collapse
+  // multiple actuations in the same gen into a single rolled-up
+  // event when more than 2 fire — mirrors the Phase 30h merger
+  // rollup so the bounded events list spotlights interesting events
+  // instead of variant-adoption noise.
   const actuations = decayAndActuate(lang, generation);
-  for (const a of actuations) {
-    lang.lastChangeGeneration[a.meaning] = generation;
-    bumpFrequency(lang, a.meaning, 0.06);
-    pushEvent(lang, {
-      generation,
-      kind: "actuation",
-      description: `actuation: "${a.meaning}" /${a.fromForm.join("")}/ → /${a.toForm.join("")}/ (minority variant prevailed)`,
-    });
-  }
   const socialActuations = stepSocialContagion(lang, generation, rng);
-  for (const a of socialActuations) {
+  const allActuations: Array<{
+    meaning: string;
+    fromForm: WordForm;
+    toForm: WordForm;
+    innovator?: string;
+    finalAdoption?: number;
+    source: "minority" | "social";
+  }> = [
+    ...actuations.map((a) => ({ ...a, source: "minority" as const })),
+    ...socialActuations.map((a) => ({ ...a, source: "social" as const })),
+  ];
+  for (const a of allActuations) {
     lang.lastChangeGeneration[a.meaning] = generation;
     bumpFrequency(lang, a.meaning, 0.06);
-    const innov = a.innovator ? ` [from ${a.innovator}]` : "";
+  }
+  if (allActuations.length === 1) {
+    const a = allActuations[0]!;
+    if (a.source === "minority") {
+      pushEvent(lang, {
+        generation,
+        kind: "actuation",
+        description: `actuation: "${a.meaning}" /${a.fromForm.join("")}/ → /${a.toForm.join("")}/ (minority variant prevailed)`,
+      });
+    } else {
+      const innov = a.innovator ? ` [from ${a.innovator}]` : "";
+      pushEvent(lang, {
+        generation,
+        kind: "actuation",
+        description: `social-contagion actuation: "${a.meaning}" /${a.fromForm.join("")}/ → /${a.toForm.join("")}/${innov} @ ${((a.finalAdoption ?? 0) * 100).toFixed(0)}%`,
+      });
+    }
+  } else if (allActuations.length >= 2) {
+    const sample = allActuations
+      .slice(0, 3)
+      .map((a) => `"${a.meaning}"`)
+      .join(", ");
+    const more = allActuations.length > 3 ? ` (+${allActuations.length - 3} more)` : "";
     pushEvent(lang, {
       generation,
       kind: "actuation",
-      description: `social-contagion actuation: "${a.meaning}" /${a.fromForm.join("")}/ → /${a.toForm.join("")}/${innov} @ ${(a.finalAdoption * 100).toFixed(0)}%`,
+      description: `${allActuations.length} variant actuations this gen: ${sample}${more}`,
     });
   }
   if (mutated > 0) {

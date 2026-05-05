@@ -34,6 +34,19 @@ export function maybeGrammaticalize(
   rng: Rng,
   probability: number,
 ): MorphShift | null {
+  // Phase 33 Tranche 33i: probabilistic article-emergence pathway —
+  // before the standard maybeGrammaticalize fires, give the language
+  // a chance to develop articles from demonstratives (Latin ille
+  // → Romance le/la/il; OE se/seo → English the). PIE descendants
+  // historically did this within the first ~1000-1500 years; in
+  // simulator gens that's 30-60 gens. Pre-Phase-33-i `articlePresence`
+  // never changed once seeded, so PIE / Bantu / Tokipona descendants
+  // could never develop articles even when grammar-drifted.
+  if (lang.grammar.articlePresence === "none") {
+    const demShift = maybeArticleEmergence(lang, rng);
+    if (demShift) return demShift;
+  }
+
   if (!rng.chance(probability)) return null;
   const meanings = Object.keys(lang.lexicon);
   if (meanings.length === 0) return null;
@@ -91,6 +104,58 @@ export function maybeGrammaticalize(
       pathway: chosen.tag,
       category: chosen.target,
     },
+  };
+}
+
+/**
+ * Phase 33 Tranche 33i: article emergence via demonstrative
+ * grammaticalization. When a language has `articlePresence: "none"`
+ * and a demonstrative in its lexicon, with low per-gen probability
+ * (~0.5% × tier+1) the demonstrative grammaticalises into a free
+ * or proclitic article. Mirrors Latin ille→Romance le/la, OE
+ * se→Modern English the, Greek ho→none-then-redeveloped, etc.
+ *
+ * Returns null if the trigger doesn't fire. Mutates lang.grammar.
+ * Rolls 60% free / 30% proclitic / 10% enclitic when it fires.
+ */
+function maybeArticleEmergence(
+  lang: Language,
+  rng: Rng,
+): MorphShift | null {
+  if (lang.grammar.articlePresence !== "none") return null;
+  // Need a demonstrative source — "that" is the cross-linguistically
+  // dominant donor for definite articles; "this" is rarer; "the" if
+  // already present (closed-class seeded) means we already half-have
+  // it and just need to flip articlePresence.
+  const donor = lang.lexicon["that"]
+    ? "that"
+    : lang.lexicon["this"]
+      ? "this"
+      : lang.lexicon["the"]
+        ? "the"
+        : null;
+  if (!donor) return null;
+  const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
+  // Tier 0 → 0.4%/gen; tier 3 → 1.6%/gen. Higher culture = more
+  // explicit definiteness marking (statehood, literacy, scribal
+  // standardisation push articles into the system).
+  const baseRate = 0.004 * (1 + tier);
+  if (!rng.chance(baseRate)) return null;
+  const r = rng.next();
+  const next: NonNullable<Language["grammar"]["articlePresence"]> =
+    r < 0.6 ? "free" : r < 0.9 ? "proclitic" : "enclitic";
+  // Promote: copy donor form to "the" if it isn't already there,
+  // and reduce its frequency hint slightly (function words erode).
+  if (!lang.lexicon["the"]) {
+    lang.lexicon["the"] = lang.lexicon[donor]!.slice();
+    lang.wordFrequencyHints["the"] = 0.97;
+    lang.wordOrigin["the"] = `grammaticalization:${donor}`;
+  }
+  lang.grammar.articlePresence = next;
+  return {
+    kind: "grammaticalization",
+    description: `articles emerge: "${donor}" (demonstrative) → definite article (${next}); articlePresence: none → ${next}`,
+    source: { meaning: donor, pathway: "demonstrative", category: "noun.case.nom" },
   };
 }
 
