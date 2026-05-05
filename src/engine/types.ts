@@ -316,6 +316,36 @@ export interface Language {
    */
   toneRegime?: "non-tonal" | "tonal" | "pitch-accent";
   /**
+   * Phase 34 Tranche 34a: compound metadata. When a meaning is a
+   * semantically-compound concept (moonlight = moon + light,
+   * daylight = day + light, homework = home + work), it carries a
+   * structural definition here. Two regimes:
+   *   - **transparent** (`fossilized: false`): the meaning's
+   *     surface form in `lang.lexicon[m]` is RECOMPUTED each gen
+   *     from the current forms of its parts. Drift in the parts
+   *     propagates automatically to the compound.
+   *   - **fossilized** (`fossilized: true`): the compound has
+   *     opacified; `lang.lexicon[m]` is frozen and drifts
+   *     independently of its parts (English "lord" < "loaf-warden"
+   *     became opaque centuries ago). Fossilization fires at a low
+   *     per-gen probability scaled by frequency.
+   *
+   * Pre-Phase-34 compounds were either (a) seeded as flat
+   * lexicon entries (no metadata) or (b) coined at runtime by the
+   * `compound` mechanism in genesis (which also stored a flat
+   * form). The new metadata enables proper diachronic modeling of
+   * compound erosion + univerbation + analysis.
+   */
+  compounds?: Record<Meaning, {
+    parts: Meaning[];
+    /** Optional connector segment between parts (German -s-, Greek -o-). */
+    linker?: WordForm;
+    fossilized: boolean;
+    fossilizedGen?: number;
+    /** Generation when the compound was originally formed. */
+    bornGeneration: number;
+  }>;
+  /**
    * Generation deadline for the abstract-vocabulary catch-up window.
    * Set when a language crosses into tier 2 (literacy / abstract noun
    * morphology unlocks): the genesis driver bumps targetedDerivation
@@ -573,6 +603,21 @@ export interface SimulationConfig {
    * tonogenesis rules can fire during the run.
    */
   seedToneRegime?: NonNullable<Language["toneRegime"]>;
+  /**
+   * Phase 34 Tranche 34g: declare seeded compound meanings. Each
+   * entry maps the compound meaning to its constituent meanings
+   * + optional linker. At language birth, the simulator computes
+   * the initial surface from the parts (which must be in
+   * `seedLexicon`) and stores the compound metadata on
+   * `lang.compounds`. Transparent compounds drift with their parts
+   * until they fossilise (Phase 34 Tranche 34a).
+   *
+   * Example: `seedCompounds: { moonlight: { parts: ["moon", "light"] } }`.
+   */
+  seedCompounds?: Record<Meaning, {
+    parts: Meaning[];
+    linker?: WordForm;
+  }>;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;

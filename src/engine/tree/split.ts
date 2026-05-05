@@ -173,6 +173,24 @@ export function splitLeaf(
       inflectionClass: parentLang.inflectionClass
         ? { ...parentLang.inflectionClass }
         : undefined,
+      // Phase 34 Tranche 34a: daughters inherit the compound metadata.
+      // After the split each daughter's compounds drift independently
+      // (transparent ones recompose from the daughter's parts; fossilised
+      // ones drift opaque just like any other root).
+      compounds: parentLang.compounds
+        ? Object.fromEntries(
+            Object.entries(parentLang.compounds).map(([k, v]) => [
+              k,
+              {
+                parts: v.parts.slice(),
+                linker: v.linker?.slice(),
+                fossilized: v.fossilized,
+                fossilizedGen: v.fossilizedGen,
+                bornGeneration: v.bornGeneration,
+              },
+            ]),
+          )
+        : undefined,
       suppletion: parentLang.suppletion
         ? Object.fromEntries(
             Object.entries(parentLang.suppletion).map(([m, slots]) => [

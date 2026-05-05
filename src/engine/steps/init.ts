@@ -16,6 +16,7 @@ import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { assignAllGenders } from "../morphology/gender";
 import { classifyLexicon } from "../morphology/inflectionClass";
 import { isToneBearing, toneOf, MID } from "../phonology/tone";
+import { addCompound } from "../lexicon/compound";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
 import { syncWordsFromLexicon } from "../lexicon/word";
 import {
@@ -186,6 +187,15 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // (which left languages in inconsistent partial-tonal states).
   if (rootLang.toneRegime === "tonal") {
     tonaliseLexicon(rootLang);
+  }
+  // Phase 34 Tranche 34g: register preset-declared compounds so the
+  // simulator tracks their structure. The initial surface form is
+  // recomposed from the parts at language birth; subsequent gens
+  // recompose each tick until fossilisation.
+  if (config.seedCompounds) {
+    for (const [meaning, def] of Object.entries(config.seedCompounds)) {
+      addCompound(rootLang, meaning, def.parts, 0, { linker: def.linker });
+    }
   }
   assignAllGenders(rootLang);
   // Phase 29 Tranche 5e: bucket every seed meaning into an inflection
