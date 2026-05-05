@@ -221,43 +221,10 @@ function bootState(): {
   resumed: boolean;
   loadFailure?: PersistenceNotice;
 } {
-  const loaded = loadAutosave();
-  let loadFailure: PersistenceNotice | undefined;
-  if (loaded.ok) {
-    const { sim, seedForms } = initFromConfig(loaded.payload.config);
-    try {
-      sim.restoreState(loaded.payload.state);
-      const restored = sim.getState();
-      const { next: rehydrated } = recordHistory({}, restored);
-      return {
-        config: loaded.payload.config,
-        sim,
-        state: restored,
-        history: rehydrated,
-        seedForms,
-        resumed: true,
-      };
-    } catch {
-      loadFailure = {
-        kind: "corrupt",
-        message: "Couldn't restore your last autosave; starting fresh.",
-        shownAt: Date.now(),
-      };
-    }
-  } else if (loaded.reason !== "empty") {
-    const msg: Record<"corrupt" | "future-version" | "migration-failed", string> = {
-      corrupt: "Your last autosave was corrupt; starting fresh.",
-      "future-version":
-        "Your last autosave was written by a newer build; starting fresh.",
-      "migration-failed":
-        "Your last autosave couldn't be migrated to the current schema; starting fresh.",
-    };
-    loadFailure = {
-      kind: loaded.reason,
-      message: msg[loaded.reason],
-      shownAt: Date.now(),
-    };
-  }
+  // Phase 38+: autosave is now async (IndexedDB). Boot sync with a
+  // fresh sim, then attempt restore in `restoreFromAutosaveAsync`
+  // (called below after store creation). Users see a brief flash of
+  // gen-0 state before the restore completes (~50-200ms).
   const cfg = defaultConfig();
   const fresh = initFromConfig(cfg);
   return {
@@ -267,8 +234,55 @@ function bootState(): {
     history: fresh.history,
     seedForms: fresh.seedForms,
     resumed: false,
-    loadFailure,
   };
+}
+
+/**
+ * Phase 38+: async restore from IndexedDB autosave. Called once on
+ * store init; if a saved payload is found, swaps the live sim to
+ * the restored state. If load fails, posts a persistence notice.
+ */
+async function restoreFromAutosaveAsync(): Promise<void> {
+  const loaded = await loadAutosave();
+  if (loaded.ok) {
+    try {
+      const { sim, seedForms } = initFromConfig(loaded.payload.config);
+      sim.restoreState(loaded.payload.state);
+      const restored = sim.getState();
+      const { next: rehydrated } = recordHistory({}, restored);
+      useSimStore.setState({
+        config: loaded.payload.config,
+        sim,
+        state: restored,
+        history: rehydrated,
+        seedFormsByMeaning: seedForms,
+      });
+    } catch {
+      useSimStore.setState({
+        persistenceNotice: {
+          kind: "corrupt",
+          message: "Couldn't restore your last autosave; starting fresh.",
+          shownAt: Date.now(),
+        },
+      });
+    }
+    return;
+  }
+  if (loaded.reason === "empty") return;
+  const msg: Record<"corrupt" | "future-version" | "migration-failed", string> = {
+    corrupt: "Your last autosave was corrupt; starting fresh.",
+    "future-version":
+      "Your last autosave was written by a newer build; starting fresh.",
+    "migration-failed":
+      "Your last autosave couldn't be migrated to the current schema; starting fresh.",
+  };
+  useSimStore.setState({
+    persistenceNotice: {
+      kind: loaded.reason,
+      message: msg[loaded.reason],
+      shownAt: Date.now(),
+    },
+  });
 }
 
 const booted = bootState();
@@ -280,29 +294,30 @@ const QUOTA_WARN_INTERVAL_MS = 60_000;
 
 function tryAutosave(args: Parameters<typeof saveAutosave>): void {
   const run = () => {
-    const result = saveAutosave(args[0], args[1]);
-    if (result.ok) return;
-    const now = Date.now();
-    if (result.reason === "quota") {
-      if (now - lastQuotaWarnAt < QUOTA_WARN_INTERVAL_MS) return;
-      lastQuotaWarnAt = now;
-      useSimStore.setState({
-        persistenceNotice: {
-          kind: "quota",
-          message:
-            "Storage is full — autosave can't write your latest progress. Free space in your browser or export a snapshot.",
-          shownAt: now,
-        },
-      });
-    } else if (result.reason === "other") {
-      useSimStore.setState({
-        persistenceNotice: {
-          kind: "save-error",
-          message: "Couldn't write the autosave — your latest progress isn't persisted.",
-          shownAt: now,
-        },
-      });
-    }
+    void saveAutosave(args[0], args[1]).then((result) => {
+      if (result.ok) return;
+      const now = Date.now();
+      if (result.reason === "quota") {
+        if (now - lastQuotaWarnAt < QUOTA_WARN_INTERVAL_MS) return;
+        lastQuotaWarnAt = now;
+        useSimStore.setState({
+          persistenceNotice: {
+            kind: "quota",
+            message:
+              "Storage is full — autosave can't write your latest progress. Free space in your browser or export a snapshot.",
+            shownAt: now,
+          },
+        });
+      } else if (result.reason === "other") {
+        useSimStore.setState({
+          persistenceNotice: {
+            kind: "save-error",
+            message: "Couldn't write the autosave — your latest progress isn't persisted.",
+            shownAt: now,
+          },
+        });
+      }
+    });
   };
   const ric = (globalThis as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
   if (typeof ric === "function") {
@@ -742,6 +757,12 @@ export const useSimStore = create<SimStore>((set, get) => ({
     }
   },
   clearAutosave: () => {
-    clearAutosave();
+    void clearAutosave();
   },
 }));
+
+// Phase 38+: kick off the async autosave restore after the store is
+// created. Skipped in test/SSR (no IndexedDB).
+if (typeof indexedDB !== "undefined") {
+  void restoreFromAutosaveAsync();
+}

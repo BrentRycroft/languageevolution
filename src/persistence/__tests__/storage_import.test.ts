@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { exportRun, importRunJson, importAndSaveRun, listRuns } from "../storage";
+import { exportRun, importRunJson, importAndSaveRun, listRuns, deleteRun } from "../storage";
 import { defaultConfig } from "../../engine/config";
 import type { SavedRun } from "../../engine/types";
 
-beforeEach(() => {
+beforeEach(async () => {
   if (typeof localStorage !== "undefined") localStorage.clear();
+  // Phase 38+: clear the IDB-backed runs index too.
+  for (const r of await listRuns()) await deleteRun(r.id);
 });
 
 function fixture(): SavedRun {
@@ -42,19 +44,20 @@ describe("storage import/export", () => {
     expect(importRunJson(JSON.stringify({ version: 5, id: "x", label: "y" }))).toBeNull();
   });
 
-  it("importAndSaveRun persists the run with a fresh id", () => {
+  it("importAndSaveRun persists the run with a fresh id", async () => {
     const json = exportRun(fixture());
-    const saved = importAndSaveRun(json);
+    const saved = await importAndSaveRun(json);
     expect(saved).not.toBeNull();
     expect(saved!.id).not.toBe("run-test");
-    expect(listRuns().some((r) => r.id === saved!.id)).toBe(true);
+    const runs = await listRuns();
+    expect(runs.some((r) => r.id === saved!.id)).toBe(true);
   });
 
-  it("importAndSaveRun multiple times produces distinct ids", () => {
+  it("importAndSaveRun multiple times produces distinct ids", async () => {
     const json = exportRun(fixture());
-    const a = importAndSaveRun(json);
-    const b = importAndSaveRun(json);
+    const a = await importAndSaveRun(json);
+    const b = await importAndSaveRun(json);
     expect(a?.id).not.toBe(b?.id);
-    expect(listRuns().length).toBe(2);
+    expect((await listRuns()).length).toBe(2);
   });
 });

@@ -1,3 +1,9 @@
+// Phase 38+: in-memory IndexedDB for the persistence layer. The
+// app's autosave + saved-runs storage now uses IDB (5MB localStorage
+// quota was the source of recurring "Storage full" warnings on
+// mature runs). Tests get a fresh in-memory IDB per file.
+import "fake-indexeddb/auto";
+
 class MockResizeObserver {
   observe() {}
   unobserve() {}

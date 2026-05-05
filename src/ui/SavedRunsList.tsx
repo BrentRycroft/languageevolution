@@ -18,28 +18,31 @@ export function SavedRunsList() {
   const [runs, setRuns] = useState<SavedRun[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const refresh = () => setRuns(listRuns());
+  const refresh = async () => {
+    const r = await listRuns();
+    setRuns(r);
+  };
   useEffect(() => {
-    refresh();
+    void refresh();
   }, []);
 
-  const onSaveReplayable = () => {
+  const onSaveReplayable = async () => {
     const label = prompt(
       "Replayable save — stores config + generation count.",
       `run @ gen ${state.generation}`,
     );
     if (!label) return;
-    saveRun(label, config, state.generation);
-    refresh();
+    await saveRun(label, config, state.generation);
+    void refresh();
   };
-  const onSaveCheckpoint = () => {
+  const onSaveCheckpoint = async () => {
     const label = prompt(
       "Full checkpoint — stores the entire tree state for instant restore.",
       `checkpoint @ gen ${state.generation}`,
     );
     if (!label) return;
-    saveRun(label, config, state.generation, state);
-    refresh();
+    await saveRun(label, config, state.generation, state);
+    void refresh();
   };
   const onLoad = (r: SavedRun) => {
     loadConfig(r.config, r.generationsRun, r.stateSnapshot);
@@ -53,7 +56,7 @@ export function SavedRunsList() {
     e.target.value = "";
     if (!file) return;
     const text = await file.text();
-    const imported = importAndSaveRun(text);
+    const imported = await importAndSaveRun(text);
     if (!imported) {
       await showConfirm({
         title: "Import failed",
@@ -62,7 +65,7 @@ export function SavedRunsList() {
       });
       return;
     }
-    refresh();
+    void refresh();
   };
   const onDelete = async (id: string) => {
     const ok = await showConfirm({
@@ -72,8 +75,8 @@ export function SavedRunsList() {
       danger: true,
     });
     if (!ok) return;
-    deleteRun(id);
-    refresh();
+    await deleteRun(id);
+    void refresh();
   };
 
   // Phase 29 Tranche 8f: drag-and-drop a saved-run JSON onto the
@@ -96,7 +99,7 @@ export function SavedRunsList() {
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
     const text = await file.text();
-    const imported = importAndSaveRun(text);
+    const imported = await importAndSaveRun(text);
     if (!imported) {
       await showConfirm({
         title: "Import failed",
@@ -106,7 +109,7 @@ export function SavedRunsList() {
       });
       return;
     }
-    refresh();
+    void refresh();
   };
 
   return (
