@@ -2,6 +2,7 @@ import type { Language, Phoneme, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { featuresOf } from "./features";
 import { stripTone, capToneStacking } from "./tone";
+import { isFormLegal } from "./wordShape";
 import { functionalLoadMap } from "./functionalLoad";
 
 const MAX_RARE_OCCURRENCES = 2;
@@ -180,6 +181,14 @@ export function prunePhonemes(
       return raw;
     });
     if (changed) {
+      // Phase 31 follow-up: if the merger eliminates the only
+      // syllabic nucleus (e.g., l̩ → l, i → j collapses), reject the
+      // change for this word — keep the pre-merger form. Pre-fix
+      // pruning could leave words with no syllable nucleus
+      // (`dʰdʰθgʲʰ` for "long" in a PIE leaf), violating
+      // isFormLegal on the lexicon level. The inventory still gets
+      // the candidate dropped at the end of this function.
+      if (!isFormLegal(m, next)) continue;
       // Direct lexicon write — sync of lang.words happens once at
       // end-of-step in stepInventoryManagement to amortise the cost
       // across all per-gen pruning attempts. See Phase 29 Tranche 7b
