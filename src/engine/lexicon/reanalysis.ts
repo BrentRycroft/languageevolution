@@ -98,6 +98,75 @@ function maybeVerbGrammaticalization(
   };
 }
 
+/**
+ * Phase 36 Tranche 36p: detect shared edge sequences across
+ * fossilised compounds and promote them to productive bound
+ * morphemes. When ≥ 3 fossilised compounds share the same trailing
+ * 1-3 segments, that string becomes a candidate derivational suffix
+ * registered in `lang.boundMorphemes` and `lang.derivationalSuffixes`.
+ *
+ * Models the iterative reanalysis loop: univerbation produces
+ * fossilised compounds, which then template a new derivational
+ * morpheme, which then becomes available to coin further words.
+ */
+function detectReanalysisTemplate(
+  lang: Language,
+  rng: Rng,
+): ReanalysisEvent | null {
+  const compounds = lang.compounds;
+  if (!compounds) return null;
+  const fossilised: Array<{ meaning: string; form: WordForm }> = [];
+  for (const meaning of Object.keys(compounds)) {
+    const meta = compounds[meaning]!;
+    if (!meta.fossilized) continue;
+    const form = lang.lexicon[meaning];
+    if (!form || form.length < 3) continue;
+    fossilised.push({ meaning, form });
+  }
+  if (fossilised.length < 3) return null;
+
+  // Tally trailing 2- and 3-segment suffixes across the fossilised
+  // pool. A suffix attested in ≥ 3 distinct compounds is a template.
+  const suffixCounts = new Map<string, { count: number; affix: WordForm }>();
+  for (const { form } of fossilised) {
+    for (const len of [2, 3]) {
+      if (form.length <= len) continue;
+      const tail = form.slice(form.length - len);
+      const key = tail.join("|");
+      const existing = suffixCounts.get(key);
+      if (existing) existing.count++;
+      else suffixCounts.set(key, { count: 1, affix: tail });
+    }
+  }
+  const candidates = Array.from(suffixCounts.values()).filter((c) => c.count >= 3);
+  if (candidates.length === 0) return null;
+
+  const chosen = candidates[rng.int(candidates.length)]!;
+  const tag = `-${chosen.affix.join("")}.reanalysed`;
+
+  // Skip if already registered.
+  const existing = lang.derivationalSuffixes ?? [];
+  if (existing.some((s) => s.tag === tag)) return null;
+
+  if (!lang.derivationalSuffixes) lang.derivationalSuffixes = [];
+  lang.derivationalSuffixes.push({ affix: chosen.affix.slice(), tag });
+
+  // Register as a bound morpheme so productive derivation can use
+  // it via the genesis pathway.
+  if (!lang.boundMorphemes) lang.boundMorphemes = new Set();
+  if (!lang.lexicon[tag]) {
+    lang.lexicon[tag] = chosen.affix.slice();
+    lang.boundMorphemes.add(tag);
+    if (!lang.boundMorphemeOrigin) lang.boundMorphemeOrigin = {};
+    lang.boundMorphemeOrigin[tag] = {
+      introducedGen: 0,
+      pathway: "reanalysis-template",
+    };
+  }
+
+  return { source: tag, promotedTag: tag, affix: chosen.affix.slice() };
+}
+
 export function maybeReanalyse(
   lang: Language,
   rng: Rng,
@@ -105,10 +174,14 @@ export function maybeReanalyse(
 ): ReanalysisEvent | null {
   if (!rng.chance(probability)) return null;
   // Try grammaticalization first (rarer, more impactful); fall back
-  // to compound reanalysis if no candidate available.
+  // to compound reanalysis, then iterative reanalysis from fossilised
+  // compounds.
   if (rng.chance(0.4)) {
     const grammaticalized = maybeVerbGrammaticalization(lang, rng);
     if (grammaticalized) return grammaticalized;
   }
-  return maybeCompoundReanalysis(lang, rng);
+  const compoundReanalysed = maybeCompoundReanalysis(lang, rng);
+  if (compoundReanalysed) return compoundReanalysed;
+  // Phase 36 Tranche 36p: try the fossilised-compound template path.
+  return detectReanalysisTemplate(lang, rng);
 }

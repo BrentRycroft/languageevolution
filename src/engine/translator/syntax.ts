@@ -30,7 +30,12 @@ export type Mood =
   | "subjunctive"
   | "imperative"
   | "conditional"
-  | "optative";
+  | "optative"
+  // Phase 36 Tranche 36l: extended mood inventory.
+  | "jussive"     // 3rd-person directive ("let him come")
+  | "irrealis"    // counterfactual / hypothetical, distinct from subj
+  | "dubitative"  // speaker uncertainty
+  | "hortative";  // 1pl directive ("let us go")
 export type Voice = "active" | "passive";
 export type Degree = "positive" | "comparative" | "superlative";
 export type Evidential = "direct" | "reportative" | "inferred";

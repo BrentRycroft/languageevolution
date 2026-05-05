@@ -603,7 +603,11 @@ function realiseVerb(
     vp.verb.mood === "subjunctive" ? "verb.mood.subj" :
     vp.verb.mood === "imperative" ? "verb.mood.imp" :
     vp.verb.mood === "conditional" ? "verb.mood.cond" :
-    vp.verb.mood === "optative" ? "verb.mood.opt" : null;
+    vp.verb.mood === "optative" ? "verb.mood.opt" :
+    vp.verb.mood === "jussive" ? "verb.mood.jus" :
+    vp.verb.mood === "irrealis" ? "verb.mood.irr" :
+    vp.verb.mood === "dubitative" ? "verb.mood.dub" :
+    vp.verb.mood === "hortative" ? "verb.mood.hort" : null;
   if (moodCat) stack.push(moodCat);
   if (vp.verb.voice === "passive") stack.push("verb.voice.pass");
 

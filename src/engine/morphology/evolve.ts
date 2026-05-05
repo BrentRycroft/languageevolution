@@ -204,6 +204,62 @@ export function maybeAffixReplacement(
   return { meaning: target, replacedBy: replacement };
 }
 
+/**
+ * Phase 36 Tranche 36s: back-formation / de-derivation.
+ *
+ * When a fossilised compound's surface ends in a recognised
+ * productive suffix, speakers may reanalyse it as base + suffix and
+ * extract the base as a new lexicon entry. Models real cycles like
+ * editor → edit, televise ← television, enthusiasm → enthuse.
+ *
+ * Returns the new lemma + base form on success, or null when no
+ * candidate fires.
+ */
+export function maybeBackformation(
+  lang: Language,
+  rng: Rng,
+  probability: number = 0.001,
+): { newLemma: string; base: WordForm; from: string } | null {
+  if (!rng.chance(probability)) return null;
+  if (!lang.compounds || !lang.boundMorphemes) return null;
+  const candidates: Array<{
+    meaning: string;
+    surface: WordForm;
+    base: WordForm;
+    suffix: string;
+  }> = [];
+  for (const meaning of Object.keys(lang.compounds)) {
+    const meta = lang.compounds[meaning]!;
+    if (!meta.fossilized) continue;
+    const surface = lang.lexicon[meaning];
+    if (!surface) continue;
+    for (const morph of lang.boundMorphemes) {
+      const affixForm = lang.lexicon[morph];
+      if (!affixForm || affixForm.length === 0) continue;
+      if (surface.length <= affixForm.length) continue;
+      const tail = surface.slice(surface.length - affixForm.length);
+      if (tail.join("") !== affixForm.join("")) continue;
+      const base = surface.slice(0, surface.length - affixForm.length);
+      if (base.length < 2) continue;
+      // Skip if base is already a known lexeme.
+      const baseStr = base.join("");
+      const newLemma = `bf:${baseStr}`;
+      if (lang.lexicon[newLemma]) continue;
+      candidates.push({ meaning, surface, base, suffix: morph });
+    }
+  }
+  if (candidates.length === 0) return null;
+  const chosen = candidates[rng.int(candidates.length)]!;
+  const newLemma = `bf:${chosen.base.join("")}`;
+  setLexiconForm(lang, newLemma, chosen.base, {
+    bornGeneration: 0,
+    origin: `backformation:${chosen.meaning}`,
+  });
+  if (!lang.wordOrigin) lang.wordOrigin = {};
+  lang.wordOrigin[newLemma] = `backformation:${chosen.meaning}`;
+  return { newLemma, base: chosen.base, from: chosen.meaning };
+}
+
 export function maybeCliticize(
   lang: Language,
   rng: Rng,

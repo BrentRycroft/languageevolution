@@ -384,6 +384,31 @@ export interface Language {
    */
   nounClassAssignments?: Record<Meaning, 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8>;
   /**
+   * Phase 36 Tranche 36m: borrow history. Each meaning may have been
+   * borrowed multiple times (re-borrowing — Old French → English →
+   * Modern French). Track the trail so the etymology UI can flag
+   * "déjà-vu" entries.
+   */
+  borrowHistory?: Record<Meaning, Array<{
+    fromLangId: string;
+    generation: number;
+    surface: string;
+  }>>;
+  /**
+   * Phase 36 Tranche 36o: tone sandhi rule selection. Subset of
+   * "meeussen" / "dissimilate" / "spread" / "downstep". Empty/undef
+   * for non-tonal languages.
+   */
+  toneSandhiRules?: ReadonlyArray<"meeussen" | "dissimilate" | "spread" | "downstep">;
+  /**
+   * Phase 36 Tranche 36q: sociolinguistic register strata. Weights
+   * sum to 1. Tier-2+ literacy tilts toward standard/literary;
+   * vernacular dominates pre-literacy. Currently informational; the
+   * apply pipeline reads `registerOf` per meaning to scale change
+   * rate (see ApplyOptions.registerOf in phonology/apply.ts).
+   */
+  registerStrata?: { vernacular: number; standard: number; literary: number };
+  /**
    * Phase 36 Tranche 36h: track when each bound morpheme was
    * introduced, and any replacement events. Powers etymology trace.
    */
@@ -619,7 +644,22 @@ export interface GrammarFeatures {
   classifierTable?: Record<string, string>;
   relativeClauseStrategy?: "gap" | "resumptive" | "relativizer" | "internal-headed";
   serialVerbConstructions?: boolean;
-  politenessRegister?: "none" | "binary" | "tiered";
+  /**
+   * Phase 36 Tranche 36k: politeness register.
+   * - "none": no T-V or honorific marking.
+   * - "binary" / "T-V": two-form pronoun system (tu/vous, tú/usted).
+   * - "honorific": verbal honorific marking (Korean, Japanese).
+   * - "tiered" / "stratal": full lexical-set substitution per register.
+   */
+  politenessRegister?: "none" | "binary" | "T-V" | "honorific" | "tiered" | "stratal";
+  /**
+   * Phase 36 Tranche 36j: switch-reference and logophoric pronoun
+   * tracking. "switch-reference" marks SS/DS on the verb of a
+   * subordinate clause (Pomo, Amele). "logophoric" distinguishes
+   * he₁-said-he₁ from he₁-said-he₂ via a special pronoun (Ewe,
+   * Yoruba). "both" enables both mechanisms.
+   */
+  referenceTracking?: "none" | "switch-reference" | "logophoric" | "both";
 }
 
 export interface SimulationConfig {

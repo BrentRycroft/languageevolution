@@ -462,6 +462,8 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "deletion.apocope",
+    frequency: "common",
+    rationale: "Final-vowel apocope (French final-e silencing, Romanian short-vowel apocope) is one of the commonest erosions.",
     label: "C → ∅ / _#",
     category: "deletion",
     positionBias: "final",
@@ -1048,6 +1050,8 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "harmony.backness",
+    frequency: "common",
+    rationale: "Vowel harmony is an Areal feature in Turkic, Uralic, Mongolic, Yoruba — common where it takes hold.",
     label: "V harmony by backness",
     category: "harmony",
     description:
@@ -1089,6 +1093,8 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "umlaut.front_before_front_vowel",
+    frequency: "common",
+    rationale: "Vowel umlaut (Germanic *muːs > *myːs > Eng. mice) is a common assimilatory process across Indo-European.",
     label: "V → V̈ / _…[i,j]",
     category: "umlaut",
     description:
@@ -1208,6 +1214,9 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "devoicing.final_obstruent",
+    frequency: "common",
+    rationale: "Final-obstruent devoicing — German, Dutch, Russian, Catalan — among the most attested phonotactic shifts.",
+    regime: "blanket",
     label: "[+voiced obstr] → [-voiced] / _#",
     category: "devoicing",
     positionBias: "final",
@@ -1238,6 +1247,8 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "nasalization.vowel_before_nasal",
+    frequency: "common",
+    rationale: "Vowel nasalisation before a nasal coda — French, Portuguese, Polish — a typologically dominant assimilation.",
     label: "V → Ṽ / _N",
     category: "vowel",
     positionBias: "any",
@@ -1274,6 +1285,8 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "lenition.tap_intervocalic",
+    frequency: "common",
+    rationale: "Intervocalic /t/ → tap [ɾ] in American English, Spanish, Portuguese; one of the most attested lenitions.",
     label: "t/d → ɾ / V_V  [unstressed]",
     category: "lenition",
     positionBias: "internal",
@@ -1312,6 +1325,9 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "fortition.initial_aspiration",
+    frequency: "ordinary",
+    rationale: "Initial-stop aspiration is well-attested (English, Greek, German) but not pan-typological.",
+    regime: "blanket",
     label: "[-voiced stop] → [+aspirated] / #_",
     category: "fortition",
     positionBias: "initial",
@@ -1338,6 +1354,8 @@ export const CATALOG: SoundChange[] = [
   // Phase 29 Tranche 5a: missing rule families flagged by audit.
   {
     id: "metathesis.liquid_swap",
+    frequency: "rare",
+    rationale: "Liquid metathesis (Slavic Cr-/Cl- alternations) is sporadic; not a productive process in most lineages.",
     label: "VRC ↔ VRC (liquid metathesis)",
     category: "metathesis",
     description:

@@ -18,6 +18,13 @@ export type ClosedClassLemma =
   // emitted `kind:"missing"` for them on round-trips. Source of two
   // failing translator_roundtrip tests.
   | "i" | "me" | "you" | "he" | "him" | "she" | "we" | "us" | "they" | "them" | "it"
+  // Phase 36 Tranche 36k: T-V politeness distinction. Synthesised
+  // distinct forms via the per-lemma fnv1a hash; languages with
+  // politenessRegister "T-V" (or "binary") use these in addition to
+  // the bare "you".
+  | "you_fml" | "you_fam"
+  // Phase 36 Tranche 36j: logophoric pronouns.
+  | "3sg.log" | "3pl.log"
   | "CLF"
   | "Q";
 
@@ -34,6 +41,10 @@ export const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "who", "whom", "whose", "what", "which",
   "where", "when", "why", "how",
   "i", "me", "you", "he", "him", "she", "we", "us", "they", "them", "it",
+  "you_fml", "you_fam",
+  // Phase 36 Tranche 36j: logophoric pronouns. Distinct lemmas so
+  // the closed-class synthesiser yields contrast against bare he/they.
+  "3sg.log", "3pl.log",
   "CLF", "Q",
 ];
 
