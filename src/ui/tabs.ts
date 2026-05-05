@@ -20,6 +20,7 @@ export type TabId =
   | "sandbox"
   | "stats"
   | "wordmap"
+  | "lexicostat"
   | "glossary";
 
 export interface TabSpec {
@@ -67,6 +68,11 @@ export const TABS: TabSpec[] = [
     title: "Phonology sandbox: pick rules and apply them to a chosen word, deterministically",
   },
   { id: "stats", label: "Stats", title: "Per-language stats dashboard" },
+  {
+    id: "lexicostat",
+    label: "Lexicostat",
+    title: "Pairwise Swadesh retention heatmap + glottochronology curve per leaf",
+  },
   {
     id: "wordmap",
     label: "Words",

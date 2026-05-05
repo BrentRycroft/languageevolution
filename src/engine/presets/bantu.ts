@@ -323,6 +323,13 @@ export function presetBantu(): SimulationConfig {
       caseStrategy: "preposition",
       adjectivePosition: "post",
       possessorPosition: "post",
+      // Phase 35 Tranche 35c/d/e: Bantu typology — three-way
+      // demonstrative (typically i/u, "this near speaker / that
+      // near hearer / yonder"), sg-pl, rich aspect (perfective +
+      // imperfective + habitual all marked on the verb).
+      demonstrativeDistance: "three-way",
+      numberSystem: "sg-pl",
+      aspectSystem: "rich",
     },
     // Phase 31 Tranche 31d: Bantu is tonal — most Niger-Congo
     // languages mark tone on every syllable. The proto-language
