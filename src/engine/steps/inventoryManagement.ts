@@ -8,6 +8,7 @@ import { setLexiconForm } from "../lexicon/mutate";
 import { syncWordsAfterPhonology } from "../lexicon/word";
 import { disambiguateCoreCollisions } from "../lexicon/disambiguate";
 import { updateCompounds } from "../lexicon/compound";
+import { tryUniverbation } from "../lexicon/univerbation";
 import { pushEvent } from "./helpers";
 
 /**
@@ -199,6 +200,20 @@ export function stepInventoryManagement(
       generation,
       kind: "lexical_replacement",
       description: `${compoundUpdate.fossilized} compound${compoundUpdate.fossilized === 1 ? "" : "s"} fossilised this gen`,
+    });
+  }
+  // Phase 34 Tranche 34f: univerbation — multi-word collocations
+  // collapse into single morphological units (good-bye < God-be-
+  // with-ye, today < this-day, French aujourd'hui < au jour de
+  // hui). The new word registers as a fossilised compound so the
+  // parts stay queryable for etymology UI but the surface drifts
+  // independently.
+  const univ = tryUniverbation(lang, rng, generation);
+  if (univ) {
+    pushEvent(lang, {
+      generation,
+      kind: "lexical_replacement",
+      description: `univerbation: "${univ.meaning}" < ${univ.parts.join(" + ")}`,
     });
   }
   const merged = runHomeostasis(lang, rng, generation);
