@@ -9,6 +9,7 @@ import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
 import { stepInventoryManagement } from "./steps/inventoryManagement";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { rebuildFormKeyIndex } from "./lexicon/word";
+import { seedTierTwoOrthography } from "./phonology/orthography";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
 import { stepCopulaErosion, stepCopulaGenesis } from "./steps/copula";
@@ -198,6 +199,24 @@ export function createSimulation(
               kind: "grammar_shift",
               description: `abstract-vocabulary catch-up window opened (next 30 gens)`,
             });
+            // Phase 34 Tranche 34e: literacy emergence — scribes
+            // commit to an orthographic convention. Each phoneme
+            // with multiple ALT_SPELLINGS options gets a
+            // language-specific pick (English sh / German sch /
+            // French ch / Polish sz, all for /ʃ/, are this same
+            // step at different historical moments).
+            const { adoptions } = seedTierTwoOrthography(lang, rng);
+            if (adoptions.length > 0) {
+              const sample = adoptions
+                .slice(0, 5)
+                .map((a) => `/${a.phoneme}/→<${a.spelling}>`)
+                .join(", ");
+              pushEvent(lang, {
+                generation: nextGen,
+                kind: "grammar_shift",
+                description: `writing system adopted: ${adoptions.length} orthographic conventions (${sample}${adoptions.length > 5 ? `, +${adoptions.length - 5} more` : ""})`,
+              });
+            }
           }
         }
         lang.lexicalCapacity = lexicalCapacity(lang, nextGen);
