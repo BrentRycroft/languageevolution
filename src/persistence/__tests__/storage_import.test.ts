@@ -9,7 +9,7 @@ beforeEach(() => {
 
 function fixture(): SavedRun {
   return {
-    version: 7,
+    version: 8,
     id: "run-test",
     label: "Original run",
     createdAt: 1000,

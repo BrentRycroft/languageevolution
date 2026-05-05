@@ -70,16 +70,19 @@ export function findWordsByMeaning(
 
 /**
  * Find the Word entry whose primary sense is the given meaning, if any.
- * Used to power the lexicon[meaning] → primary-form view.
+ * Used to power the lexicon[meaning] → primary-form view. Phase 37
+ * skips senses tagged `synonym: true` so a synonym Word never wins
+ * the primary slot.
  */
 export function findPrimaryWordForMeaning(
   lang: Language,
   meaning: Meaning,
 ): Word | undefined {
   if (!lang.words) return undefined;
-  return lang.words.find(
-    (w) => w.senses[w.primarySenseIndex]?.meaning === meaning,
-  );
+  return lang.words.find((w) => {
+    const sense = w.senses[w.primarySenseIndex];
+    return sense?.meaning === meaning && !sense.synonym;
+  });
 }
 
 /**
@@ -99,6 +102,7 @@ export function addSenseToWord(
     register: sense.register,
     bornGeneration: sense.bornGeneration,
     origin: sense.origin,
+    synonym: sense.synonym,
   });
 }
 
@@ -117,6 +121,7 @@ export function addWord(
     weight?: number;
     register?: "high" | "low" | "neutral";
     origin?: string;
+    synonym?: boolean;
   },
 ): Word {
   if (!lang.words) lang.words = [];
@@ -133,6 +138,7 @@ export function addWord(
       register: opts.register,
       bornGeneration: opts.bornGeneration,
       origin: opts.origin,
+      synonym: opts.synonym,
     });
     return existing;
   }
@@ -146,6 +152,7 @@ export function addWord(
         register: opts.register,
         bornGeneration: opts.bornGeneration,
         origin: opts.origin,
+        synonym: opts.synonym,
       },
     ],
     primarySenseIndex: 0,
@@ -155,6 +162,103 @@ export function addWord(
   lang.words.push(word);
   if (lang.wordsByFormKey) lang.wordsByFormKey.set(key, word);
   return word;
+}
+
+/**
+ * Phase 37: return every form that carries this meaning as a sense,
+ * primary first. Used by the composer/realiser to pick among
+ * synonyms based on context, and by the UI to display all forms for
+ * a meaning. Returns at most a few forms; the empty array is the
+ * normal "no synonyms exist" outcome.
+ */
+export function selectSynonyms(
+  lang: Language,
+  meaning: Meaning,
+): Word[] {
+  if (!lang.words) return [];
+  const matches = findWordsByMeaning(lang, meaning);
+  // Primary-first ordering: the Word whose primary sense is `meaning`
+  // (and is not flagged as synonym) comes first; synonyms follow,
+  // ranked by their sense weight.
+  const primary = matches.find((w) => {
+    const s = w.senses[w.primarySenseIndex];
+    return s?.meaning === meaning && !s.synonym;
+  });
+  const others = matches
+    .filter((w) => w !== primary)
+    .sort((a, b) => {
+      const sa = a.senses.find((s) => s.meaning === meaning)?.weight ?? 0;
+      const sb = b.senses.find((s) => s.meaning === meaning)?.weight ?? 0;
+      return sb - sa;
+    });
+  return primary ? [primary, ...others] : others;
+}
+
+/**
+ * Phase 37: pick which form to surface for a meaning given the
+ * caller's context (genre register + recently-used set). When no
+ * synonyms exist, returns the primary form. Otherwise:
+ *
+ * - if `recentlyUsed` contains the primary form, prefer a synonym
+ *   to avoid repetition (real-world variation).
+ * - if `register` is set, bias toward a synonym whose sense register
+ *   matches.
+ * - otherwise return the primary form.
+ *
+ * The helper is pure — it doesn't mutate. The composer is expected
+ * to update the caller-side recently-used set after each pick.
+ */
+export function pickSynonym(
+  lang: Language,
+  meaning: Meaning,
+  ctx?: {
+    register?: "high" | "low" | "neutral";
+    recentlyUsed?: ReadonlySet<string>;
+  },
+): WordForm | undefined {
+  const candidates = selectSynonyms(lang, meaning);
+  if (candidates.length === 0) return lang.lexicon[meaning];
+  const primary = candidates[0]!;
+  if (candidates.length === 1) return primary.form;
+  // Register-biased pick.
+  if (ctx?.register) {
+    const matched = candidates.find((w) =>
+      w.senses.some((s) => s.meaning === meaning && s.register === ctx.register),
+    );
+    if (matched) return matched.form;
+  }
+  // Repetition avoidance.
+  if (ctx?.recentlyUsed && ctx.recentlyUsed.has(primary.formKey)) {
+    return candidates[1]!.form;
+  }
+  return primary.form;
+}
+
+/**
+ * Phase 37: drop the meaning from the word with this exact form. If
+ * the word's senses become empty after removal, the word itself is
+ * removed from the language. Used to retire a synonym.
+ */
+export function removeSynonymSense(
+  lang: Language,
+  meaning: Meaning,
+  form: WordForm,
+): void {
+  if (!lang.words) return;
+  const w = findWordByForm(lang, form);
+  if (!w) return;
+  const remaining = w.senses.filter((s) => s.meaning !== meaning);
+  if (remaining.length === w.senses.length) return; // not a sense
+  if (remaining.length === 0) {
+    // Drop the word entirely.
+    lang.words = lang.words.filter((x) => x !== w);
+    if (lang.wordsByFormKey) lang.wordsByFormKey.delete(w.formKey);
+    return;
+  }
+  const oldPrimary = w.senses[w.primarySenseIndex]?.meaning;
+  w.senses = remaining;
+  const newPrimary = remaining.findIndex((s) => s.meaning === oldPrimary);
+  w.primarySenseIndex = newPrimary >= 0 ? newPrimary : 0;
 }
 
 /**
@@ -485,7 +589,14 @@ export function tryCommitCoinage(
   const related = existing.senses.some((s) =>
     areMeaningsRelated(lang, s.meaning, meaning),
   );
-  const prob = related ? polyRel : polyUnrel;
+  // Phase 37: progressively gate accidental homonymy. Each existing
+  // sense on the target form halves the polysemy probability for
+  // *unrelated* meanings (related polysemy stays at full rate). This
+  // makes 3-way and 4-way homonyms vanishingly rare.
+  const homonymPenalty = related
+    ? 1
+    : Math.pow(0.5, Math.max(0, existing.senses.length - 1));
+  const prob = (related ? polyRel : polyUnrel) * homonymPenalty;
   if (!rng.chance(prob)) {
     return { committed: false, viaPolysemy: false };
   }

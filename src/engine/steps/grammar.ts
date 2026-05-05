@@ -17,6 +17,7 @@ import { stepTypologyDrift } from "../grammar/typology_drift";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
 import { simplificationFactor, realismMultiplier } from "../phonology/rate";
 import { maybeReanalyse } from "../lexicon/reanalysis";
+import { maybeSpawnSynonym, maybeSuppressHomonym } from "../lexicon/synonyms";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 
@@ -166,6 +167,39 @@ export function stepMorphology(
         kind: "lexical_replacement",
         description: `back-formation: extracted "${bf.newLemma}" from "${bf.from}" (/${bf.base.join("")}/)`,
         meta: { meaning: bf.newLemma, donorId: bf.from },
+      });
+    }
+  }
+  // Phase 37 Tranche 37d: synonym genesis. Low-rate stylistic split
+  // of a high-frequency content word into two register variants
+  // (mirroring English house/abode, big/large). Tier-scaled — higher
+  // tiers spawn synonyms more readily because of literacy and prestige
+  // pressures.
+  {
+    const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
+    const synRate = 0.003 * (1 + tier) * lang.conservatism;
+    const synEvent = maybeSpawnSynonym(lang, rng, synRate);
+    if (synEvent) {
+      pushEvent(lang, {
+        generation,
+        kind: "coinage",
+        description: `synonym spawned: "${synEvent.meaning}" gains synonym /${synEvent.synonym.join("")}/ (${synEvent.pathway})`,
+        meta: { meaning: synEvent.meaning, pathway: synEvent.pathway },
+      });
+    }
+  }
+  // Phase 37 Tranche 37d: homonym suppression. When two non-core
+  // meanings share a form AND the loser has a synonym, swap the
+  // loser to its synonym. Slower than spawn so synonyms accrete
+  // before suppression vacates them.
+  {
+    const supEvent = maybeSuppressHomonym(lang, rng, 0.002 * lang.conservatism);
+    if (supEvent) {
+      pushEvent(lang, {
+        generation,
+        kind: "lexical_replacement",
+        description: `homonym suppressed: "${supEvent.meaning}" /${supEvent.vacatedForm.join("")}/ → /${supEvent.replacementForm.join("")}/`,
+        meta: { meaning: supEvent.meaning },
       });
     }
   }
