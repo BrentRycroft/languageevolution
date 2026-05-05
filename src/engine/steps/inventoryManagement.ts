@@ -6,6 +6,7 @@ import { phonotacticScore } from "../phonology/phonotactics";
 import { effectiveTier } from "../defaults";
 import { setLexiconForm } from "../lexicon/mutate";
 import { syncWordsAfterPhonology } from "../lexicon/word";
+import { disambiguateCoreCollisions } from "../lexicon/disambiguate";
 import { pushEvent } from "./helpers";
 
 /**
@@ -188,13 +189,27 @@ export function stepInventoryManagement(
 ): void {
   runPhonotacticRepair(lang, rng, generation);
   const merged = runHomeostasis(lang, rng, generation);
+  // Phase 32 Tranche 32a: end-of-step core-collision repair. Walks
+  // the lexicon for cases where 2+ high-frequency Swadesh meanings
+  // (≥ 0.85 freq, content POS) share a surface form and perturbs all
+  // but the highest-frequency one to break the homophony. Pre-Phase-
+  // 32 default preset surveys showed mother=water, foot=good,
+  // moon=see all collapsed in a single 60-gen run.
+  const resolved = disambiguateCoreCollisions(lang, rng, generation);
+  if (resolved > 0) {
+    pushEvent(lang, {
+      generation,
+      kind: "lexical_replacement",
+      description: `disambiguation: ${resolved} core homophone${resolved === 1 ? "" : "s"} broken`,
+    });
+  }
   // Phase 29 Tranche 7b: prunePhonemes mutates lang.lexicon directly,
   // bypassing setLexiconForm. Sync once at end-of-step to amortise the
   // catch-up. Phase 29 Tranche 7c (perf): skip the sync entirely when
   // no merger fired — most generations don't trigger pruning.
   // runPhonotacticRepair already routes through setLexiconForm so its
   // changes are already reflected in lang.words.
-  if (merged && lang.words) syncWordsAfterPhonology(lang, generation);
+  if ((merged || resolved > 0) && lang.words) syncWordsAfterPhonology(lang, generation);
 }
 
 // Back-compat exports for tests that referenced the pre-28a entry

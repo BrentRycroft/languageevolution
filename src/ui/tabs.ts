@@ -7,6 +7,7 @@
 export type TabId =
   | "tree"
   | "map"
+  | "profile"
   | "dictionary"
   | "timeline"
   | "grammar"
@@ -30,6 +31,11 @@ export interface TabSpec {
 export const TABS: TabSpec[] = [
   { id: "tree", label: "Tree", title: "Phylogenetic tree of languages" },
   { id: "map", label: "Map", title: "2-D map of where languages live" },
+  {
+    id: "profile",
+    label: "Profile",
+    title: "TL;DR card for the selected language — typology, register, sample words, distinguishing rules",
+  },
   {
     id: "dictionary",
     label: "Dictionary",

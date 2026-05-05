@@ -1,6 +1,6 @@
 import type { SoundChange, WordForm, Phoneme } from "../types";
 import { isVowel, isConsonant, isSyllabic } from "./ipa";
-import { HIGH, LOW, stripTone, toneOf, capToneStacking } from "./tone";
+import { HIGH, LOW, stripTone, toneOf, capToneStacking, hasLength } from "./tone";
 import { UNSTRESSED_REDUCTION, stressedPositions } from "./stress";
 import {
   ALL_VOICELESS_CONSONANTS,
@@ -323,14 +323,14 @@ export const CATALOG: SoundChange[] = [
       if (w.length < 3) return 0;
       const last = w[w.length - 1]!;
       const prev = w[w.length - 2]!;
-      if (isConsonant(last) && isVowel(prev) && !prev.endsWith("ː")) return 0.04;
+      if (isConsonant(last) && isVowel(prev) && !hasLength(prev)) return 0.04;
       return 0;
     },
     apply: (word) => {
       if (word.length < 3) return word;
       const last = word[word.length - 1]!;
       const prev = word[word.length - 2]!;
-      if (!(isConsonant(last) && isVowel(prev) && !prev.endsWith("ː"))) return word;
+      if (!(isConsonant(last) && isVowel(prev) && !hasLength(prev))) return word;
       const lengthened = prev + "ː";
       const out = word.slice();
       out[out.length - 2] = lengthened;
@@ -837,7 +837,7 @@ export const CATALOG: SoundChange[] = [
       let n = 0;
       for (const i of sites) {
         const v = stripTone(w[i]!);
-        if (v.endsWith("ː")) continue;
+        if (hasLength(v)) continue;
         const nxt = w[i + 1];
         const aft = w[i + 2];
         if (!nxt) {
@@ -851,7 +851,7 @@ export const CATALOG: SoundChange[] = [
     apply: (w, rng) => {
       const sites = stressedPositions(w, "stressed").filter((i) => {
         const v = stripTone(w[i]!);
-        if (v.endsWith("ː")) return false;
+        if (hasLength(v)) return false;
         const nxt = w[i + 1];
         if (!nxt) return true;
         const aft = w[i + 2];
@@ -937,14 +937,14 @@ export const CATALOG: SoundChange[] = [
       const prev = w[w.length - 2]!;
       if (!isConsonant(last)) return 0;
       if (!isVowel(prev)) return 0;
-      if (prev.endsWith("ː")) return 0;
+      if (hasLength(prev)) return 0;
       return 0.05;
     },
     apply: (word) => {
       if (word.length < 2) return word;
       const last = word[word.length - 1]!;
       const prev = word[word.length - 2]!;
-      if (!isConsonant(last) || !isVowel(prev) || prev.endsWith("ː")) return word;
+      if (!isConsonant(last) || !isVowel(prev) || hasLength(prev)) return word;
       const out = word.slice(0, -1);
       out[out.length - 1] = prev + "ː";
       return out;
@@ -968,7 +968,7 @@ export const CATALOG: SoundChange[] = [
         const v = w[i]!;
         const c1 = w[i + 1]!;
         if (!isVowel(v)) continue;
-        if (v.endsWith("ː")) continue;
+        if (hasLength(v)) continue;
         if (!isConsonant(c1)) continue;
         return 0.04;
       }
@@ -980,7 +980,7 @@ export const CATALOG: SoundChange[] = [
         const v = word[i]!;
         const c1 = word[i + 1]!;
         if (!isVowel(v)) continue;
-        if (v.endsWith("ː")) continue;
+        if (hasLength(v)) continue;
         if (!isConsonant(c1)) continue;
         sites.push(i);
       }

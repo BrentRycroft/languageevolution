@@ -1,439 +1,442 @@
 
 ========================================================================
-PRESET: DEFAULT  (leaf L-10 after 60 gens, seed=audit-default)
+PRESET: DEFAULT  (leaf L-1 after 60 gens, seed=audit-default)
 ========================================================================
-name=Bukuola  speakers=3398  tier=0  conservatism=1.33  alive-leaves=9
-stress=initial  word-order=SOV  case=case  art=none
+name=Safoen  speakers=7364  tier=1  conservatism=1.05  alive-leaves=4
+stress=antepenult  word-order=SOV  case=case  art=none
 adj=pre  neg=pre-verb  hasCase=false
-phonemes (38, target 22, ratio 1.73×): a aː b d eː ẽ f g h i iː k kʼ l n o õ p r s tʃ tʼ u uː w y yː æ æː ø øː ŋ ɖ ə əː ɾ ʈ θ
+phonemes (35, target 28, ratio 1.25×): aː b d dʒ e f g h i k m n o oː õ p r s t tʃ u uː w y yː z æː ø ɔ ɔː ɛ ɾ ʂ ʃ θ
 tone-stack diagnostics: stacked-segments=0  max-stack=0
-active sound rules: 7  retired: 1
-words: 692  lexicon meanings: 748
+active sound rules: 6  retired: 1
+words: 702  lexicon meanings: 743
 
 Sample lexicon (12 core words):
-  water      /bæːbeːb/
-  fire       /huːb/
-  mother     /bæːbeːb/
-  father     /hæːbeːb/
-  sun        /huːb/
-  moon       /beːb/
-  go         /bæːb/
-  see        /bib/
-  eat        /eːb/
-  big        /bæːb/
-  i          /batʃiː/
-  you        /tʼudətʃeː/
+  water      /boːbyb/
+  fire       /bib/
+  mother     /boːbyb/
+  father     /boːbyb/
+  sun        /hib/
+  moon       /byb/
+  go         /boːb/
+  see        /baːb/
+  eat        /yb/
+  big        /boːb/
+  i          /doɾi/
+  you        /dʒyːdʒy/
 
 Last 6 events:
-  g60  actuation       social-contagion actuation: "top" /bihu/ → /biːhu/ [from phonology] @ 
-  g60  sound_change    47 forms shifted (×0.61)
-  g60  merger          merger: /huːheː/ — "temple" fell together with "chicken", now one word
-  g60  merger          merger: /buːhi/ — "four" fell together with "sickle", now one word wit
-  g60  merger          merger: /huːɖd/ — "friend" fell together with "wrist", now one word wi
-  g60  sound_change    homeostatic pruning: 5 mergers this gen (370 words affected) — /ɳ/→/m/
+  g60  sound_change    20 forms shifted (×0.89)
+  g60  merger          merger: /ʃyː/ — "very" fell together with "with", now one word with mu
+  g60  merger          merger: /ʃydʒiː/ — "tiger" fell together with "middle", now one word w
+  g60  merger          merger: /diːhy/ — "thirty" fell together with "all", now one word with
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (301 words affected) — /a/→/aː
+  g60  grammar_shift   verb.person.3sg merged into noun.case.gen
 
 [MYTH]
-  bull knew elder with village             → bæːbi buhiːɾu bbuːəd bæːk tʼaɖheːhtʃiː
-  servant not went at harbor and lord came to harbor → dutʃiθdi ɖaːtʃeː hinwaːka huː bæːbəd ɖa huːhuːhuː bbeːbəd heːb hinwaːka
-  it came                                  → tʃiːhu bbeːbəd
-  it spoke dog                             → tʃiːhu kuːb huːbæːəd
+  snake knew son with harbor               → hyːdy hobobit bbiydʒy ʃyː hyʃyːdʒyːh
+  pig not went at mountain and servant came to mountain → dotody daː tydydd fy boːbydʒy θy dʒydʒyːt bbybydʒy fyθy tydydd
+  it came                                  → dʒihy bbybydʒy
+  it held eye                              → dʒihy ib didaːdidydʒy
 
 [LEGEND]
-  stranger not flied at village            → hutʃæːhæː ɖaːtʃeː tʼaɖheːhtʃiː huː bæːbæːbhuːəd
-  he walked                                → beːbi duːɾuːəd
-  good bull walked                         → buːb bæːbi duːɾuːəd
-  warrior knew eagle                       → haːtʃeːtʃeː buːhæːbbeː bbuːəd
+  aunt not flied at home                   → dʒyhi daː hyfaːʃydʒy fy doɾodbiydʒy
+  it walked                                → dʒihy bibiydʒy
+  light snake ran                          → tiaːtti hyːdy diθdybyːdydʒy
+  warrior knew wolf                        → gɔːθoːθy fidb bbiydʒy
 
 [DAILY]
-  dog takes eagle and fox dies at valley   → kuːb buːhæːbbeː heːbbibuːbh ɖa haːtʼdok ɖaːtʃeː buːbuːhæːb buːbh
-  it eats wine                             → tʃiːhu beːbuː eːbh
-  in hour it comes and bird goes           → tʃeː həɾeːdhæː tʃiːhu bbeːbh ɖa æːbi bæːbh
-  in today it runs                         → tʃeː tʃeːidəheː tʃiːhu tʃiːtʃeːbeːdh
+  deer holds road and mouse dies at sea    → didhid dʒydʒydʒi didaːdid θy ʃyttɔː daː tybi dyd
+  it eats fish                             → dʒihy bihb yb
+  in hour it falls and brother goes        → bɔː θytʃyθhø dʒihy dʒiɾo θy hydʒi boːb
+  in today it runs                         → bɔː hɔːhɔro dʒihy diθdybyːd
 
 [DIALOGUE]
-  mouse eats grain                         → goda buːbi eːbh
-  it runs                                  → tʃiːhu tʃiːtʃeːbeːdh
-  it sleeps                                → tʃiːhu hbeːhh
-  it not dies                              → tʃiːhu huː buːbh
+  stranger gives foot                      → ʃyːɔːfy bib difyt
+  it runs                                  → dʒihy diθdybyːd
+  it sleeps                                → dʒihy hbyb
+  it not dies                              → dʒihy fy dyd
 
 [POETRY]
-  big deer dies                            → bæːb fidhitʼ buːbh
-  young hawk dies                          → deːɾadbad buːbbuː buːbh
-  wet rabbit comes                         → buːkuːhæː buːphi bbeːbh
-  neighbor eats fish                       → tʃiːtʃeːɾaː hihk eːbh
+  goat speaks young son                    → podybode dyɾodaːboː hobobit hiboː
+  lord held cow                            → dʒyːysy bbi didaːdidydʒy
+  good daughter flies                      → bib dødtʃø doɾodbi
+  good cat flies                           → bib dihipi doɾodbi
 
 ========================================================================
-PRESET: PIE  (leaf L-3 after 60 gens, seed=audit-pie)
+PRESET: PIE  (leaf L-1 after 60 gens, seed=audit-pie)
 ========================================================================
-name=Jugoari  speakers=3093  tier=0  conservatism=0.81  alive-leaves=1
+name=Pekil  speakers=3135  tier=0  conservatism=0.79  alive-leaves=2
 stress=lexical  word-order=SOV  case=case  art=none
-adj=pre  neg=pre-verb  hasCase=false
-phonemes (26, target 22, ratio 1.18×): aː bʰ d dʰ e eː gʰ gʲʰ gʷ gʷʰ h₁ j k kʲ kʷ kʼ l̩ m n̩ o oː r̩ tʃ tʃʷ ə əː
-tone-stack diagnostics: stacked-segments=0  max-stack=0
-active sound rules: 2  retired: 0
-words: 350  lexicon meanings: 416
-
-Sample lexicon (12 core words):
-  water      /gʰodʰd/
-  fire       /dʰeːh₁gʷʰr̩/
-  mother     /deːh₁dʰeːr̩/
-  father     /dʰh₁dʰeːr̩/
-  sun        /h₁əh₁gʷʰeːl̩/
-  moon       /deːh₁dh₁/
-  go         /gʰoːd/
-  see        /gʰoːoːdʰ/
-  eat        /h₁eːdʰ/
-  big        /deːgʲʰh₁/
-  i          /h₁eːgʲʰəː/
-  you        /dʰoː/
-
-Last 6 events:
-  g60  merger          merger: /ʃeːʃ/ — "she" fell together with "be", "plant", "sow", now on
-  g60  merger          merger: /dʰeːʃ/ — "do", "drink", "throw" fell together with "give", "s
-  g60  merger          merger: /ʃeːd/ — "old" fell together with "inside", "some", now one wo
-  g60  merger          merger: /l̩oːdʰ/ — "steal" fell together with "lose", now one word wit
-  g60  merger          merger: /ʃdeːʃ/ — "swim" fell together with "spindle", now one word wi
-  g60  sound_change    homeostatic pruning: 5 mergers this gen (264 words affected) — /ʃ/→/h₁
-
-[MYTH]
-  sister take earth                        → h₁gʷʰeːh₁or̩ dʰoːgʲʰod gʲʰoːddʰ
-  it ate salt                              → dʰodʰ h₁əh₁l̩ h₁ēɖ
-  in spring guest flied and it saw eagle   → oːd tʃeːh₁r̩ gʰoh₁dʰeː edʰeːdʰh₁ kʼoː dʰodʰ h₁or̩d vēat
-  it knew truth                            → dʰodʰ h₁oddʰ egʲʰdeːh₁
-
-[LEGEND]
-  brother did not walk at road and bad child walked → dʰr̩eːh₁dʰeːr̩ gʲʰoː dʰoddʰe edʰeːh₁ doː h₁dʰeːeːgʰ kʼoː dʰoh₁ dʰodʰl̩oh₁ eh₁dʰeːeːgʰ
-  he slept                                 → h₁o eh₁gʷʰeːdʰ
-  sister walked from lake                  → h₁gʷʰeːh₁or̩ eh₁dʰeːeːgʰ dʰoːdʰ l̩oːd
-  thin baby fell                           → dʰoːd h₁odo edʰoːdʰ
-
-[DAILY]
-  brother eats bread                       → dʰr̩eːh₁dʰeːr̩ dʰdoːgʰ h₁eːdʰθe
-  it gives foot                            → dʰodʰ dʰodʰh₁ dʰeːh₁θe
-  uncle does not go                        → h₁oːgʷʰədəːər̩ dʰeːh₁ doː gʰoːd
-  in evening it sleeps                     → oːd gʷʰeːh₁dʰeːr̩o dʰodʰ h₁gʷʰeːdʰθe
-
-[DIALOGUE]
-  child did not take red head              → dʰodʰl̩oh₁ h₁r̩eːgʷʰdʰ kʲeːr̩h₁ edʰeːh₁ doː gʲʰoːddʰ
-  it does not sleep and it flies           → dʰodʰ dʰeːh₁θe doː h₁gʷʰeːdʰ kʼoː dʰodʰ dʰeːdʰh₁θe
-  person drinks blood                      → gʲʰdo kʲr̩eːgʷʰh₁ dʰeːh₁θe
-  it runs                                  → dʰodʰ dʰdoːdθe
-
-[POETRY]
-  mother eats grain                        → deːh₁dʰeːr̩ gʰr̩eːh₁d h₁eːdʰθe
-  wife sleeps                              → dʰeːdh₁dʰodʰdeː h₁gʷʰeːdʰθe
-  wife goes                                → dʰeːdh₁dʰodʰdeː gʰoːdθe
-  sweet king goes                          → h₁gʷʰeːh₁dʰ h₁r̩eːgʲʰh₁ gʰoːdθe
-
-========================================================================
-PRESET: GERMANIC  (leaf L-2 after 60 gens, seed=audit-germanic)
-========================================================================
-name=Lubis  speakers=8321  tier=1  conservatism=0.71  alive-leaves=3
-stress=final  word-order=SVO  case=preposition  art=free
 adj=pre  neg=pre-verb  hasCase=true
-phonemes (29, target 28, ratio 1.04×): aː b d dʒ eː eː̃ f g h i iː k kʷ m n oː p s t tʃ u uː w y yː z ə ɛː θ
+phonemes (24, target 22, ratio 1.09×): a aː bʰ dʰ e eː f g gʲʰ gʷ gʷʰ h₂ i k kʲ l̩ n o oː p r tʃ tʃʷ ɣ
 tone-stack diagnostics: stacked-segments=0  max-stack=0
-active sound rules: 7  retired: 1
-words: 260  lexicon meanings: 311
+active sound rules: 4  retired: 0
+words: 331  lexicon meanings: 407
 
 Sample lexicon (12 core words):
-  water      /baːbaːbiː/
-  fire       /hubiː/
-  mother     /bubiːbiː/
-  father     /haːbiːbiː/
-  sun        /hubbu/
-  moon       /biːbu/
-  go         /baːbbiː/
-  see        /hiːhiː/
-  eat        /iːbiː/
-  big        /biːbiːbaːbiː/
-  i          /eːkeː/
-  you        /hu/
+  water      /gʷeːdʰdʰ/
+  fire       /bʰeːggʷdʰ/
+  mother     /geːgbʰeːdʰ/
+  father     /bʰgbʰeːdʰ/
+  sun        /gaːggʷeːdʰ/
+  moon       /geːggg/
+  go         /gʷeːg/
+  see        /gʷeːeːdʰ/
+  eat        /geːdʰ/
+  big        /geːgg/
+  i          /pekp/
+  you        /bʰeː/
 
 Last 6 events:
-  g60  actuation       social-contagion actuation: "son" /hugutʃeː/ → /fugutʃeː/ [from phonol
-  g60  actuation       social-contagion actuation: "me" /tʼuːheː/ → /tʼuːfeː/ [from phonology
-  g60  sound_change    6 forms shifted (×0.51)
-  g60  sound_change    sound law: devoicing.final_obstruent applied exceptionlessly
-  g60  sound_change    homeostatic pruning: 5 mergers this gen (184 words affected) — /tʼ/→/t
-  g60  grammaticalize  cliticization: "eye" (body_core) /aːubu/ → /aːub/
+  g60  actuation       social-contagion actuation: "horse" /keːkgʷeː/ → /kʲekʲgʷeː/ [from pho
+  g60  actuation       social-contagion actuation: "find" /tʃʷeːgʷədʰ/ → /tʃʷegʷdʰ/ [from pho
+  g60  actuation       social-contagion actuation: "but" /keːk/ → /kʲeːkʲ/ [from phonology] @
+  g60  actuation       social-contagion actuation: "young" /tʃʷeːkgʷg/ → /tʃʷeːkʲgʷg/ [from p
+  g60  sound_change    8 forms shifted (×0.58)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (20 words affected) — /w/→/gʷ/
 
 [MYTH]
-  long-ago the father knew the dry king and long-ago the sister held the bad stone → taːtʃi haː haːbiːbiː bubaːpdʒɛ haː fuːpfuːbeː puːbiːbbaːbiːaɳ uːpeː taːtʃi haː aːhbiːhbiːbiː haːbbiːdʒɛ haː ubiːbaːbiː aːhbaːiːbaːbiːaɳ
-  the friend knew the light brother        → haː ftʃiːeːnds bubaːpdʒɛ haː biːhpaːbiː aːbbuhiːbiːaɳ
-  the mother came at the river             → haː bubiːbiː kʷam θuθə haː aːhu
-  it knew the deer                         → θɛː bubaːpdʒɛ haː biːubaːaɳ
+  sister take fish                         → ggʷeːgeːdʰ bʰeːggm geːgdʰ
+  it drank blood                           → bʰeːdʰ gdʰeːgʷgm eːbʰeːg
+  in summer guest walked and it saw he     → eːg kaːkk geːbʰe eːgbʰeːeːg gʷeː bʰeːdʰ goːm wēiː
+  it truth                                 → bʰeːdʰ geːgbʰm
 
 [LEGEND]
-  the person did not go at the house       → haː baːbbaːp buːtdʒɛ biː baːbbiː θuθə haː huhaː
-  it slept and it flied                    → θɛː aːhbiːbiːdʒɛ uːpeː θɛː aːhbiːubiːdʒɛ
-  it gave the fire                         → θɛː biːbiːdʒɛ haː hubiːaɳ
-  she knew the mother                      → hu bubaːpdʒɛ haː bubiːbiːaɳ
+  horse did not walk at house and wet king ran → kʲekʲgʷeː gʲʰeːdʰe dʰeːg eːdʰeːtʃeː geː gbʰeːeːg gʷeː gʷodʰk pdʰegpe eːdʰdʰeːg
+  it                                       → bʰeːdʰ
+  daughter walked from lake                → dʰeːggbʰeːdʰ eːgbʰeːeːg bʰeːgʷeː dʰeːgg
+  white husband came                       → geːdʰbʰeː bʰeːbʰeːg gʷm̥
 
 [DAILY]
-  the brother sees the father              → haː aːbbuhiːbiː hiːhiːθi haː haːbiːbiːaɳ
-  the mother speaks the mother             → haː bubiːbiː aːhbbiːbiːθi haː bubiːbiːaɳ
-  the mother falls                         → haː bubiːbiː haːbaːpθi
-  the bull drinks the water for the river  → haː aːfdʒiugaːdʒeː aːbbiːbbiːθi haː baːbaːbiːaɳ fudʒi haː aːhu
+  horse eats milk                          → kʲekʲgʷeː gʷdʰaːgbʰm geːdʰθi
+  he takes father                          → goː bʰgbʰeːdʰm geːgdʰθi
+  fox does not go                          → gʷdʰbʰeːg dʰeːtʃeː geː gʷeːg
+  in spring it falls                       → eːg tʃʷepdʰ bʰeːdʰ bʰeːdʰθi
 
 [DIALOGUE]
-  the deer does not break the knife and the baby drank the hot blood → haː biːubaː buːtθi biː aːbbiːbiː haː haːhhaːaɳ uːpeː haː dʒiːbfaː drɛnk haː haːiːbaːbiː aːbuːhaːaɳ
-  the sheep the thin he and it drink the milk → haː kʷeːpaː haː fuːbbuːp haːaɳ uːpeː θɛː aːbbiːbbiː haː geːgugfaɳ
-  the bird held the white mountain         → haː hubbaːbiː haːbbiːdʒɛ haː figaːdʒeː tʃeːggaːgeːaɳ
-  it comes                                 → θɛː biːbiːθi
+  king did not take new sun                → pdʰegpe geːgʷeːg gaːggʷeːdʰm eːdʰeːtʃeː geː geːgdʰ
+  it does not and it flies                 → bʰeːdʰ dʰeːtʃeːθi geː gʷeː bʰeːdʰ bʰeːbʰgθi
+  snake drinks water                       → geːgʷʰeːg gʷeːdʰdʰm bʰeːgθi
+  it runs                                  → bʰeːdʰ dʰdʰeːgθi
 
 [POETRY]
-  the enemy knows the big she              → haː hiːbaːbbhiː bubaːpθi haː biːbiːbaːbiː huaɳ
-  the dog speaks the young deer            → haː hubbaːbiː aːhbbiːbiːθi haː gubgaːpeː biːubaːaɳ
-  the mother sleeps                        → haː bubiːbiː aːhbiːbiːθi
-  the bull sleeps                          → haː aːfdʒiugaːdʒeː aːhbiːbiːθi
+  light king falls                         → dʰeːggʷʰ pdʰegpe bʰeːdʰθi
+  goat eats fruit                          → gaːbʰdʰeː bʰdʰeːgm geːdʰθi
+  long mother goes                         → dʰl̩gk geːgbʰeːdʰ gʷeːgθi
+  woman walks                              → gʷeːgg gbʰeːeːgθi
+
+========================================================================
+PRESET: GERMANIC  (leaf L-3 after 60 gens, seed=audit-germanic)
+========================================================================
+name=Aldaese  speakers=7348  tier=1  conservatism=1.15  alive-leaves=7
+stress=initial  word-order=SVO  case=preposition  art=free
+adj=pre  neg=pre-verb  hasCase=true
+phonemes (32, target 28, ratio 1.14×): a aː b d eː f i iː kʷ l m n oː r s t tʃʷ u uː v w x xʷ y yː z ŋ ə əː ɛ ɯ ʂ
+tone-stack diagnostics: stacked-segments=0  max-stack=0
+active sound rules: 6  retired: 1
+words: 276  lexicon meanings: 323
+
+Sample lexicon (12 core words):
+  water      /dadaːd/
+  fire       /dud/
+  mother     /dudid/
+  father     /dadid/
+  sun        /dudu/
+  moon       /didu/
+  go         /dadd/
+  see        /dikʷ/
+  eat        /id/
+  big        /diːkʷiːdad/
+  i          /ikʷ/
+  you        /du/
+
+Last 6 events:
+  g60  actuation       social-contagion actuation: "black" /zppaːvaːp/ → /zppaːfaːp/ [from ph
+  g60  actuation       social-contagion actuation: "guest" /paːzpiːv/ → /paːzpiːf/ [from phon
+  g60  actuation       social-contagion actuation: "wolf" /duddaːv/ → /pupdaf/ [from phonolog
+  g60  sound_change    7 forms shifted (×0.67)
+  g60  merger          merger: /fəː/ — "it" fell together with "his", now one word with multi
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (87 words affected) — /ɖ/→/b/,
+
+[MYTH]
+  long-ago the king knew the dry sister and long-ago the guest held the empty sky → baːbyː dəː kʷudyːdaːd kʷudtɨ dəː zduzuː ddiddidaː uməb baːbyː dəː baːzbiːf xaːddeːtɨ dəː tuːdaːd kʷiːdiːdadaː
+  the deer knew the bitter child           → dəː tyːudaː kʷudtɨ dəː biːbbaːf ddadaaː
+  the sheep came at the sea                → dəː kʷiba kʷɔme fuːdə dəː daiːdiːd
+  it knew the wolf                         → fəː kʷudtɨ dəː bubdafaː
+
+[LEGEND]
+  the dog did not go at the forest         → dəː kʷuddad bubtɨ by dadd fuːdə dəː baːdub
+  it slept and it flied                    → fəː ddidtɨ uməb fəː dyːudtɨ
+  it gave the bread                        → fəː didtɨ dəː ddaudaaː
+  it knew the she                          → fəː kʷudtɨ dəː diːaː
+
+[DAILY]
+  the guest sees the water                 → dəː baːzbiːf dikʷθi dəː dadaːdaː
+  the sheep speaks the he                  → dəː kʷiba dddikʷθi dəː daaː
+  the sheep falls                          → dəː kʷiba faːlθi
+  the hawk gives the stone for the river   → dəː dumɯuːs didθi dəː ddaiːdadaː dudiː dəː akʷu
+
+[DIALOGUE]
+  the snake does not break the river and the baby gave the heavy sun → dəː buːbiːb bubθi by bbiːkʷ dəː akʷuaː uməb dəː kʷiːdfɛ didtɨ dəː ddidad duduaː
+  the enemy made the fast mountain and it give the mountain → dəː zyːmaːddəz dakʷtɨ dəː zdibaːd bfibabaː uməb fəː did dəː bfibabaː
+  the daughter held the blue friend        → dəː bukʷfib xaːddeːtɨ dəː bbiːmab ryŋundʂaː
+  it falls                                 → fəː faːlθi
+
+[POETRY]
+  the green guest goes                     → dəː bbuːyːb baːzbiːf daddθi
+  the man walks                            → dəː myːdaːt dadkʷθi
+  the strong sister falls                  → dəː dbbakʷaː ddiddid faːlθi
+  the bitter deer falls                    → dəː biːbbaːf tyːudaː faːlθi
 
 ========================================================================
 PRESET: ROMANCE  (leaf L-1 after 60 gens, seed=audit-romance)
 ========================================================================
-name=Kaluon  speakers=8198  tier=2  conservatism=1.20  alive-leaves=6
+name=Kaluon  speakers=6815  tier=2  conservatism=1.20  alive-leaves=4
 stress=penult  word-order=SVO  case=case  art=none
 adj=pre  neg=pre-verb  hasCase=true
-phonemes (36, target 34, ratio 1.06×): aː aː̃ ã b d e eː g h iː k l m n o oː õ p r s t tʃ u uː ũ v w æː ə əː ɛ ɛː ɛ̃ ɾ ʈ θ
+phonemes (38, target 34, ratio 1.12×): a aː ã b d dʒ e eː f g h i iː j k l n o p r s t tʃ uː v æː ð ɖ ə əː ɛ ɯː ɾ ʂ ʃ ʈ β θ
 tone-stack diagnostics: stacked-segments=0  max-stack=0
-active sound rules: 8  retired: 0
-words: 317  lexicon meanings: 335
+active sound rules: 8  retired: 2
+words: 310  lexicon meanings: 340
 
 Sample lexicon (12 core words):
-  water      /əːddəː/
-  fire       /huːdu/
-  mother     /dəːddiː/
-  father     /pəːddiː/
-  sun        /huːdiː/
-  moon       /dudəː/
-  see        /hiːdiːdiː/
-  eat        /buːdeːdeːdeː/
-  big        /ddəːddiː/
-  i          /aːgoː/
-  you        /du/
+  water      /sθebbae/
+  fire       /hobuː/
+  mother     /diddi/
+  father     /diddi/
+  sun        /foɾi/
+  moon       /buːni/
+  go         /id/
+  see        /hididi/
+  eat        /bodididi/
+  big        /dindi/
+  i          /eʃe/
+  you        /ʈuː/
 
 Last 6 events:
-  g60  actuation       social-contagion actuation: "heavy" /əbbefe/ → /əbbehe/ [from phonolog
-  g60  actuation       social-contagion actuation: "cloud" /dudeː/ → /duteː/ [from phonology]
-  g60  actuation       social-contagion actuation: "time" /deːdpu/ → /deːtpu/ [from phonology
-  g60  sound_change    10 forms shifted (×1.02)
-  g60  sound_change    sound law: L-1.g41.areal.lenition.stops_to_fricatives_intervocalic app
-  g60  sound_change    homeostatic pruning: 5 mergers this gen (228 words affected) — /ɳ/→/m/
+  g60  actuation       social-contagion actuation: "person" /pehoːni/ → /beːfoːni/ [from phon
+  g60  actuation       social-contagion actuation: "green" /hiðeβi/ → /fiðiβi/ [from phonolog
+  g60  actuation       social-contagion actuation: "white" /pinəbuː/ → /binəɖuː/ [from phonol
+  g60  sound_change    20 forms shifted (×1.06)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (182 words affected) — /u/→/uː
+  g60  coinage         derivation: payment ← pay + -tion
 
 [MYTH]
-  snake flied at river                     → heːbheːdeː huːdəːdiːɔwy mɛːb buːbe
-  it came                                  → eːbuːbe hiːdiːdiːɔwy
-  baby held red boat                       → edəhədde deːebeɔwy bubp dəːddəːũm
-  long-ago father took fast sun            → haːr pəːddiː pdiːddiːdiːɔwy pebu huːdiːũm
+  mother flied at valley                   → diddi fopiriave naːfo fiːdtiː
+  she went                                 → iddi ei
+  husband held bad meat                    → diːriːɖuː benidiave dibuː didniū
+  long-ago child took good earth           → saːr inhindi dindidiave bonuː diddiū
 
 [LEGEND]
-  daughter flied from field                → hebə huːdəːdiːɔwy haːg dətpu
-  she held queen and she slept             → iːddəː deːebeɔwy mæːiːũm aːh iːddəː duːddiːdiːɔwy
-  she walked                               → iːddəː əːddudəːdiːɔwy
-  it took deer                             → eːbuːbe pdiːddiːdiːɔwy deːdhuũm
+  pig flied from town                      → forbuː fopiriave haː fooβi
+  it held knife and it slept               → idɖuːɖ benidiave duːdeːdduːū eː idɖuːɖ boddidiave
+  it walked                                → idɖuːɖ idbuːdidiave
+  it took salt                             → idɖuːɖ dindidiave hiðiū
 
 [DAILY]
-  snake gives boat for river and father drinks blood → heːbheːdeː dəːdiː dəːddəːũm pboː buːbe aːh pəːddiː diːdiːdiː həːdddiːũm
-  it gives wine                            → eːbuːbe dəːdiː heːduũm
-  deer come                                → deːdhu hiːdiːdiːɛβo
-  it sees stone                            → eːbuːbe hiːdiːdiː piːddəːũm
+  mother gives river for valley and child drinks wine → diddi tiːrtʼ buːdiū ddo fiːdtiː eː inhindi dididitʼ hinuːū
+  it drinks blood                          → idɖuːɖ dididitʼ hinddiū
+  eagle go                                 → iːddiːd idəβo
+  it sees eagle                            → idɖuːɖ hididitʼ iːddiːdū
 
 [DIALOGUE]
-  sister ate long grain                    → huːbuːdiː buːdeːdeːdeːɔwy buːdbu bpaːnuːũm
-  it runs                                  → eːbuːbe duddiːdiː
-  sister held wide eagle                   → huːbuːdiː deːebeɔwy dədbu əːddiːdəːũm
-  she know mother and she take stone       → iːddəː hdiːdiːɛβo dəːddiːũm aːh iːddəː pdiːddiːdiːɛβo piːddəːũm
+  bull ate strong fruit                    → beuːtuː bodididiave hord ruːdɖuːū
+  it runs                                  → idɖuːɖ buːddiditʼ
+  bull held short rain                     → beuːtuː benidiave dihi buːhdiū
+  she know sister and she take eagle       → iddi bireəβo hododiū eː iddi dindidiəβo iːddiːdū
 
 [POETRY]
-  enemy                                    → iːdiːdiːd
-  yellow goat runs                         → bəbb gəpb duddiːdiː
-  dog mother                               → kãne dəːddiːũm
-  child child                              → iːdhəːddiː iːdhəːddiːũm
+  sister                                   → hododi
+  person fish                              → beːfoni diːfdū
+  young wolf goes                          → ɖuːfɯːnɯː buːbuː idtʼ
+  dog goes                                 → tiːniː idtʼ
 
 ========================================================================
-PRESET: BANTU  (leaf L-10 after 60 gens, seed=audit-bantu)
+PRESET: BANTU  (leaf L-1 after 60 gens, seed=audit-bantu)
 ========================================================================
-name=Guguen  speakers=1401  tier=1  conservatism=0.96  alive-leaves=12
-stress=initial  word-order=SOV  case=preposition  art=none
+name=Kaa  speakers=12203  tier=1  conservatism=1.27  alive-leaves=8
+stress=penult  word-order=SVO  case=preposition  art=none
 adj=post  neg=pre-verb  hasCase=true
-phonemes (39, target 28, ratio 1.39×): a aː aːː ã d e eː eːː eː̃ f g h i iː iː̃ j k kʼ l m n p r t tʃ u uːː v w z æ æː ø ɛ ɾ ʂ ʃ ʔk ʔt
+phonemes (31, target 28, ratio 1.11×): a aː b d e eː g h iː ĩ k m n o oː p r t u uː uːː v æ æː ɖ ɛ ɯ ɳ ɾ θ ⁿg
 tones (4): ˥ ˧ ˧˥ ˩
 tone-stack diagnostics: stacked-segments=0  max-stack=0
-active sound rules: 9  retired: 5
-words: 284  lexicon meanings: 318
+active sound rules: 6  retired: 3
+words: 279  lexicon meanings: 308
 
 Sample lexicon (12 core words):
-  water      /taː˧ji˧/
-  fire       /tu˧ti˧tu˧/
-  mother     /taː˧˥taː˩/
-  father     /taː˧˥taː˩/
-  sun        /i˧ju˧taː˧/
-  moon       /gtʃeː˩zi˧/
-  go         /e˧ttaː˧/
-  see        /u˧taː˧/
-  eat        /ti˧aː˧/
-  big        /tu˧tu˧/
-  i          /niː˧̃niː˧/
-  you        /deː˧ɾeː˧/
+  water      /dæː˧miː˧/
+  fire       /du˧biː˧bu˧/
+  mother     /dæː˧˥dæː˩/
+  father     /bæː˧˥bæː˩/
+  sun        /iː˧mu˧bæː˧/
+  moon       /dbiː˩biː˧/
+  go         /iː˧dbæː˧/
+  see        /u˧dæː˧/
+  eat        /biː˧æː˧/
+  big        /bu˧bu˧/
+  i          /ɳi˧̃niː˧/
+  you        /kiː˧t/
 
 Last 6 events:
-  g60  actuation       social-contagion actuation: "us" /tu˧ɲe˧/ → /tuː˧je˧/ [from phonology]
-  g60  actuation       social-contagion actuation: "childish" /dda˩ːa˧e˧w/ → /dda˩ta˧eː˧w/ [f
-  g60  actuation       social-contagion actuation: "net" /tuːiː˧te˧/ → /tu˧ːiː˧te/ [from phon
-  g60  sound_change    8 forms shifted (×0.65)
-  g60  sound_change    homeostatic pruning: 5 mergers this gen (87 words affected) — /θ/→/f/,
-  g60  coinage         reduplication: eel
+  g60  actuation       social-contagion actuation: "us" /fu˧h/ → /puː˧h/ [from phonology] @ 6
+  g60  actuation       social-contagion actuation: "fall" /aː˧buː˧baː˧/ → /aː˧puː˧baː˧/ [from
+  g60  actuation       social-contagion actuation: "what" /bu˧ve˧/ → /bu˧fe/ [from phonology]
+  g60  actuation       social-contagion actuation: "lizard" /du˧iː˧æː˩biː˧e˧b/ → /du˧iː˧æː˩pi
+  g60  sound_change    5 forms shifted (×0.96)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (52 words affected) — /f/→/h/,
 
 [MYTH]
-  goat drank blood bitter                  → i˧ttu˧di˧ tu˧taː˧di˧ tu˧tu˧ ajtaː˧
-  it drank milk                            → i˩fi˧ taː˩di˧taː˧ ajtaː˧
-  it went and it broke foot                → i˩fi˧ enəɾeːla taː˧ i˩fi˧ tu˧tu˧tu˧ afu˧tjaː˧
-  in day daughter walked                   → taː˧hi˧ i˧fi˧tu˧ ttaː˩taː˧tte˧ ate˧tte˧aː˧
+  man drank water thick                    → du˥æː˩dæː˧u˧ɾiː˧ o˧̃na˧ dæː˧miː˧ tiː˧ɾiː˧
+  it drank blood                           → iː˩diː˧ o˧̃na˧ du˧bæː˧biː˧
+  it went and it broke mouth               → iː˩diː˧ enədil dæː˧ iː˩diː˧ ahu˧dmæː˧ tu˧bu˩du˧
+  in fall baby walked                      → bæː˧biː˧ aː˧puː˧baː˧ ɖuː˧uː˥buː˧ abiː˧dbiː˧æː˧
 
 [LEGEND]
-  deer took he                             → ttaː˩taː˧ i˧e˧e˧ attaː˧˥aː˩
-  it ran                                   → i˩fi˧ ati˧tti˧aː˧
-  man bitter went                          → tu˥aː˩taː˧u˧te˧ tu˧tu˧ enəɾeːla
-  it ate grain                             → i˩fi˧ i˧tu˧ttaː˧ ati˧aː˧
+  son took field                           → dbaː˩ɖaː˧ abbæː˧˥æː˩ doː˧boː˩db
+  it ran                                   → iː˩diː˧ abiː˧dbiː˧æː˧
+  daughter thick went                      → dbæː˩dæː˧dbiː˧ tiː˧ɾiː˧ enədil
+  it ate milk                              → iː˩diː˧ abiː˧æː˧ na˩beː˧pa˧
 
 [DAILY]
-  father drinks water for mountain         → taː˧˥taː˩ taː˧ji˧ ajtaː˧ ttaː˧ tu˧ti˧taː˧
-  in night it walks                        → taː˧hi˧ tu˧fi˧tu˧ i˩fi˧ ate˧tte˧aː˧
-  sister does not will go                  → taː˩i˧taː˧ hateː˧̃ntaː˧ fi˩ hu˧tji˧aː˧eː˧ːk e˧ttaː˧
-  it speaks truth                          → i˩fi˧ tte˧ti˧ afe˧taː˧
+  goat drinks water for river              → iː˧dbu˧piː˧ aːmbæː˧ dæː˧miː˧ ppa˧ du˧bu˧
+  in night it walks                        → bæː˧biː˧ bu˧hiː˧bu˧ iː˩diː˧ aːbiː˧dbiː˧æː˧
+  mother does not go                       → dæː˧˥dæː˩ həθi˧̃mbæː˧ hiː˩ iː˧dbæː˧
+  it speaks eagle                          → iː˩diː˧ aːhiː˧dæː˧ iː˧bæː˧iː˧
 
 [DIALOGUE]
-  bull gave water full                     → i˧ttu˧te˧ taː˧ji˧ jaː˧˥aː˩ ate˧aː˧
-  he will hold father                      → i˧e˧e˧ taː˧˥taː˩ hu˧tji˧aː˧eː˧ːk haʃi˧taː˧
-  child makes eye and it will eat milk     → ttaː˩taː˧ i˧ji˧fu˧ ate˧tte˧te˧daː˧ taː˧ i˩fi˧ taː˩di˧taː˧ hu˧tji˧aː˧eː˧ːk hati˧aː˧
-  sheep ate fruit small                    → i˧tu˧ttu˧tu˧ i˧ɾu˧ttaː˧ tu˩tu˧ ati˧aː˧
+  sister gave field empty                  → bæː˩iː˧bæː˧ abæː˧æː˧ doː˧boː˩db bu˥bu˧
+  he hold king                             → iː˧iː˧iː˧ həhiː˧bæː˧ mu˥hu˧mu˧
+  king makes water and it eat meat         → mu˥hu˧mu˧ aːbiː˧dbiː˧diː˧bæː˧ dæː˧miː˧ dæː˧ iː˩diː˧ həbiː˧æː˧ mæː˩dæː˧
+  person ate grain bad                     → du˥bu˧ abiː˧æː˧ iː˧doː˧nd biː˧biː˧
 
 [POETRY]
-  bull drank water                         → i˧ttu˧te˧ taː˧ji˧ ajtaː˧
-  eagle drinks milk yellow                 → i˧taː˧i˧ taː˩di˧taː˧ e˧aː˩tti˧ ajtaː˧
-  bull speaks son long                     → i˧ttu˧te˧ ttaː˩taː˧ tiː˥diː˧ afe˧taː˧
-  cow speaks king yellow                   → ju˧tte˧ tu˥tu˧tu˧ e˧aː˩tti˧ afe˧taː˧
+  sister drank milk                        → bæː˩iː˧bæː˧ o˧̃na˧ na˩beː˧pa˧
+  brother speaks dog good                  → bæː˩bæː˧ aːhiː˧dæː˧ dbu˧æː˩ bæː˩du˧
+  father ate grain                         → bæː˧˥bæː˩ abiː˧æː˧ iː˧doː˧nd
+  mother goes                              → dæː˧˥dæː˩ aːiː˧dbæː˧
 
 ========================================================================
 PRESET: TOKIPONA  (leaf L-1 after 60 gens, seed=audit-tokipona)
 ========================================================================
-name=Mamaay  speakers=6982  tier=1  conservatism=1.16  alive-leaves=5
-stress=initial  word-order=SOV  case=preposition  art=none
+name=Mamaay  speakers=7732  tier=1  conservatism=1.16  alive-leaves=3
+stress=initial  word-order=SVO  case=preposition  art=none
 adj=pre  neg=pre-verb  hasCase=false
-phonemes (31, target 28, ratio 1.11×): a aː aː̃ e eː eː̃ f h i iː j k m o oː oː̃ p uː v w yː z æː øː ə ɛ ɯ ɯː ɾ ʃ θ
+phonemes (28, target 28, ratio 1.00×): a e eː eː̃ f h k l m n o oː p r tʃ uː w y ø øː ā ē ēː ō ōː ɔ ɔː ɛ
 tone-stack diagnostics: stacked-segments=0  max-stack=0
-active sound rules: 4  retired: 2
-words: 172  lexicon meanings: 192
+active sound rules: 5  retired: 1
+words: 170  lexicon meanings: 189
 
 Sample lexicon (12 core words):
-  water      /kezoː/
-  fire       /hezyː/
-  mother     /zeze/
-  sun        /hoːzoː/
-  moon       /zoːz/
-  go         /keke/
-  see        /moːfiːm/
-  eat        /zoːkoː/
-  big        /hoːzyː/
-  i          /zyː/
-  you        /hezæː/
+  water      /kēnoː/
+  fire       /hēnē/
+  mother     /nēnē/
+  father     /nēnē/
+  sun        /hōnoː/
+  moon       /nōn/
+  go         /kēfē/
+  see        /nōkē/
+  eat        /noːkō/
+  big        /hōnē/
+  i          /lēː/
+  you        /hēːl/
 
 Last 6 events:
-  g60  actuation       actuation: "dig" /oeːneneː/ → /oeːneː̃neː/ (minority variant prevailed
-  g60  actuation       actuation: "oldish" /keːnhɯeːn/ → /keːnhueːn/ (minority variant prevai
-  g60  actuation       social-contagion actuation: "three" /mɯɾa/ → /muɾa/ [from phonology] @
-  g60  sound_change    8 forms shifted (×0.83)
-  g60  sound_change    homeostatic pruning: 5 mergers this gen (185 words affected) — /n/→/l/
-  g60  suppletion      suppletion: "dig" (verb.tense.fut) adopts root of "know"
+  g60  actuation       social-contagion actuation: "granary-house" /dʒēhø/ → /dʒøːhø/ [from p
+  g60  sound_change    1 form shifted (×0.77)
+  g60  sound_change    learner-driven markedness loss: /ɳ/ → /n/ (3 words)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (29 words affected) — /œ/→/ɛ/,
+  g60  grammaticalize  cliticization: "see" (perception) /nōkēn/ → /nōkē/
+  g60  semantic_drift  bleaching: "come" frequency dropping (now 0.42; grammaticalised)
 
 [MYTH]
-  long-ago friend not dog                  → hiːfa peː hoːkezyː eːze
-  it saw eagle                             → zyː hez moːfiːm
-  it                                       → zyː
-  brother fight he                         → heheː oːze oːpemafeːj
+  long-ago mother not spoke she            → hɔho nēnē ēlē poːfē ēnē
+  it knew word                             → løː hoːnē nēnē
+  it came                                  → løː kāfe
+  child fight horse                        → fēn oːfeːleː hoːfēnē
 
 [LEGEND]
-  cow at mountain                          → hoːʃem hæːhe hiːhez
-  it                                       → zyː
-  it saw hand                              → zyː zoːke moːfiːm
-  it                                       → zyː
+  bear came at road                        → foːtʃoːnoː kāfe hɔːtʃē nēhēn
+  it came                                  → løː kāfe
+  it saw wolf                              → løː nōkē hoːtʃeːneː
+  it                                       → løː
 
 [DAILY]
-  horse not foot                           → hoːhomɯː zoːʃeː eːze
-  in day it                                → zoːz hoːzoː zyː
-  neighbor knows brother                   → ʃəməfoːme heheː hoːze
-  in day he goes                           → zoːz hoːzoː oːze keke
+  cat not water                            → hofeːleː ēlē kēnoː
+  in day it                                → noːn hōnoː løː
+  dog knows cow                            → hotʃoːloː hoːnē hoːhēn
+  in day it goes                           → noːn hōnoː løː kēfē
 
 [DIALOGUE]
-  dog not ate blue fruit                   → hoːkezyː meːhoː fimi eːze zoːkoː
-  it dies                                  → zyː zozɯ
-  cow not eats fruit                       → hoːʃem fimi eːze zoːkoː
-  child saw thick head                     → keː hiːiːme zeke moːfiːm
+  friend not ate small fish                → fēn ēlē noːkō nēnē feːleː
+  it dies                                  → løː noːnē
+  snake not eats fish                      → peːp ēlē noːkō feːleː
+  father knew new he                       → nēnē hoːnē hēn oːnē
 
 [POETRY]
-  friend sees old sky                      → peː pemfoː heʃi moːfiːm
-  wolf sees bad tree                       → hoːfemiː yːke kehyː moːfiːm
-  bear speaks she                          → hoːhamiː oːma poːfiː
-  husband speaks black cow                 → ziʃeː fizepe hoːʃem poːfiː
+  husband speaks mother                    → neː̃neː poːfē nēnē
+  rabbit knows small name                  → hoːoːloːhɔtʃe hoːnē nēnē nēnē
+  friend spoke child                       → fēn poːfē fēn
+  husband knows friend                     → neː̃neː hoːnē fēn
 
 ========================================================================
-PRESET: ENGLISH  (leaf L-3 after 60 gens, seed=audit-english)
+PRESET: ENGLISH  (leaf L-11 after 60 gens, seed=audit-english)
 ========================================================================
-name=Spɛnen  speakers=4839  tier=3  conservatism=0.72  alive-leaves=6
-stress=penult  word-order=SVO  case=preposition  art=free
+name=Sərkyn  speakers=1291  tier=3  conservatism=0.72  alive-leaves=13
+stress=initial  word-order=SOV  case=preposition  art=free
 adj=pre  neg=pre-verb  hasCase=false
-phonemes (41, target 40, ratio 1.02×): a aː b d dʒ e eː f g i iː j k l m n p r s t tʃ w x z æ æː ð ŋ ɔ ɔː ə əː ə̃ ɛː ɪ ɪː ɾ ʊ ʌ β θ
+phonemes (45, target 40, ratio 1.13×): a b d dʒ e eː f g i iː j k l m n o oː p s t tʃ uː v w z æ ŋ ɔː ɖ ə əː ɛ ɪ ɪː ɯ ɾ ʂ ʃ ʈ ʊ ʊː ʌ ʌː ʌː̃ θ
 tone-stack diagnostics: stacked-segments=0  max-stack=0
 active sound rules: 7  retired: 0
-words: 594  lexicon meanings: 639
+words: 592  lexicon meanings: 639
 
 Sample lexicon (12 core words):
-  water      /gʊdæːbe/
-  fire       /fæːgæːbe/
-  mother     /mʊzæːbe/
-  father     /fæːjæːbe/
-  sun        /sʊd/
-  moon       /mʊd/
-  see        /sɪː/
-  eat        /ɪːde/
-  big        /biːge/
-  i          /atʃe/
-  you        /gʊ/
+  water      /wʌːtəd/
+  fire       /sæwəd/
+  mother     /bʌːvəd/
+  father     /sævəd/
+  sun        /ʂʌːd/
+  moon       /buːb/
+  go         /go/
+  see        /si/
+  eat        /it/
+  big        /bɪg/
+  i          /æw/
+  you        /wuː/
 
 Last 6 events:
-  g60  actuation       social-contagion actuation: "hundred" /hɔndəːte/ → /hɔndət/ [from phon
-  g60  actuation       social-contagion actuation: "important" /ɪməhɔddəːdh/ → /ɪməfɔdtəːnh/ 
-  g60  actuation       social-contagion actuation: "decide" /tihaːgde/ → /tɪhaːwd/ [from phon
-  g60  sound_change    28 forms shifted (×0.44)
-  g60  sound_change    homeostatic pruning: 5 mergers this gen (342 words affected) — /ʌ̃/→/ʌ
-  g60  coinage         clipping: swamp
+  g60  actuation       social-contagion actuation: "bottle" /dæːθəl/ → /dæːtəːl/ @ 52%
+  g60  actuation       social-contagion actuation: "box" /tæːgs/ → /dæːks/ [from phonology] @
+  g60  actuation       social-contagion actuation: "history" /sisəʈəri/ → /sisəʈəːri/ [from p
+  g60  actuation       social-contagion actuation: "return" /reəəde/ → /reːəːəːde/ [from phon
+  g60  sound_change    15 forms shifted (×0.32)
+  g60  sound_change    homeostatic pruning: 5 mergers this gen (131 words affected) — /ɛ̃/→/ɛ
 
 [MYTH]
-  the king saw the salt with the forest    → ja kɪtʃeː hɔ ja sɔlda tʃɪjeː ja fʊbæfde
-  the warrior did not make the short sun   → ja gɔːzɔəːd tɪː naf megke ja fʊbde sʊd
-  it had come                              → iːɾe fæːfe kʊme
-  it came and it knew the fox              → iːɾe hejm æːdbe iːɾe nuː ja fɔkf
+  the friend saw the sun with the town     → və əfədɛnf və ʂʌːd sɔ wiː və tæwθ
+  the uncle did not make the thin tree     → və ʌːŋgəː və sɪb tdi dɪːd θæt bɪwg
+  it had come                              → ɪt sæv gʌːb
+  it went and it knew the queen            → ɪt wɛnt æθəː ɪt və wiːd nuː
 
 [LEGEND]
-  the full son flied and the wife ran from the valley → ja fʊl sʊd læːgeɖ æːdbe ja gæːkfaː ræːn bʊme ja fæːl
-  the wide friend fell                     → ja gægb bedbe fil
-  the small king died                      → ja mʊl kɪtʃeː bæːgeɖ
-  he flied                                 → fɪː læːgeɖ
+  the narrow wife flied and the bull ran from the cave → və bædo wæws slæwəː æθəː və duːl ræn əsdʌːd və iːwə
+  the light bull came                      → və læwt duːl kejm
+  the fast friend                          → və sæst əfədɛnf
+  it flied                                 → ɪt slæwəː
 
 [DAILY]
-  the student comes at the river           → ja dʊβæːdd kʊmej æjeː ja biːfæβe
-  in the yesterday it does not die         → iːd ja dʒifæbbeg iːɾe tʼʌj naf bæːge
-  it does not make the bread               → iːɾe tʼʌj naf megke ja pebe
-  the wife has eaten the bread             → ja gæːkfaː fæːf'ɪːde ja pebe
+  the cat goes at the bridge               → və gæt æte və dif goz
+  in the day it does not                   → iː və bɪw ɪt tʌz θæt
+  it does not make the milk                → ɪt və bɪlg tʌz θæt bɪwg
+  the bull has eaten the milk              → və duːl və bɪlg sæv it
 
 [DIALOGUE]
-  the brother did not drink the big milk and the parent breaks the rain → ja bʊjæbeː tɪː naf biːgke ja biːge miːltʃe æːdbe ja peβædd bekkej ja pegd
-  it dies                                  → iːɾe bæːgej
-  it does not come and the teacher gave the old field → iːɾe tʼʌj naf kʊme æːdbe ja tɪːdʒət gejwe ja ʌlbe fɪːlbe
-  the brother eats the salt                → ja bʊjæbeː ɪːdej ja sɔlda
+  the stranger did not eat the empty grain and the warrior makes the meat → və sθdewədfəː v'ibpt gdɪwb dɪːd θæt it æθəː və vʌːdɪəd və bit bɪwgz
+  it                                       → ɪt
+  it does not go and the person drank the thick blood → ɪt tʌz θæt go æθəː və pədsəːd və sɪg blʌːb dræŋək
+  the teacher knows the father             → və tɪːvəːd və sævəd boz
 
 [POETRY]
-  the student speaks the father            → ja dʊβæːdd fɪːkej ja fæːjæːbe
-  the friend took the water                → ja bedbe tʼʊk ja gʊdæːbe
-  the dog holds the brother                → ja bʊge fʌlbej ja bʊjæbeː
-  the brother made the river               → ja bʊjæbeː mejʔt ja biːfæβe
+  the doctor drinks the bad water          → və dæʈəd və bæb wʌːtəd bdɪŋgz
+  the father drinks the wine               → və sævəd və wæwb bdɪŋgz
+  the sister walks                         → və sɪstəd wʌːgz
+  the sharp bull walks                     → və sædp duːl wʌːgz
