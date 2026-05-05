@@ -17,6 +17,7 @@ import { assignAllGenders } from "../morphology/gender";
 import { classifyLexicon } from "../morphology/inflectionClass";
 import { isToneBearing, toneOf, MID } from "../phonology/tone";
 import { addCompound } from "../lexicon/compound";
+import { assignAllNounClasses } from "../lexicon/nounClass";
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
 import { syncWordsFromLexicon } from "../lexicon/word";
 import {
@@ -196,6 +197,25 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     for (const [meaning, def] of Object.entries(config.seedCompounds)) {
       addCompound(rootLang, meaning, def.parts, 0, { linker: def.linker });
     }
+  }
+  // Phase 36 Tranche 36f: register bound morphemes so they're
+  // skipped in standalone-form contexts but still flow through
+  // phonological evolution.
+  if (config.seedBoundMorphemes && config.seedBoundMorphemes.size > 0) {
+    rootLang.boundMorphemes = new Set(config.seedBoundMorphemes);
+    rootLang.boundMorphemeOrigin = {};
+    for (const m of config.seedBoundMorphemes) {
+      rootLang.boundMorphemeOrigin[m] = {
+        introducedGen: 0,
+        pathway: "preset-seed",
+      };
+    }
+  }
+  // Phase 36 Tranche 36b: Bantu-style noun-class assignment. Each
+  // noun in the lexicon gets a class slot used by realise.ts to
+  // inflect with the matching class prefix.
+  if (config.seedNounClassSystem) {
+    assignAllNounClasses(rootLang);
   }
   assignAllGenders(rootLang);
   // Phase 29 Tranche 5e: bucket every seed meaning into an inflection

@@ -4,6 +4,7 @@ import { posOf } from "../lexicon/pos";
 import { closedClassForm } from "./closedClass";
 import { parseSyntaxAll } from "./parse";
 import { realiseSentence } from "./realise";
+import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense } from "../lexicon/word";
 
 export type { EnglishTag, EnglishToken } from "./tokens";
@@ -40,7 +41,7 @@ const PRONOUNS_SUBJ = new Set(["i", "he", "she", "we", "they"]);
 const PRONOUNS_BOTH = new Set(["you", "it"]);
 const DETERMINERS = new Set([
   "the", "a", "an",
-  "this", "that", "these", "those",
+  "this", "that", "these", "those", "yonder", "yon",
   "some", "any", "all", "no", "every", "each",
   "my", "your", "his", "her", "its", "our", "their",
 ]);
@@ -284,7 +285,11 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
       continue;
     }
     if (DETERMINERS.has(w)) {
-      tokens.push({ surface: w, lemma: w, tag: "DET", features: {} });
+      // Phase 36 Tranche 36c/36i: "yonder" / "yon" surface as a
+      // DET with the distance lemma `that_far`. Two-way demonstrative
+      // languages will fall back to "that" via closedClassForm.
+      const lemma = (w === "yonder" || w === "yon") ? "that_far" : w;
+      tokens.push({ surface: w, lemma, tag: "DET", features: {} });
       continue;
     }
     if (PREPOSITIONS.has(w)) {
@@ -659,6 +664,68 @@ export function reverseParseToTokens(
   return tokens;
 }
 
+/**
+ * Phase 36 Tranche 36d: in-place pass that overrides each VP's
+ * `verb.aspect` based on the language's `aspectSystem` setting and
+ * the verb's lexical class. Skipped when aspectSystem is "simple"
+ * or undefined.
+ */
+function applyAspectOverrides(
+  sentences: import("./syntax").Sentence[],
+  lang: Language,
+): void {
+  const aspectSystem = lang.grammar.aspectSystem ?? "simple";
+  if (aspectSystem === "simple") return;
+  for (const s of sentences) {
+    const vp = s.predicate;
+    const verb = vp.verb;
+    if (!verb || verb.aspect) continue;
+    const tense = verb.tense ?? "present";
+    if (tense === "future") continue;
+    const picked = pickAspect(verb.lemma, tense, aspectSystem);
+    if (picked) verb.aspect = picked;
+  }
+}
+
+/**
+ * Phase 36 Tranche 36e: in-place pass that sets `verb.mood =
+ * "subjunctive"` on a parsed Sentence when the language has a
+ * subjunctive marker AND the sentence is a subordinate clause.
+ * Triggers: `leadingConj` matches a subordinator (that, if, because,
+ * when, while, though). Imperative-second-person sentences also get
+ * `mood: "imperative"` when applicable.
+ */
+const SUBJUNCTIVE_TRIGGERS = new Set([
+  "that", "if", "because", "when", "while", "though", "although",
+  "unless", "lest", "until",
+]);
+function applyMoodOverrides(
+  sentences: import("./syntax").Sentence[],
+  lang: Language,
+): void {
+  const moodMarking = lang.grammar.moodMarking ?? "declarative";
+  if (moodMarking === "declarative") return;
+  for (const s of sentences) {
+    const verb = s.predicate.verb;
+    if (!verb || verb.mood) continue;
+    // Imperative: second-person subject with no explicit subject
+    // (parser-detected) and not interrogative. Triggered for any
+    // language with moodMarking that supports it.
+    const subjLemma = s.subject?.head.lemma ?? "";
+    const isImperative =
+      !s.interrogative &&
+      verb.tense !== "past" &&
+      (subjLemma === "you" || s.subject?.head.isPronoun === true && subjLemma === "you");
+    if (moodMarking === "imperative" && isImperative) {
+      verb.mood = "imperative";
+      continue;
+    }
+    if (moodMarking === "subjunctive" && s.leadingConj && SUBJUNCTIVE_TRIGGERS.has(s.leadingConj.lemma)) {
+      verb.mood = "subjunctive";
+    }
+  }
+}
+
 export function translateSentence(lang: Language, english: string): SentenceTranslation {
   const englishTokens = tokeniseEnglish(english);
 
@@ -808,6 +875,13 @@ function translateViaTree(
   englishTokens: EnglishToken[],
   parsedAll: import("./syntax").Sentence[],
 ): SentenceTranslation {
+  // Phase 36 Tranche 36d: language-driven aspect override. Walk
+  // each parsed VP and, when the language has a grammaticalised
+  // aspect system, override the verb's aspect based on its class
+  // (punctual/durative/stative). For "simple" aspect systems this
+  // is a no-op.
+  applyAspectOverrides(parsedAll, lang);
+  applyMoodOverrides(parsedAll, lang);
   const missing: string[] = [];
   const resolveOpen = (lemma: string) => {
     const r = resolveLemma(lang, lemma);

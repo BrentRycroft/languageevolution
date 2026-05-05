@@ -6,6 +6,7 @@ import {
   maybeGrammaticalize,
   maybeMergeParadigms,
   maybeCliticize,
+  maybeAffixReplacement,
   maybeSuppletion,
   maybeSplitParadigm,
   maybeVowelMutationIrregular,
@@ -123,6 +124,20 @@ export function stepMorphology(
         kind: "grammaticalize",
         description: `cliticization: "${clit.meaning}" (${clit.pathway}) /${clit.from}/ → /${clit.to}/`,
         meta: { meaning: clit.meaning, pathway: clit.pathway },
+      });
+    }
+  }
+  // Phase 36 Tranche 36h: derivational morpheme replacement.
+  if (lang.boundMorphemes && lang.boundMorphemes.size >= 2) {
+    const repl = maybeAffixReplacement(lang, rng, 0.002 * lang.conservatism);
+    if (repl) {
+      const origin = lang.boundMorphemeOrigin?.[repl.meaning];
+      if (origin) origin.obsolescentGen = generation;
+      pushEvent(lang, {
+        generation,
+        kind: "grammar_shift",
+        description: `affix replacement: "${repl.meaning}" obsolescent → "${repl.replacedBy}"`,
+        meta: { meaning: repl.meaning },
       });
     }
   }

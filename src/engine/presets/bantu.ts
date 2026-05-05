@@ -267,6 +267,17 @@ const MORPHOLOGY: Morphology = {
     "noun.class.6": { affix: ["m", "a"], position: "prefix", category: "noun.class.6" },
     "noun.class.7": { affix: ["k", "i"], position: "prefix", category: "noun.class.7" },
     "noun.class.8": { affix: ["v", "i"], position: "prefix", category: "noun.class.8" },
+    // Phase 36 Tranche 36b: verb-class agreement. Subject's noun
+    // class drives a prefix on the verb. Same surface shape as the
+    // noun-class prefix in proto-Bantu.
+    "verb.cls.1": { affix: ["a"], position: "prefix", category: "verb.cls.1" },
+    "verb.cls.2": { affix: ["b", "a"], position: "prefix", category: "verb.cls.2" },
+    "verb.cls.3": { affix: ["u"], position: "prefix", category: "verb.cls.3" },
+    "verb.cls.4": { affix: ["i"], position: "prefix", category: "verb.cls.4" },
+    "verb.cls.5": { affix: ["l", "i"], position: "prefix", category: "verb.cls.5" },
+    "verb.cls.6": { affix: ["g", "a"], position: "prefix", category: "verb.cls.6" },
+    "verb.cls.7": { affix: ["k", "i"], position: "prefix", category: "verb.cls.7" },
+    "verb.cls.8": { affix: ["v", "i"], position: "prefix", category: "verb.cls.8" },
     "noun.num.pl": { affix: ["b", "a"], position: "prefix", category: "noun.num.pl" },
     "verb.tense.past": { affix: ["a"], position: "prefix", category: "verb.tense.past" },
     "verb.tense.fut": { affix: ["t", "a"], position: "prefix", category: "verb.tense.fut" },
@@ -328,6 +339,10 @@ export function presetBantu(): SimulationConfig {
       // near hearer / yonder"), sg-pl, rich aspect (perfective +
       // imperfective + habitual all marked on the verb).
       demonstrativeDistance: "three-way",
+      // Phase 36 Tranche 36e: Bantu languages typically mark a
+      // subjunctive on the verb stem (Swahili -e ending) for
+      // subordinate clauses, optatives, and polite directives.
+      moodMarking: "subjunctive",
       numberSystem: "sg-pl",
       aspectSystem: "rich",
     },
@@ -336,6 +351,9 @@ export function presetBantu(): SimulationConfig {
     // begins tonal; non-tonal daughters can still emerge via
     // detonogenesis if it pushes coverage below threshold.
     seedToneRegime: "tonal",
+    // Phase 36 Tranche 36b: Bantu noun-class system. Activates the
+    // class-prefix realiser and verb-agreement pathway.
+    seedNounClassSystem: true,
     preset: "bantu",
   };
 }

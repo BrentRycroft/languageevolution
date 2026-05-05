@@ -380,7 +380,20 @@ const LEXICON: Lexicon = {
   to: ["d", "o"],
   for: ["p", "r", "o"],
   by: ["h₁", "e", "p", "i"],
+  // Phase 36 Tranche 36n: PIE derivational morphemes. *-tér agentive
+  // (*ph₂tér "father" lit. "protector"), *-mn̥ neuter action noun
+  // (*nh₃men- → name), *-eh₂ feminine collective, *-tós passive
+  // participle, *-i̯o thematic adjective.
+  "-tér.agt": ["t", "e", "r"],
+  "-mn̥.action": ["m", "n̩"],
+  "-eh₂.fem": ["e", "h₂"],
+  "-tós.ptcp": ["t", "o", "s"],
+  "-i̯o.adj": ["i̯", "o"],
 };
+
+const PIE_BOUND_MORPHEMES = new Set<string>([
+  "-tér.agt", "-mn̥.action", "-eh₂.fem", "-tós.ptcp", "-i̯o.adj",
+]);
 
 // Phase 29 Tranche 5s: deepened PIE frequency hints.
 const FREQ: Record<Meaning, number> = {
@@ -500,6 +513,7 @@ export function presetPIE(): SimulationConfig {
     // marks. So PIE is non-tonal here — pitch-accent realisation is
     // Phase 32+.
     seedToneRegime: "non-tonal",
+    seedBoundMorphemes: PIE_BOUND_MORPHEMES,
     preset: "pie",
   };
 }

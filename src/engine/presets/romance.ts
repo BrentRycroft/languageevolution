@@ -257,7 +257,22 @@ const LEXICON: Lexicon = {
   to: ["a", "d"],
   for: ["p", "r", "o"],
   by: ["p", "e", "r"],
+  // Phase 36 Tranche 36n: Latin derivational morphemes. -tor agentive
+  // (factor, doctor); -tio nominalisation (actio, passio); -tas abstract
+  // (libertas, veritas); -arius adjectival agentive (sicarius); -ulus
+  // diminutive (parvulus). Seeded as bound morphemes; flow through
+  // sound change to /-tre/, /-zone/, /-tat/, /-aire/, /-uolo/ in
+  // Romance daughters.
+  "-tor.agt": ["t", "o", "r"],
+  "-tio.nmlz": ["t", "i", "o"],
+  "-tas.abs": ["t", "a", "s"],
+  "-arius.agt": ["a", "r", "i", "u", "s"],
+  "-ulus.dim": ["u", "l", "u", "s"],
 };
+
+const ROMANCE_BOUND_MORPHEMES = new Set<string>([
+  "-tor.agt", "-tio.nmlz", "-tas.abs", "-arius.agt", "-ulus.dim",
+]);
 
 // Phase 29 Tranche 5s: deepened from ~33 to ~80 entries to catch the
 // frequency-direction split (Phase 24c) for the Romance lexicon. Pre-
@@ -388,9 +403,13 @@ export function presetRomance(): SimulationConfig {
       // post-Classical "habere + past participle" periphrasis
       // started spreading. Seed synthetic; daughters can flip.
       perfectRealisation: "synthetic",
+      // Phase 36 Tranche 36e: Latin/Romance subjunctive in subordinate
+      // clauses ("quiero que venga", "veuille qu'il vienne").
+      moodMarking: "subjunctive",
     },
     // Phase 31 Tranche 31d: Latin non-tonal.
     seedToneRegime: "non-tonal",
+    seedBoundMorphemes: ROMANCE_BOUND_MORPHEMES,
     preset: "romance",
   };
 }

@@ -1,6 +1,8 @@
 import type { Language, WordForm } from "../types";
 import { inflect, inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
+import { reduplicate } from "../morphology/reduplication";
+import { pluralClassOf } from "../lexicon/nounClass";
 import { closedClassForm } from "./closedClass";
 import { fnv1a } from "../rng";
 import type { NP, PP, Sentence, VP } from "./syntax";
@@ -45,6 +47,11 @@ export function realiseSentence(
     articlePresence, caseStrategy, adjPos, possPos, numPos,
     subjectCaseSlot, objectCaseSlot,
   }, "S");
+  // Phase 36 Tranche 36b: relay the subject's noun-class to the VP
+  // so the verb realiser picks the matching agreement marker.
+  if (s.subject.head.nounClass !== undefined) {
+    s.predicate.subjectNounClass = s.subject.head.nounClass;
+  }
   const canIncorporate =
     !!lang.grammar.incorporates &&
     !!obj &&
@@ -236,9 +243,26 @@ function realiseNP(
 ): RealisedToken[] {
   let headForm = np.head.baseForm;
   const meaning = np.head.lemma;
+  // Phase 36 Tranche 36b: Bantu-style noun-class prefix. Resolve the
+  // class for this meaning, swap to the plural class when number ===
+  // "pl", and prefix the corresponding paradigm before number/case
+  // affixes. Languages without a class system (no nounClassAssignments)
+  // skip this entirely.
+  let nounClass: 1|2|3|4|5|6|7|8 | undefined = lang.nounClassAssignments?.[meaning];
+  if (nounClass !== undefined && np.head.number === "pl") {
+    nounClass = pluralClassOf(nounClass);
+  }
+  if (nounClass !== undefined) {
+    np.head.nounClass = nounClass;
+    const cat = `noun.class.${nounClass}` as const;
+    const p = lang.morphology.paradigms[cat];
+    if (p) headForm = inflect(headForm, p, lang, meaning);
+  }
   if (np.head.number === "pl" && lang.grammar.pluralMarking === "affix") {
     const p = lang.morphology.paradigms["noun.num.pl"];
     if (p) headForm = inflect(headForm, p, lang, meaning);
+  } else if (np.head.number === "pl" && lang.grammar.pluralMarking === "reduplication") {
+    headForm = reduplicate(headForm, "partial-initial");
   }
   let caseSlot: import("../morphology/types").MorphCategory | null = null;
   if (role === "POSS") caseSlot = "noun.case.gen";
@@ -285,8 +309,12 @@ function realiseNP(
   const adjTokens: RealisedToken[] = np.adjectives.map((a) => {
     let af = a.baseForm;
     if (np.head.number === "pl") {
-      const p = lang.morphology.paradigms["adj.num.pl"];
-      if (p) af = inflect(af, p, lang, a.lemma);
+      if (lang.grammar.pluralMarking === "reduplication") {
+        af = reduplicate(af, "partial-initial");
+      } else {
+        const p = lang.morphology.paradigms["adj.num.pl"];
+        if (p) af = inflect(af, p, lang, a.lemma);
+      }
     }
     if (a.degree === "comparative") {
       const p = lang.morphology.paradigms["adj.degree.cmp"];
@@ -575,7 +603,11 @@ function realiseVerb(
     vp.verb.mood === "subjunctive" ? "verb.mood.subj" :
     vp.verb.mood === "imperative" ? "verb.mood.imp" :
     vp.verb.mood === "conditional" ? "verb.mood.cond" :
-    vp.verb.mood === "optative" ? "verb.mood.opt" : null;
+    vp.verb.mood === "optative" ? "verb.mood.opt" :
+    vp.verb.mood === "jussive" ? "verb.mood.jus" :
+    vp.verb.mood === "irrealis" ? "verb.mood.irr" :
+    vp.verb.mood === "dubitative" ? "verb.mood.dub" :
+    vp.verb.mood === "hortative" ? "verb.mood.hort" : null;
   if (moodCat) stack.push(moodCat);
   if (vp.verb.voice === "passive") stack.push("verb.voice.pass");
 
@@ -597,6 +629,15 @@ function realiseVerb(
   if (lang.grammar.classifierSystem) {
     const matchPdm = lang.morphology.paradigms["verb.cls.match"];
     if (matchPdm) stack.push("verb.cls.match");
+  }
+  // Phase 36 Tranche 36b: subject-driven noun-class agreement on the
+  // verb. When the subject NP carries a class (set by realiseNP) and
+  // a matching `verb.cls.N` paradigm exists, push that category onto
+  // the inflection stack so the verb prefixes the agreement marker.
+  const subjClass = vp.subjectNounClass;
+  if (subjClass !== undefined) {
+    const cat = `verb.cls.${subjClass}` as MorphCategory;
+    if (lang.morphology.paradigms[cat]) stack.push(cat);
   }
 
   const ps = vp.verb.subjectPerson;

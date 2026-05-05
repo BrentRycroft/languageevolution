@@ -9,7 +9,7 @@ export type ClosedClassLemma =
   | "because" | "when" | "while" | "if"
   | "not"
   | "very" | "now" | "then"
-  | "this" | "that"
+  | "this" | "that" | "that_near" | "that_far" | "that_remote"
   | "my" | "your" | "his" | "her" | "its" | "our" | "their"
   | "who" | "whom" | "whose" | "what" | "which"
   | "where" | "when" | "why" | "how"
@@ -18,6 +18,13 @@ export type ClosedClassLemma =
   // emitted `kind:"missing"` for them on round-trips. Source of two
   // failing translator_roundtrip tests.
   | "i" | "me" | "you" | "he" | "him" | "she" | "we" | "us" | "they" | "them" | "it"
+  // Phase 36 Tranche 36k: T-V politeness distinction. Synthesised
+  // distinct forms via the per-lemma fnv1a hash; languages with
+  // politenessRegister "T-V" (or "binary") use these in addition to
+  // the bare "you".
+  | "you_fml" | "you_fam"
+  // Phase 36 Tranche 36j: logophoric pronouns.
+  | "3sg.log" | "3pl.log"
   | "CLF"
   | "Q";
 
@@ -29,11 +36,15 @@ export const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   "because", "when", "while", "if",
   "not",
   "very", "now", "then",
-  "this", "that",
+  "this", "that", "that_near", "that_far", "that_remote",
   "my", "your", "his", "her", "its", "our", "their",
   "who", "whom", "whose", "what", "which",
   "where", "when", "why", "how",
   "i", "me", "you", "he", "him", "she", "we", "us", "they", "them", "it",
+  "you_fml", "you_fam",
+  // Phase 36 Tranche 36j: logophoric pronouns. Distinct lemmas so
+  // the closed-class synthesiser yields contrast against bare he/they.
+  "3sg.log", "3pl.log",
   "CLF", "Q",
 ];
 
@@ -94,7 +105,22 @@ export function closedClassForm(
   lang: Language,
   lemma: string,
 ): WordForm | undefined {
-  const direct = closedClassTable(lang)[lemma];
+  const remapped = remapDemonstrative(lang, lemma);
+  const direct = closedClassTable(lang)[remapped];
   if (direct) return direct;
-  return synthesise(lang, lemma);
+  return synthesise(lang, remapped);
+}
+
+/**
+ * Phase 36 Tranche 36c/36i: when the language has a three-way or
+ * four-way demonstrative system, a generic English "that" maps to
+ * `that_near` (the medial/hearer-proximal slot). Distance lemmas
+ * passed in directly (`that_far`, `that_remote`) pass through. A
+ * two-way language receives the bare `"that"` form regardless.
+ */
+function remapDemonstrative(lang: Language, lemma: string): string {
+  if (lemma !== "that") return lemma;
+  const d = lang.grammar.demonstrativeDistance ?? "two-way";
+  if (d === "three-way" || d === "four-way") return "that_near";
+  return "that";
 }

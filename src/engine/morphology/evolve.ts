@@ -159,6 +159,107 @@ function maybeArticleEmergence(
   };
 }
 
+/**
+ * Phase 36 Tranche 36h: derivational suffix replacement / obsolescence.
+ *
+ * With low probability per generation, an established bound morpheme
+ * (e.g., `-er.agt`, `-ness`) can be marked obsolescent — new
+ * productive coinages stop using it and prefer either a fresh donor
+ * from the lexicon or a competitor already in the bound-morpheme
+ * pool.
+ *
+ * Real-world models: Latin `-tor` displaced Germanic `-er` in
+ * scholastic Romance registers; Old English `-end` (agentive) was
+ * replaced by Middle English `-er`.
+ */
+export function maybeAffixReplacement(
+  lang: Language,
+  rng: Rng,
+  probability: number = 0.002,
+): { meaning: string; replacedBy?: string } | null {
+  if (!rng.chance(probability)) return null;
+  if (!lang.boundMorphemes || lang.boundMorphemes.size < 2) return null;
+  const candidates: string[] = [];
+  for (const m of lang.boundMorphemes) {
+    const origin = lang.boundMorphemeOrigin?.[m];
+    if (origin?.obsolescentGen !== undefined) continue;
+    const f = lang.lexicon[m];
+    if (!f || f.length === 0) continue;
+    candidates.push(m);
+  }
+  if (candidates.length < 2) return null;
+  const target = candidates[rng.int(candidates.length)]!;
+  const others = candidates.filter((m) => m !== target);
+  const replacement = others[rng.int(others.length)]!;
+  if (!lang.boundMorphemeOrigin) lang.boundMorphemeOrigin = {};
+  const prior = lang.boundMorphemeOrigin[target] ?? {
+    introducedGen: 0,
+    pathway: "preset-seed",
+  };
+  lang.boundMorphemeOrigin[target] = {
+    ...prior,
+    obsolescentGen: 0, // caller can set if it knows current gen
+    replacedBy: replacement,
+  };
+  return { meaning: target, replacedBy: replacement };
+}
+
+/**
+ * Phase 36 Tranche 36s: back-formation / de-derivation.
+ *
+ * When a fossilised compound's surface ends in a recognised
+ * productive suffix, speakers may reanalyse it as base + suffix and
+ * extract the base as a new lexicon entry. Models real cycles like
+ * editor → edit, televise ← television, enthusiasm → enthuse.
+ *
+ * Returns the new lemma + base form on success, or null when no
+ * candidate fires.
+ */
+export function maybeBackformation(
+  lang: Language,
+  rng: Rng,
+  probability: number = 0.001,
+): { newLemma: string; base: WordForm; from: string } | null {
+  if (!rng.chance(probability)) return null;
+  if (!lang.compounds || !lang.boundMorphemes) return null;
+  const candidates: Array<{
+    meaning: string;
+    surface: WordForm;
+    base: WordForm;
+    suffix: string;
+  }> = [];
+  for (const meaning of Object.keys(lang.compounds)) {
+    const meta = lang.compounds[meaning]!;
+    if (!meta.fossilized) continue;
+    const surface = lang.lexicon[meaning];
+    if (!surface) continue;
+    for (const morph of lang.boundMorphemes) {
+      const affixForm = lang.lexicon[morph];
+      if (!affixForm || affixForm.length === 0) continue;
+      if (surface.length <= affixForm.length) continue;
+      const tail = surface.slice(surface.length - affixForm.length);
+      if (tail.join("") !== affixForm.join("")) continue;
+      const base = surface.slice(0, surface.length - affixForm.length);
+      if (base.length < 2) continue;
+      // Skip if base is already a known lexeme.
+      const baseStr = base.join("");
+      const newLemma = `bf:${baseStr}`;
+      if (lang.lexicon[newLemma]) continue;
+      candidates.push({ meaning, surface, base, suffix: morph });
+    }
+  }
+  if (candidates.length === 0) return null;
+  const chosen = candidates[rng.int(candidates.length)]!;
+  const newLemma = `bf:${chosen.base.join("")}`;
+  setLexiconForm(lang, newLemma, chosen.base, {
+    bornGeneration: 0,
+    origin: `backformation:${chosen.meaning}`,
+  });
+  if (!lang.wordOrigin) lang.wordOrigin = {};
+  lang.wordOrigin[newLemma] = `backformation:${chosen.meaning}`;
+  return { newLemma, base: chosen.base, from: chosen.meaning };
+}
+
 export function maybeCliticize(
   lang: Language,
   rng: Rng,
