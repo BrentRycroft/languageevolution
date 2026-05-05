@@ -504,6 +504,30 @@ export interface GrammarFeatures {
   voice?: "active" | "mixed";
   moodMarking?: "declarative" | "subjunctive" | "imperative";
   interrogativeStrategy?: "particle" | "inversion" | "intonation";
+  /**
+   * Phase 34 Tranche 34c: how the language realises future tense.
+   *   - **synthetic**: affix on the verb stem (Latin amabō, Old English).
+   *   - **go-future**: auxiliary "go" + main verb (Spanish ir + a, French
+   *     aller + V, English going-to). Grammaticalised from a motion verb.
+   *   - **will-future**: auxiliary "will" + bare verb (Modern English).
+   *     Grammaticalised from a desiderative.
+   *   - **shall-future**: auxiliary "shall" + bare verb (Old English,
+   *     archaic Modern English).
+   * Default synthetic. The grammaticalisation pathway in
+   * `maybeGrammaticalize` flips to a periphrastic when the source
+   * verb has high frequency.
+   */
+  futureRealisation?: "synthetic" | "go-future" | "will-future" | "shall-future";
+  /**
+   * Phase 34 Tranche 34c: how perfect aspect renders.
+   *   - **synthetic**: affix on the verb stem.
+   *   - **have-perfect**: "have" + past participle (Romance, Modern
+   *     English have-perfect, Modern German haben-perfect).
+   *   - **be-perfect**: "be" + past participle (French être-perfect for
+   *     unaccusative verbs, Modern German sein-perfect).
+   * Default synthetic.
+   */
+  perfectRealisation?: "synthetic" | "have-perfect" | "be-perfect";
   interrogativeParticle?: "initial" | "final";
   alignment?: "nom-acc" | "erg-abs" | "tripartite" | "split-S";
   harmony?: "none" | "front-back" | "rounding" | "atr";

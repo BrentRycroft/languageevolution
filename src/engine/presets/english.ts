@@ -749,6 +749,11 @@ export function presetEnglish(): SimulationConfig {
       affixPosition: "suffix",
       pluralMarking: "affix",
       tenseMarking: "past",
+      // Phase 34 Tranche 34c: English future is periphrastic
+      // ("will + V" / "going to + V") and English perfect is
+      // periphrastic ("have + V"). Seed both as periphrastic.
+      futureRealisation: "will-future",
+      perfectRealisation: "have-perfect",
       hasCase: false,
       genderCount: 0,
       articlePresence: "free",

@@ -11,7 +11,7 @@ export interface RealisedToken {
   surface: string;
   form: WordForm;
   english: string;
-  role: "S" | "V" | "O" | "ADJ" | "DET" | "PREP" | "POSTP" | "POSS" | "NUM" | "NEG" | "ADV" | "PP-NP";
+  role: "S" | "V" | "AUX" | "O" | "ADJ" | "DET" | "PREP" | "POSTP" | "POSS" | "NUM" | "NEG" | "ADV" | "PP-NP";
   resolution?: "direct" | "concept" | "colex" | "reverse-colex" | "fallback";
 }
 
@@ -512,16 +512,63 @@ function realiseVerb(
   }
 
   const stack: import("../morphology/types").MorphCategory[] = [];
+
+  // Phase 34 Tranche 34c: periphrastic future / perfect. When the
+  // language has flipped to a periphrastic strategy, emit the
+  // auxiliary as a separate token BEFORE the main verb and skip the
+  // synthetic affix. Real-world: English "will go" / "going to go",
+  // Spanish "voy a ir", Romance haber-perfect.
+  const futureRealisation = lang.grammar.futureRealisation ?? "synthetic";
+  const perfectRealisation = lang.grammar.perfectRealisation ?? "synthetic";
+  let auxiliaryTokens: RealisedToken[] = [];
+  let useSyntheticTense = true;
+  let useSyntheticPerfect = true;
+  if (vp.verb.tense === "future" && futureRealisation !== "synthetic") {
+    const auxLemma =
+      futureRealisation === "go-future" ? "go" :
+      futureRealisation === "will-future" ? "will" :
+      futureRealisation === "shall-future" ? "shall" : null;
+    if (auxLemma) {
+      const auxForm =
+        lang.lexicon[auxLemma] ?? closedClassForm(lang, auxLemma) ?? null;
+      if (auxForm && auxForm.length > 0) {
+        auxiliaryTokens.push({
+          surface: auxForm.join(""),
+          form: auxForm.slice(),
+          english: auxLemma,
+          role: "AUX",
+          resolution: "concept",
+        });
+        useSyntheticTense = false;
+      }
+    }
+  }
+  if (vp.verb.aspect === "perfect" && perfectRealisation !== "synthetic") {
+    const auxLemma = perfectRealisation === "have-perfect" ? "have" : "be";
+    const auxForm =
+      lang.lexicon[auxLemma] ?? closedClassForm(lang, auxLemma) ?? null;
+    if (auxForm && auxForm.length > 0) {
+      auxiliaryTokens.push({
+        surface: auxForm.join(""),
+        form: auxForm.slice(),
+        english: auxLemma,
+        role: "AUX",
+        resolution: "concept",
+      });
+      useSyntheticPerfect = false;
+    }
+  }
+
   const tenseCat: MorphCategory | null =
     vp.verb.tense === "past" ? "verb.tense.past" :
-    vp.verb.tense === "future" ? "verb.tense.fut" : null;
+    vp.verb.tense === "future" && useSyntheticTense ? "verb.tense.fut" : null;
   if (tenseCat) stack.push(tenseCat);
   const aspectCat: MorphCategory | null =
     vp.verb.aspect === "perfective" ? "verb.aspect.pfv" :
     vp.verb.aspect === "imperfective" ? "verb.aspect.ipfv" :
     vp.verb.aspect === "progressive" ? "verb.aspect.prog" :
     vp.verb.aspect === "habitual" ? "verb.aspect.hab" :
-    vp.verb.aspect === "perfect" ? "verb.aspect.perf" :
+    vp.verb.aspect === "perfect" && useSyntheticPerfect ? "verb.aspect.perf" :
     vp.verb.aspect === "prospective" ? "verb.aspect.prosp" : null;
   if (aspectCat) stack.push(aspectCat);
   const moodCat: MorphCategory | null =
@@ -573,24 +620,29 @@ function realiseVerb(
     if (negPos === "prefix" || negPos === "suffix") {
       const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
       form = negPos === "prefix" ? [...negForm, ...form] : [...form, ...negForm];
-      return [{ surface: form.join(""), form, english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
+      return [...auxiliaryTokens, { surface: form.join(""), form, english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution }];
     }
     const negForm = closedClassForm(lang, "not") ?? ["n", "ə"];
     const verbTok: RealisedToken = { surface: form.join(""), form, english: vp.verb.lemma, role: "V", resolution: vp.verb.resolution };
     const negTok: RealisedToken = { surface: negForm.join(""), form: negForm, english: "not", role: "NEG", resolution: "concept" };
-    return negPos === "pre-verb" ? [negTok, verbTok] : [verbTok, negTok];
+    return negPos === "pre-verb"
+      ? [...auxiliaryTokens, negTok, verbTok]
+      : [...auxiliaryTokens, verbTok, negTok];
   }
-  if (isZeroCopula) return [];
+  if (isZeroCopula) return auxiliaryTokens;
   const verbSurface = vp.verb.baseForm.length === 0 && form.length === 0
     ? `“${vp.verb.lemma}”`
     : form.join("");
-  return [{
-    surface: verbSurface,
-    form: vp.verb.baseForm.length === 0 && form.length === 0 ? [] : form,
-    english: vp.verb.lemma,
-    role: "V",
-    resolution: vp.verb.resolution,
-  }];
+  return [
+    ...auxiliaryTokens,
+    {
+      surface: verbSurface,
+      form: vp.verb.baseForm.length === 0 && form.length === 0 ? [] : form,
+      english: vp.verb.lemma,
+      role: "V",
+      resolution: vp.verb.resolution,
+    },
+  ];
 }
 
 function populateForms(s: Sentence, deps: RealiseDeps): void {
