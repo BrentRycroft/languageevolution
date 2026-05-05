@@ -11,6 +11,7 @@ import { DERIVATION_TARGETS } from "../lexicon/derivation_targets";
 import { assignInflectionClass } from "../morphology/inflectionClass";
 import {
   attemptTargetedDerivation,
+  attemptProductiveDerivation,
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
 import { tryCommitCoinage, rebuildFormKeyIndex } from "../lexicon/word";
@@ -257,6 +258,17 @@ export function stepGenesis(
  * If multiple candidates, pick a random one.
  */
 function tryTargetedDerivation(lang: Language, rng: Rng) {
+  // Phase 34 Tranche 34b: 30% of the time, fall through to opportunistic
+  // productive derivation — the language uses any productive suffix on
+  // any compatible root, even if the resulting meaning isn't in the
+  // hardcoded DERIVATION_TARGETS table. This is what real productivity
+  // looks like: once -er is productive in English, you can derive
+  // "speaker", "writer", "runner" without anyone explicitly licensing
+  // each one.
+  if (rng.chance(0.3)) {
+    const productive = attemptProductiveDerivation(lang, rng);
+    if (productive) return productive;
+  }
   const candidates: string[] = [];
   for (const meaning of Object.keys(DERIVATION_TARGETS)) {
     if (lang.lexicon[meaning]) continue; // already have it
