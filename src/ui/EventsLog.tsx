@@ -27,6 +27,7 @@ const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   merger: "#ffaaaa",
   tier_transition: "#ffd07a",
   kinship_simplification: "#d6c1ff",
+  grammar_cascade: "#ffe580",
 };
 
 const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
@@ -48,6 +49,7 @@ const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
   merger: "merger",
   tier_transition: "tier",
   kinship_simplification: "kinship",
+  grammar_cascade: "cascade",
 };
 
 export function EventsLog() {

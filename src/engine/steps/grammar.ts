@@ -80,10 +80,44 @@ export function stepMorphology(
   rng: Rng,
   generation: number,
 ): void {
+  // Phase 38b: literary brake on grammaticalisation rates. Tier-2+
+  // literate languages still grammaticalise but slower (Old → Modern
+  // English shows real change despite literacy, just measured).
+  const literary = lang.literaryStability ?? 0;
+  const litMult = 1 - 0.4 * literary;
+  // Phase 38c: grammaticalisation cascade multiplier. When in a
+  // cascade window, all rates ×3; outside any cascade, rates ×0.3
+  // (slower-than-baseline quiet eras between cascades).
+  // Roll cascade onset at low baseline rate (0.4%/gen) — modelling
+  // English Middle-period inflection collapse, Latin → Romance morph.
+  const cascade = lang.grammaticalisationCascade;
+  const inCascade = !!(cascade && generation < cascade.until);
+  if (!inCascade && rng.chance(0.004)) {
+    const duration = 12 + Math.floor(rng.next() * 8); // 12-20 gens
+    lang.grammaticalisationCascade = {
+      until: generation + duration,
+      multiplier: 3.0,
+      trigger: "spontaneous",
+    };
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_cascade",
+      description: `grammaticalisation cascade begins (×3 for ${duration} gens, spontaneous)`,
+    });
+  } else if (cascade && generation === cascade.until) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_cascade",
+      description: `grammaticalisation cascade ends (was ×${cascade.multiplier.toFixed(1)})`,
+    });
+  }
+  const activeCascade = lang.grammaticalisationCascade && generation < lang.grammaticalisationCascade.until;
+  const cascadeMult = activeCascade ? lang.grammaticalisationCascade!.multiplier : 0.3;
+  const gramMult = litMult * cascadeMult;
   const gShift = maybeGrammaticalize(
     lang,
     rng,
-    config.morphology.grammaticalizationProbability * lang.conservatism,
+    config.morphology.grammaticalizationProbability * lang.conservatism * gramMult,
   );
   if (gShift) {
     pushEvent(lang, {
@@ -144,7 +178,7 @@ export function stepMorphology(
   }
   // Phase 36 Tranche 36h: derivational morpheme replacement.
   if (lang.boundMorphemes && lang.boundMorphemes.size >= 2) {
-    const repl = maybeAffixReplacement(lang, rng, 0.002 * lang.conservatism);
+    const repl = maybeAffixReplacement(lang, rng, 0.002 * lang.conservatism * gramMult);
     if (repl) {
       const origin = lang.boundMorphemeOrigin?.[repl.meaning];
       if (origin) origin.obsolescentGen = generation;
@@ -160,7 +194,7 @@ export function stepMorphology(
   // ends in a recognised productive bound morpheme, speakers may
   // re-extract the base as a new lexeme (editor → edit pattern).
   if (lang.compounds && lang.boundMorphemes && lang.boundMorphemes.size > 0) {
-    const bf = maybeBackformation(lang, rng, 0.001 * lang.conservatism);
+    const bf = maybeBackformation(lang, rng, 0.001 * lang.conservatism * gramMult);
     if (bf) {
       pushEvent(lang, {
         generation,
@@ -177,7 +211,7 @@ export function stepMorphology(
   // pressures.
   {
     const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
-    const synRate = 0.003 * (1 + tier) * lang.conservatism;
+    const synRate = 0.003 * (1 + tier) * lang.conservatism * gramMult;
     const synEvent = maybeSpawnSynonym(lang, rng, synRate);
     if (synEvent) {
       pushEvent(lang, {
@@ -193,7 +227,7 @@ export function stepMorphology(
   // loser to its synonym. Slower than spawn so synonyms accrete
   // before suppression vacates them.
   {
-    const supEvent = maybeSuppressHomonym(lang, rng, 0.002 * lang.conservatism);
+    const supEvent = maybeSuppressHomonym(lang, rng, 0.002 * lang.conservatism * gramMult);
     if (supEvent) {
       pushEvent(lang, {
         generation,
@@ -215,7 +249,7 @@ export function stepMorphology(
       });
     }
   }
-  const conjClassRate = 0.005 * lang.conservatism / Math.max(0.7, simplificationFactor(lang.speakers));
+  const conjClassRate = 0.005 * lang.conservatism * gramMult / Math.max(0.7, simplificationFactor(lang.speakers));
   if (conjClassRate > 0) {
     const split = maybeSplitParadigm(lang, rng, conjClassRate);
     if (split) {
@@ -226,7 +260,7 @@ export function stepMorphology(
       });
     }
   }
-  const reanalysisRate = 0.004 * lang.conservatism;
+  const reanalysisRate = 0.004 * lang.conservatism * gramMult;
   if (reanalysisRate > 0) {
     const ev = maybeReanalyse(lang, rng, reanalysisRate);
     if (ev) {

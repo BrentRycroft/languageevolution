@@ -10,23 +10,25 @@ import { pushEvent } from "./helpers";
  * periods model the long centuries between such upheavals when change
  * is incremental and slow.
  *
+ * Phase 38a: deepened the contrast. Stable eras now freeze (×0.08-0.23,
+ * 40-120 gens = 1000-3000 simulated years at 25y/gen) so the simulator
+ * shows real "no-change" plateaus. Upheavals extended slightly (8-28 gens
+ * = 200-700 years). Calibrated against Latin (1500 yrs ≈ near-zero
+ * change) → Vulgar Latin → Romance (500 yrs of rapid change).
+ *
  * State machine per language:
  *   - default: phase = undefined → treated as "stable" with multiplier 1.
  *   - On each generation tick:
  *       1. If `until` is reached, roll the next phase.
- *       2. Stable → 1% chance per gen of flipping into upheaval.
+ *       2. Stable → 1.2% chance per gen of flipping into upheaval.
  *       3. Upheaval → always flips to stable when `until` reached.
  *   - Triggers (besides random): tier promotion + heavy contact (called
  *     externally to seed an upheaval).
- *
- * Multiplier ranges:
- *   - Stable:   0.4 – 0.7  (slow drift)
- *   - Upheaval: 2.5 – 4.0  (rapid change)
  */
-const STABLE_MIN_DURATION = 25;
-const STABLE_MAX_DURATION = 80;
+const STABLE_MIN_DURATION = 40;
+const STABLE_MAX_DURATION = 120;
 const UPHEAVAL_MIN_DURATION = 8;
-const UPHEAVAL_MAX_DURATION = 22;
+const UPHEAVAL_MAX_DURATION = 28;
 const UPHEAVAL_RANDOM_TRIGGER_RATE = 0.012;
 
 /**
@@ -50,9 +52,14 @@ function rollPhase(
   trigger?: string,
 ): void {
   const wasUpheaval = lang.volatilityPhase?.kind === "upheaval";
+  // Phase 38b: literary brake biases the phase pick. Languages with
+  // high literaryStability (tier 2+ + orthography) are 3× less likely
+  // to roll into upheaval at random.
+  const literary = lang.literaryStability ?? 0;
+  const literaryFactor = literary >= 0.6 ? 0.33 : 1;
   const goUpheaval =
     forceUpheaval ||
-    (!wasUpheaval && rng.chance(UPHEAVAL_RANDOM_TRIGGER_RATE));
+    (!wasUpheaval && rng.chance(UPHEAVAL_RANDOM_TRIGGER_RATE * literaryFactor));
 
   if (goUpheaval) {
     const duration =
@@ -74,7 +81,7 @@ function rollPhase(
     const duration =
       STABLE_MIN_DURATION +
       Math.floor(rng.next() * (STABLE_MAX_DURATION - STABLE_MIN_DURATION));
-    const multiplier = 0.4 + rng.next() * 0.3; // 0.4 – 0.7
+    const multiplier = 0.08 + rng.next() * 0.15; // 0.08 – 0.23 (Phase 38a)
     const wasUpheavalPhase = wasUpheaval;
     lang.volatilityPhase = {
       kind: "stable",

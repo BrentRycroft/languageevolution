@@ -260,6 +260,26 @@ function isContentWord(meaning: Meaning): boolean {
   return pos === "noun" || pos === "verb" || pos === "adjective";
 }
 
+/**
+ * Phase 38d: Swadesh-100 core anchor list. Used to apply a hard
+ * brake on phonological drift for the most stable cross-linguistic
+ * meanings. Inlined to avoid a circular import with semantics/lexicostat.
+ */
+const SWADESH_CORE_SET: ReadonlySet<string> = new Set([
+  "i", "you", "we", "this", "that", "who", "what", "not", "all", "many",
+  "one", "two", "big", "long", "small", "woman", "man", "person", "fish",
+  "bird", "dog", "louse", "tree", "seed", "leaf", "root", "bark", "skin",
+  "flesh", "blood", "bone", "grease", "egg", "horn", "tail", "feather",
+  "hair", "head", "ear", "eye", "nose", "mouth", "tooth", "tongue", "claw",
+  "foot", "knee", "hand", "belly", "neck", "breast", "heart", "liver",
+  "drink", "eat", "bite", "see", "hear", "know", "sleep", "die", "kill",
+  "swim", "fly", "walk", "come", "lie", "sit", "stand", "give", "say",
+  "sun", "moon", "star", "water", "rain", "stone", "sand", "earth", "cloud",
+  "smoke", "fire", "ash", "burn", "path", "mountain", "red", "green", "yellow",
+  "white", "black", "night", "hot", "cold", "full", "new", "good", "round",
+  "dry", "name",
+]);
+
 export function applyChangesToWord(
   word: WordForm,
   changes: SoundChange[],
@@ -278,7 +298,22 @@ export function applyChangesToWord(
   const freqInput = isContentWord(meaning)
     ? Math.max(0.05, Math.min(1, 1 - freq + registerShift))
     : Math.max(0.05, Math.min(1, freq + registerShift));
-  const freqExponent = 0.4 + freqInput * 1.2;
+  let freqExponent = 0.4 + freqInput * 1.2;
+  // Phase 38d: Swadesh-core hard brake. Meanings on the Swadesh-100
+  // list with freq ≥ 0.85 get an additional 0.4× exponent multiplier,
+  // bringing their effective drift rate to ~0.1-0.3%/gen — matching
+  // real Swadesh retention of 85%/millennium.
+  if (freq >= 0.85 && SWADESH_CORE_SET.has(meaning)) {
+    freqExponent *= 0.4;
+  }
+  // Phase 38d: low-freq content boost. Real low-freq vocabulary
+  // churns faster than the smooth curve predicts (rare technical
+  // terms, hapax legomena). Boost by 20% when freq ≤ 0.25 and
+  // content word.
+  let lowFreqBoost = 1;
+  if (freq <= 0.25 && isContentWord(meaning)) {
+    lowFreqBoost = 1.2;
+  }
   const age = opts.agesSinceChange?.[meaning];
   const ageMult = ageBoost(age);
   // Phase 26e: removed coreMult = corenessResistance(meaning). See header
@@ -336,12 +371,25 @@ export function applyChangesToWord(
       }
     }
     const freqTier = FREQUENCY_MULT[change.frequency ?? "ordinary"];
+    // Phase 38e: per-category rule-level momentum. When a sister
+    // rule in the same category has actuated recently, this rule
+    // gets a boost — modelling chain-shift clusters (Grimm's Law,
+    // Great Vowel Shift). Decays to 1 after `until` gen.
+    let catMomentum = 1;
+    if (opts.langForOt && opts.currentGeneration !== undefined) {
+      const cm = (opts.langForOt as Language).categoryMomentum?.[change.category];
+      if (cm && opts.currentGeneration < cm.until) {
+        catMomentum = cm.boost;
+      }
+    }
     const lambda = Math.min(
       3,
       adjusted *
         weight *
         naturalBias *
         freqTier *
+        lowFreqBoost *
+        catMomentum *
         momentum *
         wangBoost *
         opts.globalRate *

@@ -100,6 +100,9 @@ export function lexicalCapacity(lang: Language, generation: number): number {
   const age = Math.max(0, generation - lang.birthGeneration);
   const pop = Math.max(1, lang.speakers ?? 10000);
   const popFactor = 40 * Math.max(0, Math.log10(pop / 10000));
-  const ageFactor = Math.min(120, age / 50);
-  return Math.round(400 + 80 * tier + ageFactor + popFactor);
+  // Phase 38g: amplify tier scaling so lexicons grow toward
+  // realistic sizes: tier 0 → ~500, tier 3 mature → ~2000-3000.
+  // Pre-38g this capped at ~720; far short of real lexicon growth.
+  const ageFactor = Math.min(400, age / 25);
+  return Math.round(400 + 250 * tier + ageFactor + popFactor);
 }

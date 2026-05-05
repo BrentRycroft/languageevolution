@@ -178,6 +178,22 @@ export function createSimulation(
             rng,
             `tier ${TIER_LABELS[priorTier]} → ${TIER_LABELS[nextTier]}`,
           );
+          // Phase 38c: tier transitions also seed a grammaticalisation
+          // cascade. Models the rapid Old → Middle English inflection
+          // collapse during the Norman / literacy shock.
+          if (!lang.grammaticalisationCascade || nextGen >= lang.grammaticalisationCascade.until) {
+            const dur = 12 + Math.floor(rng.next() * 8);
+            lang.grammaticalisationCascade = {
+              until: nextGen + dur,
+              multiplier: 3.0,
+              trigger: `tier ${nextTier}`,
+            };
+            pushEvent(lang, {
+              generation: nextGen,
+              kind: "grammar_cascade",
+              description: `grammaticalisation cascade begins (×3 for ${dur} gens, tier transition)`,
+            });
+          }
           if (priorTier === 0 && nextTier >= 1) {
             const merges = applyKinshipSimplification(lang, rng, 2);
             for (const m of merges) {

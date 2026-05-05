@@ -229,6 +229,19 @@ export function App() {
           >
             <FastForwardIcon size={16} />
           </button>
+          <button
+            onClick={() => {
+              const skipped = useSimStore.getState().runUntilNextEvent(50);
+              void skipped;
+            }}
+            disabled={playing}
+            className="ghost"
+            style={{ fontSize: "var(--fs-1)", padding: "4px 8px" }}
+            aria-label="Skip to next noteworthy event"
+            title="Phase 38h: skip up to 50 stable gens until the next noteworthy event"
+          >
+            ⏭ event
+          </button>
           <CancelStepButton />
           <button
             onClick={async () => {

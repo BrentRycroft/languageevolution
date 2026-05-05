@@ -135,6 +135,14 @@ interface SimStore {
   step: () => void;
   stepN: (n: number) => void;
   stepNAsync: (n: number) => Promise<void>;
+  /**
+   * Phase 38h: fast-forward through stable eras. Steps the simulation
+   * until any leaf emits a non-trivial LanguageEvent (sound_change,
+   * grammaticalize, borrow, areal, tier_transition, volatility,
+   * grammar_cascade), or `maxGens` is reached. Returns the number
+   * of generations skipped.
+   */
+  runUntilNextEvent: (maxGens?: number) => number;
   togglePlay: () => void;
   setSpeed: (s: number) => void;
   reset: () => void;
@@ -370,6 +378,43 @@ export const useSimStore = create<SimStore>((set, get) => ({
       }
       s.step();
     }
+  },
+  runUntilNextEvent: (maxGens = 50) => {
+    // Phase 38h: skip through stable eras to the next noteworthy
+    // language event. Triggers on most LanguageEvent kinds; ignores
+    // routine semantic_drift / coinage / suppletion since those fire
+    // commonly even in "stable" eras. Returns number of gens skipped.
+    const NOTEWORTHY = new Set([
+      "sound_change", "actuation", "grammaticalize", "grammar_shift",
+      "borrow", "areal", "tier_transition", "volatility",
+      "grammar_cascade", "creolization", "merger",
+    ]);
+    let skipped = 0;
+    for (let i = 0; i < maxGens; i++) {
+      if (get().stepAbortRequested) {
+        set({ stepAbortRequested: false });
+        break;
+      }
+      const beforeGen = get().state.generation;
+      get().step();
+      skipped++;
+      const state = get().state;
+      let foundEvent = false;
+      for (const id of Object.keys(state.tree)) {
+        const lang = state.tree[id]!.language;
+        for (let j = lang.events.length - 1; j >= 0; j--) {
+          const ev = lang.events[j]!;
+          if (ev.generation <= beforeGen) break;
+          if (NOTEWORTHY.has(ev.kind)) {
+            foundEvent = true;
+            break;
+          }
+        }
+        if (foundEvent) break;
+      }
+      if (foundEvent) break;
+    }
+    return skipped;
   },
   stepNAsync: async (n) => {
     const { config, sim, history, activityHistory } = get();

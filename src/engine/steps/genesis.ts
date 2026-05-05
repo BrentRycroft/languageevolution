@@ -36,9 +36,14 @@ export function stepGenesis(
   const noise = 0.5 + rng.next();
   const target = Math.max(1, Math.round(base * noise * lang.conservatism));
   const atCapacity = lexSize >= capacity;
+  // Phase 38g: literary brake on coinage rate. Tier-2+ literate
+  // languages still coin words but at a measured pace; drops the
+  // gate probability by up to 40% at full literacy.
+  const literary = lang.literaryStability ?? 0;
+  const literaryGateMult = 1 - 0.4 * literary;
   const gateProb = atCapacity
-    ? 0.25 * lang.conservatism
-    : Math.min(1, 0.5 + 0.5 * lang.conservatism);
+    ? 0.25 * lang.conservatism * literaryGateMult
+    : Math.min(1, (0.5 + 0.5 * lang.conservatism) * literaryGateMult);
   // Clear an expired catch-up window so it doesn't linger across gens.
   // Hoisted above the gateProb early-return so the flag is cleaned up
   // even on generations when the genesis loop is skipped.
@@ -168,6 +173,10 @@ export function stepGenesis(
       },
     );
     if (!commit.committed) continue;
+    // Phase 38g: track total coinages produced.
+    if (!isReplacement) {
+      lang.totalCoinages = (lang.totalCoinages ?? 0) + 1;
+    }
     // Phase 29 Tranche 5c+1: remove the OLD sense AFTER commit succeeds.
     // Pre-fix the removeSense ran upstream of the polysemy roll, so a
     // failed roll left lang.lexicon with the old form but lang.words
