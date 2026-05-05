@@ -1,17 +1,10 @@
 import type { Language, LanguageNode, LanguageTree, SimulationConfig, SimulationState } from "../engine/types";
 import { LATEST_SAVE_VERSION, migrateSavedRun } from "./migrate";
+import { idbGet, idbSet, idbRemove, type IdbWriteResult } from "./idb";
 
 const AUTOSAVE_KEY = "lev.autosave.v2";
-// Phase 29-2f: tracks LATEST_SAVE_VERSION instead of being a separate
-// drifting constant. Pre-29-2f this was hard-coded to 5 while
-// LATEST_SAVE_VERSION was 6 — autosaves written at v6 silently
-// failed the future-version check on load.
 const AUTOSAVE_VERSION = LATEST_SAVE_VERSION;
 
-// Phase 29 Tranche 5l: bumped from 30 → 80 to match the runtime cap
-// (engine soft-limits events to ~80 per language). The prior 30
-// silently truncated 60% of recent activity on save → reload, so the
-// EventsLog after a reload showed only the last few generations.
 const PERSIST_EVENT_CAP = 80;
 
 function trimLanguageForPersist(lang: Language): Language {
@@ -19,12 +12,6 @@ function trimLanguageForPersist(lang: Language): Language {
     lang.events.length > PERSIST_EVENT_CAP
       ? lang.events.slice(-PERSIST_EVENT_CAP)
       : lang.events;
-  // Phase 29 Tranche 5l: stop stripping `variants` and `bilingualLinks`
-  // on save. Pre-fix, social-contagion variant history and contact
-  // graphs were silently lost on every reload — no reload could
-  // resume the in-progress diffusion of an actuating variant. Both
-  // are bounded structures (variants caps at ~10/meaning, links
-  // bounded by adjacent leaves), so persisting them costs little.
   return { ...lang, events };
 }
 
@@ -56,62 +43,26 @@ interface AutosavePayload {
   stateSnapshot: SimulationState;
 }
 
-export type StorageWriteResult =
-  | { ok: true }
-  | { ok: false; reason: "quota" | "disabled" | "other" };
-
-function safeGet(key: string): string | null {
-  try {
-    if (typeof localStorage === "undefined") return null;
-    return localStorage.getItem(key);
-  } catch (e) {
-    // Phase 29-2e: was silent. Surface autosave-read failures so the
-    // user/dev can tell when localStorage is disabled (private mode,
-    // browser quota), or when a chunk is malformed.
-    console.warn(`[autosave] safeGet(${key}) failed:`, e);
-    return null;
-  }
-}
-
-function safeSet(key: string, value: string): StorageWriteResult {
-  if (typeof localStorage === "undefined") {
-    return { ok: false, reason: "disabled" };
-  }
-  try {
-    localStorage.setItem(key, value);
-    return { ok: true };
-  } catch (e) {
-    const name = (e as { name?: string })?.name ?? "";
-    const code = (e as { code?: number })?.code ?? -1;
-    const isQuota =
-      name === "QuotaExceededError" ||
-      name === "NS_ERROR_DOM_QUOTA_REACHED" ||
-      code === 22 ||
-      code === 1014;
-    return { ok: false, reason: isQuota ? "quota" : "other" };
-  }
-}
-
-function safeRemove(key: string): void {
-  try {
-    if (typeof localStorage === "undefined") return;
-    localStorage.removeItem(key);
-  } catch (e) {
-    console.warn(`[autosave] safeRemove(${key}) failed:`, e);
-  }
-}
+export type StorageWriteResult = IdbWriteResult;
 
 let lastSaveAt = 0;
 const MIN_SAVE_INTERVAL_MS = 500;
 
-export function saveAutosave(
+/**
+ * Phase 38+: autosave migrated from localStorage to IndexedDB. The
+ * 5MB localStorage quota was the source of recurring "Storage full"
+ * warnings on mature runs (Phase 38g amplified lexicon growth).
+ * IDB has multi-GB quota and supports structured clone, so the
+ * payload is stored as a JS object directly (no JSON round-trip).
+ */
+export async function saveAutosave(
   payload: {
     config: SimulationConfig;
     state: SimulationState;
     generationsRun: number;
   },
   opts: { force?: boolean } = {},
-): StorageWriteResult {
+): Promise<StorageWriteResult> {
   const now = Date.now();
   if (!opts.force && now - lastSaveAt < MIN_SAVE_INTERVAL_MS) {
     return { ok: true };
@@ -124,14 +75,7 @@ export function saveAutosave(
     generationsRun: payload.generationsRun,
     stateSnapshot: trimStateForPersist(payload.state),
   };
-  let serialized: string;
-  try {
-    serialized = JSON.stringify(body);
-  } catch (e) {
-    console.warn(`[autosave] JSON.stringify failed (likely circular ref):`, e);
-    return { ok: false, reason: "other" };
-  }
-  return safeSet(AUTOSAVE_KEY, serialized);
+  return idbSet(AUTOSAVE_KEY, body);
 }
 
 export interface AutosaveLoaded {
@@ -145,17 +89,26 @@ export type AutosaveLoadResult =
   | { ok: true; payload: AutosaveLoaded }
   | { ok: false; reason: "empty" | "corrupt" | "future-version" | "migration-failed" };
 
-export function loadAutosave(): AutosaveLoadResult {
-  const raw = safeGet(AUTOSAVE_KEY);
-  if (!raw) return { ok: false, reason: "empty" };
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
-    console.warn(`[autosave] saved payload is not valid JSON:`, e);
-    return { ok: false, reason: "corrupt" };
+export async function loadAutosave(): Promise<AutosaveLoadResult> {
+  // Phase 38+ first-run migration: if IDB has nothing but the legacy
+  // localStorage entry exists, copy it across before falling through.
+  let raw = await idbGet(AUTOSAVE_KEY);
+  if (raw === null && typeof localStorage !== "undefined") {
+    try {
+      const legacy = localStorage.getItem(AUTOSAVE_KEY);
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        await idbSet(AUTOSAVE_KEY, parsed);
+        // Free up localStorage so future saves don't re-collide.
+        localStorage.removeItem(AUTOSAVE_KEY);
+        raw = parsed;
+      }
+    } catch (e) {
+      console.warn(`[autosave] localStorage → IDB migration failed:`, e);
+    }
   }
-  const obj = (parsed ?? {}) as Record<string, unknown>;
+  if (raw === null) return { ok: false, reason: "empty" };
+  const obj = (raw ?? {}) as Record<string, unknown>;
   const ver = typeof obj.version === "number" ? obj.version : 1;
   if (ver > AUTOSAVE_VERSION) {
     return { ok: false, reason: "future-version" };
@@ -183,7 +136,7 @@ export function loadAutosave(): AutosaveLoadResult {
   };
 }
 
-export function clearAutosave(): void {
-  safeRemove(AUTOSAVE_KEY);
+export async function clearAutosave(): Promise<void> {
+  await idbRemove(AUTOSAVE_KEY);
   lastSaveAt = 0;
 }

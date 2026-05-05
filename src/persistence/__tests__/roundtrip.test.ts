@@ -19,18 +19,19 @@ function stringifyLexicons(state: ReturnType<ReturnType<typeof createSimulation>
 }
 
 describe("persistence round-trip", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
+    for (const r of await listRuns()) await deleteRun(r.id);
   });
 
-  it("save + load + replay produces identical lexicons", () => {
+  it("save + load + replay produces identical lexicons", async () => {
     const cfg = defaultConfig();
     const simA = createSimulation(cfg);
     for (let i = 0; i < 80; i++) simA.step();
     const beforeSig = stringifyLexicons(simA.getState());
 
-    const saved = saveRun("replay-test", cfg, 80);
-    const loaded = loadRun(saved.id);
+    const saved = await saveRun("replay-test", cfg, 80);
+    const loaded = await loadRun(saved.id);
     expect(loaded).not.toBeNull();
     if (!loaded) return;
 
@@ -40,16 +41,16 @@ describe("persistence round-trip", () => {
     expect(afterSig).toBe(beforeSig);
   });
 
-  it("save + listRuns + deleteRun cycle", () => {
+  it("save + listRuns + deleteRun cycle", async () => {
     const cfg = defaultConfig();
-    const r1 = saveRun("one", cfg, 10);
-    const r2 = saveRun("two", cfg, 20);
-    const list = listRuns();
+    const r1 = await saveRun("one", cfg, 10);
+    const r2 = await saveRun("two", cfg, 20);
+    const list = await listRuns();
     expect(list.length).toBe(2);
     expect(list.map((r) => r.id)).toContain(r1.id);
     expect(list.map((r) => r.id)).toContain(r2.id);
-    deleteRun(r1.id);
-    expect(listRuns().length).toBe(1);
+    await deleteRun(r1.id);
+    expect((await listRuns()).length).toBe(1);
   });
 
   it("leafIds is deterministic after replay", () => {
