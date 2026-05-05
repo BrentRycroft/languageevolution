@@ -388,7 +388,7 @@ const LEXICON: Lexicon = {
   "-mn̥.action": ["m", "n̩"],
   "-eh₂.fem": ["e", "h₂"],
   "-tós.ptcp": ["t", "o", "s"],
-  "-i̯o.adj": ["i̯", "o"],
+  "-i̯o.adj": ["j", "o"],
 };
 
 const PIE_BOUND_MORPHEMES = new Set<string>([

@@ -3,6 +3,7 @@ import { inflect, inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { reduplicate } from "../morphology/reduplication";
 import { pluralClassOf } from "../lexicon/nounClass";
+import { pickSynonym, formKeyOf } from "../lexicon/word";
 import { closedClassForm } from "./closedClass";
 import { fnv1a } from "../rng";
 import type { NP, PP, Sentence, VP } from "./syntax";
@@ -43,9 +44,14 @@ export function realiseSentence(
   const subjectCaseSlot: import("../morphology/types").MorphCategory | null = alignmentSubjectCase(alignment, transitive);
   const objectCaseSlot: import("../morphology/types").MorphCategory | null = alignmentObjectCase(alignment, transitive);
 
+  // Phase 37: per-sentence synonym-rotation tracker. Each NP picks
+  // a synonym for its head meaning; the tracker prevents the same
+  // form from showing up twice across the subject + object NPs.
+  const recentSynonymKeys = new Set<string>();
   const subject = realiseNP(s.subject, lang, {
     articlePresence, caseStrategy, adjPos, possPos, numPos,
     subjectCaseSlot, objectCaseSlot,
+    recentSynonymKeys,
   }, "S");
   // Phase 36 Tranche 36b: relay the subject's noun-class to the VP
   // so the verb realiser picks the matching agreement marker.
@@ -67,6 +73,7 @@ export function realiseSentence(
     : realiseNP(obj, lang, {
         articlePresence, caseStrategy, adjPos, possPos, numPos,
         subjectCaseSlot, objectCaseSlot,
+        recentSynonymKeys,
       }, "O");
   const verbTokens = realiseVerb(s.predicate, lang, s.negated, negPos, incorporatedRoot);
   const predPpTokens = s.predicate.pps.flatMap((pp) =>
@@ -198,6 +205,14 @@ interface NPCtx {
   numPos: "pre" | "post";
   subjectCaseSlot?: import("../morphology/types").MorphCategory | null;
   objectCaseSlot?: import("../morphology/types").MorphCategory | null;
+  /**
+   * Phase 37: synonym-pick context. `register` biases toward
+   * register-matched synonyms (literary genre → high). `recentSynonymKeys`
+   * accumulates form-keys already used in the current sentence to
+   * encourage variation across NPs within one utterance.
+   */
+  register?: "high" | "low" | "neutral";
+  recentSynonymKeys?: Set<string>;
 }
 
 function alignmentSubjectCase(
@@ -241,8 +256,22 @@ function realiseNP(
   ctx: NPCtx,
   role: "S" | "O" | "PP-NP" | "POSS",
 ): RealisedToken[] {
-  let headForm = np.head.baseForm;
   const meaning = np.head.lemma;
+  // Phase 37: when a meaning has synonyms, ask the lexicon to pick
+  // one based on register + recently-used context (set on ctx by the
+  // composer). Falls back to the parsed-input baseForm when the
+  // language has no synonyms for this meaning.
+  let headForm = np.head.baseForm;
+  if (lang.words && meaning) {
+    const picked = pickSynonym(lang, meaning, {
+      register: ctx.register,
+      recentlyUsed: ctx.recentSynonymKeys,
+    });
+    if (picked && picked.length > 0) {
+      headForm = picked;
+      if (ctx.recentSynonymKeys) ctx.recentSynonymKeys.add(formKeyOf(picked));
+    }
+  }
   // Phase 36 Tranche 36b: Bantu-style noun-class prefix. Resolve the
   // class for this meaning, swap to the plural class when number ===
   // "pl", and prefix the corresponding paradigm before number/case
@@ -637,6 +666,17 @@ function realiseVerb(
   const subjClass = vp.subjectNounClass;
   if (subjClass !== undefined) {
     const cat = `verb.cls.${subjClass}` as MorphCategory;
+    if (lang.morphology.paradigms[cat]) stack.push(cat);
+  }
+  // Phase 36 Tranche 36j: switch-reference marker. When the language
+  // tracks SR and the VP is flagged as a subordinate clause, push
+  // verb.subord.ss / verb.subord.ds depending on subject-coreference.
+  const refTrack = lang.grammar.referenceTracking ?? "none";
+  if (
+    (refTrack === "switch-reference" || refTrack === "both") &&
+    vp.subordSubjectCoreference !== undefined
+  ) {
+    const cat = vp.subordSubjectCoreference === "same" ? "verb.subord.ss" : "verb.subord.ds";
     if (lang.morphology.paradigms[cat]) stack.push(cat);
   }
 

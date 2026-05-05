@@ -480,6 +480,8 @@ export const CATALOG: SoundChange[] = [
   },
   {
     id: "deletion.syncope",
+    frequency: "common",
+    rationale: "Syncope of unstressed medial vowels — Latin → Romance (calidus → caldo), English → reduced unstressed.",
     label: "V → ∅ / C_C [unstressed]",
     category: "deletion",
     positionBias: "internal",
@@ -562,6 +564,8 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "monophthongization.au_to_o",
+    frequency: "common",
+    rationale: "Diphthong simplification au → o — universal Romance, Old → Middle English, regular monophthongisation.",
     label: "au → o / ai → e",
     category: "monophthongization",
     description:
@@ -720,6 +724,8 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "inventory.click_introduction",
+    frequency: "rare",
+    rationale: "Click consonants are restricted to a few areal pockets (Khoisan, southern Bantu, Damin) — not a productive global change.",
     label: "C → click (rare)",
     category: "inventory",
     description:
@@ -837,6 +843,8 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "stress.open_syllable_lengthening",
+    frequency: "ordinary",
+    rationale: "Open-syllable lengthening (Old → Middle English; Old High German) is well-attested but not pan-typological.",
     label: "V → Vː / σ̌_open",
     category: "stress",
     description:
@@ -882,6 +890,8 @@ export const CATALOG: SoundChange[] = [
 
   {
     id: "stress.unstressed_final_apocope",
+    frequency: "common",
+    rationale: "Stress-conditioned final-vowel loss — Old French / Old English / Middle High German all lost final unstressed vowels.",
     label: "V[ - stress]# → ∅",
     category: "stress",
     description:

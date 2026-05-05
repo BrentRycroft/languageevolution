@@ -204,11 +204,26 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   if (config.seedBoundMorphemes && config.seedBoundMorphemes.size > 0) {
     rootLang.boundMorphemes = new Set(config.seedBoundMorphemes);
     rootLang.boundMorphemeOrigin = {};
+    if (!rootLang.derivationalSuffixes) rootLang.derivationalSuffixes = [];
     for (const m of config.seedBoundMorphemes) {
       rootLang.boundMorphemeOrigin[m] = {
         introducedGen: 0,
         pathway: "preset-seed",
       };
+      // Phase 36 Tranche 36t: register seeded bound morphemes as
+      // derivational suffix candidates so the genesis loop can pick
+      // them up for productive coinage. usageCount starts above
+      // threshold for preset-seeded morphemes — they're already
+      // productive at language birth.
+      const affix = rootLang.lexicon[m];
+      if (affix && affix.length > 0 && !rootLang.derivationalSuffixes.some((s) => s.tag === m)) {
+        rootLang.derivationalSuffixes.push({
+          affix: affix.slice(),
+          tag: m,
+          usageCount: 5,
+          productive: true,
+        });
+      }
     }
   }
   // Phase 36 Tranche 36b: Bantu-style noun-class assignment. Each
@@ -216,6 +231,11 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // inflect with the matching class prefix.
   if (config.seedNounClassSystem) {
     assignAllNounClasses(rootLang);
+  }
+  // Phase 36 Tranche 36o: opt the proto language into a sandhi family
+  // subset. Filters which tone-sandhi rules fire in stepToneSandhi.
+  if (config.seedToneSandhiRules && config.seedToneSandhiRules.length > 0) {
+    rootLang.toneSandhiRules = config.seedToneSandhiRules.slice();
   }
   assignAllGenders(rootLang);
   // Phase 29 Tranche 5e: bucket every seed meaning into an inflection

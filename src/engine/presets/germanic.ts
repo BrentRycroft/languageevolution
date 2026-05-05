@@ -262,7 +262,7 @@ const LEXICON: Lexicon = {
   // collective (*friundskapiz → -ship).
   "-arja.agt": ["a", "r", "j", "a"],
   "-iþō.abs": ["i", "θ", "oː"],
-  "-uŋgō.nmlz": ["u", "ŋ", "ɡ", "oː"],
+  "-uŋgō.nmlz": ["u", "ŋ", "g", "oː"],
   "-laikaz.adj": ["l", "a", "j", "k", "a", "z"],
   "-skapiz.coll": ["s", "k", "a", "p", "i", "z"],
 };

@@ -1,5 +1,6 @@
 import type { Language, Meaning, WordForm } from "../types";
-import { addWord, findPrimaryWordForMeaning, removeSense } from "./word";
+import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSense, removeSynonymSense } from "./word";
+import { invalidateReverseLexCache } from "../translator/reverse";
 
 /**
  * Phase 28a: single chokepoint for writing a form to the meaning-keyed
@@ -59,6 +60,68 @@ export function setLexiconForm(
  *   delete lang.registerOf?.[m];
  *   removeSense(lang, m);
  */
+/**
+ * Phase 37: register a synonym for an existing meaning. Adds the form
+ * to `lang.words` (creating a new Word or appending a sense to an
+ * existing one) with the sense flagged as `synonym: true`. The
+ * meaning's primary form in `lang.lexicon[meaning]` is left
+ * unchanged. Idempotent — calling twice with the same (meaning, form)
+ * pair is a no-op.
+ *
+ * Returns true on success, false when:
+ * - the meaning has no primary form yet (caller should use
+ *   setLexiconForm first), or
+ * - the form is identical to the primary form (not a synonym).
+ */
+export function addSynonym(
+  lang: Language,
+  meaning: Meaning,
+  form: WordForm,
+  opts: {
+    bornGeneration: number;
+    register?: "high" | "low" | "neutral";
+    origin?: string;
+    weight?: number;
+  },
+): boolean {
+  if (!lang.lexicon[meaning]) return false;
+  if (form.length === 0) return false;
+  const primaryKey = formKeyOf(lang.lexicon[meaning]!);
+  const newKey = formKeyOf(form);
+  if (primaryKey === newKey) return false;
+  if (!lang.words) return false;
+  // Avoid double-registering on a Word that already has the meaning.
+  const existing = findWordByForm(lang, form);
+  if (existing && existing.senses.some((s) => s.meaning === meaning)) {
+    return false;
+  }
+  addWord(lang, form, meaning, {
+    bornGeneration: opts.bornGeneration,
+    register: opts.register,
+    origin: opts.origin ?? "synonym",
+    weight: opts.weight ?? 0.3,
+    synonym: true,
+  });
+  // Phase 37: invalidate the reverse-lookup cache so subsequent
+  // translations pick up the new sense.
+  invalidateReverseLexCache(lang);
+  return true;
+}
+
+/**
+ * Phase 37: remove a synonym entry. Strips the sense from the word
+ * with this form; if the word has no remaining senses, the word is
+ * dropped. The primary form in `lang.lexicon[meaning]` is untouched.
+ */
+export function removeSynonym(
+  lang: Language,
+  meaning: Meaning,
+  form: WordForm,
+): void {
+  removeSynonymSense(lang, meaning, form);
+  invalidateReverseLexCache(lang);
+}
+
 export function deleteMeaning(lang: Language, meaning: Meaning): void {
   delete lang.lexicon[meaning];
   delete lang.wordFrequencyHints[meaning];

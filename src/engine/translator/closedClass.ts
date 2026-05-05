@@ -117,10 +117,21 @@ export function closedClassForm(
  * `that_near` (the medial/hearer-proximal slot). Distance lemmas
  * passed in directly (`that_far`, `that_remote`) pass through. A
  * two-way language receives the bare `"that"` form regardless.
+ *
+ * Phase 36 Tranche 36k: when the language has a T-V politeness
+ * distinction, generic "you" maps to `you_fml` (the formal slot).
+ * Speakers can opt into the familiar form by passing `you_fam`
+ * directly. Languages without T-V politeness keep bare `"you"`.
  */
 function remapDemonstrative(lang: Language, lemma: string): string {
-  if (lemma !== "that") return lemma;
-  const d = lang.grammar.demonstrativeDistance ?? "two-way";
-  if (d === "three-way" || d === "four-way") return "that_near";
-  return "that";
+  if (lemma === "that") {
+    const d = lang.grammar.demonstrativeDistance ?? "two-way";
+    if (d === "three-way" || d === "four-way") return "that_near";
+    return "that";
+  }
+  if (lemma === "you") {
+    const reg = lang.grammar.politenessRegister ?? "none";
+    if (reg === "T-V" || reg === "binary") return "you_fml";
+  }
+  return lemma;
 }

@@ -110,10 +110,20 @@ export function stepPhonology(
     ruleActuationGen[ruleId] = entry.actuatedAt;
   }
 
+  // Phase 36 Tranche 36q: sociolinguistic register strata. When the
+  // language carries weights for vernacular/standard/literary, scale
+  // the per-language rate multiplier accordingly: vernacular-heavy
+  // languages erode faster (×1.2), literary-heavy resist (×0.7).
+  let strataMult = 1;
+  if (lang.registerStrata) {
+    const w = lang.registerStrata;
+    strataMult = (w.vernacular ?? 0) * 1.2 + (w.standard ?? 0) * 1.0 + (w.literary ?? 0) * 0.7;
+    if (!Number.isFinite(strataMult) || strataMult <= 0) strataMult = 1;
+  }
   const opts = {
     globalRate: config.phonology.globalRate * realismMultiplier(config),
     weights: lang.changeWeights,
-    rateMultiplier: mult,
+    rateMultiplier: mult * strataMult,
     frequencyHints: lang.wordFrequencyHints,
     agesSinceChange: ages,
     registerOf: lang.registerOf,

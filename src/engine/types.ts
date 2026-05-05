@@ -511,6 +511,16 @@ export interface WordSense {
    * "borrow" record how they joined the word.
    */
   origin?: string;
+  /**
+   * Phase 37: synonym flag. When true, this sense represents an
+   * alternative form for a meaning whose *primary* form lives on a
+   * different Word. The simulator uses this to skip synonym senses
+   * when looking up the primary form via `findPrimaryWordForMeaning`,
+   * so synonyms don't compete with the canonical form for that role.
+   * Synonym senses are still discoverable via `findWordsByMeaning`
+   * and `selectSynonyms`.
+   */
+  synonym?: boolean;
 }
 
 /**
@@ -781,6 +791,13 @@ export interface SimulationConfig {
    * class prefix and drives verb-class agreement.
    */
   seedNounClassSystem?: boolean;
+  /**
+   * Phase 36 Tranche 36o: declarative tone-sandhi rule selection. Set
+   * by tonal presets (e.g., Bantu's ["meeussen","spread"]) to filter
+   * which sandhi rules can fire on the proto language. Daughter
+   * languages inherit unless overridden.
+   */
+  seedToneSandhiRules?: ReadonlyArray<"meeussen" | "dissimilate" | "spread" | "downstep">;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;
@@ -805,7 +822,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 7;
+  version: 8;
   id: string;
   label: string;
   createdAt: number;

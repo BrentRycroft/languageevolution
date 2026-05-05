@@ -40,6 +40,16 @@ interface ReverseLexEntry {
 
 const cache = new WeakMap<Language, Map<string, ReverseLexEntry>>();
 
+/**
+ * Phase 37: invalidate the reverse-lookup cache for a language.
+ * Called after synonym add/remove so subsequent lookups see the new
+ * sense. The simulator's per-gen lang re-write naturally invalidates
+ * via WeakMap, but mid-gen mutations need explicit invalidation.
+ */
+export function invalidateReverseLexCache(lang: Language): void {
+  cache.delete(lang);
+}
+
 function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
   const cached = cache.get(lang);
   if (cached) return cached;

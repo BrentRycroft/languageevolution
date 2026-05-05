@@ -5,6 +5,7 @@ import { formatForm } from "../engine/phonology/display";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 import { topRegularCorrespondences } from "../engine/phonology/soundLaws";
 import { closedClassForm } from "../engine/translator/closedClass";
+import { selectSynonyms } from "../engine/lexicon/word";
 
 /**
  * Phase 32 Tranche 32d: language profile card. The TL;DR view —
@@ -177,14 +178,31 @@ export function LanguageProfile() {
       <Section title="Sample lexicon">
         <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
           <tbody>
-            {sampleWords.map(({ meaning, form }) => (
-              <tr key={meaning}>
-                <td style={{ width: 100, color: "var(--muted)" }}>{meaning}</td>
-                <td style={{ fontFamily: "var(--font-mono)" }}>{form}</td>
-              </tr>
-            ))}
+            {sampleWords.map(({ meaning, form }) => {
+              const synonyms = selectSynonyms(lang, meaning);
+              const altForms = synonyms.length > 1
+                ? synonyms.slice(1).map((w) => formatForm(w.form, lang, script, meaning))
+                : [];
+              return (
+                <tr key={meaning}>
+                  <td style={{ width: 100, color: "var(--muted)" }}>{meaning}</td>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>
+                    {form}
+                    {altForms.length > 0 && (
+                      <span className="t-muted" style={{ marginLeft: 8, fontSize: "var(--fs-1)" }}>
+                        ~ {altForms.join(", ")}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
+      </Section>
+
+      <Section title="Lexicon stats">
+        <LexiconStats lang={lang} />
       </Section>
 
       {aliveLeaves.length > 1 && (
@@ -309,6 +327,56 @@ function DemonstrativeParadigm({
         })}
       </tbody>
     </table>
+  );
+}
+
+/**
+ * Phase 37 Tranche 37e: lexicon stats panel showing the
+ * synonym-vs-homonym balance. A healthy language has noticeably
+ * more synonyms (multiple forms per meaning) than homonyms
+ * (multiple meanings per form).
+ */
+function LexiconStats({
+  lang,
+}: {
+  lang: import("../engine/types").Language;
+}) {
+  const meanings = Object.keys(lang.lexicon);
+  const totalMeanings = meanings.length;
+  let synonymTotal = 0;
+  let meaningsWithSynonym = 0;
+  for (const m of meanings) {
+    const syns = selectSynonyms(lang, m);
+    if (syns.length > 1) {
+      meaningsWithSynonym++;
+      synonymTotal += syns.length - 1;
+    }
+  }
+  const meanSynonyms = totalMeanings === 0 ? 0 : synonymTotal / totalMeanings;
+  const synonymRate = totalMeanings === 0 ? 0 : meaningsWithSynonym / totalMeanings;
+
+  let homonymPairs = 0;
+  let formsWithHomonymy = 0;
+  if (lang.words) {
+    for (const w of lang.words) {
+      const realSenses = w.senses.filter((s) => !s.synonym);
+      if (realSenses.length >= 2) {
+        formsWithHomonymy++;
+        homonymPairs += realSenses.length - 1;
+      }
+    }
+  }
+  const totalForms = lang.words?.length ?? 0;
+  const homonymRate = totalForms === 0 ? 0 : formsWithHomonymy / totalForms;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 8 }}>
+      <span className="t-muted">Synonyms</span>
+      <span>{meanSynonyms.toFixed(2)} per meaning ({(synonymRate * 100).toFixed(0)}% have ≥ 1)</span>
+      <span className="t-muted">Homonyms</span>
+      <span>{homonymPairs} pairs ({(homonymRate * 100).toFixed(0)}% of forms)</span>
+      <span className="t-muted">Forms / meanings</span>
+      <span>{totalForms} forms / {totalMeanings} meanings</span>
+    </div>
   );
 }
 

@@ -5,6 +5,7 @@ import type {
 } from "../engine/types";
 import { defaultConfig } from "../engine/config";
 import { syncWordsFromLexicon } from "../engine/lexicon/word";
+import { addSynonym } from "../engine/lexicon/mutate";
 
 /**
  * Bump LATEST_SAVE_VERSION when adding a breaking change. Each bump must:
@@ -17,7 +18,7 @@ import { syncWordsFromLexicon } from "../engine/lexicon/word";
  * get default values without needing an explicit migration. Migrations
  * therefore only need to handle field renames, type changes, or removals.
  */
-export const LATEST_SAVE_VERSION = 7;
+export const LATEST_SAVE_VERSION = 8;
 
 type RawObj = Record<string, unknown>;
 
@@ -75,6 +76,38 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
       }
     }
     return { ...raw, version: 7 };
+  },
+  // Phase 37: fold existing `altForms` entries into the `words` table
+  // as synonym senses. After migration the `words` table is the single
+  // source of truth for both directions (synonymy + homonymy).
+  // `altForms` is preserved on the in-memory object for back-compat
+  // but writers should prefer `addSynonym` going forward.
+  7: (raw) => {
+    const snapshot = raw.stateSnapshot as RawObj | undefined;
+    if (snapshot && snapshot.tree && typeof snapshot.tree === "object") {
+      const tree = snapshot.tree as Record<string, RawObj>;
+      const generation =
+        typeof snapshot.generation === "number" ? snapshot.generation : 0;
+      for (const node of Object.values(tree)) {
+        const lang = node.language as Language | undefined;
+        if (!lang) continue;
+        const altForms = (lang as unknown as { altForms?: Record<string, unknown[]> }).altForms;
+        if (!altForms || !lang.words) continue;
+        for (const [meaning, alts] of Object.entries(altForms)) {
+          if (!Array.isArray(alts)) continue;
+          for (const alt of alts) {
+            if (!Array.isArray(alt)) continue;
+            const form = alt as string[];
+            if (form.length === 0) continue;
+            addSynonym(lang, meaning, form, {
+              bornGeneration: generation,
+              origin: "altForms-migration",
+            });
+          }
+        }
+      }
+    }
+    return { ...raw, version: 8 };
   },
 };
 

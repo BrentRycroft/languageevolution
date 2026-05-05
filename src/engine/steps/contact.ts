@@ -1,5 +1,6 @@
 import type { Language, SimulationConfig, SimulationState } from "../types";
 import { tryBorrow } from "../contact/borrow";
+import { tryCalque } from "../contact/calque";
 import { maybeArealPhonemeShare } from "../contact/areal_phonology";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
@@ -67,6 +68,36 @@ export function stepContact(
         kind: "grammar_shift",
         description: `substrate-simplification phase: ${currentLoanRate} loans in ${LOAN_HISTORY_WINDOW} gens triggered ${SUBSTRATE_PHASE_LENGTH}-gen accelerated mergers`,
       });
+    }
+  }
+  // Phase 36 Tranche 36m: calque (loan-translation) — when a sister
+  // leaf has a transparent compound for a meaning the recipient
+  // lacks, copy the *structure* and stitch it from the recipient's
+  // own parts. Models compassio → Mitleid pattern.
+  if (lang.bilingualLinks) {
+    for (const partnerId of Object.keys(lang.bilingualLinks)) {
+      if ((lang.bilingualLinks[partnerId] ?? 0) <= 0) continue;
+      const donorNode = state.tree[partnerId];
+      if (!donorNode) continue;
+      const donor = donorNode.language;
+      if (donor.extinct) continue;
+      const calque = tryCalque(lang, donor, rng, 0.0008);
+      if (calque) {
+        if (!lang.borrowHistory) lang.borrowHistory = {};
+        if (!lang.borrowHistory[calque.meaning]) lang.borrowHistory[calque.meaning] = [];
+        lang.borrowHistory[calque.meaning]!.push({
+          fromLangId: donor.id,
+          generation,
+          surface: calque.form.join(""),
+        });
+        pushEvent(lang, {
+          generation,
+          kind: "borrow",
+          description: `calque: "${calque.meaning}" loan-translated from ${donor.name} (parts: ${calque.parts.join(" + ")})`,
+          meta: { donorId: donor.id, recipientId: lang.id, meaning: calque.meaning },
+        });
+        break; // one calque per gen
+      }
     }
   }
   const areal = maybeArealPhonemeShare(

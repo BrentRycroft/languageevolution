@@ -205,6 +205,52 @@ export function maybeAffixReplacement(
 }
 
 /**
+ * Phase 36 Tranche 36l: mood-emergence pathway. When a language is
+ * `moodMarking: "declarative"` and has a subordinator-clitic donor
+ * (`if`, `that`, `because`) of high frequency, with low per-gen
+ * probability the donor grammaticalises into a mood-marking prefix
+ * on the verb. Flips `moodMarking → "subjunctive"` and seeds a
+ * `verb.mood.subj` paradigm from the donor form.
+ *
+ * Mirrors `maybeArticleEmergence` shape; tier-scaled rate.
+ */
+export function maybeMoodEmergence(
+  lang: Language,
+  rng: Rng,
+): MorphShift | null {
+  if ((lang.grammar.moodMarking ?? "declarative") !== "declarative") return null;
+  const donor = lang.lexicon["if"]
+    ? "if"
+    : lang.lexicon["that"]
+      ? "that"
+      : lang.lexicon["because"]
+        ? "because"
+        : null;
+  if (!donor) return null;
+  const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
+  // Slower than article emergence (subjunctive is rarer to evolve
+  // de novo): tier 0 → 0.1%, tier 3 → 0.4%.
+  const baseRate = 0.001 * (1 + tier);
+  if (!rng.chance(baseRate)) return null;
+  const donorForm = lang.lexicon[donor]!;
+  const affix = donorForm.slice(0, Math.min(2, donorForm.length));
+  if (affix.length === 0) return null;
+  if (lang.morphology.paradigms["verb.mood.subj"]) return null;
+  lang.morphology.paradigms["verb.mood.subj"] = {
+    affix: affix.slice(),
+    position: "prefix",
+    category: "verb.mood.subj",
+    source: { meaning: donor, pathway: "subordinator" },
+  };
+  lang.grammar.moodMarking = "subjunctive";
+  return {
+    kind: "grammaticalization",
+    description: `mood emerges: "${donor}" (subordinator) → subjunctive prefix /${affix.join("")}/; moodMarking: declarative → subjunctive`,
+    source: { meaning: donor, pathway: "subordinator", category: "verb.mood.subj" },
+  };
+}
+
+/**
  * Phase 36 Tranche 36s: back-formation / de-derivation.
  *
  * When a fossilised compound's surface ends in a recognised
