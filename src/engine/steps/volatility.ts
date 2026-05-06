@@ -25,7 +25,12 @@ import { pushEvent } from "./helpers";
  *   - Triggers (besides random): tier promotion + heavy contact (called
  *     externally to seed an upheaval).
  */
-const STABLE_MIN_DURATION = 40;
+// Phase 39g: range widened from [40, 120] → [15, 120]. Prior min of
+// 40 forced every stable era to last ≥ 1000 yrs, which made the
+// simulator feel locked in long quiet plateaus. Real diachrony also
+// has shorter stable interludes (a 400-yr quiet period punctuated by
+// a 100-yr upheaval is realistic).
+const STABLE_MIN_DURATION = 15;
 const STABLE_MAX_DURATION = 120;
 const UPHEAVAL_MIN_DURATION = 8;
 const UPHEAVAL_MAX_DURATION = 28;

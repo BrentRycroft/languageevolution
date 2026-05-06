@@ -194,7 +194,11 @@ export function presetTokipona(): SimulationConfig {
       caseStrategy: "preposition",
       adjectivePosition: "pre",
       possessorPosition: "pre",
-      synthesisIndex: 1.0,
+      // Phase 39n: extreme isolating — Toki Pona has 137 lexemes,
+      // no inflection, no agreement. synthesisIndex 0.2 reflects
+      // this; pre-39n the simulator mid-range hid Toki Pona's true
+      // type.
+      synthesisIndex: 0.2,
       hasCase: false,
       // Phase 36 Tranche 36a: Toki Pona has no native plural marker
       // (mute "many" is a separate word). For simulator purposes use

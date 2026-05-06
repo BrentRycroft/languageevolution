@@ -505,6 +505,13 @@ export function presetPIE(): SimulationConfig {
       synthesisIndex: 2.5,
       fusionIndex: 0.7,
       hasCase: true,
+      // Phase 39n: PIE had a productive dual (Vedic, Greek, Lithuanian
+      // retain it). Daughters can lose it as a measurable diachronic
+      // event (Latin → Romance lost the dual; English lost it pre-1100).
+      numberSystem: "sg-du-pl",
+      // PIE evidential / mood / aspect were rich. Phase 39n seeds the
+      // dual as the most attested feature; pitch-accent is reserved
+      // for Phase 40+ (mobile accent reconstruction is contentious).
     },
     // Phase 31 Tranche 31d: Proto-Indo-European is typologically
     // pitch-accent (Vedic / Greek / Lithuanian retain traces of

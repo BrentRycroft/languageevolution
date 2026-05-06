@@ -112,6 +112,22 @@ export function stepPhonology(
   // ramp lambda from a damped initial rate to full rate over the
   // following dozens of generations.
   if (!lang.diffusionState) lang.diffusionState = {};
+  // Phase 39g: drift per-language natural-bias override per category.
+  // Each gen, with low probability, nudge one category's multiplier
+  // by ±0.02 within bounds [0.7, 1.3]. Languages slowly develop
+  // characteristic phonological preferences.
+  if (rng.chance(0.05)) {
+    if (!lang.naturalBiasOverride) lang.naturalBiasOverride = {};
+    const cats: ReadonlyArray<keyof typeof lang.naturalBiasOverride> = [
+      "lenition", "fortition", "voicing", "devoicing",
+      "palatalization", "assimilation", "vowel", "deletion",
+    ];
+    const cat = cats[rng.int(cats.length)]!;
+    const cur = lang.naturalBiasOverride[cat] ?? 1.0;
+    const step = (rng.next() < 0.5 ? -1 : 1) * 0.02;
+    const next = Math.max(0.7, Math.min(1.3, cur + step));
+    lang.naturalBiasOverride[cat] = next;
+  }
   const lexiconKeys = Object.keys(before);
   for (const change of changes) {
     if (lang.diffusionState[change.id] !== undefined) continue;

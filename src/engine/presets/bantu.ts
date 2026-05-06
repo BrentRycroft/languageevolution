@@ -345,6 +345,11 @@ export function presetBantu(): SimulationConfig {
       moodMarking: "subjunctive",
       numberSystem: "sg-pl",
       aspectSystem: "rich",
+      // Phase 39n: Niger-Congo languages frequently mark honorific
+      // pronouns / verbal honorifics (Swahili -ku-/-mwa-/-tu-).
+      // Seed as "honorific" so daughters can drift to "tiered" or
+      // back to "none" via grammaticalisation cascade.
+      politenessRegister: "honorific",
     },
     // Phase 31 Tranche 31d: Bantu is tonal — most Niger-Congo
     // languages mark tone on every syllable. The proto-language

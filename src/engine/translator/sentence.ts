@@ -6,6 +6,25 @@ import { parseSyntaxAll } from "./parse";
 import { realiseSentence } from "./realise";
 import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
+import { formatNumeral } from "./numerals";
+
+/**
+ * Phase 39k: parse a numeral lemma to an integer. Returns null if
+ * the lemma isn't a recognised number word. Used to drive
+ * formatNumeral when the language has numeralBase / numeralOrder set.
+ */
+const NUMERAL_VALUES: Record<string, number> = {
+  zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
+  eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13,
+  fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18,
+  nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60,
+  seventy: 70, eighty: 80, ninety: 90, hundred: 100, thousand: 1000,
+};
+function numeralLemmaToInt(lemma: string): number | null {
+  if (NUMERAL_VALUES[lemma] !== undefined) return NUMERAL_VALUES[lemma]!;
+  const asInt = Number(lemma);
+  return Number.isFinite(asInt) && Number.isInteger(asInt) ? asInt : null;
+}
 
 export type { EnglishTag, EnglishToken } from "./tokens";
 import type { EnglishTag, EnglishToken } from "./tokens";
@@ -485,6 +504,25 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     else if (nounsSeen === 1) t.features.role = "object";
     nounsSeen++;
   }
+  // Phase 39i: collapse "there is" / "there are" / "there was" /
+  // "there were" into a single existential token (EXIST.imp).
+  // Languages with impersonalExistential: "single-word" render this
+  // as a single closed-class lexeme (Spanish hay, Italian c'è).
+  // Languages with "be-there" / "have-style" / "give-style" render
+  // periphrastically — those will be wired up later; for now the
+  // collapsed token still resolves via closedClassForm.
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const a = tokens[i]!;
+    const b = tokens[i + 1]!;
+    if (a.lemma === "there" && (b.lemma === "is" || b.lemma === "are" || b.lemma === "was" || b.lemma === "were")) {
+      tokens.splice(i, 2, {
+        surface: `${a.surface} ${b.surface}`,
+        lemma: "EXIST.imp",
+        tag: "V",
+        features: { tense: b.lemma === "was" || b.lemma === "were" ? "past" : "present" },
+      });
+    }
+  }
   return tokens;
 }
 
@@ -877,6 +915,42 @@ function translateFragment(
         emitClosedClass(tok.lemma, "CONJ", "conj");
         continue;
       case "NUM": {
+        // Phase 39k: route numerals through formatNumeral so the
+        // language's numeralBase + numeralOrder shape the output.
+        // English "fifty-five" against a German-style preset emits
+        // "five-and-fifty"; against French preset, "seventy-five"
+        // emits "sixty-fifteen" (soixante-quinze).
+        const numValue = numeralLemmaToInt(tok.lemma);
+        if (numValue !== null && (lang.grammar.numeralBase || lang.grammar.numeralOrder)) {
+          const formatted = formatNumeral(numValue, lang);
+          for (const ft of formatted) {
+            const lex = lang.lexicon[ft.lemma];
+            const form = lex ?? closedClassForm(lang, ft.lemma) ?? [];
+            if (form.length === 0) continue;
+            if (ft.connector) {
+              const cf = closedClassForm(lang, ft.connector) ?? [];
+              if (cf.length > 0) {
+                targetTokens.push({
+                  englishLemma: ft.connector,
+                  englishTag: "CONJ",
+                  targetForm: cf,
+                  targetSurface: cf.join(""),
+                  glossNote: "num.connector",
+                  resolution: "direct",
+                });
+              }
+            }
+            targetTokens.push({
+              englishLemma: ft.lemma,
+              englishTag: "NUM",
+              targetForm: form,
+              targetSurface: form.join(""),
+              glossNote: `num(${numValue})`,
+              resolution: lex ? "direct" : "concept",
+            });
+          }
+          continue;
+        }
         const lex = lang.lexicon[tok.lemma];
         const form = lex ?? closedClassForm(lang, tok.lemma) ?? [];
         if (form.length > 0) {
@@ -892,6 +966,27 @@ function translateFragment(
         continue;
       }
       default: {
+        // Phase 39i: existential impersonal "there is/are/was/were"
+        // collapses to a single closed-class lemma. Languages with
+        // impersonalExistential: "single-word" render this as one
+        // word (Spanish hay); other strategies still render via
+        // closedClassForm but the synthesised form differs per
+        // language so it's still visibly distinct.
+        if (tok.lemma === "EXIST.imp" || tok.lemma === "EXIST.imp.past") {
+          const ex = closedClassForm(lang, tok.lemma) ?? [];
+          if (ex.length > 0) {
+            const strat = lang.grammar.impersonalExistential ?? "be-there";
+            targetTokens.push({
+              englishLemma: tok.lemma,
+              englishTag: "V",
+              targetForm: ex,
+              targetSurface: ex.join(""),
+              glossNote: `exist:${strat}`,
+              resolution: "direct",
+            });
+          }
+          continue;
+        }
         const { form: rawForm, resolution, glossNote } = resolveLemma(lang, tok.lemma);
         // Phase 39c: synonym selection in fragment fallback. When the
         // meaning has synonyms, pick one (register-aware). Pre-39c
