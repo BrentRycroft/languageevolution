@@ -149,7 +149,11 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   const enabled = config.phonology.enabledChangeIds.slice().sort();
   const weights: Record<string, number> = {};
   for (const id of enabled) {
-    weights[id] = config.phonology.changeWeights[id] ?? CATALOG_BY_ID[id]?.baseWeight ?? 1;
+    const base = config.phonology.changeWeights[id] ?? CATALOG_BY_ID[id]?.baseWeight ?? 1;
+    // Phase 40d: preset-level rule-weight priors. Multiplicative on
+    // top of the catalog/config base weight. Soft prior, not cap.
+    const priorMult = config.seedRuleBias?.[id] ?? 1;
+    weights[id] = base * priorMult;
   }
   const seedLex = cloneLexicon(config.seedLexicon);
   const rootLang: Language = {

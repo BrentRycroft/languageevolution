@@ -91,7 +91,19 @@ export function decayAndActuate(
     }
     survivors.sort((a, b) => b.weight - a.weight);
     const top = survivors[0]!;
-    if (canonical && !formsEqual(top.form, canonical) && top.weight > 0.5 && generation - top.bornGeneration >= 2) {
+    // Phase 40b: frequency-tilted actuation threshold. Median content
+    // (freq=0.5) actuates at 0.5; Swadesh-core (freq=1.0) needs 0.7.
+    // Real diachrony: variants compete for frequency over 5-10 gens
+    // before one dominates; high-freq core resists displacement.
+    const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+    const threshold = 0.5 + 0.4 * Math.max(0, freq - 0.5);
+    // Phase 40b: lengthening-bias dampening. When the variant is
+    // *longer* than the canonical, dampen its actuation by adding
+    // 0.1 to the threshold. Real diachrony favours shorter variants
+    // (high-frequency reduction). Shorter variants face no penalty.
+    const lengthBias = canonical && top.form.length > canonical.length ? 0.1 : 0;
+    const effectiveThreshold = threshold + lengthBias;
+    if (canonical && !formsEqual(top.form, canonical) && top.weight > effectiveThreshold && generation - top.bornGeneration >= 2) {
       actuations.push({ meaning: m, fromForm: canonical.slice(), toForm: top.form.slice() });
       // Phase 29 Tranche 1 round 2: route through chokepoint.
       setLexiconForm(lang, m, top.form.slice(), { bornGeneration: generation, origin: "variant-actuation" });
