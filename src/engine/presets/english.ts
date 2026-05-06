@@ -844,6 +844,7 @@ export function presetEnglish(): SimulationConfig {
       childhood: { parts: ["child", "-hood"] },
     },
     seedBoundMorphemes: BOUND_MORPHEMES,
+    seedPhonemeTarget: 44,
     preset: "english",
   };
 }

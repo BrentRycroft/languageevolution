@@ -57,20 +57,22 @@ describe("Phase 27b — functional load", () => {
 });
 
 describe("Phase 27b — inventory size pressure", () => {
-  it("returns 0 when at-or-below tier target", () => {
+  it("returns ≤ 0 when at-or-below tier target (Phase 39a: signed pressure)", () => {
     const lang = freshEnglish();
     // Force a small inventory.
     lang.phonemeInventory.segmental = ["a", "i", "u", "p", "t", "k"];
-    expect(inventorySizePressure(lang)).toBe(0);
+    expect(inventorySizePressure(lang)).toBeLessThanOrEqual(0);
   });
 
   it("returns positive value when over tier target", () => {
     const lang = freshEnglish();
-    // English preset seeds tier 3 → target = 40. Inflate inventory to 60.
+    // Force a known target so the test isn't sensitive to seed-size detection.
+    lang.phonemeTarget = 40;
     lang.phonemeInventory.segmental = Array.from({ length: 60 }, (_, i) => `x${i}`);
     const pressure = inventorySizePressure(lang);
     expect(pressure).toBeGreaterThan(0);
-    expect(pressure).toBeCloseTo(0.5, 1); // (60-40)/40 = 0.5
+    // Phase 39a: pressure = (size - target) / 6 → (60 - 40) / 6 ≈ 3.33.
+    expect(pressure).toBeCloseTo(3.33, 1);
   });
 
   it("tierInventoryTarget scales by tier", () => {

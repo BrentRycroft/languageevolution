@@ -162,6 +162,47 @@ export function maybeSuppressHomonym(
 }
 
 /**
+ * Phase 39b: low-rate stylistic preference drift. Picks a meaning
+ * that has at least one synonym, swaps a non-primary synonym to be
+ * the new primary, demoting the old primary to synonym slot. Models
+ * real cross-generational stylistic-preference shifts (English
+ * "abode" → "house" → "home" all coexist in different registers
+ * across periods). Slow rate (~0.4%/gen) so the lexicon doesn't
+ * thrash.
+ */
+export function maybeReplacePrimary(
+  lang: Language,
+  rng: Rng,
+  probability: number = 0.004,
+): { meaning: Meaning; oldForm: WordForm; newForm: WordForm } | null {
+  if (!rng.chance(probability)) return null;
+  if (!lang.words) return null;
+  // Find a meaning with ≥ 2 senses across all words, where one is
+  // primary and at least one is a synonym.
+  const candidates: Meaning[] = [];
+  for (const m of Object.keys(lang.lexicon)) {
+    const syns = selectSynonyms(lang, m);
+    if (syns.length >= 2) candidates.push(m);
+  }
+  if (candidates.length === 0) return null;
+  const meaning = candidates[rng.int(candidates.length)]!;
+  const syns = selectSynonyms(lang, meaning);
+  // First entry is current primary; pick a non-primary synonym.
+  const newPrimaryWord = syns[1 + rng.int(syns.length - 1)]!;
+  const newForm = newPrimaryWord.form.slice();
+  const oldForm = lang.lexicon[meaning]!.slice();
+  // Promote the synonym to primary by re-routing setLexiconForm,
+  // which also demotes the old form to a synonym entry.
+  setLexiconForm(lang, meaning, newForm, {
+    bornGeneration: 0,
+    origin: "stylistic-preference",
+  });
+  // Old form lives on as a synonym (synonym sense was already there
+  // via the original Word).
+  return { meaning, oldForm, newForm };
+}
+
+/**
  * Phase 37: coinage gate. Called by genesis before committing a new
  * (meaning, form) pair. Returns true if the new entry is acceptable;
  * false if it would create accidental homonymy (the form already

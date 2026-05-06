@@ -45,7 +45,11 @@ const ABSOLUTE_FLOOR_LEN = 2;
  * 0.4 is calibrated against the audit baseline; tune at this knob
  * rather than per-rule.
  */
-const GENERATION_RATE_SCALE = 0.4;
+// Phase 39b: dropped 0.4 → 0.25. Real diachrony is more
+// lexical-replacement-dominated than sound-change-dominated. Phase
+// 38g already cut the rate; 39b cuts it further to balance against
+// the now-tripled synonym genesis rate (steps/grammar.ts).
+const GENERATION_RATE_SCALE = 0.25;
 
 /**
  * Phase 36 Tranche 36g: per-rule frequency-tier multiplier.

@@ -371,6 +371,16 @@ export interface Language {
    */
   toneRegime?: "non-tonal" | "tonal" | "pitch-accent";
   /**
+   * Phase 39a: per-language phoneme inventory target. Replaces the
+   * hard tier-table cap [22, 28, 34, 40] with a per-language attractor
+   * that drifts. Pruning is a soft sigmoid around this target rather
+   * than a hard cap, so languages can genuinely vary from ~10
+   * (Hawaiian-style) to ~80+ (Caucasian-style) without forced
+   * convergence. Initial value comes from `seedPhonemeTarget` if
+   * declared, else seed inventory size, else tier default.
+   */
+  phonemeTarget?: number;
+  /**
    * Phase 34 Tranche 34a: compound metadata. When a meaning is a
    * semantically-compound concept (moonlight = moon + light,
    * daylight = day + light, homework = home + work), it carries a
@@ -794,6 +804,14 @@ export interface SimulationConfig {
    * tonogenesis rules can fire during the run.
    */
   seedToneRegime?: NonNullable<Language["toneRegime"]>;
+  /**
+   * Phase 39a: per-preset declared phoneme inventory target. When
+   * absent, the simulator falls back to `seedLexicon`'s observed
+   * inventory size or the tier-default. Real-language attestation
+   * spans Pirahã (~10) → !Xóõ (~130); presets should declare a
+   * target that matches the language family they're modelling.
+   */
+  seedPhonemeTarget?: number;
   /**
    * Phase 34 Tranche 34g: declare seeded compound meanings. Each
    * entry maps the compound meaning to its constituent meanings

@@ -18,6 +18,20 @@ import { classifyLexicon } from "../morphology/inflectionClass";
 import { isToneBearing, toneOf, MID } from "../phonology/tone";
 import { addCompound } from "../lexicon/compound";
 import { assignAllNounClasses } from "../lexicon/nounClass";
+
+/**
+ * Phase 39a: count the unique phonemes across a seed lexicon. Used to
+ * derive a default `phonemeTarget` when the preset hasn't declared one.
+ */
+function observedInventorySize(lexicon: import("../types").Lexicon): number {
+  const seen = new Set<string>();
+  for (const m of Object.keys(lexicon)) {
+    const f = lexicon[m];
+    if (!f) continue;
+    for (const p of f) seen.add(p);
+  }
+  return seen.size;
+}
 import { lexicalCapacity as computeCapacity } from "../lexicon/tier";
 import { syncWordsFromLexicon } from "../lexicon/word";
 import {
@@ -149,6 +163,11 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     // to non-tonal. `refreshInventory` reclassifies each gen so the
     // seed value just sets the proto-language's starting state.
     toneRegime: config.seedToneRegime ?? "non-tonal",
+    // Phase 39a: per-language phoneme target. Preset-declared, else
+    // seed inventory size, else tier default (28 for tier 1).
+    phonemeTarget:
+      config.seedPhonemeTarget ??
+      (config.seedLexicon ? observedInventorySize(config.seedLexicon) : 28),
     infinitiveStrategy: config.seedInfinitiveStrategy ?? { kind: "bare" },
     // Phase 27a: phonotactic profile defaults to permissive (English-like)
     // when no preset specifies — preserves pre-Phase-27 behavior.

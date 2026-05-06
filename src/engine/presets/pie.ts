@@ -514,6 +514,7 @@ export function presetPIE(): SimulationConfig {
     // Phase 32+.
     seedToneRegime: "non-tonal",
     seedBoundMorphemes: PIE_BOUND_MORPHEMES,
+    seedPhonemeTarget: 36,
     preset: "pie",
   };
 }

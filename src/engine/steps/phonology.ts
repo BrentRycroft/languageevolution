@@ -123,7 +123,13 @@ export function stepPhonology(
         // shift clusters (Grimm's Law affected the entire obstruent
         // series; the Great Vowel Shift moved every long vowel).
         if (!lang.categoryMomentum) lang.categoryMomentum = {};
-        lang.categoryMomentum[change.category] = {
+        // Phase 39e: fortition is typologically marked — momentum-
+        // driven cascades make breathy stops dominate PIE runs. Cap
+        // boost lower (×1.1 vs ×1.4) and decay faster (8 gens vs 15).
+        const isFortition = change.category === "fortition";
+        lang.categoryMomentum[change.category] = isFortition
+          ? { boost: 1.1, until: generation + 8 }
+          : {
           boost: 1.4,
           until: generation + 15,
         };

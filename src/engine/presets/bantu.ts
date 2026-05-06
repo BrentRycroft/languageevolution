@@ -355,6 +355,7 @@ export function presetBantu(): SimulationConfig {
     // Phase 36 Tranche 36b: Bantu noun-class system. Activates the
     // class-prefix realiser and verb-agreement pathway.
     seedNounClassSystem: true,
+    seedPhonemeTarget: 32,
     preset: "bantu",
   };
 }
