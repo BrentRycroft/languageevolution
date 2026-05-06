@@ -8,6 +8,9 @@ import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
 import { stepInventoryManagement } from "./steps/inventoryManagement";
 import { activeModulesOf } from "./modules/registry";
+// Phase 41+: side-effect import to register all modules at boot
+// (the barrel in modules/index.ts auto-runs registerXModules()).
+import "./modules";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { rebuildFormKeyIndex } from "./lexicon/word";
 import { seedTierTwoOrthography } from "./phonology/orthography";
