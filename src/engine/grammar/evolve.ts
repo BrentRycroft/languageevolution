@@ -265,10 +265,11 @@ export function driftGrammar(
   grammar: GrammarFeatures,
   rng: Rng,
   simplification: number = 1,
+  rateMultiplier: number = 1,
 ): GrammarShift[] {
   const shifts: GrammarShift[] = [];
   for (const rule of DRIFT_RULES) {
-    if (rng.chance(rule.probability)) {
+    if (rng.chance(rule.probability * rateMultiplier)) {
       const applied = rule.shift(grammar, rng, simplification);
       if (applied) shifts.push(applied);
     }

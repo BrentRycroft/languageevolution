@@ -30,7 +30,14 @@ export function stepGrammar(
   const p = Math.min(1, config.grammar.driftProbabilityPerGeneration * lang.conservatism * realismMultiplier(config));
   if (!rng.chance(p)) return;
   const simplification = simplificationFactor(lang.speakers);
-  const shifts = driftGrammar(lang.grammar, rng, simplification);
+  // Phase 39l: sister-drift dampening. Daughters within 30 gens of
+  // split have their drift rate cut to 0.4× — preserves sister-
+  // language similarity for the early post-split window.
+  const dampener = lang.siblingDriftDampenUntil !== undefined
+    && generation < lang.siblingDriftDampenUntil
+    ? 0.4
+    : 1;
+  const shifts = driftGrammar(lang.grammar, rng, simplification, dampener);
   for (const s of shifts) {
     pushEvent(lang, {
       generation,

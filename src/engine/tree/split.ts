@@ -264,6 +264,14 @@ export function splitLeaf(
   }
 
   const usedKinds = new Set<string>();
+  // Phase 39l: sister-grammar dampening. Fresh daughters get a 30-gen
+  // window where their grammar drift is dampened to 0.4× — modelling
+  // the ~400-yr mutual-intelligibility window between Old English
+  // and Old Saxon post-split. The flag is read by driftGrammar in
+  // grammar/evolve.ts.
+  for (const child of children) {
+    child.siblingDriftDampenUntil = generation + 30;
+  }
   for (const child of children) {
     const innovation = applyFounderInnovation(
       child,

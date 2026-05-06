@@ -389,6 +389,14 @@ export interface Language {
    */
   naturalBiasOverride?: Partial<Record<SoundChangeCategory, number>>;
   /**
+   * Phase 39l: post-split mutual-intelligibility dampening. While
+   * `state.generation < siblingDriftDampenUntil`, this language's
+   * grammar drift rate is multiplied by 0.4. Models the ~400 yr
+   * window where Old English and Old Saxon stayed mutually
+   * intelligible despite their tree-split.
+   */
+  siblingDriftDampenUntil?: number;
+  /**
    * Phase 34 Tranche 34a: compound metadata. When a meaning is a
    * semantically-compound concept (moonlight = moon + light,
    * daylight = day + light, homework = home + work), it carries a

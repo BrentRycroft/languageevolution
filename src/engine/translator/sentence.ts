@@ -1112,9 +1112,14 @@ function translateViaTree(
     });
   }
 
-  const notes = missing.length === 0
+  // Phase 39c: surface fragment-mode fallback. Pre-39c the translator
+  // silently fell back when full sentence parsing failed; users had
+  // no signal whether output was clause-shaped or just word-by-word.
+  const fragmentNotice = "(couldn't parse as a full clause — translating word-by-word)";
+  const baseNotes = missing.length === 0
     ? `Resolved every word via the dictionary.`
     : `${missing.length} word${missing.length === 1 ? "" : "s"} unresolved — flagged with [].`;
+  const notes = `${fragmentNotice} ${baseNotes}`;
 
   return {
     english,

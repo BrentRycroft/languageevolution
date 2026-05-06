@@ -54,6 +54,9 @@ import {
  * instead of partly-tonal.
  */
 function tonaliseLexicon(lang: Language): void {
+  // Phase 39f: pitch-accent regime marks ONE tone per word (the
+  // accented syllable). Tonal regime marks every tone-bearing syllable.
+  const isPitchAccent = lang.toneRegime === "pitch-accent";
   for (const m of Object.keys(lang.lexicon)) {
     const f = lang.lexicon[m]!;
     let needsRewrite = false;
@@ -61,11 +64,26 @@ function tonaliseLexicon(lang: Language): void {
       if (isToneBearing(p) && !toneOf(p)) { needsRewrite = true; break; }
     }
     if (!needsRewrite) continue;
-    lang.lexicon[m] = f.map((p) => {
-      if (!isToneBearing(p)) return p;
-      if (toneOf(p)) return p;
-      return p + MID;
-    });
+    if (isPitchAccent) {
+      // Mark only the FIRST tone-bearing position with HIGH (accent),
+      // leave the rest untoned. Models Japanese/Norwegian.
+      let marked = false;
+      lang.lexicon[m] = f.map((p) => {
+        if (!isToneBearing(p)) return p;
+        if (toneOf(p)) { marked = true; return p; }
+        if (!marked) {
+          marked = true;
+          return p + "˥"; // HIGH = accent peak
+        }
+        return p;
+      });
+    } else {
+      lang.lexicon[m] = f.map((p) => {
+        if (!isToneBearing(p)) return p;
+        if (toneOf(p)) return p;
+        return p + MID;
+      });
+    }
   }
 }
 
