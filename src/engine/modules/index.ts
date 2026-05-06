@@ -17,6 +17,7 @@
  */
 
 import { registerGrammaticalModules } from "./grammatical";
+import { registerSyntacticalModules } from "./syntactical";
 
 let booted = false;
 
@@ -24,8 +25,8 @@ export function bootModules(): void {
   if (booted) return;
   booted = true;
   registerGrammaticalModules();
-  // Phases 43-45 add their barrels here:
-  // registerSyntacticalModules();
+  registerSyntacticalModules();
+  // Phases 44-45 add their barrels here:
   // registerMorphologicalModules();
   // registerSemanticModules();
 }
