@@ -81,10 +81,14 @@ describe("Phase 42f — grammatical modules", () => {
     }
   });
 
-  it("a language with no activeModules runs back-compat unchanged", () => {
-    // No seedActiveModules — the language has activeModules undefined,
-    // and all module hooks no-op.
-    const cfg = { ...presetEnglish(), seed: "phase42-back-compat" };
+  it("a language with seedActiveModules explicitly cleared runs back-compat unchanged", () => {
+    // Phase 46a-migration: presets now declare `seedActiveModules` by
+    // default. Pass an empty array to opt out (back-compat path).
+    const cfg = {
+      ...presetEnglish(),
+      seed: "phase42-back-compat",
+      seedActiveModules: undefined,
+    };
     const sim = createSimulation(cfg);
     for (let i = 0; i < 10; i++) sim.step();
     const state = sim.getState();

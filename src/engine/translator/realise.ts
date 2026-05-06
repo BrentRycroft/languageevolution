@@ -119,14 +119,18 @@ export function realiseSentence(
     ];
   const subjectFinal = dropSubject ? [] : subject;
 
-  // Phase 41c: stage hook — order-tokens. A wordOrder module can
-  // override the static sliceOrder dispatch. Falls through to legacy
-  // when no module is registered.
+  // Phase 46a-migration: order-tokens stage. Each wordOrder module
+  // (svo / sov / vso / vos / ovs / osv / free) writes the canonical
+  // S/V/O sequence into `meta.order`. When no module is active,
+  // fall through to the legacy `sliceOrder` dispatch.
+  const orderMeta: { stage: string; order?: Array<"S" | "V" | "O"> } = {
+    stage: "order-tokens",
+  };
   runRealiseStage("order-tokens", lang, {
     data: { sentence: s, subject, verbTokens, objectTokens, predPpTokens },
-    meta: { stage: "order-tokens" },
+    meta: orderMeta,
   });
-  const order = sliceOrder(lang.grammar.wordOrder);
+  const order = orderMeta.order ?? sliceOrder(lang.grammar.wordOrder);
   const isVFinal = order[order.length - 1] === "V";
   const slot: Record<"S" | "V" | "O", RealisedToken[]> = {
     S: subjectFinal,

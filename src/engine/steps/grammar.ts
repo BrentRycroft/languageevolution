@@ -20,6 +20,8 @@ import { maybeReanalyse } from "../lexicon/reanalysis";
 import { maybeSpawnSynonym, maybeSuppressHomonym, maybeReplacePrimary } from "../lexicon/synonyms";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
+import { activateModule, deactivateModule } from "../modules/registry";
+import { wordOrderModuleId, WORD_ORDER_MODULE_IDS } from "../modules/syntactical";
 
 export function stepGrammar(
   lang: Language,
@@ -56,6 +58,19 @@ export function stepGrammar(
       kind: "grammar_shift",
       description: `${orderShift.feature}: ${String(orderShift.from)} → ${String(orderShift.to)}`,
     });
+    // Phase 46a-migration: swap the active wordOrder module so the
+    // realiser tracks the new order. Idempotent; only fires when
+    // the language is module-aware.
+    if (lang.activeModules) {
+      const fromId = wordOrderModuleId(orderShift.from as Language["grammar"]["wordOrder"]);
+      const toId = wordOrderModuleId(orderShift.to as Language["grammar"]["wordOrder"]);
+      if (fromId !== toId) {
+        for (const id of WORD_ORDER_MODULE_IDS) {
+          if (id !== toId) deactivateModule(lang, id);
+        }
+        activateModule(lang, toId, { generation, rng, config });
+      }
+    }
   }
   // Soft typological-consistency repair: low-probability nudge of features
   // that violate well-attested implicational universals.

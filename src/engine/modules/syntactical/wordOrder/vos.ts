@@ -11,7 +11,8 @@ const vosModule: SimulationModule = {
   id: "syntactical:wordOrder/vos",
   kind: "syntactical",
   realiseStage: "order-tokens",
-  realise(input) {
+  realise(input, _lang, _state, ctx) {
+    (ctx as Record<string, unknown>).order = ["V", "O", "S"];
     return input;
   },
 };
