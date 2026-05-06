@@ -43,8 +43,15 @@ const BASE_PRUNE_PROB = 0.03;
 const MAX_PRUNE_ATTEMPTS_PER_GEN = 5;
 
 // Phase 39a: per-gen drift on the per-language phoneme target.
-const TARGET_DRIFT_RATE = 0.0005; // ~0.05%/gen
-const TARGET_DRIFT_MAX_STEP = 1; // ±1 phoneme per drift step
+// Recalibrated for 25y/gen: real long-term inventory drift is ±5-15
+// phonemes over 5000 yrs (200 gens). Pre-calibration the rate
+// (0.0005, step=1) gave std ~0.32 over 200 gens — far too small.
+// Now: rate 0.003, step ≤2 → std = √(200 × 0.003 × 4) ≈ 1.55 with
+// mean drift ~3-5 phonemes per language per 200 gens, occasional
+// ±10 outliers. Matches Indo-European range (PIE ~36 → daughters
+// 25-50).
+const TARGET_DRIFT_RATE = 0.003;
+const TARGET_DRIFT_MAX_STEP = 2;
 const TARGET_MIN = 8;
 const TARGET_MAX = 130;
 
