@@ -81,10 +81,16 @@ export function erosionResistance(
   category: SoundChangeCategory,
   currentLen: number,
   seedLen: number,
+  freq?: number,
 ): number {
   if (!EROSIVE_CATEGORIES.has(category)) return 1;
-  if (seedLen <= ABSOLUTE_FLOOR_LEN) return 1; // 2-phoneme seeds get full rate
-  const seedFloor = Math.max(ABSOLUTE_FLOOR_LEN, Math.ceil(seedLen * 0.7));
+  // Phase 39g: high-frequency function words can erode below the
+  // global ABSOLUTE_FLOOR_LEN. Real reduction: "going to" → "gonna",
+  // "of" → /əv/ → /ə/. When freq ≥ 0.85 and the form is already 2
+  // phonemes, allow further erosion at half rate.
+  const effectiveFloor = freq !== undefined && freq >= 0.85 ? 1 : ABSOLUTE_FLOOR_LEN;
+  if (seedLen <= effectiveFloor) return freq !== undefined && freq >= 0.85 ? 0.5 : 1;
+  const seedFloor = Math.max(effectiveFloor, Math.ceil(seedLen * 0.7));
   const range = seedLen - seedFloor;
   if (range <= 0) return 1; // pathological: floor equals seed (e.g., seedLen=3 → floor=3)
   if (currentLen <= seedFloor) return 0;
@@ -343,10 +349,18 @@ export function applyChangesToWord(
     // Phase 24: soft erosion resistance — fades probability of erosive
     // rules to zero as currentLen approaches SOFT_FLOOR_LEN (=2). Vowel
     // shifts, palatalisation, fortition, insertion etc. are unaffected.
-    const resistance = erosionResistance(change.category, current.length, seedLen);
+    const resistance = erosionResistance(change.category, current.length, seedLen, freq);
     // Phase 28c: directionality bias (natural processes ×1.2-1.5,
     // marked processes ×0.5-0.6).
-    const naturalBias = CATEGORY_NATURAL_BIAS[change.category] ?? 1.0;
+    // Phase 39g: per-language natural-bias override allows some
+    // languages to develop unusual category preferences (e.g., a
+    // fortition-loving Caucasian-style language). The override
+    // multiplies the global bias rather than replacing it; drifts
+    // ±0.02 per category per gen via stepPhonology.
+    const baseBias = CATEGORY_NATURAL_BIAS[change.category] ?? 1.0;
+    const langOverride = (opts.langForOt as Language | undefined)
+      ?.naturalBiasOverride?.[change.category];
+    const naturalBias = baseBias * (langOverride ?? 1.0);
     // Phase 28d: lexical-diffusion S-curve. When this meaning's
     // semantic neighbours have recently undergone change, the rule's
     // probability boosts here too — modeling how sound changes spread

@@ -381,6 +381,22 @@ export interface Language {
    */
   phonemeTarget?: number;
   /**
+   * Phase 39g: per-language override on `CATEGORY_NATURAL_BIAS`.
+   * Each entry is a multiplier (typically 0.85-1.15) that applies on
+   * top of the global bias. Drifts ±0.02 per category per gen so
+   * languages develop characteristic phonological preferences over
+   * time (a fortition-leaning lineage vs a lenition-leaning one).
+   */
+  naturalBiasOverride?: Partial<Record<SoundChangeCategory, number>>;
+  /**
+   * Phase 39l: post-split mutual-intelligibility dampening. While
+   * `state.generation < siblingDriftDampenUntil`, this language's
+   * grammar drift rate is multiplied by 0.4. Models the ~400 yr
+   * window where Old English and Old Saxon stayed mutually
+   * intelligible despite their tree-split.
+   */
+  siblingDriftDampenUntil?: number;
+  /**
    * Phase 34 Tranche 34a: compound metadata. When a meaning is a
    * semantically-compound concept (moonlight = moon + light,
    * daylight = day + light, homework = home + work), it carries a

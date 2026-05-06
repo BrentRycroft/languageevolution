@@ -442,13 +442,29 @@ function GrammarFeatureList({
     stress === "lexical"
       ? `lexical${lexCount > 0 ? ` · ${lexCount} overrides` : ""}`
       : stress;
+  // Phase 39o: expanded typology table — surface previously-hidden
+  // axes (caseStrategy, articlePresence, demonstrativeDistance, etc.)
   const rows: Array<[string, string]> = [
     ["word order", grammar.wordOrder],
+    ["alignment", grammar.alignment ?? "nom-acc"],
+    ["case", grammar.hasCase ? `yes (${grammar.caseStrategy ?? "case"})` : `no (${grammar.caseStrategy ?? "preposition"})`],
+    ["gender count", String(grammar.genderCount)],
     ["affix position", grammar.affixPosition],
     ["plural marking", grammar.pluralMarking],
     ["tense marking", grammar.tenseMarking],
-    ["case", grammar.hasCase ? "yes" : "no"],
-    ["gender count", String(grammar.genderCount)],
+    ["aspect", grammar.aspectSystem ?? "—"],
+    ["mood", grammar.moodMarking ?? "—"],
+    ["evidential", grammar.evidentialMarking ?? "—"],
+    ["politeness", grammar.politenessRegister ?? "—"],
+    ["articles", grammar.articlePresence ?? "—"],
+    ["number", grammar.numberSystem ?? "—"],
+    ["demonstrative", grammar.demonstrativeDistance ?? "—"],
+    ["impersonal exist.", grammar.impersonalExistential ?? "—"],
+    ["numeral base", grammar.numeralBase ?? "—"],
+    ["numeral order", grammar.numeralOrder ?? "—"],
+    ["adjective pos", grammar.adjectivePosition ?? "—"],
+    ["possessor pos", grammar.possessorPosition ?? "—"],
+    ["synthesis idx", grammar.synthesisIndex !== undefined ? grammar.synthesisIndex.toFixed(1) : "—"],
     ["stress", stressLabel],
   ];
   return (

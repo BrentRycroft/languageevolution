@@ -25,6 +25,10 @@ export type ClosedClassLemma =
   | "you_fml" | "you_fam"
   // Phase 36 Tranche 36j: logophoric pronouns.
   | "3sg.log" | "3pl.log"
+  // Phase 39i: existential impersonal verb (Spanish hay, Italian
+  // c'è). Synthesised per language; surfaces in narrative output
+  // when impersonalExistential === "single-word".
+  | "EXIST.imp" | "EXIST.imp.past"
   | "CLF"
   | "Q";
 
@@ -45,6 +49,7 @@ export const CLOSED_CLASS_LEMMAS: ClosedClassLemma[] = [
   // Phase 36 Tranche 36j: logophoric pronouns. Distinct lemmas so
   // the closed-class synthesiser yields contrast against bare he/they.
   "3sg.log", "3pl.log",
+  "EXIST.imp", "EXIST.imp.past",
   "CLF", "Q",
 ];
 

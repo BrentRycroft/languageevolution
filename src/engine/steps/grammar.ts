@@ -30,7 +30,14 @@ export function stepGrammar(
   const p = Math.min(1, config.grammar.driftProbabilityPerGeneration * lang.conservatism * realismMultiplier(config));
   if (!rng.chance(p)) return;
   const simplification = simplificationFactor(lang.speakers);
-  const shifts = driftGrammar(lang.grammar, rng, simplification);
+  // Phase 39l: sister-drift dampening. Daughters within 30 gens of
+  // split have their drift rate cut to 0.4× — preserves sister-
+  // language similarity for the early post-split window.
+  const dampener = lang.siblingDriftDampenUntil !== undefined
+    && generation < lang.siblingDriftDampenUntil
+    ? 0.4
+    : 1;
+  const shifts = driftGrammar(lang.grammar, rng, simplification, dampener);
   for (const s of shifts) {
     pushEvent(lang, {
       generation,
@@ -233,7 +240,11 @@ export function stepMorphology(
   {
     // Phase 39b: quadrupled from 0.002 to 0.008 — homonym swaps now
     // happen visibly, modelling real synonym-takes-over-from-homonym.
-    const supEvent = maybeSuppressHomonym(lang, rng, 0.008 * lang.conservatism * gramMult);
+    // Phase 39 calibration pass: trimmed 0.008 → 0.003. Real homonyms
+    // persist for centuries (English bank/bank still distinct after
+    // 600 yrs). 0.008/gen gave 80% cumulative suppression over 200
+    // gens — too aggressive. 0.003 → ~45% over 200 gens matches.
+    const supEvent = maybeSuppressHomonym(lang, rng, 0.003 * lang.conservatism * gramMult);
     if (supEvent) {
       pushEvent(lang, {
         generation,
@@ -247,7 +258,11 @@ export function stepMorphology(
   // promotion of an existing synonym to primary, demoting old form
   // to synonym slot. Models real cross-generational lexical shifts.
   {
-    const repEvent = maybeReplacePrimary(lang, rng, 0.004 * lang.conservatism * gramMult);
+    // Phase 39 calibration: 0.004 → 0.002. At 25y/gen, primary swaps
+    // happen at most once per word per millennium. 0.004/gen
+    // (one swap per ~250 yrs at the language level) was OK; trim
+    // slightly so it doesn't dominate over true sound-change drift.
+    const repEvent = maybeReplacePrimary(lang, rng, 0.002 * lang.conservatism * gramMult);
     if (repEvent) {
       pushEvent(lang, {
         generation,
