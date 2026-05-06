@@ -205,6 +205,42 @@ export function LanguageProfile() {
         <LexiconStats lang={lang} />
       </Section>
 
+      {/* Phase 39d: surface previously-orphaned engine state. Each
+          subsection is gated on the field being non-empty so they
+          stay invisible for languages that don't use the feature. */}
+      {lang.nounClassAssignments && Object.keys(lang.nounClassAssignments).length >= 5 && (
+        <Section title="Noun classes">
+          <NounClassPanel lang={lang} />
+        </Section>
+      )}
+      {lang.boundMorphemes && lang.boundMorphemes.size > 0 && (
+        <Section title="Bound morphemes (productive affixes)">
+          <BoundMorphemesPanel lang={lang} />
+        </Section>
+      )}
+      {lang.compounds && Object.keys(lang.compounds).length > 0 && (
+        <Section title="Compounds">
+          <CompoundsPanel lang={lang} />
+        </Section>
+      )}
+      {lang.borrowHistory && Object.keys(lang.borrowHistory).length > 0 && (
+        <Section title="Borrow history">
+          <BorrowHistoryPanel lang={lang} />
+        </Section>
+      )}
+      {lang.categoryMomentum && Object.keys(lang.categoryMomentum).length > 0 && (
+        <Section title="Active sound-change momentum">
+          <CategoryMomentumPanel lang={lang} gen={state.generation} />
+        </Section>
+      )}
+      {lang.toneSandhiRules && lang.toneSandhiRules.length > 0 && (
+        <Section title="Tone sandhi">
+          <div style={{ fontSize: "var(--fs-1)" }}>
+            {lang.toneSandhiRules.map((r) => <span key={r} style={{ marginRight: 8 }}>{r}</span>)}
+          </div>
+        </Section>
+      )}
+
       {aliveLeaves.length > 1 && (
         <div style={{ marginTop: 12, fontSize: "var(--fs-1)" }}>
           <span className="t-muted">Switch language: </span>
@@ -391,6 +427,166 @@ function LexiconStats({
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Phase 39d: noun-class assignment table. Shows which class each
+ * noun belongs to (Bantu-style class 1-8). Engine field
+ * `lang.nounClassAssignments` was previously invisible.
+ */
+function NounClassPanel({ lang }: { lang: import("../engine/types").Language }) {
+  const assignments = lang.nounClassAssignments ?? {};
+  // Group by class so each class shows its members.
+  const byClass = new Map<number, string[]>();
+  for (const [meaning, cls] of Object.entries(assignments)) {
+    const arr = byClass.get(cls) ?? [];
+    arr.push(meaning);
+    byClass.set(cls, arr);
+  }
+  const sortedClasses = Array.from(byClass.keys()).sort((a, b) => a - b);
+  return (
+    <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
+      <tbody>
+        {sortedClasses.map((cls) => (
+          <tr key={cls}>
+            <td style={{ width: 80, color: "var(--muted)" }}>class {cls}</td>
+            <td style={{ fontFamily: "var(--font-mono)" }}>
+              {byClass.get(cls)!.slice(0, 12).join(", ")}
+              {byClass.get(cls)!.length > 12 ? ` …+${byClass.get(cls)!.length - 12}` : ""}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * Phase 39d: bound-morpheme list with current form + introduction
+ * generation + replacement chain. Engine fields `lang.boundMorphemes`
+ * + `lang.boundMorphemeOrigin` were previously invisible.
+ */
+function BoundMorphemesPanel({ lang }: { lang: import("../engine/types").Language }) {
+  const morphemes = lang.boundMorphemes;
+  if (!morphemes) return null;
+  const list = Array.from(morphemes);
+  return (
+    <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
+      <tbody>
+        {list.map((m) => {
+          const form = lang.lexicon[m];
+          const origin = lang.boundMorphemeOrigin?.[m];
+          return (
+            <tr key={m}>
+              <td style={{ width: 100, color: "var(--muted)" }}>{m}</td>
+              <td style={{ fontFamily: "var(--font-mono)" }}>
+                {form ? form.join("") : <span className="t-muted">∅</span>}
+                {origin?.obsolescentGen !== undefined && (
+                  <span className="t-muted" style={{ marginLeft: 6 }}>
+                    obsolescent (gen {origin.obsolescentGen})
+                    {origin.replacedBy && ` → ${origin.replacedBy}`}
+                  </span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * Phase 39d: compound list (transparent vs fossilised).
+ */
+function CompoundsPanel({ lang }: { lang: import("../engine/types").Language }) {
+  const compounds = lang.compounds;
+  if (!compounds) return null;
+  const entries = Object.entries(compounds);
+  const transparent = entries.filter(([, m]) => !m.fossilized);
+  const fossilised = entries.filter(([, m]) => m.fossilized);
+  return (
+    <div style={{ fontSize: "var(--fs-1)" }}>
+      <div style={{ marginBottom: 4 }}>
+        <span className="t-muted">{transparent.length} transparent · {fossilised.length} fossilised</span>
+      </div>
+      <table className="paradigm-table" style={{ width: "100%" }}>
+        <tbody>
+          {transparent.slice(0, 8).map(([meaning, meta]) => (
+            <tr key={meaning}>
+              <td style={{ width: 110, color: "var(--muted)" }}>{meaning}</td>
+              <td style={{ fontFamily: "var(--font-mono)" }}>
+                {meta.parts.join(" + ")}
+              </td>
+            </tr>
+          ))}
+          {fossilised.slice(0, 4).map(([meaning, meta]) => (
+            <tr key={meaning} style={{ opacity: 0.7 }}>
+              <td style={{ width: 110, color: "var(--muted)" }}>{meaning}</td>
+              <td style={{ fontFamily: "var(--font-mono)" }}>
+                {meta.parts.join(" + ")}
+                <span className="t-muted" style={{ marginLeft: 6 }}>(fossilised gen {meta.fossilizedGen})</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Phase 39d: most-recent borrow history. Each meaning shows up to
+ * 3 borrowing events with donor + surface form.
+ */
+function BorrowHistoryPanel({ lang }: { lang: import("../engine/types").Language }) {
+  const history = lang.borrowHistory;
+  if (!history) return null;
+  // Flatten to (meaning, event) pairs, sort by generation desc, take top 10.
+  const all: Array<{ meaning: string; gen: number; from: string; surface: string }> = [];
+  for (const [meaning, events] of Object.entries(history)) {
+    for (const ev of events) all.push({ meaning, gen: ev.generation, from: ev.fromLangId, surface: ev.surface });
+  }
+  all.sort((a, b) => b.gen - a.gen);
+  const recent = all.slice(0, 10);
+  return (
+    <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
+      <tbody>
+        {recent.map((ev, i) => (
+          <tr key={`${ev.meaning}-${i}`}>
+            <td style={{ width: 100, color: "var(--muted)" }}>gen {ev.gen}</td>
+            <td>
+              <span style={{ fontFamily: "var(--font-mono)", marginRight: 6 }}>{ev.surface}</span>
+              <span className="t-muted">{ev.meaning} ← {ev.from}</span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * Phase 39d: live category-momentum tracker. Shows which sound-change
+ * categories currently have a momentum boost active and how many gens
+ * remain.
+ */
+function CategoryMomentumPanel({ lang, gen }: { lang: import("../engine/types").Language; gen: number }) {
+  const cm = lang.categoryMomentum ?? {};
+  const active = Object.entries(cm).filter(([, m]) => m.until > gen);
+  if (active.length === 0) return <span className="t-muted">no active boosts</span>;
+  return (
+    <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
+      <tbody>
+        {active.map(([cat, m]) => (
+          <tr key={cat}>
+            <td style={{ width: 130, color: "var(--muted)" }}>{cat}</td>
+            <td>×{m.boost.toFixed(2)} for {m.until - gen} more gens</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
