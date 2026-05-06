@@ -848,11 +848,21 @@ function translateFragment(
       case "DET": {
         const isArticle = tok.lemma === "the" || tok.lemma === "a" || tok.lemma === "an";
         if (isArticle && articlePresence === "none") continue;
-        if (isArticle && (articlePresence === "enclitic" || articlePresence === "proclitic")) {
+        // Phase 39j: prefix-merged / suffix-merged FUSE the article into
+        // the noun stem with no separate token. enclitic/proclitic stay
+        // as adjacent-but-separate (legacy behavior).
+        if (isArticle && (
+          articlePresence === "enclitic" ||
+          articlePresence === "proclitic" ||
+          articlePresence === "prefix-merged" ||
+          articlePresence === "suffix-merged"
+        )) {
           const af = closedClassForm(lang, tok.lemma === "an" ? "a" : tok.lemma) ?? [];
           if (af.length > 0) {
             pendingArticle = af;
-            pendingAffix = articlePresence;
+            pendingAffix = articlePresence === "suffix-merged" || articlePresence === "enclitic"
+              ? "enclitic"
+              : "proclitic";
           }
           continue;
         }
