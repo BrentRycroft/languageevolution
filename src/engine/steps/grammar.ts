@@ -61,7 +61,7 @@ export function stepGrammar(
     // Phase 46a-migration: swap the active wordOrder module so the
     // realiser tracks the new order. Idempotent; only fires when
     // the language is module-aware.
-    if (lang.activeModules) {
+    if (lang.activeModules instanceof Set) {
       const fromId = wordOrderModuleId(orderShift.from as Language["grammar"]["wordOrder"]);
       const toId = wordOrderModuleId(orderShift.to as Language["grammar"]["wordOrder"]);
       if (fromId !== toId) {

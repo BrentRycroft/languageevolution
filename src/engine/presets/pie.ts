@@ -536,6 +536,43 @@ export function presetPIE(): SimulationConfig {
       "lenition.tap_intervocalic": 1.2,
       "monophthongization.au_to_o": 1.4,
     },
+    // Phase 46a-migration: Proto-Indo-European — SOV, full case system
+    // (8 cases), sg-du-pl numbers, no articles. The articles module is
+    // off; daughters that grammaticalise articles activate it via
+    // Phase 46d's deferred-load when the demonstrative→article
+    // pathway fires.
+    seedActiveModules: [
+      "semantic:lexicon",
+      "semantic:clusters",
+      "semantic:frequency",
+      "semantic:synonymy",
+      "semantic:colexification",
+      "semantic:borrowing",
+      "semantic:calque",
+      "semantic:reborrow",
+      "semantic:taboo",
+      "semantic:coinage",
+      "syntactical:wordOrder/sov",
+      "syntactical:alignment/nom-acc",
+      "syntactical:adj-placement",
+      "syntactical:poss-placement",
+      "syntactical:num-placement",
+      "syntactical:neg-placement",
+      "syntactical:relativiser",
+      "syntactical:coordination",
+      "grammatical:case-marking",
+      "grammatical:number-system",
+      "grammatical:aspect",
+      "grammatical:mood",
+      "grammatical:reference-tracking",
+      "grammatical:numerals",
+      "grammatical:demonstratives",
+      "morphological:paradigms",
+      "morphological:derivation",
+      "morphological:inflection-class",
+      "morphological:agreement",
+      "morphological:analogy",
+    ],
     preset: "pie",
   };
 }

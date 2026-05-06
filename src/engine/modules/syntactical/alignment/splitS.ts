@@ -17,7 +17,11 @@ const splitSModule: SimulationModule = {
   id: "syntactical:alignment/split-s",
   kind: "syntactical",
   realiseStage: "resolve-alignment",
-  realise(input) {
+  realise(input, _lang, _state, ctx) {
+    const c = ctx as Record<string, unknown>;
+    const transitive = !!c.transitive;
+    c.subjectCaseSlot = transitive ? "noun.case.erg" : null;
+    c.objectCaseSlot = transitive ? "noun.case.acc" : null;
     return input;
   },
 };

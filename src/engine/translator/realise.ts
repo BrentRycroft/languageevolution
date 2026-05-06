@@ -49,8 +49,27 @@ export function realiseSentence(
   const alignment = lang.grammar.alignment ?? "nom-acc";
   const obj = s.predicate.object;
   const transitive = !!obj;
-  const subjectCaseSlot: import("../morphology/types").MorphCategory | null = alignmentSubjectCase(alignment, transitive);
-  const objectCaseSlot: import("../morphology/types").MorphCategory | null = alignmentObjectCase(alignment, transitive);
+  // Phase 46a-migration: resolve-alignment stage. Active alignment
+  // module writes ctx.subjectCaseSlot + ctx.objectCaseSlot. When no
+  // alignment module is active, the legacy switch is the fallback.
+  const alignMeta: {
+    stage: string;
+    transitive: boolean;
+    subjectCaseSlot?: import("../morphology/types").MorphCategory | null;
+    objectCaseSlot?: import("../morphology/types").MorphCategory | null;
+  } = { stage: "resolve-alignment", transitive };
+  runRealiseStage("resolve-alignment", lang, {
+    data: { sentence: s },
+    meta: alignMeta,
+  });
+  const subjectCaseSlot: import("../morphology/types").MorphCategory | null =
+    alignMeta.subjectCaseSlot !== undefined
+      ? alignMeta.subjectCaseSlot
+      : alignmentSubjectCase(alignment, transitive);
+  const objectCaseSlot: import("../morphology/types").MorphCategory | null =
+    alignMeta.objectCaseSlot !== undefined
+      ? alignMeta.objectCaseSlot
+      : alignmentObjectCase(alignment, transitive);
 
   // Phase 37: per-sentence synonym-rotation tracker. Each NP picks
   // a synonym for its head meaning; the tracker prevents the same
@@ -161,7 +180,13 @@ export function realiseSentence(
   }
   if (s.leadingConj) {
     const isAnd = s.leadingConj.lemma === "and";
-    const dropForSVC = isAnd && !!lang.grammar.serialVerbConstructions;
+    // Phase 46a-migration: serial-verb decides whether to drop the
+    // conjunction. Module-aware languages: presence of the module
+    // signals "drop"; legacy languages keep reading the flat flag.
+    const svcActive = lang.activeModules instanceof Set
+      ? lang.activeModules.has("syntactical:serial-verb")
+      : !!lang.grammar.serialVerbConstructions;
+    const dropForSVC = isAnd && svcActive;
     if (!dropForSVC) {
       const cf = closedClassForm(lang, s.leadingConj.lemma) ?? [];
       if (cf.length > 0) {

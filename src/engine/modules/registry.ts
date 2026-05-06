@@ -78,7 +78,10 @@ function toposort(modules: AnyModule[]): AnyModule[] {
  * for pre-Phase-41 languages).
  */
 export function activeModulesOf(lang: Language): AnyModule[] {
-  if (!lang.activeModules || lang.activeModules.size === 0) return [];
+  // Tolerate non-Set activeModules (e.g., after JSON-clone roundtrip
+  // in legacy test helpers). Treat as empty — back-compat path.
+  if (!lang.activeModules || !(lang.activeModules instanceof Set)) return [];
+  if (lang.activeModules.size === 0) return [];
   const active: AnyModule[] = [];
   for (const id of lang.activeModules) {
     const m = REGISTRY.get(id);
@@ -135,7 +138,7 @@ export function activateModule(
 ): boolean {
   const m = REGISTRY.get(id);
   if (!m) return false;
-  if (!lang.activeModules) lang.activeModules = new Set<string>();
+  if (!(lang.activeModules instanceof Set)) lang.activeModules = new Set<string>();
   if (lang.activeModules.has(id)) return false;
   lang.activeModules.add(id);
   if (!lang.moduleState) lang.moduleState = {};
@@ -154,7 +157,7 @@ export function activateModule(
  * its hooks stop firing. The state slot is dropped to free memory.
  */
 export function deactivateModule(lang: Language, id: string): boolean {
-  if (!lang.activeModules || !lang.activeModules.has(id)) return false;
+  if (!(lang.activeModules instanceof Set) || !lang.activeModules.has(id)) return false;
   lang.activeModules.delete(id);
   if (lang.moduleState && id in lang.moduleState) {
     delete lang.moduleState[id];

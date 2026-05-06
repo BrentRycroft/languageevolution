@@ -13,7 +13,11 @@ const ergAbsModule: SimulationModule = {
   id: "syntactical:alignment/erg-abs",
   kind: "syntactical",
   realiseStage: "resolve-alignment",
-  realise(input) {
+  realise(input, _lang, _state, ctx) {
+    const c = ctx as Record<string, unknown>;
+    const transitive = !!c.transitive;
+    c.subjectCaseSlot = transitive ? "noun.case.erg" : "noun.case.abs";
+    c.objectCaseSlot = transitive ? "noun.case.abs" : null;
     return input;
   },
 };
