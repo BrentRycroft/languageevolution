@@ -4,10 +4,23 @@ import { featuresOf } from "./features";
 import { stripTone, capToneStacking } from "./tone";
 import { isFormLegal } from "./wordShape";
 import { functionalLoadMap } from "./functionalLoad";
+import { SWADESH_LIST } from "../semantics/lexicostat";
 
 const MAX_RARE_OCCURRENCES = 2;
 const MIN_INVENTORY_TO_PRUNE = 12;
 const LOW_LOAD_THRESHOLD = 0.05; // ≤5% homophone-creation rate is "low load"
+
+// Phase 40a: Swadesh-100 protection during homeostatic pruning.
+// Pre-Phase-40 pruning rewrote every word containing the candidate
+// phoneme in a single gen, bypassing Wang sigmoid + freq tilt +
+// Swadesh hard brake. Now: high-freq Swadesh words skip the merger
+// (they drift through the gated phonology pipeline at their own
+// pace). Low-freq + non-core words still flash-merge — those would
+// have diffused in a few gens anyway, so the speedup is realistic.
+// Inventory removal is conditional on no Swadesh words remaining
+// with the candidate; otherwise the phoneme stays in inventory.
+const PRUNE_FREQ_PROTECT_THRESHOLD = 0.85;
+const SWADESH_CORE_SET: ReadonlySet<string> = new Set(SWADESH_LIST);
 
 function countOccurrences(lang: Language): Map<Phoneme, number> {
   const counts = new Map<Phoneme, number>();
@@ -166,8 +179,22 @@ export function prunePhonemes(
   if (!candidate || !neighbour) return null;
 
   let affected = 0;
+  let swadeshSkipped = 0;
   for (const m of Object.keys(lang.lexicon)) {
     const form = lang.lexicon[m]!;
+    // Phase 40a: skip Swadesh-core high-freq words. They keep the
+    // candidate phoneme; the gated phonology pipeline handles their
+    // drift over many gens via the Wang sigmoid + freq tilt.
+    let containsCandidate = false;
+    for (const raw of form) {
+      if (stripTone(raw) === candidate) { containsCandidate = true; break; }
+    }
+    if (!containsCandidate) continue;
+    const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+    if (freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) {
+      swadeshSkipped++;
+      continue;
+    }
     let changed = false;
     const next: WordForm = form.map((raw) => {
       const tone = raw.length > stripTone(raw).length ? raw.slice(stripTone(raw).length) : "";
@@ -197,18 +224,19 @@ export function prunePhonemes(
       affected++;
     }
   }
-  lang.phonemeInventory.segmental = inventory.filter((p) => p !== candidate);
-  if (lang.inventoryProvenance) {
-    delete lang.inventoryProvenance[candidate];
-  }
-  // Phase 27.1: previously we deleted `lang.functionalLoadCache` here
-  // so subsequent pruning calls in the same generation would see
-  // post-merger loads. That made multi-attempt homeostasis loops
-  // O(N²×W) per generation. The cache key is generation-based, so it
-  // is invalidated naturally each new gen — minor intra-gen staleness
-  // is an acceptable tradeoff for the speedup.
-  if (lang.functionalLoadCache) {
-    delete lang.functionalLoadCache.perPhoneme[candidate];
+  // Phase 40a: only shrink inventory when no Swadesh words still
+  // hold the candidate. Otherwise the phoneme stays and the
+  // protected words keep it, drifting independently via the gated
+  // phonology pipeline. Prevents the "phantom phoneme" pattern where
+  // pruning declares /X/ removed but Swadesh forms still contain it.
+  if (swadeshSkipped === 0) {
+    lang.phonemeInventory.segmental = inventory.filter((p) => p !== candidate);
+    if (lang.inventoryProvenance) {
+      delete lang.inventoryProvenance[candidate];
+    }
+    if (lang.functionalLoadCache) {
+      delete lang.functionalLoadCache.perPhoneme[candidate];
+    }
   }
   // Phase 27.1: even when affected === 0 (the candidate was a phantom
   // — in segmental but not in any lexicon entry, e.g. left over from

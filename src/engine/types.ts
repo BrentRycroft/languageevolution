@@ -881,6 +881,15 @@ export interface SimulationConfig {
    */
   seedNounClassSystem?: boolean;
   /**
+   * Phase 40d: per-preset rule-weight priors. At language birth,
+   * each entry multiplies the catalog default for that rule. Daughter
+   * languages inherit and the weights drift naturally over time;
+   * this is a soft prior, not a cap. Used to bias families away from
+   * typologically-marked rules (e.g., PIE descendants away from
+   * `fortition.initial_aspiration`) and toward attested ones.
+   */
+  seedRuleBias?: Record<string, number>;
+  /**
    * Phase 36 Tranche 36o: declarative tone-sandhi rule selection. Set
    * by tonal presets (e.g., Bantu's ["meeussen","spread"]) to filter
    * which sandhi rules can fire on the proto language. Daughter

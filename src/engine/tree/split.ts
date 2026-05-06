@@ -259,6 +259,47 @@ export function splitLeaf(
   for (const child of children) {
     if (child.words) rebuildFormKeyIndex(child);
   }
+  // Phase 40c: sister differentiation. Each daughter gets a clone of
+  // parent's diffusionState / categoryMomentum / naturalBiasOverride
+  // with INDEPENDENT random jitter, so:
+  //   - same inherited rule advances at slightly different ages in
+  //     each sister (Wang sigmoid completes at different gens)
+  //   - category-momentum boosts decay at different rates
+  //   - per-language phonological preferences drift apart
+  // Pre-40c daughters all converged to identical outcomes because
+  // they ran the same rule set with identical state. Now they diverge
+  // even when the inherited rules are unchanged.
+  for (const child of children) {
+    if (parentLang.diffusionState) {
+      child.diffusionState = {};
+      for (const [ruleId, entry] of Object.entries(parentLang.diffusionState)) {
+        const jitter = rng.int(31) - 15; // ±15 gens
+        child.diffusionState[ruleId] = {
+          actuatedAt: entry.actuatedAt + jitter,
+        };
+      }
+    }
+    if (parentLang.categoryMomentum) {
+      child.categoryMomentum = {};
+      for (const [cat, m] of Object.entries(parentLang.categoryMomentum)) {
+        const jitter = rng.int(11) - 5; // ±5 gens on the until window
+        const boostJitter = (rng.next() - 0.5) * 0.1; // ±0.05 on boost
+        child.categoryMomentum[cat] = {
+          boost: Math.max(0.5, Math.min(2.0, m.boost + boostJitter)),
+          until: m.until + jitter,
+        };
+      }
+    }
+    if (parentLang.naturalBiasOverride) {
+      child.naturalBiasOverride = {};
+      for (const [cat, mult] of Object.entries(parentLang.naturalBiasOverride)) {
+        if (mult === undefined) continue;
+        const jitter = (rng.next() - 0.5) * 0.1; // ±0.05
+        child.naturalBiasOverride[cat as keyof typeof child.naturalBiasOverride]
+          = Math.max(0.7, Math.min(1.3, mult + jitter));
+      }
+    }
+  }
   for (const child of children) {
     child.lexicalCapacity = lexicalCapacity(child, generation);
   }
