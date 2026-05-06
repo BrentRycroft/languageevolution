@@ -8,6 +8,7 @@ import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
 import { stepInventoryManagement } from "./steps/inventoryManagement";
 import { activeModulesOf } from "./modules/registry";
+import { timeStep } from "./modules/profile";
 // Phase 41+: side-effect import to register all modules at boot
 // (the barrel in modules/index.ts auto-runs registerXModules()).
 import "./modules";
@@ -273,7 +274,11 @@ export function createSimulation(
         for (const m of activeModulesOf(lang)) {
           if (!m.step) continue;
           const s = lang.moduleState[m.id];
-          if (s !== undefined) m.step(lang, s, ctx);
+          if (s === undefined) continue;
+          // Phase 46b: wrap each step in the profiler. No-op when
+          // profiling is disabled; under the hood `timeStep` skips
+          // the timer entirely.
+          timeStep(m.id, () => m.step!(lang, s, ctx));
         }
       }
       if (config.modes.contact) stepContact(state, lang, config, rng, nextGen);

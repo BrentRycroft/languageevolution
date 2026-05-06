@@ -6,6 +6,7 @@ import type {
 import { defaultConfig } from "../engine/config";
 import { syncWordsFromLexicon } from "../engine/lexicon/word";
 import { addSynonym } from "../engine/lexicon/mutate";
+import { computeActiveModulesFromLegacy } from "../engine/modules/legacyMigration";
 
 /**
  * Bump LATEST_SAVE_VERSION when adding a breaking change. Each bump must:
@@ -18,7 +19,7 @@ import { addSynonym } from "../engine/lexicon/mutate";
  * get default values without needing an explicit migration. Migrations
  * therefore only need to handle field renames, type changes, or removals.
  */
-export const LATEST_SAVE_VERSION = 8;
+export const LATEST_SAVE_VERSION = 9;
 
 type RawObj = Record<string, unknown>;
 
@@ -108,6 +109,32 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
       }
     }
     return { ...raw, version: 8 };
+  },
+  // Phase 46a: v9 introduces `Language.activeModules` + `moduleState`.
+  // Pre-v9 saves carry only the legacy flat-flag state; we compute the
+  // equivalent activeModules set from the language's typological flags
+  // so post-migration languages activate the right modules without
+  // requiring the user to re-save.
+  //
+  // moduleState is left empty (and lazily filled at first step / first
+  // save). Modules whose `initState` populates derived data will repair
+  // their own slot on first call.
+  8: (raw) => {
+    const snapshot = raw.stateSnapshot as RawObj | undefined;
+    if (snapshot && snapshot.tree && typeof snapshot.tree === "object") {
+      const tree = snapshot.tree as Record<string, RawObj>;
+      for (const node of Object.values(tree)) {
+        const lang = node.language as Language | undefined;
+        if (!lang) continue;
+        if (!lang.activeModules) {
+          lang.activeModules = computeActiveModulesFromLegacy(lang);
+        }
+        if (!lang.moduleState) {
+          lang.moduleState = {};
+        }
+      }
+    }
+    return { ...raw, version: 9 };
   },
 };
 

@@ -289,6 +289,8 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     rootLang.moduleState = {};
     const initCtx = { generation: 0, rng, config };
     for (const m of activeModulesOf(rootLang)) {
+      // Phase 46c: lazy state — stateless modules (no initState)
+      // don't get a slot allocated. Saves the empty-object overhead.
       if (m.initState) {
         rootLang.moduleState[m.id] = m.initState(rootLang, initCtx);
       }

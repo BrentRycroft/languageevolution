@@ -262,8 +262,8 @@ describe("Phase 21a — buildInitialState seeds words from lexicon", () => {
 });
 
 describe("Phase 21a — persistence migration v5 → v6", () => {
-  it("LATEST_SAVE_VERSION is 8", () => {
-    expect(LATEST_SAVE_VERSION).toBe(8);
+  it("LATEST_SAVE_VERSION is 9", () => {
+    expect(LATEST_SAVE_VERSION).toBe(9);
   });
 
   it("a v5 save with a stateSnapshot gets words populated post-migration", () => {
@@ -289,7 +289,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
     };
     const migrated = migrateSavedRun(v5);
     expect(migrated).not.toBeNull();
-    expect(migrated!.version).toBe(8);
+    expect(migrated!.version).toBe(9);
     const migratedLang =
       migrated!.stateSnapshot!.tree["L"]!.language;
     expect(migratedLang.words).toBeDefined();
@@ -312,7 +312,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
       },
     };
     const v5: SavedRun = {
-      version: 5 as unknown as 8,
+      version: 5 as unknown as 9,
       id: "x",
       label: "x",
       createdAt: 0,
@@ -343,7 +343,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
     syncWordsFromLexicon(lang, 0);
     const refWords = lang.words!;
     const v6: SavedRun = {
-      version: 6 as unknown as 8,
+      version: 6 as unknown as 9,
       id: "y",
       label: "y",
       createdAt: 0,
@@ -353,7 +353,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
     };
     const migrated = migrateSavedRun(v6);
     expect(migrated).not.toBeNull();
-    expect(migrated!.version).toBe(8);
+    expect(migrated!.version).toBe(9);
     // words array preserved (idempotent guard in syncWordsFromLexicon)
     const migratedLang =
       migrated!.stateSnapshot!.tree["L"]!.language;

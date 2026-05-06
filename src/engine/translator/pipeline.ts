@@ -34,6 +34,7 @@
 import type { Language } from "../types";
 import type { RealiseStage } from "../modules/types";
 import { activeModulesOf } from "../modules/registry";
+import { timeRealise } from "../modules/profile";
 
 export interface PipelinePayload {
   /** Mutable accumulator for whatever the stage produces. */
@@ -62,7 +63,11 @@ export function runRealiseStage(
     if (m.realiseStage !== stage) continue;
     if (!m.realise) continue;
     const state = lang.moduleState[m.id];
-    const next = m.realise(current.data, lang, state, current.meta);
+    // Phase 46b: time the hook. `timeRealise` is a no-op when
+    // profiling is disabled.
+    const next = timeRealise(m.id, () =>
+      m.realise!(current.data, lang, state, current.meta),
+    );
     current = { data: next ?? current.data, meta: current.meta };
   }
   return current;
