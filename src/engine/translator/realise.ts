@@ -8,6 +8,7 @@ import { closedClassForm } from "./closedClass";
 import { fnv1a } from "../rng";
 import type { NP, PP, Sentence, VP } from "./syntax";
 import { sliceOrder } from "./wordOrder";
+import { runRealiseStage } from "./pipeline";
 import { classifierMeaningFor } from "./classifiers";
 
 export interface RealisedToken {
@@ -30,6 +31,13 @@ export function realiseSentence(
   deps: RealiseDeps,
 ): RealisedToken[] {
   populateForms(s, deps);
+  // Phase 41c: stage hook — modules can post-process populated forms
+  // (e.g., a synonymy module rewrites baseForm with a register-aware
+  // pick). When no module is registered, this is a no-op.
+  runRealiseStage("populate-forms", lang, {
+    data: { sentence: s },
+    meta: { stage: "populate-forms" },
+  });
 
   const articlePresence = lang.grammar.articlePresence ?? "none";
   const caseStrategy = lang.grammar.caseStrategy ?? (lang.grammar.hasCase ? "case" : "preposition");
@@ -111,6 +119,13 @@ export function realiseSentence(
     ];
   const subjectFinal = dropSubject ? [] : subject;
 
+  // Phase 41c: stage hook — order-tokens. A wordOrder module can
+  // override the static sliceOrder dispatch. Falls through to legacy
+  // when no module is registered.
+  runRealiseStage("order-tokens", lang, {
+    data: { sentence: s, subject, verbTokens, objectTokens, predPpTokens },
+    meta: { stage: "order-tokens" },
+  });
   const order = sliceOrder(lang.grammar.wordOrder);
   const isVFinal = order[order.length - 1] === "V";
   const slot: Record<"S" | "V" | "O", RealisedToken[]> = {

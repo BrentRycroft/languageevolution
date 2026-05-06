@@ -6,6 +6,7 @@ import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import { fnv1a } from "../rng";
 import type { Rng } from "../rng";
 import { lexicalCapacity } from "../lexicon/tier";
+import { getModule } from "../modules/registry";
 import { rebuildFormKeyIndex } from "../lexicon/word";
 import { partitionTerritory } from "../geo/territory";
 import type { WorldMap } from "../geo/map";
@@ -298,6 +299,35 @@ export function splitLeaf(
         child.naturalBiasOverride[cat as keyof typeof child.naturalBiasOverride]
           = Math.max(0.7, Math.min(1.3, mult + jitter));
       }
+    }
+  }
+  // Phase 41b: clone activeModules + moduleState into each daughter.
+  // activeModules is a Set<string> — copy verbatim. moduleState is
+  // module-owned; modules may register `serialise`/`deserialise` for
+  // reference-typed state. Default fallback is structuredClone for
+  // back-compat where the module hasn't declared serialise hooks.
+  if (parentLang.activeModules) {
+    for (const child of children) {
+      child.activeModules = new Set(parentLang.activeModules);
+      const parentState = parentLang.moduleState ?? {};
+      const childState: Record<string, unknown> = {};
+      for (const id of child.activeModules) {
+        const raw = parentState[id];
+        if (raw === undefined) continue;
+        const mod = getModule(id);
+        if (mod && mod.serialise && mod.deserialise) {
+          childState[id] = mod.deserialise(mod.serialise(raw));
+        } else {
+          // Default deep-clone via structuredClone (handles Maps,
+          // Sets, Dates; falls back to JSON for plain objects).
+          try {
+            childState[id] = structuredClone(raw);
+          } catch {
+            childState[id] = JSON.parse(JSON.stringify(raw));
+          }
+        }
+      }
+      child.moduleState = childState;
     }
   }
   for (const child of children) {

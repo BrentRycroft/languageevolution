@@ -7,6 +7,11 @@ import { validateConfig, summarizeValidation } from "./configValidation";
 import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
 import { stepInventoryManagement } from "./steps/inventoryManagement";
+import { activeModulesOf } from "./modules/registry";
+import { timeStep } from "./modules/profile";
+// Phase 41+: side-effect import to register all modules at boot
+// (the barrel in modules/index.ts auto-runs registerXModules()).
+import "./modules";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { rebuildFormKeyIndex } from "./lexicon/word";
 import { seedTierTwoOrthography } from "./phonology/orthography";
@@ -259,6 +264,23 @@ export function createSimulation(
         stepMorphology(lang, config, rng, nextGen);
       }
       if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
+      // Phase 41d: module step hooks. Modules in lang.activeModules
+      // run in topological order (requires-first); modules outside
+      // the active set are skipped entirely (the perf win).
+      // Phases 42-45 progressively replace legacy step calls above
+      // with module hooks here.
+      if (lang.activeModules && lang.moduleState) {
+        const ctx = { generation: nextGen, rng, config, state };
+        for (const m of activeModulesOf(lang)) {
+          if (!m.step) continue;
+          const s = lang.moduleState[m.id];
+          if (s === undefined) continue;
+          // Phase 46b: wrap each step in the profiler. No-op when
+          // profiling is disabled; under the hood `timeStep` skips
+          // the timer entirely.
+          timeStep(m.id, () => m.step!(lang, s, ctx));
+        }
+      }
       if (config.modes.contact) stepContact(state, lang, config, rng, nextGen);
       if (config.modes.areal) stepArealTypology(state, lang, rng, nextGen);
       if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);

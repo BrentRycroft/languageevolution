@@ -126,6 +126,21 @@ export interface Language {
   }>;
   morphology: import("./morphology/types").Morphology;
   localNeighbors: Record<Meaning, string[]>;
+  /**
+   * Phase 41a: per-language active-module set. Modules in this set
+   * have their `step` and `realise` hooks called; modules outside
+   * the set are skipped entirely (the perf win).
+   * Undefined → legacy code paths run (back-compat). Phase 46a
+   * inverts this default after every preset declares its module set.
+   */
+  activeModules?: Set<string>;
+  /**
+   * Phase 41a: per-module per-language state, owned by each module.
+   * Keyed by `module.id`. The module is the only consumer that
+   * should read or write its own slot. Type-erased here; modules
+   * cast to their own state type internally.
+   */
+  moduleState?: Record<string, unknown>;
   conservatism: number;
   speakers?: number;
   wordOrigin: Record<Meaning, string>;
@@ -843,6 +858,14 @@ export interface SimulationConfig {
    */
   seedToneRegime?: NonNullable<Language["toneRegime"]>;
   /**
+   * Phase 41a: declarative module set for the proto language.
+   * Daughters inherit verbatim; runtime grammaticalisation can
+   * activate / deactivate modules via the registry.
+   * When omitted, languages run legacy flat-flag code paths
+   * (the Phase 41-45 back-compat default).
+   */
+  seedActiveModules?: ReadonlyArray<string>;
+  /**
    * Phase 39a: per-preset declared phoneme inventory target. When
    * absent, the simulator falls back to `seedLexicon`'s observed
    * inventory size or the tier-default. Real-language attestation
@@ -920,7 +943,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 8;
+  version: 9;
   id: string;
   label: string;
   createdAt: number;
