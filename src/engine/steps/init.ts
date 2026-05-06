@@ -14,6 +14,7 @@ import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { assignAllGenders } from "../morphology/gender";
+import { activeModulesOf } from "../modules/registry";
 import { classifyLexicon } from "../morphology/inflectionClass";
 import { isToneBearing, toneOf, MID } from "../phonology/tone";
 import { addCompound } from "../lexicon/compound";
@@ -277,6 +278,21 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // subset. Filters which tone-sandhi rules fire in stepToneSandhi.
   if (config.seedToneSandhiRules && config.seedToneSandhiRules.length > 0) {
     rootLang.toneSandhiRules = config.seedToneSandhiRules.slice();
+  }
+  // Phase 41b: module activation. When the preset declares an active
+  // module set, allocate the per-language state record and run each
+  // module's initState in topological order (requires-first). Modules
+  // not in the set are skipped entirely throughout this language's
+  // lifetime — that's where the perf win comes from.
+  if (config.seedActiveModules && config.seedActiveModules.length > 0) {
+    rootLang.activeModules = new Set(config.seedActiveModules);
+    rootLang.moduleState = {};
+    const initCtx = { generation: 0, rng, config };
+    for (const m of activeModulesOf(rootLang)) {
+      if (m.initState) {
+        rootLang.moduleState[m.id] = m.initState(rootLang, initCtx);
+      }
+    }
   }
   assignAllGenders(rootLang);
   // Phase 29 Tranche 5e: bucket every seed meaning into an inflection
