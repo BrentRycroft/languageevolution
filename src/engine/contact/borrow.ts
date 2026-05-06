@@ -234,10 +234,15 @@ function repairLoanShape(form: WordForm, recipient: Language): WordForm {
   const epenthetic = pickEpentheticVowel(recipient);
   const out: string[] = [];
   let consRun = 0;
+  // Phase 39g: respect the recipient's actual phonotactic profile.
+  // Pre-39g this was a global MAX_CONSONANT_RUN=2 — too strict for
+  // languages that license complex onsets/codas (Polish, Georgian).
+  const profileMax = recipient.phonotacticProfile?.maxCluster ?? MAX_CONSONANT_RUN;
+  const effectiveMax = Math.max(MAX_CONSONANT_RUN, profileMax);
   for (const p of form) {
     if (isNonSyllabic(p)) {
       consRun++;
-      if (consRun > MAX_CONSONANT_RUN) {
+      if (consRun > effectiveMax) {
         out.push(epenthetic);
         consRun = 1;
       }
