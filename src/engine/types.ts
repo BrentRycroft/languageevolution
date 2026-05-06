@@ -617,7 +617,29 @@ export interface GrammarFeatures {
   synthesisIndex?: number;
   fusionIndex?: number;
   morphologicalType?: "isolating" | "agglutinating" | "fusional" | "polysynthetic";
-  articlePresence?: "none" | "free" | "enclitic" | "proclitic";
+  // Phase 39j: extended with "prefix-merged" (Arabic al-bayt) and
+  // "suffix-merged" (Scandinavian huset). Existing "proclitic" /
+  // "enclitic" stay for back-compat with adjacent-but-not-fused
+  // attachment.
+  articlePresence?: "none" | "free" | "enclitic" | "proclitic" | "prefix-merged" | "suffix-merged";
+  /**
+   * Phase 39k: numeral base. "decimal" (10/100), "vigesimal" (20-based,
+   * Yoruba/Maya), "mixed-decimal-vigesimal" (French 70=soixante-dix,
+   * 80=quatre-vingts), "subtractive-decimal" (Yoruba 45 = "five from
+   * fifty"). Drift via grammaticalisation cascade.
+   */
+  numeralBase?: "decimal" | "vigesimal" | "mixed-decimal-vigesimal" | "subtractive-decimal";
+  /**
+   * Phase 39k: numeral order. "big-small" = English/Spanish/French
+   * (fifty-five). "small-big" = German/Arabic/Dutch (five-and-fifty).
+   */
+  numeralOrder?: "big-small" | "small-big";
+  /**
+   * Phase 39i: existential strategy. "be-there" = English/Russian
+   * (there is), "give-style" = German (es gibt), "have-style" =
+   * French (il y a), "single-word" = Spanish hay, Italian c'è.
+   */
+  impersonalExistential?: "be-there" | "give-style" | "have-style" | "single-word";
   caseStrategy?: "case" | "preposition" | "postposition" | "mixed";
   incorporates?: boolean;
   classifierSystem?: boolean;
