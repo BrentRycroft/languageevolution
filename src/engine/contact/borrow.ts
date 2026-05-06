@@ -4,6 +4,7 @@ import { leafIds } from "../tree/split";
 import { isVowel, isSyllabic } from "../phonology/ipa";
 import { isFormLegal } from "../phonology/wordShape";
 import { addAlt } from "../lexicon/altForms";
+import { addSynonym } from "../lexicon/mutate";
 import { tryCommitCoinage } from "../lexicon/word";
 import { stripTone } from "../phonology/tone";
 import { geoDistance } from "../geo";
@@ -122,12 +123,22 @@ export function tryBorrow(
   const recipPop = recipient.speakers ?? 10000;
   const prestige: "high" | "low" = donorPop > recipPop * 2 ? "high" : "low";
   // If the recipient already has a native form for this meaning, the
-  // borrowed form joins as a register-tagged alternate (cf. real-world
-  // doublets like sheep/mutton, ask/inquire). Otherwise it takes the
-  // primary slot.
+  // borrowed form joins as a register-tagged synonym (cf. real-world
+  // doublets like sheep/mutton, ask/inquire). The existing
+  // maybeSuppressHomonym / maybeReplacePrimary mechanics may then
+  // promote it to primary over generations. Phase 39b routes through
+  // addSynonym (Phase 37) so the loan is queryable via selectSynonyms
+  // and visible in the reverse translator.
   const alreadyHas = !!recipient.lexicon[meaning];
   if (alreadyHas) {
     addAlt(recipient, meaning, adapted, prestige);
+    // Phase 39b: also register as a first-class synonym in the words
+    // table. addAlt is back-compat; addSynonym is the modern path.
+    addSynonym(recipient, meaning, adapted, {
+      bornGeneration: generation,
+      register: prestige === "high" ? "high" : "low",
+      origin: `borrow:${donor.id}`,
+    });
   } else {
     // Phase 21c: collision-aware commit. The borrowed form may be a
     // homophone of an existing native word; in that case roll polysemy
@@ -223,10 +234,15 @@ function repairLoanShape(form: WordForm, recipient: Language): WordForm {
   const epenthetic = pickEpentheticVowel(recipient);
   const out: string[] = [];
   let consRun = 0;
+  // Phase 39g: respect the recipient's actual phonotactic profile.
+  // Pre-39g this was a global MAX_CONSONANT_RUN=2 — too strict for
+  // languages that license complex onsets/codas (Polish, Georgian).
+  const profileMax = recipient.phonotacticProfile?.maxCluster ?? MAX_CONSONANT_RUN;
+  const effectiveMax = Math.max(MAX_CONSONANT_RUN, profileMax);
   for (const p of form) {
     if (isNonSyllabic(p)) {
       consRun++;
-      if (consRun > MAX_CONSONANT_RUN) {
+      if (consRun > effectiveMax) {
         out.push(epenthetic);
         consRun = 1;
       }

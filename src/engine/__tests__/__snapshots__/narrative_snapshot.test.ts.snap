@@ -6,23 +6,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "va kig siːz va gubf",
+      "target": "və kɪŋ və wʊlf siːz",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "va bɔgs siː va gubfs",
+      "target": "və dɔdɔg və wʊwʊlf siː",
     },
     {
       "english": "i give you the bread",
-      "target": "ag givɪŋ gu",
+      "target": "aj jʊ gɪvɪŋ",
     },
     {
       "english": "the king walks at the river",
-      "target": "va kig gɔkɪŋz æʔt va divad",
+      "target": "və kɪŋ və rɪvər æ wɔkɪŋz",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "va kig baʔt siːz va gubf",
+      "target": "və kɪŋ və wʊlf nat siːz",
     },
   ],
   "preset": "english",
@@ -35,23 +35,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "digi vididit luːpuːum",
+      "target": "reːge βideːret luːpuum",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "kãnii vididinθ luːpuːium",
+      "target": "kaːne βideːrent luːpuum",
     },
     {
       "english": "i give you the bread",
-      "target": "igoː dadio tuːum",
+      "target": "eːgo daːreo tuːum",
     },
     {
       "english": "the king walks at the river",
-      "target": "digi ãmbuːladit flũmi",
+      "target": "reːge ambulaːret fluːme",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "digi noːn vididit luːpuːum",
+      "target": "reːge non βideːret luːpuum",
     },
   ],
   "preset": "romance",
@@ -64,23 +64,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Toki Pona preset
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "kiwi lupin kowili",
+      "target": "nutin esewi esoweni",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "kokowili lupin kokowili",
+      "target": "nutin esosoweni esosoweni",
     },
     {
       "english": "i give you the bread",
-      "target": "mi paːnaː kinaː",
+      "target": "fana mi sina",
     },
     {
       "english": "the king walks at the river",
-      "target": "kiwi paːw kaːpi pilo",
+      "target": "tawa esewi saθi eteno",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "kiwi aːlaː lupin kowili",
+      "target": "ana nutin esewi esoweni",
     },
   ],
   "preset": "tokipona",

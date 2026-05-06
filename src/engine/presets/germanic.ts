@@ -369,6 +369,7 @@ export function presetGermanic(): SimulationConfig {
     // Germanic).
     seedToneRegime: "non-tonal",
     seedBoundMorphemes: GERMANIC_BOUND_MORPHEMES,
+    seedPhonemeTarget: 28,
     preset: "germanic",
   };
 }

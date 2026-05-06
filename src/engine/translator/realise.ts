@@ -198,7 +198,7 @@ export function realiseSentence(
 }
 
 interface NPCtx {
-  articlePresence: "none" | "free" | "enclitic" | "proclitic";
+  articlePresence: "none" | "free" | "enclitic" | "proclitic" | "prefix-merged" | "suffix-merged";
   caseStrategy: "case" | "preposition" | "postposition" | "mixed";
   adjPos: "pre" | "post";
   possPos: "pre" | "post";
@@ -304,8 +304,15 @@ function realiseNP(
   if (np.determiner && (np.determiner.lemma === "the" || np.determiner.lemma === "a" || np.determiner.lemma === "an")) {
     const articleLemma = np.determiner.lemma === "an" ? "a" : np.determiner.lemma;
     const af = closedClassForm(lang, articleLemma) ?? [];
-    if (ctx.articlePresence === "enclitic") headForm = [...headForm, ...af];
-    else if (ctx.articlePresence === "proclitic") headForm = [...af, ...headForm];
+    // Phase 39j: enclitic/proclitic attach as adjacent-but-stretched
+    // (still rendered as one phonological word). prefix-merged /
+    // suffix-merged are FULLY fused — no token boundary, no separate
+    // determiner emission.
+    if (ctx.articlePresence === "enclitic" || ctx.articlePresence === "suffix-merged") {
+      headForm = [...headForm, ...af];
+    } else if (ctx.articlePresence === "proclitic" || ctx.articlePresence === "prefix-merged") {
+      headForm = [...af, ...headForm];
+    }
   }
   const head: RealisedToken = {
     surface: np.head.baseForm.length === 0

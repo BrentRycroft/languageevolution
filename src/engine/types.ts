@@ -371,6 +371,16 @@ export interface Language {
    */
   toneRegime?: "non-tonal" | "tonal" | "pitch-accent";
   /**
+   * Phase 39a: per-language phoneme inventory target. Replaces the
+   * hard tier-table cap [22, 28, 34, 40] with a per-language attractor
+   * that drifts. Pruning is a soft sigmoid around this target rather
+   * than a hard cap, so languages can genuinely vary from ~10
+   * (Hawaiian-style) to ~80+ (Caucasian-style) without forced
+   * convergence. Initial value comes from `seedPhonemeTarget` if
+   * declared, else seed inventory size, else tier default.
+   */
+  phonemeTarget?: number;
+  /**
    * Phase 34 Tranche 34a: compound metadata. When a meaning is a
    * semantically-compound concept (moonlight = moon + light,
    * daylight = day + light, homework = home + work), it carries a
@@ -607,7 +617,29 @@ export interface GrammarFeatures {
   synthesisIndex?: number;
   fusionIndex?: number;
   morphologicalType?: "isolating" | "agglutinating" | "fusional" | "polysynthetic";
-  articlePresence?: "none" | "free" | "enclitic" | "proclitic";
+  // Phase 39j: extended with "prefix-merged" (Arabic al-bayt) and
+  // "suffix-merged" (Scandinavian huset). Existing "proclitic" /
+  // "enclitic" stay for back-compat with adjacent-but-not-fused
+  // attachment.
+  articlePresence?: "none" | "free" | "enclitic" | "proclitic" | "prefix-merged" | "suffix-merged";
+  /**
+   * Phase 39k: numeral base. "decimal" (10/100), "vigesimal" (20-based,
+   * Yoruba/Maya), "mixed-decimal-vigesimal" (French 70=soixante-dix,
+   * 80=quatre-vingts), "subtractive-decimal" (Yoruba 45 = "five from
+   * fifty"). Drift via grammaticalisation cascade.
+   */
+  numeralBase?: "decimal" | "vigesimal" | "mixed-decimal-vigesimal" | "subtractive-decimal";
+  /**
+   * Phase 39k: numeral order. "big-small" = English/Spanish/French
+   * (fifty-five). "small-big" = German/Arabic/Dutch (five-and-fifty).
+   */
+  numeralOrder?: "big-small" | "small-big";
+  /**
+   * Phase 39i: existential strategy. "be-there" = English/Russian
+   * (there is), "give-style" = German (es gibt), "have-style" =
+   * French (il y a), "single-word" = Spanish hay, Italian c'è.
+   */
+  impersonalExistential?: "be-there" | "give-style" | "have-style" | "single-word";
   caseStrategy?: "case" | "preposition" | "postposition" | "mixed";
   incorporates?: boolean;
   classifierSystem?: boolean;
@@ -794,6 +826,14 @@ export interface SimulationConfig {
    * tonogenesis rules can fire during the run.
    */
   seedToneRegime?: NonNullable<Language["toneRegime"]>;
+  /**
+   * Phase 39a: per-preset declared phoneme inventory target. When
+   * absent, the simulator falls back to `seedLexicon`'s observed
+   * inventory size or the tier-default. Real-language attestation
+   * spans Pirahã (~10) → !Xóõ (~130); presets should declare a
+   * target that matches the language family they're modelling.
+   */
+  seedPhonemeTarget?: number;
   /**
    * Phase 34 Tranche 34g: declare seeded compound meanings. Each
    * entry maps the compound meaning to its constituent meanings

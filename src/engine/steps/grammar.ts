@@ -17,7 +17,7 @@ import { stepTypologyDrift } from "../grammar/typology_drift";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
 import { simplificationFactor, realismMultiplier } from "../phonology/rate";
 import { maybeReanalyse } from "../lexicon/reanalysis";
-import { maybeSpawnSynonym, maybeSuppressHomonym } from "../lexicon/synonyms";
+import { maybeSpawnSynonym, maybeSuppressHomonym, maybeReplacePrimary } from "../lexicon/synonyms";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 
@@ -211,7 +211,11 @@ export function stepMorphology(
   // pressures.
   {
     const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
-    const synRate = 0.003 * (1 + tier) * lang.conservatism * gramMult;
+    // Phase 39b: tripled from 0.003 to 0.009 — real diachrony has
+    // more lexical replacement than sound-change erosion. Combined
+    // with the 0.4→0.25 GENERATION_RATE_SCALE cut, the synonym/erosion
+    // ratio shifts from ~3:97 toward ~60:40 (matching real proportion).
+    const synRate = 0.009 * (1 + tier) * lang.conservatism * gramMult;
     const synEvent = maybeSpawnSynonym(lang, rng, synRate);
     if (synEvent) {
       pushEvent(lang, {
@@ -227,13 +231,29 @@ export function stepMorphology(
   // loser to its synonym. Slower than spawn so synonyms accrete
   // before suppression vacates them.
   {
-    const supEvent = maybeSuppressHomonym(lang, rng, 0.002 * lang.conservatism * gramMult);
+    // Phase 39b: quadrupled from 0.002 to 0.008 — homonym swaps now
+    // happen visibly, modelling real synonym-takes-over-from-homonym.
+    const supEvent = maybeSuppressHomonym(lang, rng, 0.008 * lang.conservatism * gramMult);
     if (supEvent) {
       pushEvent(lang, {
         generation,
         kind: "lexical_replacement",
         description: `homonym suppressed: "${supEvent.meaning}" /${supEvent.vacatedForm.join("")}/ → /${supEvent.replacementForm.join("")}/`,
         meta: { meaning: supEvent.meaning },
+      });
+    }
+  }
+  // Phase 39b: stylistic-preference primary swap. Low-rate (0.4%/gen)
+  // promotion of an existing synonym to primary, demoting old form
+  // to synonym slot. Models real cross-generational lexical shifts.
+  {
+    const repEvent = maybeReplacePrimary(lang, rng, 0.004 * lang.conservatism * gramMult);
+    if (repEvent) {
+      pushEvent(lang, {
+        generation,
+        kind: "lexical_replacement",
+        description: `primary swap: "${repEvent.meaning}" /${repEvent.oldForm.join("")}/ → /${repEvent.newForm.join("")}/ (synonym promoted)`,
+        meta: { meaning: repEvent.meaning },
       });
     }
   }

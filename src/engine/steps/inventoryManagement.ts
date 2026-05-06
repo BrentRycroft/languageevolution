@@ -42,6 +42,12 @@ const PER_TIER_TARGET = [22, 28, 34, 40] as const;
 const BASE_PRUNE_PROB = 0.03;
 const MAX_PRUNE_ATTEMPTS_PER_GEN = 5;
 
+// Phase 39a: per-gen drift on the per-language phoneme target.
+const TARGET_DRIFT_RATE = 0.0005; // ~0.05%/gen
+const TARGET_DRIFT_MAX_STEP = 1; // ±1 phoneme per drift step
+const TARGET_MIN = 8;
+const TARGET_MAX = 130;
+
 const REPAIR_RULE_IDS = [
   "insertion.shape_repair_epenthesis",
   "insertion.prothetic_e",
@@ -58,16 +64,43 @@ export function tierInventoryTarget(tier: number | undefined): number {
 }
 
 /**
- * Compute size pressure for a language. Returns 0 when at-or-below
- * target; grows linearly with overshoot. Reused by the contact-areal
- * step to gate phoneme borrowing when the recipient is already over
- * target.
+ * Phase 39a: resolve the effective phoneme target for a language.
+ * Priority: per-language `phonemeTarget` (drifts each gen) → tier
+ * default. Languages without `phonemeTarget` fall back to the legacy
+ * tier-table behaviour (back-compat for v8 saves).
+ */
+export function effectivePhonemeTarget(lang: Language): number {
+  if (typeof lang.phonemeTarget === "number") return lang.phonemeTarget;
+  return tierInventoryTarget(effectiveTier(lang));
+}
+
+/**
+ * Compute size pressure for a language. Phase 39a: returns a SIGNED
+ * pressure — positive when over target (prune), negative when under
+ * target (introduce). Magnitude is normalised to (size - target) / 6
+ * so values beyond ±10 saturate. Drives sigmoid prune/intro rates.
  */
 export function inventorySizePressure(lang: Language): number {
   const size = lang.phonemeInventory.segmental.length;
-  const target = tierInventoryTarget(effectiveTier(lang));
-  if (size <= target) return 0;
-  return (size - target) / target;
+  const target = effectivePhonemeTarget(lang);
+  return (size - target) / 6;
+}
+
+function sigmoid(x: number): number {
+  return 1 / (1 + Math.exp(-x));
+}
+
+/**
+ * Phase 39a: per-gen random walk on the language's phoneme target.
+ * Models real long-term inventory drift — over 200 gens the target
+ * may shift ±5-15 phonemes. Bounded to [TARGET_MIN, TARGET_MAX].
+ */
+function driftPhonemeTarget(lang: Language, rng: import("../rng").Rng): void {
+  if (typeof lang.phonemeTarget !== "number") return;
+  if (!rng.chance(TARGET_DRIFT_RATE)) return;
+  const step = (rng.next() < 0.5 ? -1 : 1) * Math.ceil(rng.next() * TARGET_DRIFT_MAX_STEP);
+  const next = Math.max(TARGET_MIN, Math.min(TARGET_MAX, lang.phonemeTarget + step));
+  lang.phonemeTarget = next;
 }
 
 /**
@@ -135,10 +168,22 @@ function runHomeostasis(
   rng: Rng,
   generation: number,
 ): boolean {
+  // Phase 39a: drift the target itself (rare).
+  driftPhonemeTarget(lang, rng);
+  // Phase 39a: signed pressure ∈ [-∞, +∞]. Negative when under target,
+  // positive when over. Sigmoid converts to a [0, 1] prune probability:
+  // at pressure +6 (size = target+36), prune at near-100%; at pressure
+  // 0 (at target), prune at 50% × BASE_PRUNE_PROB; at pressure -6
+  // (size = target-36), prune at near-0%.
   let pressure = inventorySizePressure(lang);
   let anyMerger = false;
-  if (pressure === 0) {
-    if (!rng.chance(BASE_PRUNE_PROB)) return false;
+  // Soft pull: prune probability is sigmoid(pressure) × full rate.
+  // Within ±0.5 of target (3 phonemes), behaves like the old
+  // BASE_PRUNE_PROB maintenance rate. Beyond +1 (over by 6+), aggressive.
+  const pruneIntensity = sigmoid(pressure);
+  if (pressure <= 0) {
+    // Under-or-at target: low maintenance rate.
+    if (!rng.chance(BASE_PRUNE_PROB * pruneIntensity * 2)) return false;
     const merger = prunePhonemes(lang, rng, generation);
     if (merger) {
       anyMerger = true;
@@ -154,14 +199,18 @@ function runHomeostasis(
   // event per generation when 2+ fire. Pre-fix every leaf's last-6
   // events list was uniformly homeostatic mergers, so chain shifts /
   // grammaticalisation / productivity events never surfaced.
+  // Phase 39a: max attempts scale with overshoot. At pressure 1 (over
+  // by 6), 2 attempts; at pressure 3 (over by 18), full 5 attempts.
+  const maxAttempts = Math.min(MAX_PRUNE_ATTEMPTS_PER_GEN, Math.ceil(pressure * 1.7));
   const mergers: Array<{ from: string; to: string; affected: number }> = [];
-  for (let i = 0; i < MAX_PRUNE_ATTEMPTS_PER_GEN; i++) {
+  for (let i = 0; i < maxAttempts; i++) {
+    if (!rng.chance(pruneIntensity)) break;
     const merger = prunePhonemes(lang, rng, generation);
     if (!merger) break;
     anyMerger = true;
     mergers.push({ from: merger.from, to: merger.to, affected: merger.affectedWords });
     pressure = inventorySizePressure(lang);
-    if (pressure === 0) break;
+    if (pressure <= 0) break;
   }
   if (mergers.length === 1) {
     const m = mergers[0]!;

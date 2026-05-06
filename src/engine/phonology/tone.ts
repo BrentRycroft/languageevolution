@@ -76,7 +76,10 @@ export function hasLength(p: Phoneme): boolean {
  * sound-change apply paths that build segments by concatenation
  * (`base + tone`) so unbounded stacks like `e˥˥˧˥˧˥` become `e˧˥`.
  */
-const MAX_TONE_MARKS = 1;
+// Phase 39g: relaxed 1 → 2 to allow rising/falling contour tones
+// (Mandarin /ma˥˩/, Vietnamese /ma˧˨ʔ/). Non-tonal languages still
+// effectively cap at 0 because tone-marking rules don't fire there.
+const MAX_TONE_MARKS = 2;
 
 export function capToneStacking(p: Phoneme): Phoneme {
   // Count contour tokens: scan from the right, collecting matches.

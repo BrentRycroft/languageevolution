@@ -5,7 +5,7 @@ import { closedClassForm } from "./closedClass";
 import { parseSyntaxAll } from "./parse";
 import { realiseSentence } from "./realise";
 import { pickAspect } from "../narrative/verbClasses";
-import { disambiguateSense } from "../lexicon/word";
+import { disambiguateSense, pickSynonym } from "../lexicon/word";
 
 export type { EnglishTag, EnglishToken } from "./tokens";
 import type { EnglishTag, EnglishToken } from "./tokens";
@@ -503,6 +503,28 @@ function resolveLemma(
       glossNote: "",
     };
   }
+  // Phase 39c: compound resolution. If the lemma is registered as a
+  // compound (Phase 34a — e.g., "stranger" = strange + -er.agt),
+  // recompose from the parts. Models the user's complaint that
+  // typing "stranger" against English silently fails.
+  if (lang.compounds && lang.compounds[lemma]) {
+    const meta = lang.compounds[lemma]!;
+    const parts: string[] = [];
+    let allFound = true;
+    for (const partMeaning of meta.parts) {
+      const f = lang.lexicon[partMeaning];
+      if (!f || f.length === 0) { allFound = false; break; }
+      parts.push(...f);
+      if (meta.linker) parts.push(...meta.linker);
+    }
+    if (allFound && parts.length > 0) {
+      return {
+        form: parts,
+        resolution: "direct",
+        glossNote: `compound: ${meta.parts.join("+")}`,
+      };
+    }
+  }
   if (isRegisteredConcept(lemma)) {
     for (const partner of colexWith(lemma)) {
       if (lang.lexicon[partner]) {
@@ -860,7 +882,16 @@ function translateFragment(
         continue;
       }
       default: {
-        const { form, resolution, glossNote } = resolveLemma(lang, tok.lemma);
+        const { form: rawForm, resolution, glossNote } = resolveLemma(lang, tok.lemma);
+        // Phase 39c: synonym selection in fragment fallback. When the
+        // meaning has synonyms, pick one (register-aware). Pre-39c
+        // fragment mode used the primary form only; tree mode used
+        // pickSynonym. Now both paths are consistent.
+        let form: WordForm | null = rawForm;
+        if (rawForm && lang.words) {
+          const picked = pickSynonym(lang, tok.lemma, {});
+          if (picked && picked.length > 0) form = picked;
+        }
         if (!form) {
           missing.push(tok.lemma);
           targetTokens.push({

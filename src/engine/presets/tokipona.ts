@@ -204,6 +204,7 @@ export function presetTokipona(): SimulationConfig {
     },
     // Phase 31 Tranche 31d: Toki Pona is non-tonal by design.
     seedToneRegime: "non-tonal",
+    seedPhonemeTarget: 14,
     preset: "tokipona",
   };
 }
