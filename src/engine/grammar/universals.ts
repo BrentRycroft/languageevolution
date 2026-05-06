@@ -23,7 +23,13 @@ export interface UniversalRepair {
   reason: string;
 }
 
-const REPAIR_PROBABILITY = 0.05;
+// Phase 39f: dropped 0.05 → 0.015. Greenberg's universals are
+// statistical tendencies, not absolute laws. Real languages do
+// violate them: Persian SOV with prepositions, Finnish SVO with
+// postpositions, Mandarin SVO with both. Lowering the repair rate
+// from 5%/gen to 1.5%/gen lets these "exception" configurations
+// persist for centuries — modelling real typological diversity.
+const REPAIR_PROBABILITY = 0.015;
 
 export function enforceTypologicalUniversals(
   lang: Language,

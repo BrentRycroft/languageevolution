@@ -190,6 +190,56 @@ const DRIFT_RULES: readonly DriftRule[] = [
       if (r > flipBias) return null;
       const shift = { feature: "hasCase", from: g.hasCase, to: !g.hasCase };
       g.hasCase = !g.hasCase;
+      // Phase 39m: coupled flip — when hasCase flips false, force
+      // caseStrategy: "case" → "preposition" to avoid the incoherent
+      // "no morphological case but caseStrategy: case" state. Models
+      // English's coupled loss of case + adoption of prepositions.
+      if (!g.hasCase && g.caseStrategy === "case") {
+        g.caseStrategy = "preposition";
+      } else if (g.hasCase && (g.caseStrategy === "preposition" || g.caseStrategy === "postposition")) {
+        // Reverse pathway (rare, e.g., Hindi rebuilt case from postpositions).
+        g.caseStrategy = "case";
+      }
+      return shift;
+    },
+  },
+  // Phase 39m: caseStrategy can drift independently. Prior to this
+  // it only changed via enforceTypologicalUniversals soft repair.
+  // Adding it to DRIFT_RULES allows real synthetic→analytic
+  // transitions visible in narrative output.
+  {
+    feature: "caseStrategy",
+    probability: 0.04,
+    shift: (g, rng) => {
+      const cur = g.caseStrategy ?? "preposition";
+      const synth = g.synthesisIndex ?? 0.5;
+      // Analytic languages drift away from case; synthetic languages
+      // drift toward it. Pre-existing universals.ts may then re-flip
+      // for consistency, but the seed transition fires here.
+      const opts: Array<{ to: GrammarFeatures["caseStrategy"]; weight: number }> = [];
+      if (cur === "case") {
+        opts.push({ to: "mixed", weight: 0.3 * (1 - synth / 3) });
+      } else if (cur === "mixed") {
+        opts.push({ to: "preposition", weight: 0.4 });
+        opts.push({ to: "case", weight: 0.05 });
+      } else if (cur === "preposition") {
+        opts.push({ to: "postposition", weight: 0.05 });
+        opts.push({ to: "mixed", weight: 0.05 });
+        opts.push({ to: "case", weight: 0.05 });
+      } else if (cur === "postposition") {
+        opts.push({ to: "preposition", weight: 0.05 });
+      }
+      const totalW = opts.reduce((a, o) => a + o.weight, 0);
+      if (totalW <= 0) return null;
+      let r = rng.next() * totalW;
+      let pick: GrammarFeatures["caseStrategy"] | null = null;
+      for (const o of opts) {
+        r -= o.weight;
+        if (r <= 0) { pick = o.to; break; }
+      }
+      if (!pick || pick === cur) return null;
+      const shift = { feature: "caseStrategy" as const, from: cur, to: pick };
+      g.caseStrategy = pick;
       return shift;
     },
   },

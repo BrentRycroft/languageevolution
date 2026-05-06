@@ -51,6 +51,18 @@ export function applyFounderInnovation(
     return arr;
   })();
 
+  // Phase 39l: multi-flip founder. Pre-39l this returned after the
+  // FIRST successful innovation (one category per founder event,
+  // one grammar flip per category). That's too conservative — Old
+  // → Middle English shock changed phonology, stress, AND multiple
+  // grammar features simultaneously. Allow up to 3 grammar flips
+  // per event (weighted by tier so high-tier shocks flip more) plus
+  // each non-grammar category at most once.
+  const tier = (child.culturalTier ?? 0) as number;
+  const maxGrammarFlips = 1 + Math.min(3, Math.floor(tier * 0.7 + rng.next() * 1.5));
+  const descriptions: string[] = [];
+  let primaryKind: "phonology" | "stress" | "grammar" | null = null;
+
   for (const kind of order) {
     if (forbidden?.has(kind)) continue;
     if (kind === "phonology") {
@@ -58,25 +70,34 @@ export function applyFounderInnovation(
       if (rule) {
         if (!child.activeRules) child.activeRules = [];
         child.activeRules.push(rule);
-        return { kind, description: `phonological innovation: ${rule.description}` };
+        descriptions.push(`phonological innovation: ${rule.description}`);
+        primaryKind ??= kind;
       }
     } else if (kind === "stress") {
       const current = child.stressPattern ?? "penult";
       const next = pickNextStressForSplit(current, rng);
       if (next !== current) {
         child.stressPattern = next;
-        return { kind, description: `stress pattern: ${current} → ${next}` };
+        descriptions.push(`stress pattern: ${current} → ${next}`);
+        primaryKind ??= kind;
       }
     } else if (kind === "grammar") {
-      const flip = flipGrammar(child.grammar, rng);
-      if (flip) {
+      // Phase 39l: multiple grammar flips per founder event.
+      const seenFeatures = new Set<string>();
+      for (let i = 0; i < maxGrammarFlips; i++) {
+        const flip = flipGrammar(child.grammar, rng);
+        if (!flip || seenFeatures.has(flip.feature)) continue;
+        seenFeatures.add(flip.feature);
         setGrammarFeature(child.grammar, flip.feature, flip.to as GrammarFeatures[typeof flip.feature]);
-        return {
-          kind,
-          description: `${flip.feature}: ${String(flip.from)} → ${String(flip.to)}`,
-        };
+        descriptions.push(`${flip.feature}: ${String(flip.from)} → ${String(flip.to)}`);
+        primaryKind ??= kind;
       }
     }
   }
-  return null;
+
+  if (descriptions.length === 0) return null;
+  return {
+    kind: primaryKind ?? "grammar",
+    description: descriptions.join("; "),
+  };
 }
