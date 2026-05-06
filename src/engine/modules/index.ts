@@ -19,6 +19,7 @@
 import { registerGrammaticalModules } from "./grammatical";
 import { registerSyntacticalModules } from "./syntactical";
 import { registerMorphologicalModules } from "./morphological";
+import { registerSemanticModules } from "./semantic";
 
 let booted = false;
 
@@ -28,8 +29,7 @@ export function bootModules(): void {
   registerGrammaticalModules();
   registerSyntacticalModules();
   registerMorphologicalModules();
-  // Phase 45 adds its barrel here:
-  // registerSemanticModules();
+  registerSemanticModules();
 }
 
 // Auto-boot at module-load time so the registry is populated before
