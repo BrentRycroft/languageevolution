@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatNumeral, describeNumeral } from "../translator/numerals";
+import { describeNumeral } from "../translator/numerals";
 import type { Language } from "../types";
 
 function makeLang(grammar: Partial<Language["grammar"]> = {}): Language {
