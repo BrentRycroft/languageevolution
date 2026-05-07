@@ -8,6 +8,7 @@ import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
+import { attemptGracefulFallback } from "./gracefulFallback";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -46,7 +47,12 @@ export interface TranslatedToken {
     | "synth-affix"
     | "synth-neg-affix"
     | "synth-concept"
-    | "synth-cluster";
+    | "synth-cluster"
+    // Phase 50 T3: graceful fallback — when no resolution rung
+    // matches, the translator coins a fresh form from the language's
+    // own phonotactics + mechanism set and writes it to the lexicon
+    // as a real coinage event. Subsequent lookups hit "direct".
+    | "synth-fallback";
 }
 
 export interface SentenceTranslation {
@@ -87,6 +93,19 @@ const AUX_VERBS = new Set([
   "have", "has", "had",
 ]);
 const COPULAS = new Set(["am", "is", "are", "was", "were", "be"]);
+
+// Phase 50 T3: lemmas that should NOT trigger graceful-fallback
+// coinage. These are closed-class English function words; some
+// languages legitimately omit them (zero-copula, no auxiliaries, etc.)
+// and the realise layer's isZeroCopula / drop-aux logic depends on
+// resolveLemma returning null for them.
+const FALLBACK_SKIP = new Set<string>([
+  ...COPULAS,
+  "have", "has", "had", "having",
+  "do", "does", "did", "doing",
+  "will", "would", "shall", "should", "can", "could", "may", "might", "must",
+  "the", "a", "an",
+]);
 const NEGATORS = new Set(["not", "n't", "never"]);
 const INTERJECTIONS = new Set([
   "yes", "no", "ok", "okay", "yeah", "nope",
@@ -659,6 +678,28 @@ function resolveLemma(
         form: lang.lexicon[bestMatch]!.slice(),
         resolution: "fallback",
         glossNote: `* ${bestMatch}`,
+      };
+    }
+  }
+  // Phase 50 T3: graceful fallback — coin a fresh form from the
+  // language's own phonotactics + mechanism set so the translator
+  // never returns a hard `?` on a lemma the user actually typed. The
+  // form is written to the lexicon as a real coinage event; the next
+  // lookup hits Rung 1 (direct).
+  //
+  // Skip closed-class function words: `be` and the auxiliaries, which
+  // some languages legitimately omit (zero-copula, particle-marked
+  // tense, etc.). The realise pipeline detects these from a null form
+  // and elides them — coining a content-form here would re-insert
+  // them where the language wants them dropped.
+  if (!FALLBACK_SKIP.has(lemma)) {
+    const fallbackGen = lang.events?.at(-1)?.generation ?? 0;
+    const synthFallback = attemptGracefulFallback(lang, lemma, fallbackGen);
+    if (synthFallback) {
+      return {
+        form: synthFallback.form.slice(),
+        resolution: "synth-fallback",
+        glossNote: synthFallback.glossNote,
       };
     }
   }

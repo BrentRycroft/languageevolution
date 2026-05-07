@@ -83,33 +83,48 @@ describe("translator polish — object pronouns alias to subject lemmas", () => 
   });
 });
 
-describe("translator polish — unresolved words surface in quotation marks", () => {
-  it("missing noun stays in surface order, wrapped in “”", () => {
+/**
+ * Phase 50 T3: when a lemma can't be resolved by any prior rung, the
+ * translator now coins a fresh form for it via `attemptGracefulFallback`
+ * and writes it to the lexicon (Rung 8). The previous "surface in
+ * quotation marks" behaviour is preserved as a fallback only when even
+ * the graceful synthesis fails (e.g., language with no phoneme
+ * inventory). These tests now assert that the lemma DOES resolve to a
+ * non-quoted surface form on the first translation, and that the
+ * resolution is `synth-fallback`.
+ */
+describe("translator polish — unresolved words coin via graceful fallback", () => {
+  it("missing noun coins a fresh form (no quotation marks)", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the dragon eats the king");
     const dragon = out.targetTokens.find((t) => t.englishLemma === "dragon");
-    expect(dragon?.targetSurface).toBe("“dragon”");
+    expect(dragon).toBeDefined();
+    expect(dragon!.targetSurface).not.toContain("“");
+    expect(dragon!.resolution).toBe("synth-fallback");
   });
 
-  it("missing verb stays in surface order, wrapped in “”", () => {
+  it("missing verb coins a fresh form", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the spaceship lands on the moon");
     const land = out.targetTokens.find((t) => t.englishLemma === "land");
-    expect(land?.targetSurface).toBe("“land”");
+    expect(land?.resolution).toBe("synth-fallback");
+    expect(land?.targetSurface).not.toContain("“");
   });
 
-  it("missing adjective in NP stays in surface order, wrapped in “”", () => {
+  it("missing adjective coins a fresh form", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the wise king sees");
     const wise = out.targetTokens.find((t) => t.englishLemma === "wise");
-    expect(wise?.targetSurface).toBe("“wise”");
+    expect(wise?.resolution).toBe("synth-fallback");
+    expect(wise?.targetSurface).not.toContain("“");
   });
 
-  it("missing predicate adjective stays in surface order, wrapped in “”", () => {
+  it("missing predicate adjective coins a fresh form", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the king is angry");
     const angry = out.targetTokens.find((t) => t.englishLemma === "angry");
-    expect(angry?.targetSurface).toBe("“angry”");
+    expect(angry?.resolution).toBe("synth-fallback");
+    expect(angry?.targetSurface).not.toContain("“");
   });
 });
 

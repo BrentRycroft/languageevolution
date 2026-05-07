@@ -19,6 +19,48 @@ import { ScriptPicker } from "./ScriptPicker";
 import { useDebounced } from "./hooks/useDebounced";
 import { EmptyState } from "./components/EmptyState";
 
+// Phase 50 T4: per-token resolution chip (lifted from EventsLog's KIND
+// palette). Each rung gets a colour, label, and tooltip explaining how
+// the form was found — `direct` means it was in the lexicon already,
+// `synth-fallback` means the translator coined it on the spot.
+const RESOLUTION_LABEL: Record<string, string> = {
+  direct: "lex",
+  concept: "cncp",
+  colex: "↔",
+  "reverse-colex": "↔",
+  fallback: "?",
+  "synth-affix": "+aff",
+  "synth-neg-affix": "+neg",
+  "synth-concept": "decom",
+  "synth-cluster": "clust",
+  "synth-fallback": "✦coin",
+};
+const RESOLUTION_COLOR: Record<string, string> = {
+  direct: "var(--muted)",
+  concept: "#a0d8ff",
+  colex: "#c88dff",
+  "reverse-colex": "#c88dff",
+  fallback: "#ff6363",
+  "synth-affix": "#7be0b5",
+  "synth-neg-affix": "#ff8fd4",
+  "synth-concept": "#9bdcff",
+  "synth-cluster": "#80ffd4",
+  "synth-fallback": "#ffd166",
+};
+const RESOLUTION_TOOLTIP: Record<string, string> = {
+  direct: "looked up directly in the lexicon",
+  concept: "concept-level lookup",
+  colex: "colexified with another meaning",
+  "reverse-colex": "reverse-colexified",
+  fallback: "no resolution; placeholder",
+  "synth-affix": "synthesized via stem + productive affix",
+  "synth-neg-affix": "synthesized via negational affix",
+  "synth-concept": "synthesized via concept decomposition",
+  "synth-cluster": "synthesized via cluster composition",
+  "synth-fallback":
+    "translator coined this form on the fly; it is now in the language's lexicon and will evolve under sound change",
+};
+
 type Mode = "sentence" | "word" | "lang-to-lang" | "cognates" | "etymology";
 
 export function Translator() {
@@ -424,8 +466,9 @@ function SentenceOutput({
         {result.targetTokens.map((t, i) => (
           <div
             key={`${t.englishLemma}-${t.englishTag}-${i}`}
-            className="token-card"
-            title={`${t.englishLemma} (${t.englishTag})${t.glossNote ? " · " + t.glossNote : ""} · ${t.resolution}`}
+            className={`token-card token-card--${t.resolution}`}
+            data-resolution={t.resolution}
+            title={`${t.englishLemma} (${t.englishTag})${t.glossNote ? " · " + t.glossNote : ""} · ${RESOLUTION_TOOLTIP[t.resolution] ?? t.resolution}`}
           >
             <span className="token-form">
               {t.targetForm.length > 0 ? formatForm(t.targetForm, lang, script, t.englishLemma) : t.targetSurface}
@@ -433,6 +476,12 @@ function SentenceOutput({
             <span className="token-gloss">
               {t.englishLemma}
               {t.glossNote && <> · {t.glossNote}</>}
+            </span>
+            <span
+              className="token-chip"
+              style={{ color: RESOLUTION_COLOR[t.resolution] ?? "var(--muted)" }}
+            >
+              {RESOLUTION_LABEL[t.resolution] ?? t.resolution}
             </span>
           </div>
         ))}

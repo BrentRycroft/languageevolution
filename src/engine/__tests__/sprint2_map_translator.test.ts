@@ -242,13 +242,22 @@ describe("§B — translator", () => {
     expect(lastResolved.englishTag).toBe("V");
   });
 
-  it("translateSentence flags unresolved tokens", () => {
+  it("translateSentence resolves unknown tokens via graceful fallback (Phase 50 T3)", () => {
+    // Pre-Phase-50: unresolved tokens were quoted and counted in
+    // `result.missing`. Phase 50 T3 added Rung 8 — `attemptGracefulFallback` —
+    // which coins a fresh form for any unknown lemma using the language's
+    // own phonotactics + mechanism set, so the user never sees a hard `?`.
     const sim = createSimulation({ ...defaultConfig(), seed: "translate-miss" });
     for (let i = 0; i < 5; i++) sim.step();
     const state = sim.getState();
     const id = Object.keys(state.tree).find((k) => !state.tree[k]!.language.extinct)!;
     const lang = state.tree[id]!.language;
     const result = translateSentence(lang, "the xyzqwerty zooflark");
-    expect(result.missing.length).toBeGreaterThan(0);
+    const synth = result.targetTokens.filter(
+      (t) => t.resolution === "synth-fallback",
+    );
+    expect(synth.length).toBeGreaterThan(0);
+    expect(lang.lexicon["xyzqwerty"]).toBeDefined();
+    expect(lang.lexicon["zooflark"]).toBeDefined();
   });
 });

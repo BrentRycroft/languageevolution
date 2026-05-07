@@ -21,6 +21,7 @@ import { UpdateBanner } from "./UpdateBanner";
 import { DebugOverlay } from "./DebugOverlay";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
+import { HelpOverlay } from "./HelpOverlay";
 import { StatsPanel } from "./StatsPanel";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
@@ -109,6 +110,7 @@ export function App() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("tree");
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     const payload = readShareFromLocation();
@@ -142,6 +144,7 @@ export function App() {
     setActiveTab,
     activeTab,
     openGlobalSearch: requestGlobalSearchOpen,
+    toggleHelp: () => setHelpOpen((h) => !h),
   });
 
   useEffect(() => {
@@ -183,6 +186,7 @@ export function App() {
       <UpdateBanner />
       <DebugOverlay />
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
+      <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
       <header className="header">
         <button
           className="menu-toggle ghost icon-only"
@@ -205,6 +209,16 @@ export function App() {
           gen {generation} <span className="t-muted" style={{ fontWeight: "normal", marginLeft: 4 }}>· {formatElapsed(generation, yearsPerGen)}</span>
         </span>
         <GlobalSearch onJumpToLexicon={() => setActiveTab("dictionary")} />
+        <button
+          type="button"
+          className="ghost icon-only"
+          onClick={() => setHelpOpen(true)}
+          aria-label="Show keyboard shortcuts"
+          title="Keyboard shortcuts (?)"
+          style={{ fontSize: 12 }}
+        >
+          ?
+        </button>
         <div className="playback">
           <button className="primary icon-only" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
             {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}

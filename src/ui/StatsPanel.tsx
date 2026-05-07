@@ -5,6 +5,7 @@ import { TIER_LABELS, type Tier } from "../engine/lexicon/concepts";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import { EmptyState } from "./components/EmptyState";
+import { ExportButtons } from "./components/ExportButtons";
 
 function tempoBadge(conservatism: number): { icon: string; label: string; hue: number } {
   if (conservatism >= 1.3) return { icon: "🐢", label: "conservative", hue: 200 };
@@ -99,9 +100,33 @@ export function StatsPanel() {
   }
   return (
     <div style={{ fontSize: 11, color: "var(--muted)" }}>
-      <div>
-        gen {state.generation} · {alive.length} alive
-        {extinct.length > 0 ? ` · ${extinct.length} extinct` : ""}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <span>
+          gen {state.generation} · {alive.length} alive
+          {extinct.length > 0 ? ` · ${extinct.length} extinct` : ""}
+        </span>
+        <ExportButtons
+          filenameBase={`stats-gen${state.generation}`}
+          csvHeader={["lang", "tempo", "tier", "age", "words", "altForms", "homonyms", "rules"]}
+          csvRows={stats.map((s) => [
+            s.name,
+            tempoBadge(s.conservatism).label,
+            s.tier,
+            s.age,
+            s.words,
+            s.altCount,
+            s.homonyms,
+            s.productiveRules,
+          ])}
+          copyText={() =>
+            stats
+              .map(
+                (s) =>
+                  `${s.name}\t${tempoBadge(s.conservatism).label}\ttier ${s.tier}\t${s.age} gens\t${s.words} words\t${s.altCount} alts\t${s.homonyms} homs\t${s.productiveRules} rules`,
+              )
+              .join("\n")
+          }
+        />
       </div>
       <table className="stats-table">
         <thead>

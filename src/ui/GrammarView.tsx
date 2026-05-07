@@ -7,6 +7,8 @@ import { formatForm } from "../engine/phonology/display";
 import { posOf } from "../engine/lexicon/pos";
 import { PRODUCTIVITY_THRESHOLD } from "../engine/lexicon/derivation";
 import { ScriptPicker } from "./ScriptPicker";
+import { ExportButtons } from "./components/ExportButtons";
+import { EmptyState } from "./components/EmptyState";
 
 export function GrammarView() {
   const state = useSimStore((s) => s.state);
@@ -33,7 +35,19 @@ export function GrammarView() {
           >
             <strong>{selected.name}</strong>{" "}
             {selected.extinct && <span className="t-danger">(extinct)</span>}
-            <span className="ml-auto">
+            <span className="ml-auto" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <ExportButtons
+                filenameBase={`grammar-${selected.name}`}
+                csvHeader={["category", "affix", "position"]}
+                csvRows={Object.entries(selected.morphology.paradigms).map(
+                  ([cat, p]) => [cat, p?.affix.join("") ?? "", p?.position ?? ""],
+                )}
+                copyText={() =>
+                  Object.entries(selected.morphology.paradigms)
+                    .map(([cat, p]) => `${cat}\t${p?.affix.join("") ?? ""}\t${p?.position ?? ""}`)
+                    .join("\n")
+                }
+              />
               <ScriptPicker />
             </span>
           </div>
@@ -44,7 +58,11 @@ export function GrammarView() {
           <GrammaticalisationTimeline lang={selected} />
         </>
       ) : (
-        <div className="t-muted">Select a language to view grammar.</div>
+        <EmptyState
+          icon="📐"
+          title="Select a language"
+          hint="Pick a language from the tree to see its grammar."
+        />
       )}
 
       <div style={{ marginTop: 12, display: "flex", gap: 4, flexWrap: "wrap" }}>

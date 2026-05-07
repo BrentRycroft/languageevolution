@@ -19,10 +19,15 @@ interface Options {
    * Optional global-search opener. When provided, ⌘/Ctrl-K opens it.
    */
   openGlobalSearch?: () => void;
+  /**
+   * Phase 50 T7: optional help-overlay toggle. When provided, `?`
+   * opens the keyboard-shortcut reference card.
+   */
+  toggleHelp?: () => void;
 }
 
 export function useKeyboardShortcuts(options: Options): void {
-  const { playing, togglePlay, step, stepN, reset, setActiveTab, activeTab, openGlobalSearch } = options;
+  const { playing, togglePlay, step, stepN, reset, setActiveTab, activeTab, openGlobalSearch, toggleHelp } = options;
   const showConfirm = useSimStore((s) => s.showConfirm);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,6 +48,12 @@ export function useKeyboardShortcuts(options: Options): void {
           e.preventDefault();
           openGlobalSearch();
         }
+        return;
+      }
+      // Phase 50 T7: ? opens the keyboard help overlay.
+      if (e.key === "?" && toggleHelp) {
+        e.preventDefault();
+        toggleHelp();
         return;
       }
       if (e.key === " ") {
@@ -84,5 +95,5 @@ export function useKeyboardShortcuts(options: Options): void {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [playing, togglePlay, step, stepN, reset, setActiveTab, activeTab, showConfirm, openGlobalSearch]);
+  }, [playing, togglePlay, step, stepN, reset, setActiveTab, activeTab, showConfirm, openGlobalSearch, toggleHelp]);
 }
