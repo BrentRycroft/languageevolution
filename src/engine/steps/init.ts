@@ -259,9 +259,16 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       // productive at language birth.
       const affix = rootLang.lexicon[m];
       if (affix && affix.length > 0 && !rootLang.derivationalSuffixes.some((s) => s.tag === m)) {
+        // Phase 47 T2: detect position from tag shape. Tags ending
+        // with "-" (e.g. "re-", "un-") are prefixes; otherwise default
+        // to suffix (e.g. "-er.agt", "-ness"). Synthesis path uses
+        // this to choose concatenation order.
+        const position: "prefix" | "suffix" =
+          m.endsWith("-") && !m.startsWith("-") ? "prefix" : "suffix";
         rootLang.derivationalSuffixes.push({
           affix: affix.slice(),
           tag: m,
+          position,
           usageCount: 5,
           productive: true,
         });

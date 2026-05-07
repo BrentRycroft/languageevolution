@@ -626,6 +626,21 @@ const LEXICON: Lexicon = {
   "-dom": ["d", "ə", "m"],
   "-ship": ["ʃ", "ɪ", "p"],
   "-hood": ["h", "ʊ", "d"],
+  // Phase 47 T2: derivational prefixes. Tag ends with "-" so the
+  // synthesis path detects position = "prefix" and concatenates as
+  // affix + stem. Surface forms picked to match modern English IPA.
+  "re-": ["r", "iː"],
+  "pre-": ["p", "r", "iː"],
+  "mis-": ["m", "ɪ", "s"],
+  "over-": ["o", "v", "ə", "r"],
+  // Phase 47 T3: negational prefixes. Fire only on rung 5 (after
+  // non-negational synthesis returned null), so "unhappy" only
+  // surfaces when "happy" has no antonym in the lexicon. Synthesis
+  // resolution is "synth-neg-affix" rather than "synth-affix".
+  "un-": ["ʌ", "n"],
+  "dis-": ["d", "ɪ", "s"],
+  "non-": ["n", "ɑ", "n"],
+  "in-": ["ɪ", "n"],
 };
 
 /**
@@ -634,6 +649,11 @@ const LEXICON: Lexicon = {
  */
 const BOUND_MORPHEMES = new Set<string>([
   "-er.agt", "-ness", "-dom", "-ship", "-hood",
+  // Phase 47 T2: prefixes for on-demand synthesis
+  // (re-build, pre-think, mis-take, over-do).
+  "re-", "pre-", "mis-", "over-",
+  // Phase 47 T3: negational prefixes (rung 5 — rare path).
+  "un-", "dis-", "non-", "in-",
 ]);
 
 const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {

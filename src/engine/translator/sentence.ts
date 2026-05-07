@@ -7,6 +7,7 @@ import { realiseSentence } from "./realise";
 import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
+import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -41,7 +42,11 @@ export interface TranslatedToken {
     | "concept"
     | "colex"
     | "reverse-colex"
-    | "fallback";
+    | "fallback"
+    | "synth-affix"
+    | "synth-neg-affix"
+    | "synth-concept"
+    | "synth-cluster";
 }
 
 export interface SentenceTranslation {
@@ -562,6 +567,59 @@ function resolveLemma(
         glossNote: `compound: ${meta.parts.join("+")}`,
       };
     }
+  }
+  // Phase 47 T1: on-demand morphological synthesis (non-negational).
+  // If the lemma is not in the lexicon and not a registered compound,
+  // attempt to decompose it into stem + recognised productive affix
+  // from the non-negational set (agentive, abstractive, etc.).
+  // Example: "lighter" → light + -er.
+  const synthNonNeg = attemptMorphologicalSynthesis(lang, lemma, "non-neg");
+  if (synthNonNeg) {
+    return {
+      form: synthNonNeg.form,
+      resolution: synthNonNeg.resolution,
+      glossNote: synthNonNeg.glossNote,
+    };
+  }
+  // Phase 47 T3: negational synthesis (rung 5). Fires only after the
+  // non-negational pass returned null, so negational prefixes are
+  // strictly rarer than agentive/abstractive — matches English usage
+  // ("unhappy" exists but is less common than primary "sad").
+  const synthNeg = attemptMorphologicalSynthesis(lang, lemma, "neg");
+  if (synthNeg) {
+    return {
+      form: synthNeg.form,
+      resolution: synthNeg.resolution,
+      glossNote: synthNeg.glossNote,
+    };
+  }
+  // Phase 47 T6: cross-linguistic concept decomposition (rung 6).
+  // For meanings that have a CONCEPTS[lemma].decomposition default
+  // (e.g., "computer" → ["work", "know"]), compose if all parts are
+  // in the language's lexicon. Distinct from per-language seedCompounds
+  // (T5) which override these defaults at the language level.
+  // Skipped for primitives (NSM-style irreducibles).
+  const synthConcept = attemptConceptDecomposition(lang, lemma);
+  if (synthConcept) {
+    return {
+      form: synthConcept.form,
+      resolution: synthConcept.resolution,
+      glossNote: synthConcept.glossNote,
+    };
+  }
+  // Phase 47 T9: cluster-emergent composition (rung 7, last resort
+  // before colex/concept fallback). Fires only for small-lexicon-
+  // eligible languages — Pidgin / Toki Pona-style ad-hoc fills from
+  // semantically-adjacent lexicon entries. Large-lexicon languages
+  // (English, Romance) skip this rung; their primary lexicalisations
+  // stay primary.
+  const synthCluster = attemptClusterComposition(lang, lemma);
+  if (synthCluster) {
+    return {
+      form: synthCluster.form,
+      resolution: synthCluster.resolution,
+      glossNote: synthCluster.glossNote,
+    };
   }
   if (isRegisteredConcept(lemma)) {
     for (const partner of colexWith(lemma)) {

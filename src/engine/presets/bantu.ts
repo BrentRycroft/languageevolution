@@ -235,7 +235,19 @@ const LEXICON: Lexicon = {
   to: ["k", "w", "a"],
   for: ["k", "w", "a"],
   by: ["n", "a"],
+  // Phase 47 T4: proto-Bantu derivational prefixes (separate from
+  // noun-class inflectional prefixes which the noun-class system
+  // handles). ku- (infinitive nominaliser → noun "the V-ing"),
+  // m-/mu- (singular agent), ka- (diminutive prefix in many Bantu
+  // langs). Tag ends with "-" so synthesis treats as prefix.
+  "ku-": ["k", "u"],
+  "mu-": ["m", "u"],
+  "ka-": ["k", "a"],
 };
+
+const BANTU_BOUND_MORPHEMES = new Set<string>([
+  "ku-", "mu-", "ka-",
+]);
 
 // Phase 29 Tranche 5s: deepened Bantu frequency hints.
 const FREQ: Record<Meaning, number> = {
@@ -360,6 +372,7 @@ export function presetBantu(): SimulationConfig {
     // Phase 36 Tranche 36b: Bantu noun-class system. Activates the
     // class-prefix realiser and verb-agreement pathway.
     seedNounClassSystem: true,
+    seedBoundMorphemes: BANTU_BOUND_MORPHEMES,
     seedPhonemeTarget: 32,
     // Phase 46a-migration: proto-Bantu — SVO, post-head modifiers,
     // tonal, rich noun-class agreement, mood marking, honorific
