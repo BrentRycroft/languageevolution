@@ -17,6 +17,7 @@ import { formatForm } from "../engine/phonology/display";
 import type { MorphCategory } from "../engine/morphology/types";
 import { ScriptPicker } from "./ScriptPicker";
 import { useDebounced } from "./hooks/useDebounced";
+import { EmptyState } from "./components/EmptyState";
 
 type Mode = "sentence" | "word" | "lang-to-lang" | "cognates" | "etymology";
 
@@ -117,6 +118,16 @@ export function Translator() {
   const run = () => {
     /* deprecated: results are recomputed automatically via useMemo */
   };
+
+  if (alive.length === 0) {
+    return (
+      <EmptyState
+        icon="🗣️"
+        title="No language to translate yet"
+        hint="Step the simulation to bring at least one language into existence."
+      />
+    );
+  }
 
   return (
     <div style={{ fontSize: 13, maxWidth: 760 }}>

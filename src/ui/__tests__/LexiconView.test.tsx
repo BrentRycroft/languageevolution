@@ -12,7 +12,9 @@ describe("LexiconView", () => {
   it("renders rows for every seed meaning", () => {
     const { container } = render(<LexiconView />);
     const meaningCells = container.querySelectorAll("td.meaning");
-    const labels = Array.from(meaningCells).map((n) => n.textContent);
+    const labels = Array.from(meaningCells).map((n) =>
+      n.getAttribute("data-meaning"),
+    );
     expect(labels).toContain("water");
     expect(labels).toContain("fire");
     expect(labels).toContain("mother");

@@ -2,12 +2,16 @@
  * Single source of truth for the tab bar. Used by App.tsx (rendering) and
  * useKeyboardShortcuts (number-key bindings). Keep in sync — changing the
  * order here changes what the 1-9 shortcuts jump to.
+ *
+ * Phase 50 T2: trimmed to 15 tabs. The `profile` view is now folded
+ * into the Dictionary tab as a TL;DR header; `lexicostat` is folded
+ * into the Stats tab as a sub-section. This restores the keyboard-9
+ * contract from Phase 19b (tabs.test.ts).
  */
 
 export type TabId =
   | "tree"
   | "map"
-  | "profile"
   | "dictionary"
   | "timeline"
   | "grammar"
@@ -20,7 +24,6 @@ export type TabId =
   | "sandbox"
   | "stats"
   | "wordmap"
-  | "lexicostat"
   | "glossary";
 
 export interface TabSpec {
@@ -32,11 +35,6 @@ export interface TabSpec {
 export const TABS: TabSpec[] = [
   { id: "tree", label: "Tree", title: "Phylogenetic tree of languages" },
   { id: "map", label: "Map", title: "2-D map of where languages live" },
-  {
-    id: "profile",
-    label: "Profile",
-    title: "TL;DR card for the selected language — typology, register, sample words, distinguishing rules",
-  },
   {
     id: "dictionary",
     label: "Dictionary",
@@ -67,12 +65,7 @@ export const TABS: TabSpec[] = [
     label: "Sandbox",
     title: "Phonology sandbox: pick rules and apply them to a chosen word, deterministically",
   },
-  { id: "stats", label: "Stats", title: "Per-language stats dashboard" },
-  {
-    id: "lexicostat",
-    label: "Lexicostat",
-    title: "Pairwise Swadesh retention heatmap + glottochronology curve per leaf",
-  },
+  { id: "stats", label: "Stats", title: "Per-language stats dashboard + lexicostatistics" },
   {
     id: "wordmap",
     label: "Words",

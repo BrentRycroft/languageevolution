@@ -326,15 +326,44 @@ export function createSimulation(
       // Phase 29 Tranche 1e: the form-key index is a Map, not JSON-
       // serialisable. Saved snapshots strip it, so rebuild after
       // restore so the next findWordByForm hits the index path.
+      // Phase 50 T1: rehydrate Set-valued language fields too —
+      // activeModules (Phase 46a) and boundMorphemes get JSON-coerced
+      // to {} and silently break determinism on resume because the
+      // module step()s become no-ops.
       for (const id of Object.keys(cloneTree)) {
         const lang = cloneTree[id]?.language;
-        if (lang && lang.words) rebuildFormKeyIndex(lang);
+        if (!lang) continue;
+        if (lang.words) rebuildFormKeyIndex(lang);
+        if (lang.activeModules && !(lang.activeModules instanceof Set)) {
+          const arr = Array.isArray(lang.activeModules)
+            ? lang.activeModules
+            : Object.values(lang.activeModules as Record<string, string>);
+          lang.activeModules = new Set(arr as string[]);
+        }
+        if (lang.boundMorphemes && !(lang.boundMorphemes instanceof Set)) {
+          const arr = Array.isArray(lang.boundMorphemes)
+            ? lang.boundMorphemes
+            : Object.values(lang.boundMorphemes as Record<string, string>);
+          lang.boundMorphemes = new Set(arr as string[]);
+        }
       }
       state = {
         generation: snapshot.generation,
         rootId: snapshot.rootId,
         rngState: snapshot.rngState,
         tree: cloneTree,
+        // Phase 50 T1: pendingArealRules + generationsOverCap are
+        // optional fields on SimulationState but they ARE part of
+        // simulation determinism — areal waves in flight and the
+        // generation-over-cap death pressure feed the next step.
+        // Pre-50 restoreState dropped them, silently diverging
+        // resumed runs from continuous ones.
+        pendingArealRules: snapshot.pendingArealRules
+          ? (typeof structuredClone === "function"
+              ? structuredClone(snapshot.pendingArealRules)
+              : (JSON.parse(JSON.stringify(snapshot.pendingArealRules)) as typeof snapshot.pendingArealRules))
+          : undefined,
+        generationsOverCap: snapshot.generationsOverCap,
       };
     },
   };

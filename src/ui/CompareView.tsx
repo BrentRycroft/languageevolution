@@ -16,6 +16,7 @@ import {
 import { generateDiscourseNarrative } from "../engine/narrative/discourse_generate";
 import type { DiscourseGenre } from "../engine/narrative/discourse";
 import { traceEtymology } from "../engine/translator/cognates";
+import { EmptyState } from "./components/EmptyState";
 
 type CompareMode = "lexicon" | "narrative" | "cognate";
 
@@ -60,6 +61,16 @@ export function CompareView() {
     }
     return alive.slice(0, 2);
   }, [compareIds, selectedLangId, state.tree]);
+
+  if (pair.length < 2) {
+    return (
+      <EmptyState
+        icon="🔀"
+        title="Need two languages to compare"
+        hint="Step the simulation until two daughters exist, or pick a second language from the tree."
+      />
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, height: "100%", minHeight: 0 }}>

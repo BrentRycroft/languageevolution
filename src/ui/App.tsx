@@ -313,6 +313,7 @@ export function App() {
         {activeTab === "dictionary" && (
           <div className="panel panel-single" role="tabpanel" id="tabpanel-dictionary" aria-labelledby="tab-dictionary">
             <h3>Dictionary</h3>
+            <LanguageProfile />
             <DictionaryView />
           </div>
         )}
@@ -398,24 +399,14 @@ export function App() {
           <div className="panel panel-single" role="tabpanel" id="tabpanel-stats" aria-labelledby="tab-stats">
             <h3>Stats</h3>
             <StatsPanel />
+            <h3 style={{ marginTop: 24 }}>Lexicostatistics &amp; Glottochronology</h3>
+            <LexicostatView />
           </div>
         )}
         {activeTab === "map" && (
           <div className="panel panel-single" role="tabpanel" id="tabpanel-map" aria-labelledby="tab-map">
             <h3>World Map</h3>
             <MapView />
-          </div>
-        )}
-        {activeTab === "profile" && (
-          <div className="panel panel-single" role="tabpanel" id="tabpanel-profile" aria-labelledby="tab-profile">
-            <h3>Language Profile</h3>
-            <LanguageProfile />
-          </div>
-        )}
-        {activeTab === "lexicostat" && (
-          <div className="panel panel-single" role="tabpanel" id="tabpanel-lexicostat" aria-labelledby="tab-lexicostat">
-            <h3>Lexicostatistics &amp; Glottochronology</h3>
-            <LexicostatView />
           </div>
         )}
       </main>

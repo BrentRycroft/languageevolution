@@ -38,7 +38,11 @@ describe("orthography", () => {
   });
 
   it("driftOrthography flips a phoneme's spelling when triggered", () => {
-    const lang = baseLang();
+    // Phase 50 T1: orthography drift is gated to tier 2+ languages
+    // (the tier gate models that pre-literate languages don't have
+    // codified spelling to drift in the first place — see
+    // tierOrthographyMultiplier). Set tier 2 so drift can fire.
+    const lang = baseLang({ culturalTier: 2 });
     const rng = makeRng("drift");
     const shift = driftOrthography(lang, rng, 1);
     expect(shift).not.toBeNull();

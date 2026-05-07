@@ -5,6 +5,7 @@ import { isVowel, isSyllabic } from "../engine/phonology/ipa";
 import { profileBadge } from "../engine/phonology/phonotactics";
 import { functionalLoadMap } from "../engine/phonology/functionalLoad";
 import type { Phoneme } from "../engine/types";
+import { EmptyState } from "./components/EmptyState";
 
 export function PhonemeInventoryView() {
   const state = useSimStore((s) => s.state);
@@ -69,9 +70,11 @@ export function PhonemeInventoryView() {
 
   if (!lang) {
     return (
-      <div style={{ color: "var(--muted)", padding: 12, fontSize: "var(--fs-2)" }}>
-        Pick a language to see its phoneme inventory.
-      </div>
+      <EmptyState
+        icon="🔤"
+        title="Select a language"
+        hint="Pick a language from the tree to see its phoneme inventory."
+      />
     );
   }
 

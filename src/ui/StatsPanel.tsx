@@ -4,6 +4,7 @@ import { levenshtein } from "../engine/phonology/ipa";
 import { TIER_LABELS, type Tier } from "../engine/lexicon/concepts";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
+import { EmptyState } from "./components/EmptyState";
 
 function tempoBadge(conservatism: number): { icon: string; label: string; hue: number } {
   if (conservatism >= 1.3) return { icon: "🐢", label: "conservative", hue: 200 };
@@ -87,6 +88,15 @@ export function StatsPanel() {
     };
   });
 
+  if (leaves.length === 0) {
+    return (
+      <EmptyState
+        icon="📊"
+        title="No languages yet"
+        hint="Step the simulation to see language stats."
+      />
+    );
+  }
   return (
     <div style={{ fontSize: 11, color: "var(--muted)" }}>
       <div>

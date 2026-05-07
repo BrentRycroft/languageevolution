@@ -1896,10 +1896,22 @@ const TIER_T8: ExpandedConcept[] = [
   noun("research", "abstract", 3),
 ];
 
-export const EXPANDED_CONCEPTS: readonly ExpandedConcept[] = [
+// Phase 50 T1: dedupe at export time. The list grew over many sprints
+// (T7, T8) and accumulated ~115 duplicate entries (e.g. merchant tier
+// 2 in TIER_2 and tier 1 in TIER_T8). Earlier-defined tiers are
+// canonical — TIER_1 wins over TIER_T8 when an id collides.
+const _RAW_EXPANDED: readonly ExpandedConcept[] = [
   ...TIER_1,
   ...TIER_2,
   ...TIER_3,
   ...TIER_T7,
   ...TIER_T8,
 ];
+const _SEEN_IDS = new Set<Meaning>();
+export const EXPANDED_CONCEPTS: readonly ExpandedConcept[] = _RAW_EXPANDED.filter(
+  (e) => {
+    if (_SEEN_IDS.has(e.id)) return false;
+    _SEEN_IDS.add(e.id);
+    return true;
+  },
+);
