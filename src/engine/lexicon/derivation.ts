@@ -70,6 +70,22 @@ export interface DerivationalSuffix {
   productive?: boolean;
   /** Phase 22: generation at which `productive` flipped from false to true. */
   establishedGeneration?: number;
+  /**
+   * Phase 56 T1: last generation this suffix was actually applied
+   * (incremented when `usageCount` grows). Productivity-decay logic
+   * uses this to halve usageCount when a suffix sits idle for many
+   * generations — Romance Latin's `-tor` losing ground to `-ist`
+   * over centuries.
+   */
+  lastUsedGeneration?: number;
+  /**
+   * Phase 57 T1: when the language acquired this suffix via contact
+   * (areal diffusion, lexical borrowing chain). The donor language
+   * id lets the Compare tab show provenance (e.g. "this `-ist`
+   * came from Romance"). Undefined for native suffixes.
+   */
+  donorLanguageId?: string;
+  borrowedGeneration?: number;
 }
 
 /**
@@ -277,6 +293,9 @@ export function registerSuffixUsage(
   generation: number,
 ): { justBecameProductive: boolean } {
   suffix.usageCount = (suffix.usageCount ?? 0) + 1;
+  // Phase 56 T1: track the most recent gen this suffix was used so
+  // the decay pass can identify idle affixes.
+  suffix.lastUsedGeneration = generation;
   if (suffix.productive) return { justBecameProductive: false };
   if (suffix.usageCount >= PRODUCTIVITY_THRESHOLD) {
     suffix.productive = true;

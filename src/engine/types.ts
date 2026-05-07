@@ -90,7 +90,12 @@ export interface LanguageEvent {
     | "grammar_cascade"
     // Phase 48 D4-D: phonologisation event — a phoneme's contextual
     // diversity rose past the threshold and a new contrast emerged.
-    | "phonologisation";
+    | "phonologisation"
+    // Phase 56 T2: paradigm collision detected — sound change has
+    // reduced two paradigms to homophony, signalling that the
+    // language is ripe for renewal (recruiting a new affix or
+    // shedding the merged distinction).
+    | "paradigm-renewal";
   description: string;
   meta?: {
     donorId?: string;
@@ -99,6 +104,13 @@ export interface LanguageEvent {
     category?: string;
     pathway?: string;
     pairedRuleId?: string;
+    // Phase 56 T2: paradigm-collision identifier (catA|catB|affix)
+    // for idempotency. catA / catB / affix surface the colliding
+    // pair for downstream consumers (UI, renewal-driven recruiter).
+    collisionKey?: string;
+    catA?: string;
+    catB?: string;
+    affix?: string;
   };
 }
 
@@ -394,6 +406,12 @@ export interface Language {
      * concatenates as stem+affix (suffix) or affix+stem (prefix).
      */
     position?: "prefix" | "suffix";
+    /** Phase 56 T1: last gen this suffix was applied — feeds decay. */
+    lastUsedGeneration?: number;
+    /** Phase 57 T1: donor language id when the suffix was acquired via contact. */
+    donorLanguageId?: string;
+    /** Phase 57 T1: gen the suffix was borrowed in. */
+    borrowedGeneration?: number;
   }>;
   culturalTier?: 0 | 1 | 2 | 3;
   /**

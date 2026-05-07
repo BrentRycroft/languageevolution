@@ -1,5 +1,6 @@
 import type { Language, SimulationConfig } from "../types";
 import { driftGrammar, maybeDriftWordOrder } from "../grammar/evolve";
+import { decayAffixProductivity } from "../morphology/decay";
 import { enforceTypologicalUniversals } from "../grammar/universals";
 import { pickNextStressForDrift } from "../grammar/stressTransitions";
 import {
@@ -339,4 +340,8 @@ export function stepMorphology(
     }
   }
   stepTypologyDrift(lang, generation);
+  // Phase 56 T1: per-affix productivity decay. Halves usageCount on
+  // suffixes that have been idle for ≥15 gens; demotes
+  // productive=true → false when count drops below threshold.
+  decayAffixProductivity(lang, generation);
 }
