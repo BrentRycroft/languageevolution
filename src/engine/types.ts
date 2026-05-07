@@ -885,6 +885,21 @@ export interface SimulationConfig {
    */
   seedActiveModules?: ReadonlyArray<string>;
   /**
+   * Phase 48 T10: profile flag for languages whose rhotic is the
+   * alveolar approximant ɹ rather than the trill r (English-style).
+   * When true, the preset validator flags any seedLexicon entry
+   * containing raw `r` as an IPA error.
+   */
+  rhoticApproximant?: boolean;
+  /**
+   * Phase 48 T10: profile flag for presets that use the
+   * reconstruction-tradition notation for proto-languages (laryngeals
+   * h₁/h₂/h₃ and triple-diacritic stops like gʲʰ). Required for PIE.
+   * When false (default), the validator flags those phonemes as
+   * outside standard IPA-2020.
+   */
+  reconstructionMode?: boolean;
+  /**
    * Phase 39a: per-preset declared phoneme inventory target. When
    * absent, the simulator falls back to `seedLexicon`'s observed
    * inventory size or the tier-default. Real-language attestation

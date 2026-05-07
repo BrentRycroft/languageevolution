@@ -167,7 +167,7 @@ describe("Phase 48 T3 — applyChangesToWord inhibits unrelated homonyms", () =>
     return {
       id: "test:bd",
       kind: "test",
-      apply: (form) => form.map((p) => (p === "b" ? "d" : p)),
+      apply: (form: string[]) => form.map((p: string) => (p === "b" ? "d" : p)),
       probabilityFor: () => 1.0,
     } as unknown as SoundChange;
   }
