@@ -108,44 +108,47 @@ function isAcceptedStem(stem: string): boolean {
   return isRegisteredConcept(stem) || VALIDATION_CLOSED_CLASS.has(stem);
 }
 
-const VOWELS = new Set(["a", "e", "i", "o", "u", "y"]);
-
 /**
- * Phase 51 T1 heuristic: a word "looks like English" when it has at
- * least one vowel, no run of 4+ consecutive non-vowels, and is purely
- * alphabetic. Lets common English words that aren't in CONCEPTS
- * (dragon, house, wise, etc.) through; rejects obvious keyboard mash
- * (`asdfgh` has the 5-consonant run `sdfgh`, `qrtxz` has no vowel).
+ * Phase 53.5: try to split `lemma` into two consecutive
+ * CONCEPTS-or-closed-class stems with no separator. Catches real
+ * English compounds like `firewood` (fire+wood), `houseboat`,
+ * `keyboard` while rejecting random alphabetic strings (`engin`
+ * has no clean fire+anything decomposition). Greedy left-to-right;
+ * splits on stems with length ≥ 3 to avoid spurious matches.
  */
-function looksLikeEnglish(lemma: string): boolean {
-  if (!/^[a-z]+$/.test(lemma)) return false;
-  let hasVowel = false;
-  let consonantRun = 0;
-  for (const ch of lemma) {
-    if (VOWELS.has(ch)) {
-      hasVowel = true;
-      consonantRun = 0;
-    } else {
-      consonantRun++;
-      if (consonantRun >= 4) return false;
-    }
+function isCompoundOfStems(lemma: string): boolean {
+  if (lemma.length < 6) return false;
+  for (let cut = 3; cut <= lemma.length - 3; cut++) {
+    const left = lemma.slice(0, cut);
+    const right = lemma.slice(cut);
+    if (isAcceptedStem(left) && isAcceptedStem(right)) return true;
   }
-  return hasVowel;
+  return false;
 }
 
 /**
- * Phase 51 T1: returns true when `lemma` is recognisable as English
- * the translator should attempt to render. Returns false for keyboard
- * mash, single letters, and non-alphabetic input — those go straight
- * to the literal-quote fallback instead of coining a fresh form.
+ * Phase 53.5 (replaces Phase 51 T1's permissive heuristic): returns
+ * true when `lemma` is recognisable as English the translator should
+ * attempt to render. The pre-Phase-53.5 fallback ("looks alphabetic,
+ * has a vowel, no 4-consec consonants") was too permissive — it
+ * accepted typos and partial words like `engin`, polluting the
+ * lexicon when the user typed a misspelling.
  *
- * Two layers:
- *   1. Definitive: CONCEPTS hit, closed-class hit, or affix /
- *      inflection decomposition reaches a CONCEPTS stem.
- *   2. Heuristic: at least one vowel, all-alphabetic, length ≥ 2, and
- *      no 4+ consecutive consonants. Lets dragon/house/wise/angry
- *      through (they're real English even though CONCEPTS lacks them)
- *      while rejecting asdfgh.
+ * Acceptance is now strictly compositional, no "looks-like-English"
+ * heuristic:
+ *   1. CONCEPTS hit.
+ *   2. Closed-class function word.
+ *   3. Recognised affix decomposition (Phase 49) into a CONCEPTS or
+ *      closed-class stem.
+ *   4. Heuristic inflection (-s, -es, -ed, -ing, doubled-consonant)
+ *      onto a CONCEPTS or closed-class stem.
+ *   5. Compound: two consecutive CONCEPTS/closed-class stems with no
+ *      separator (`firewood` = `fire` + `wood`).
+ *   6. Otherwise REJECT.
+ *
+ * Result: `engin`, `asdf`, `qwerty`, `xyzzy`, `wibblefex` all reject
+ * and route to the literal-quote fallback. The lexicon stops growing
+ * non-words from typos.
  */
 export function isValidEnglishLemma(lemma: string): boolean {
   if (!lemma) return false;
@@ -164,5 +167,6 @@ export function isValidEnglishLemma(lemma: string): boolean {
   for (const stem of stripInflection(lower)) {
     if (isAcceptedStem(stem)) return true;
   }
-  return looksLikeEnglish(lower);
+  if (isCompoundOfStems(lower)) return true;
+  return false;
 }

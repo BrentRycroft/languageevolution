@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { isValidEnglishLemma } from "../translator/englishWordlist";
 
-describe("Phase 51 T1 — English lemma validation", () => {
+describe("Phase 51 T1 + 53.5 — English lemma validation", () => {
   it("accepts CONCEPTS-registered words", () => {
     expect(isValidEnglishLemma("water")).toBe(true);
     expect(isValidEnglishLemma("mother")).toBe(true);
@@ -38,20 +38,20 @@ describe("Phase 51 T1 — English lemma validation", () => {
     expect(isValidEnglishLemma("z")).toBe(false);
   });
 
-  it("rejects keyboard mash with consonant clusters", () => {
-    // "asdfgh" has the 5-consonant run "sdfgh", "qrtxzv" no vowel.
+  it("rejects keyboard mash and typos (Phase 53.5)", () => {
     expect(isValidEnglishLemma("asdfgh")).toBe(false);
     expect(isValidEnglishLemma("qrtxzv")).toBe(false);
+    // Phase 53.5 explicit user complaint: typo "engin" (intended
+    // "engine") should reject, not get coined into a fresh form.
+    expect(isValidEnglishLemma("engin")).toBe(false);
+    expect(isValidEnglishLemma("asdf")).toBe(false);
+    expect(isValidEnglishLemma("qwerty")).toBe(false);
+    expect(isValidEnglishLemma("xyzzy")).toBe(false);
   });
 
-  it("accepts plausible-English words not in CONCEPTS (heuristic layer)", () => {
-    // Dragon, house, wise, angry aren't in CONCEPTS but look like
-    // English; the translator should attempt to render them rather
-    // than emit a literal-quote fallback.
-    expect(isValidEnglishLemma("dragon")).toBe(true);
-    expect(isValidEnglishLemma("house")).toBe(true);
-    expect(isValidEnglishLemma("wise")).toBe(true);
-    expect(isValidEnglishLemma("angry")).toBe(true);
+  it("accepts compounds of two known stems (Phase 53.5)", () => {
+    // firewood = fire (CONCEPTS) + wood (CONCEPTS).
+    expect(isValidEnglishLemma("firewood")).toBe(true);
   });
 
   it("rejects empty input", () => {

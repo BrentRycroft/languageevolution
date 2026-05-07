@@ -242,11 +242,14 @@ describe("§B — translator", () => {
     expect(lastResolved.englishTag).toBe("V");
   });
 
-  it("translateSentence resolves unknown tokens via graceful fallback (Phase 50 T3)", () => {
-    // Pre-Phase-50: unresolved tokens were quoted and counted in
-    // `result.missing`. Phase 50 T3 added Rung 8 — `attemptGracefulFallback` —
-    // which coins a fresh form for any unknown lemma using the language's
-    // own phonotactics + mechanism set, so the user never sees a hard `?`.
+  it("translateSentence rejects gibberish lemmas (Phase 53.5 strict validation)", () => {
+    // Pre-Phase-53.5 the heuristic ("looks alphabetic, has a vowel,
+    // no 4-consec consonants") accepted typos and partial words like
+    // `engin`, `xyzqwerty`, `zooflark` — they passed validation and
+    // got coined into the lexicon. Phase 53.5 dropped that heuristic;
+    // acceptance is now strictly compositional. These nonsense inputs
+    // route to the literal-quote fallback ("?") and the lexicon
+    // doesn't grow.
     const sim = createSimulation({ ...defaultConfig(), seed: "translate-miss" });
     for (let i = 0; i < 5; i++) sim.step();
     const state = sim.getState();
@@ -256,8 +259,9 @@ describe("§B — translator", () => {
     const synth = result.targetTokens.filter(
       (t) => t.resolution === "synth-fallback",
     );
-    expect(synth.length).toBeGreaterThan(0);
-    expect(lang.lexicon["xyzqwerty"]).toBeDefined();
-    expect(lang.lexicon["zooflark"]).toBeDefined();
+    // No synth-fallback coinage for these nonsense lemmas.
+    expect(synth.length).toBe(0);
+    expect(lang.lexicon["xyzqwerty"]).toBeUndefined();
+    expect(lang.lexicon["zooflark"]).toBeUndefined();
   });
 });
