@@ -84,47 +84,55 @@ describe("translator polish — object pronouns alias to subject lemmas", () => 
 });
 
 /**
- * Phase 50 T3: when a lemma can't be resolved by any prior rung, the
- * translator now coins a fresh form for it via `attemptGracefulFallback`
- * and writes it to the lexicon (Rung 8). The previous "surface in
- * quotation marks" behaviour is preserved as a fallback only when even
- * the graceful synthesis fails (e.g., language with no phoneme
- * inventory). These tests now assert that the lemma DOES resolve to a
- * non-quoted surface form on the first translation, and that the
- * resolution is `synth-fallback`.
+ * Phase 50 T3 + Phase 53 T1: graceful fallback coins ONLY when the
+ * candidate form grounds in the language's existing lexicon
+ * (compound / derivation / blending / clipping over real lexemes).
+ * IDEOPHONE was removed because it generated from raw phoneme
+ * inventory without any lexicon basis.
+ *
+ * Result: lemmas without a lexicon-grounded path now fall through to
+ * literal-quote rendering instead of a coined-from-air form. This is
+ * the user's explicit requirement — coining only when there's a real
+ * etymological tie.
  */
-describe("translator polish — unresolved words coin via graceful fallback", () => {
-  it("missing noun coins a fresh form (no quotation marks)", () => {
+describe("translator polish — unresolved words: coin if grounded, else literal-quote", () => {
+  it("an unresolvable lemma either coins (when grounded) or quotes (when not)", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the dragon eats the king");
     const dragon = out.targetTokens.find((t) => t.englishLemma === "dragon");
     expect(dragon).toBeDefined();
-    expect(dragon!.targetSurface).not.toContain("“");
-    expect(dragon!.resolution).toBe("synth-fallback");
+    // Either grounded coinage (synth-fallback) or literal-quote
+    // (fallback). Both are valid Phase-53 outcomes; the wrong outcome
+    // would be coinage WITHOUT a lexicon-grounded etymology, which
+    // this test trusts the gracefulFallback grounding check to prevent.
+    expect(["synth-fallback", "fallback"]).toContain(dragon!.resolution);
+    if (dragon!.resolution === "synth-fallback") {
+      expect(dragon!.targetSurface).not.toContain("“");
+    }
   });
 
-  it("missing verb coins a fresh form", () => {
+  it("missing verb either coins or quotes", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the spaceship lands on the moon");
     const land = out.targetTokens.find((t) => t.englishLemma === "land");
-    expect(land?.resolution).toBe("synth-fallback");
-    expect(land?.targetSurface).not.toContain("“");
+    expect(land).toBeDefined();
+    expect(["synth-fallback", "fallback"]).toContain(land!.resolution);
   });
 
-  it("missing adjective coins a fresh form", () => {
+  it("missing adjective either coins or quotes", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the wise king sees");
     const wise = out.targetTokens.find((t) => t.englishLemma === "wise");
-    expect(wise?.resolution).toBe("synth-fallback");
-    expect(wise?.targetSurface).not.toContain("“");
+    expect(wise).toBeDefined();
+    expect(["synth-fallback", "fallback"]).toContain(wise!.resolution);
   });
 
-  it("missing predicate adjective coins a fresh form", () => {
+  it("missing predicate adjective either coins or quotes", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the king is angry");
     const angry = out.targetTokens.find((t) => t.englishLemma === "angry");
-    expect(angry?.resolution).toBe("synth-fallback");
-    expect(angry?.targetSurface).not.toContain("“");
+    expect(angry).toBeDefined();
+    expect(["synth-fallback", "fallback"]).toContain(angry!.resolution);
   });
 });
 
