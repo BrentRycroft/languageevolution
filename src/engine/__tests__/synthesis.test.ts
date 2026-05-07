@@ -48,6 +48,18 @@ function suffix(tag: string, affix: string[], productive = true): DerivationalSu
     affix,
     tag,
     category: "agentive",
+    position: "suffix",
+    usageCount: productive ? 5 : 0,
+    productive,
+  };
+}
+
+function prefix(tag: string, affix: string[], productive = true): DerivationalSuffix {
+  return {
+    affix,
+    tag,
+    category: "agentive",
+    position: "prefix",
     usageCount: productive ? 5 : 0,
     productive,
   };
@@ -147,5 +159,91 @@ describe("Phase 47 T1 — morphological synthesis", () => {
     });
     const result = attemptMorphologicalSynthesis(lang, "lighter");
     expect(result).toBeNull();
+  });
+
+  // Phase 47 T2: prefix synthesis
+  it("synthesises 'rebuild' from productive 're-' prefix + 'build'", () => {
+    const lang = makeLang({
+      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      derivationalSuffixes: [prefix("re-", ["r", "iː"])],
+    });
+    const result = attemptMorphologicalSynthesis(lang, "rebuild");
+    expect(result).not.toBeNull();
+    expect(result!.form).toEqual(["r", "iː", "b", "ɪ", "l", "d"]);
+    expect(result!.parts).toHaveLength(2);
+    expect(result!.parts[0]!.meaning).toBe("re-");
+    expect(result!.parts[1]!.meaning).toBe("build");
+    expect(result!.glossNote).toBe("re- + build");
+  });
+
+  it("synthesises 'preview' from 'pre-' + 'view'", () => {
+    const lang = makeLang({
+      lexicon: { view: ["v", "j", "u"] },
+      derivationalSuffixes: [prefix("pre-", ["p", "r", "iː"])],
+    });
+    const result = attemptMorphologicalSynthesis(lang, "preview");
+    expect(result).not.toBeNull();
+    expect(result!.form).toEqual(["p", "r", "iː", "v", "j", "u"]);
+  });
+
+  it("rejects prefix synthesis when prefix is non-productive", () => {
+    const lang = makeLang({
+      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      derivationalSuffixes: [prefix("re-", ["r", "iː"], false)],
+    });
+    const result = attemptMorphologicalSynthesis(lang, "rebuild");
+    expect(result).toBeNull();
+  });
+
+  it("position auto-detected from tag shape ('re-' → prefix without explicit position)", () => {
+    const lang = makeLang({
+      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      // Note: no `position` field — should be inferred from "re-" trailing hyphen.
+      derivationalSuffixes: [{
+        affix: ["r", "iː"],
+        tag: "re-",
+        category: "agentive",
+        usageCount: 5,
+        productive: true,
+      }],
+    });
+    const result = attemptMorphologicalSynthesis(lang, "rebuild");
+    expect(result).not.toBeNull();
+    expect(result!.form).toEqual(["r", "iː", "b", "ɪ", "l", "d"]);
+  });
+
+  it("position auto-detected: '-er.agt' (leading hyphen) → suffix", () => {
+    const lang = makeLang({
+      lexicon: { light: ["l", "a", "j", "t"] },
+      derivationalSuffixes: [{
+        affix: ["ə", "r"],
+        tag: "-er.agt",
+        category: "agentive",
+        usageCount: 5,
+        productive: true,
+      }],
+    });
+    const result = attemptMorphologicalSynthesis(lang, "lighter");
+    expect(result).not.toBeNull();
+    expect(result!.form).toEqual(["l", "a", "j", "t", "ə", "r"]);
+  });
+
+  it("prefix and suffix can coexist; longest-match still wins", () => {
+    const lang = makeLang({
+      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      derivationalSuffixes: [
+        prefix("re-", ["r", "iː"]),
+        suffix("-er.agt", ["ə", "r"]),
+      ],
+    });
+    // "rebuilder" — both could match, but longest wins; "-er" (2 chars)
+    // and "re-" (2 chars) are tied; sort is stable so first wins.
+    // More important: "rebuild" picks the prefix; "builder" picks the suffix.
+    const re = attemptMorphologicalSynthesis(lang, "rebuild");
+    expect(re).not.toBeNull();
+    expect(re!.parts[0]!.meaning).toBe("re-");
+    const er = attemptMorphologicalSynthesis(lang, "builder");
+    expect(er).not.toBeNull();
+    expect(er!.parts[1]!.meaning).toBe("-er.agt");
   });
 });

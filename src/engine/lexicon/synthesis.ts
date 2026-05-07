@@ -38,16 +38,28 @@ export interface SynthesisResult {
 }
 
 /**
- * Strip the tag's leading hyphen and any disambiguator suffix
- * (".agt" → "", ".abst" → "") to recover the English-orthographic
- * form that should match the input lemma.
+ * Strip the tag's leading/trailing hyphen and any disambiguator
+ * suffix (".agt" → "", ".abst" → "") to recover the
+ * English-orthographic form that should match the input lemma.
  *
  *   "-er.agt" → "er"
  *   "-ness" → "ness"
- *   "-dom" → "dom"
+ *   "un-" → "un"
+ *   "re-" → "re"
  */
-function tagToEnglishSuffix(tag: string): string {
-  return tag.replace(/^-/, "").replace(/\..+$/, "");
+function tagToEnglishForm(tag: string): string {
+  return tag.replace(/^-|-$/g, "").replace(/\..+$/, "");
+}
+
+/**
+ * Phase 47 T2: derive position from the tag shape when not explicitly
+ * declared. Tags ending with "-" are prefixes; tags starting with "-"
+ * (or with no hyphen, e.g. seeded suffixes) are suffixes.
+ */
+function affixPosition(suffix: { tag: string; position?: "prefix" | "suffix" }): "prefix" | "suffix" {
+  if (suffix.position) return suffix.position;
+  if (suffix.tag.endsWith("-") && !suffix.tag.startsWith("-")) return "prefix";
+  return "suffix";
 }
 
 /**
@@ -63,34 +75,56 @@ export function attemptMorphologicalSynthesis(
   lang: Language,
   lemma: string,
 ): SynthesisResult | null {
-  const suffixes = lang.derivationalSuffixes;
-  if (!suffixes || suffixes.length === 0) return null;
+  const affixes = lang.derivationalSuffixes;
+  if (!affixes || affixes.length === 0) return null;
 
-  // Sort productive suffixes by english-orthographic length descending
-  // for greedy longest-match. Non-productive suffixes are excluded
+  // Sort productive affixes by english-orthographic length descending
+  // for greedy longest-match. Non-productive affixes are excluded
   // entirely — matches generative-morphology theory.
-  const candidates = suffixes
+  const candidates = affixes
     .filter((s): s is DerivationalSuffix & { productive: true } => s.productive === true)
-    .map((s) => ({ suffix: s, eng: tagToEnglishSuffix(s.tag) }))
+    .map((s) => ({
+      affix: s,
+      eng: tagToEnglishForm(s.tag),
+      position: affixPosition(s),
+    }))
     .filter(({ eng }) => eng.length > 0)
     .sort((a, b) => b.eng.length - a.eng.length);
 
-  for (const { suffix, eng } of candidates) {
-    if (!lemma.endsWith(eng)) continue;
-    if (lemma.length <= eng.length) continue;
-    const stem = lemma.slice(0, lemma.length - eng.length);
+  for (const { affix, eng, position } of candidates) {
+    if (!affix.affix || affix.affix.length === 0) continue;
+
+    let stem: string;
+    if (position === "suffix") {
+      if (!lemma.endsWith(eng)) continue;
+      if (lemma.length <= eng.length) continue;
+      stem = lemma.slice(0, lemma.length - eng.length);
+    } else {
+      if (!lemma.startsWith(eng)) continue;
+      if (lemma.length <= eng.length) continue;
+      stem = lemma.slice(eng.length);
+    }
+
     const stemForm = lang.lexicon[stem];
     if (!stemForm || stemForm.length === 0) continue;
-    if (!suffix.affix || suffix.affix.length === 0) continue;
-    return {
-      form: [...stemForm, ...suffix.affix],
-      parts: [
-        { meaning: stem, form: stemForm.slice() },
-        { meaning: suffix.tag, form: suffix.affix.slice() },
-      ],
-      glossNote: `${stem} + ${suffix.tag}`,
-      resolution: "synth-affix",
-    };
+
+    const form = position === "suffix"
+      ? [...stemForm, ...affix.affix]
+      : [...affix.affix, ...stemForm];
+    const glossNote = position === "suffix"
+      ? `${stem} + ${affix.tag}`
+      : `${affix.tag} + ${stem}`;
+    const parts = position === "suffix"
+      ? [
+          { meaning: stem, form: stemForm.slice() },
+          { meaning: affix.tag, form: affix.affix.slice() },
+        ]
+      : [
+          { meaning: affix.tag, form: affix.affix.slice() },
+          { meaning: stem, form: stemForm.slice() },
+        ];
+
+    return { form, parts, glossNote, resolution: "synth-affix" };
   }
   return null;
 }

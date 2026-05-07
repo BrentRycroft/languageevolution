@@ -29,6 +29,14 @@ export interface DerivationalSuffix {
   tag: string;
   category: DerivationCategory;
   /**
+   * Phase 47 T2: position of the affix relative to the stem.
+   * Defaults to `"suffix"` for back-compat with pre-Phase-47 entries.
+   * Prefixes use the same productivity / usage-count machinery; only
+   * the synthesis-side concatenation order differs (prefix + stem
+   * vs stem + suffix).
+   */
+  position?: "prefix" | "suffix";
+  /**
    * Phase 22: count of successful targeted-derivation applications.
    * Reaching `PRODUCTIVITY_THRESHOLD` flips `productive` to true and
    * promotes the suffix to a productive grammatical rule.

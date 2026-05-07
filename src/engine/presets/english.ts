@@ -626,6 +626,13 @@ const LEXICON: Lexicon = {
   "-dom": ["d", "ə", "m"],
   "-ship": ["ʃ", "ɪ", "p"],
   "-hood": ["h", "ʊ", "d"],
+  // Phase 47 T2: derivational prefixes. Tag ends with "-" so the
+  // synthesis path detects position = "prefix" and concatenates as
+  // affix + stem. Surface forms picked to match modern English IPA.
+  "re-": ["r", "iː"],
+  "pre-": ["p", "r", "iː"],
+  "mis-": ["m", "ɪ", "s"],
+  "over-": ["o", "v", "ə", "r"],
 };
 
 /**
@@ -634,6 +641,9 @@ const LEXICON: Lexicon = {
  */
 const BOUND_MORPHEMES = new Set<string>([
   "-er.agt", "-ness", "-dom", "-ship", "-hood",
+  // Phase 47 T2: prefixes for on-demand synthesis
+  // (re-build, pre-think, mis-take, over-do).
+  "re-", "pre-", "mis-", "over-",
 ]);
 
 const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {

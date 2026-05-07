@@ -324,6 +324,12 @@ export interface Language {
      * show "established gen 47" alongside the rule.
      */
     establishedGeneration?: number;
+    /**
+     * Phase 47 T2: position relative to the stem. Defaults to "suffix"
+     * for back-compat with pre-Phase-47 entries. Synthesis path
+     * concatenates as stem+affix (suffix) or affix+stem (prefix).
+     */
+    position?: "prefix" | "suffix";
   }>;
   culturalTier?: 0 | 1 | 2 | 3;
   /**
