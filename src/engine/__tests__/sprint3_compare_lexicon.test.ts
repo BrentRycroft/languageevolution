@@ -5,21 +5,26 @@ import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 
 describe("§D — narrative skeleton expansion", () => {
-  it("planSkeleton returns the requested number of skeletons", () => {
+  // Phase 53 T6: planSkeleton was deprecated in favour of
+  // planSkeletonForLanguage which consults the language directly
+  // instead of selecting from English-flavoured pools. The
+  // language-agnostic deprecated wrapper returns []; tests that
+  // exercised the pool-driven planner moved into
+  // generateNarrative integration coverage below.
+  it.skip("planSkeleton returns the requested number of skeletons", () => {
     const ten = planSkeleton("seed-x", 10);
     expect(ten).toHaveLength(10);
   });
 
-  it("planSkeleton is deterministic for the same seed", () => {
+  it.skip("planSkeleton is deterministic for the same seed", () => {
     const a = planSkeleton("repro", 5);
     const b = planSkeleton("repro", 5);
     expect(a).toEqual(b);
   });
 
-  it("planSkeleton uses different patterns across the run", () => {
+  it.skip("planSkeleton uses different patterns across the run", () => {
     const seven = planSkeleton("variety", 8);
-    const patterns = new Set(seven.map((s) => s.patternIdx));
-    expect(patterns.size).toBeGreaterThanOrEqual(2);
+    expect(seven.length).toBeGreaterThan(0);
   });
 
   it("randomNarrativeSeed produces 6-char alphanumeric strings", () => {

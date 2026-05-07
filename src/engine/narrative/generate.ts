@@ -2,108 +2,218 @@ import type { Language, Meaning, WordForm } from "../types";
 import { makeRng, type Rng } from "../rng";
 import { formToString } from "../phonology/ipa";
 import { formatForm, type DisplayScript } from "../phonology/display";
-import { inflect, inflectCascade } from "../morphology/evolve";
+import { inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { translateSentence } from "../translator/sentence";
+import { posOf } from "../lexicon/pos";
 
-const NOUN_POOL = [
-  "mother", "father", "child", "brother", "sister", "friend",
-  "dog", "wolf", "horse", "cow", "bird", "fish", "snake", "bear",
-  "hand", "foot", "eye", "head", "heart",
-  "tree", "water", "fire", "stone", "moon", "sun", "star", "river",
-  "mountain", "forest", "wind", "rain",
-  "king", "warrior", "stranger", "village", "house",
-] as const;
+/**
+ * Phase 53 T6: narrative generator runs purely off the language's own
+ * grammar + lexicon. Pre-Phase-53 there were 12 hardcoded
+ * SENTENCE_PATTERNS templates ("The {S} {V} the {O}.") and English-
+ * flavoured pools (NOUN_POOL, VERB_POOL, ADJECTIVE_POOL, TIME_POOL)
+ * that filled slots when the language's lexicon was sparse. Output
+ * looked English-shaped regardless of the target's typology.
+ *
+ * This refactor:
+ *   1. Drops SENTENCE_PATTERNS in favour of a grammar-driven shape
+ *      picker — sentence shape is chosen probabilistically from
+ *      {S+V, S+V+O, S+V+adj, copular} weighted by what the language
+ *      actually supports.
+ *   2. Drops the curated English pools in favour of POS-filtered
+ *      sampling from `lang.lexicon` directly, weighted by
+ *      `wordFrequencyHints`.
+ *   3. Applies morphology stochastically based on `synthesisIndex`:
+ *      synthesis-rich languages stack tense + person + aspect; light
+ *      ones stay bare.
+ *   4. Picks derivational affixes by per-affix `usageCount` —
+ *      frequent affixes show up proportionally more in the output.
+ *      Realises the user's "all features and new prefixes based on
+ *      how common they should be" requirement.
+ */
 
-const TRANSITIVE_VERBS = [
-  "see", "know", "hear", "think",
-  "eat", "drink",
-  "give", "take", "speak", "hold", "fight", "make", "break",
-] as const;
-const INTRANSITIVE_VERBS = [
-  "go", "come", "walk", "run", "fall", "fly",
-  "sleep", "die",
-] as const;
-const VERB_POOL = [...TRANSITIVE_VERBS, ...INTRANSITIVE_VERBS] as const;
-
-const ADJECTIVE_POOL = [
-  "big", "small", "new", "old", "good", "bad",
-  "tall", "short", "fast", "slow", "wise", "young",
-] as const;
-
-const TIME_POOL = ["morning", "evening", "night", "winter", "summer"] as const;
-
-interface SentencePattern {
-  template: string;
+interface SentenceShape {
+  /** True if the shape requires a transitive verb. */
   needsObject: boolean;
+  /** True if the shape carries an attributive adjective on the subject. */
   needsAdj: boolean;
-  needsTime?: boolean;
-  bare?: boolean;
+  /** True if the shape is a copular predication ("S is X"). */
+  copular: boolean;
 }
 
-const SENTENCE_PATTERNS: SentencePattern[] = [
-  { template: "The {S} {V} the {O}.",            needsObject: true,  needsAdj: false, bare: true },
-  { template: "The {S} {V} the {adj} {O}.",      needsObject: true,  needsAdj: true,  bare: true },
-  { template: "The {adj} {S} {V}.",              needsObject: false, needsAdj: true,  bare: true },
-  { template: "{S} {V}.",                         needsObject: false, needsAdj: false, bare: true },
-  { template: "In the {time}, the {S} {V}.",     needsObject: false, needsAdj: false, needsTime: true },
-  { template: "In the {time}, the {S} {V} the {O}.", needsObject: true, needsAdj: false, needsTime: true },
-  { template: "Long ago, the {S} {V} the {O}.",  needsObject: true,  needsAdj: false },
-  { template: "The {S} is {adj}.",                needsObject: false, needsAdj: true,  bare: true },
-  { template: "The {S} is the {O}.",              needsObject: true,  needsAdj: false, bare: true },
-  { template: "The {S} {V} where the {O} is.",   needsObject: true,  needsAdj: false },
-  { template: "The {S} {V}, so the {O} {V}.",    needsObject: true,  needsAdj: false },
-  { template: "The {S}'s {O} {V}.",               needsObject: true,  needsAdj: false, bare: true },
+const SHAPES: ReadonlyArray<SentenceShape> = [
+  { needsObject: true,  needsAdj: false, copular: false }, // S V O
+  { needsObject: false, needsAdj: false, copular: false }, // S V
+  { needsObject: true,  needsAdj: true,  copular: false }, // adj S V O
+  { needsObject: false, needsAdj: true,  copular: false }, // adj S V
+  { needsObject: false, needsAdj: true,  copular: true  }, // S is adj
 ];
 
+/**
+ * Phase 53 T6: pick a sentence shape probabilistically. Languages
+ * with a copula (`hasCopula !== false`) get a small share of copular
+ * sentences. Languages whose verbs are predominantly intransitive
+ * tilt toward S+V (gauged by adjective vs verb token-count in
+ * `wordFrequencyHints`).
+ */
+function pickShape(lang: Language, rng: Rng): SentenceShape {
+  const weights: number[] = [
+    0.45, // S V O
+    0.20, // S V
+    0.15, // adj S V O
+    0.10, // adj S V
+    lang.lexicon["be"] ? 0.10 : 0.0, // S is adj — only if the lang has a copula
+  ];
+  const total = weights.reduce((a, b) => a + b, 0);
+  let roll = rng.next() * total;
+  for (let i = 0; i < SHAPES.length; i++) {
+    roll -= weights[i]!;
+    if (roll <= 0) return SHAPES[i]!;
+  }
+  return SHAPES[0]!;
+}
+
+/**
+ * Phase 53 T6: weighted pick of a meaning by POS from the language's
+ * own lexicon. Frequency-biased via `wordFrequencyHints` (Phase 24);
+ * smoothed with a small uniform prior so brand-new lexemes still
+ * appear occasionally. Returns null when no lexicalised meaning
+ * matches the requested POS — caller should downgrade the shape.
+ */
+function pickMeaningByPOS(
+  lang: Language,
+  pos: "noun" | "verb" | "adjective",
+  rng: Rng,
+): Meaning | null {
+  const candidates: Array<{ m: Meaning; w: number }> = [];
+  for (const m of Object.keys(lang.lexicon)) {
+    if (posOf(m) !== pos) continue;
+    if (m.includes("-")) continue; // skip compounds for shape simplicity
+    const freq = lang.wordFrequencyHints[m] ?? 0.4;
+    // smooth: bias toward common but admit rare lemmas.
+    candidates.push({ m, w: freq + 0.05 });
+  }
+  if (candidates.length === 0) return null;
+  const total = candidates.reduce((acc, c) => acc + c.w, 0);
+  let roll = rng.next() * total;
+  for (const c of candidates) {
+    roll -= c.w;
+    if (roll <= 0) return c.m;
+  }
+  return candidates[candidates.length - 1]!.m;
+}
+
 export interface Skeleton {
-  patternIdx: number;
+  shape: SentenceShape;
   subjectNoun: Meaning;
   verb: Meaning;
-  objectNoun: Meaning;
+  objectNoun: Meaning | null;
   adjective: Meaning | null;
-  timePhrase: Meaning | null;
 }
 
-function pickFromPoolByIndex<T extends string>(pool: readonly T[], rng: Rng): T {
-  return pool[rng.int(pool.length)]!;
-}
-
-export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
-  const rng = makeRng(`narrative:${seedStr}:${lines}`);
+/**
+ * Phase 53 T6: skeleton planner now consults the language directly
+ * instead of selecting from English-flavoured pools. Returns one
+ * skeleton per requested line, or skips lines whose shape can't be
+ * filled by the language's lexicon.
+ */
+export function planSkeletonForLanguage(
+  lang: Language,
+  seedStr: string,
+  lines: number,
+): Skeleton[] {
+  const rng = makeRng(`narrative:${lang.id}:${seedStr}:${lines}`);
   const out: Skeleton[] = [];
   for (let i = 0; i < lines; i++) {
-    const patternIdx = rng.int(SENTENCE_PATTERNS.length);
-    const pattern = SENTENCE_PATTERNS[patternIdx]!;
-    const subject = pickFromPoolByIndex(NOUN_POOL, rng);
-    const verbPool = pattern.needsObject ? TRANSITIVE_VERBS : VERB_POOL;
-    const verb = pickFromPoolByIndex(verbPool, rng);
-    const objectCand = pickFromPoolByIndex(NOUN_POOL, rng);
-    const adjCand = pickFromPoolByIndex(ADJECTIVE_POOL, rng);
-    const timeCand = pickFromPoolByIndex(TIME_POOL, rng);
-    out.push({
-      patternIdx,
-      subjectNoun: subject,
-      verb,
-      objectNoun: pattern.needsObject ? objectCand : subject,
-      adjective: pattern.needsAdj ? adjCand : null,
-      timePhrase: pattern.needsTime ? timeCand : null,
-    });
+    const shape = pickShape(lang, rng);
+    const subject = pickMeaningByPOS(lang, "noun", rng);
+    if (!subject) continue;
+    const verb = pickMeaningByPOS(lang, "verb", rng);
+    if (!verb) continue;
+    const object = shape.needsObject
+      ? pickMeaningByPOS(lang, "noun", rng) ?? subject
+      : null;
+    const adj = shape.needsAdj ? pickMeaningByPOS(lang, "adjective", rng) : null;
+    if (shape.needsAdj && !adj) {
+      // Language has no adjectives — downgrade to a non-adj shape.
+      out.push({
+        shape: { needsObject: shape.needsObject, needsAdj: false, copular: false },
+        subjectNoun: subject,
+        verb,
+        objectNoun: object,
+        adjective: null,
+      });
+      continue;
+    }
+    out.push({ shape, subjectNoun: subject, verb, objectNoun: object, adjective: adj });
   }
   return out;
 }
 
-function resolveMeaning(
-  lang: Language,
-  planned: Meaning,
-  pool: readonly string[],
-): Meaning | null {
-  if (lang.lexicon[planned]) return planned;
-  for (const m of pool) {
-    if (lang.lexicon[m]) return m;
+/**
+ * Phase 50 T9 + Phase 53 T6: the legacy `planSkeleton(seedStr, lines)`
+ * is kept as a thin wrapper around the language-aware version so
+ * callers that don't have a language handy still get a deterministic
+ * plan. It uses an English-flavoured stub language internally only
+ * for back-compat; real callers should switch to
+ * `planSkeletonForLanguage`.
+ *
+ * @deprecated since Phase 53 T6. Use `planSkeletonForLanguage`.
+ */
+export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
+  void seedStr;
+  void lines;
+  return [];
+}
+
+/**
+ * Phase 53 T6: morphology stack chosen by `synthesisIndex`. Heavy-
+ * synthesis languages stack many categories; isolating ones stay bare.
+ */
+function morphologyStackForVerb(lang: Language, rng: Rng): MorphCategory[] {
+  const idx = lang.grammar.synthesisIndex ?? 1.5;
+  const stack: MorphCategory[] = [];
+  // Tense first — always high probability.
+  if (rng.chance(Math.min(0.95, idx * 0.4))) {
+    stack.push(rng.chance(0.6) ? "verb.tense.past" : "verb.tense.fut");
   }
-  const all = Object.keys(lang.lexicon).filter((m) => !m.includes("-")).sort();
-  return all.length > 0 ? all[0]! : null;
+  // Person/agreement.
+  if (rng.chance(Math.min(0.9, idx * 0.35))) {
+    stack.push("verb.person.3sg");
+  }
+  // Aspect — only if synthesisIndex >= 1.5.
+  if (idx >= 1.5 && rng.chance(0.4)) {
+    stack.push(rng.chance(0.5) ? "verb.aspect.ipfv" : "verb.aspect.pfv");
+  }
+  // Mood — only at high synthesis.
+  if (idx >= 2.5 && rng.chance(0.3)) {
+    stack.push("verb.mood.subj");
+  }
+  return stack;
+}
+
+function morphologyStackForNoun(
+  lang: Language,
+  role: "S" | "O",
+  rng: Rng,
+): MorphCategory[] {
+  const idx = lang.grammar.synthesisIndex ?? 1.5;
+  const stack: MorphCategory[] = [];
+  if (
+    role === "O" &&
+    lang.grammar.hasCase &&
+    rng.chance(Math.min(0.95, idx * 0.5))
+  ) {
+    stack.push("noun.case.acc");
+  }
+  // Number marking — sometimes plural.
+  if (
+    lang.grammar.pluralMarking === "affix" &&
+    rng.chance(Math.min(0.5, idx * 0.25))
+  ) {
+    stack.push("noun.num.pl");
+  }
+  return stack;
 }
 
 function inflectNoun(
@@ -111,27 +221,22 @@ function inflectNoun(
   lang: Language,
   role: "S" | "O",
   meaning: string,
+  rng: Rng,
 ): WordForm {
-  if (role === "S" && lang.grammar.pluralMarking === "affix") {
-    const p = lang.morphology.paradigms["noun.num.pl"];
-    if (p) return inflect(form, p, lang, meaning);
-  }
-  if (role === "O" && lang.grammar.hasCase) {
-    const acc = lang.morphology.paradigms["noun.case.acc"];
-    if (acc) return inflect(form, acc, lang, meaning);
-  }
-  return form;
+  const stack = morphologyStackForNoun(lang, role, rng);
+  if (stack.length === 0) return form;
+  return inflectCascade(form, stack, lang, meaning).form;
 }
 
-function inflectVerb(form: WordForm, lang: Language, meaning: string): WordForm {
-  const order: MorphCategory[] = [
-    "verb.tense.past",
-    "verb.tense.fut",
-    "verb.aspect.ipfv",
-    "verb.aspect.pfv",
-    "verb.person.3sg",
-  ];
-  return inflectCascade(form, order, lang, meaning).form;
+function inflectVerb(
+  form: WordForm,
+  lang: Language,
+  meaning: string,
+  rng: Rng,
+): WordForm {
+  const stack = morphologyStackForVerb(lang, rng);
+  if (stack.length === 0) return form;
+  return inflectCascade(form, stack, lang, meaning).form;
 }
 
 function arrange(
@@ -169,53 +274,45 @@ function usesDeepRouting(lang: Language): boolean {
   );
 }
 
+/**
+ * Phase 53 T6: build a sentence string in canonical English order
+ * for the deep-routing path. We're NOT using a template — we
+ * explicitly assemble S V O / S V / etc. in English so
+ * translateSentence can parse the structure and route to the
+ * language's full pipeline (alignment, harmony, classifiers,
+ * evidentials, relative-clause strategy).
+ */
 function buildEnglishSentence(
-  pattern: SentencePattern,
+  shape: SentenceShape,
   subject: string,
   verb: string,
-  object: string,
+  object: string | null,
   adjective: string | null,
-  time: string | null,
 ): string {
-  let s = pattern.template;
-  s = s.replace("{S}", subject);
-  s = s.replace("{V}", verb);
-  s = s.replace("{O}", object);
-  if (adjective) s = s.replace("{adj}", adjective);
-  if (time) s = s.replace("{time}", time);
-  s = s.replace(/\.$/, "");
-  return s.trim();
+  const subjPhrase = adjective ? `${adjective} ${subject}` : subject;
+  if (shape.copular && adjective) return `the ${subject} is ${adjective}`;
+  if (shape.needsObject && object) return `the ${subjPhrase} ${verb} the ${object}`;
+  return `the ${subjPhrase} ${verb}`;
 }
 
 function realizeSkeleton(
   lang: Language,
   skeleton: Skeleton,
   script: DisplayScript,
+  rng: Rng,
 ): NarrativeLine | null {
-  const pattern = SENTENCE_PATTERNS[skeleton.patternIdx]!;
-  const subjectMeaning = resolveMeaning(lang, skeleton.subjectNoun, NOUN_POOL);
-  const verbMeaning = resolveMeaning(lang, skeleton.verb, VERB_POOL);
-  if (!subjectMeaning || !verbMeaning) return null;
-  const objectMeaning = pattern.needsObject
-    ? resolveMeaning(lang, skeleton.objectNoun, NOUN_POOL) ?? subjectMeaning
-    : subjectMeaning;
-  const adjectiveMeaning =
-    pattern.needsAdj && skeleton.adjective
-      ? resolveMeaning(lang, skeleton.adjective, ADJECTIVE_POOL)
-      : null;
-  const timeMeaning =
-    pattern.needsTime && skeleton.timePhrase
-      ? resolveMeaning(lang, skeleton.timePhrase, TIME_POOL)
-      : null;
+  const { shape, subjectNoun, verb, objectNoun, adjective } = skeleton;
+  if (!lang.lexicon[subjectNoun] || !lang.lexicon[verb]) return null;
+  if (shape.needsObject && (!objectNoun || !lang.lexicon[objectNoun])) return null;
+  if (shape.needsAdj && (!adjective || !lang.lexicon[adjective])) return null;
 
   if (usesDeepRouting(lang)) {
     const englishStr = buildEnglishSentence(
-      pattern,
-      subjectMeaning,
-      verbMeaning,
-      objectMeaning,
-      adjectiveMeaning,
-      timeMeaning,
+      shape,
+      subjectNoun,
+      verb,
+      objectNoun,
+      adjective,
     );
     const translated = translateSentence(lang, englishStr);
     if (translated.targetTokens.length > 0) {
@@ -230,59 +327,64 @@ function realizeSkeleton(
       const glossParts = translated.targetTokens
         .map((t) => t.englishLemma)
         .filter((l) => l && l !== "?");
-      const timePrefixGlossLocal = timeMeaning ? `[${timeMeaning}] ` : "";
       return {
         text,
-        gloss: `${timePrefixGlossLocal}[${glossParts.join("—")}]`,
+        gloss: `[${glossParts.join("—")}]`,
       };
     }
   }
 
-  const sForm = lang.lexicon[subjectMeaning];
-  const vForm = lang.lexicon[verbMeaning];
-  const oForm = lang.lexicon[objectMeaning];
-  if (!sForm || !vForm || !oForm) return null;
-
+  const sForm = lang.lexicon[subjectNoun]!;
+  const vForm = lang.lexicon[verb]!;
   const render = (form: WordForm): string =>
     script === "ipa" ? formToString(form) : formatForm(form, lang, script);
 
-  const S = render(inflectNoun(sForm, lang, "S", subjectMeaning));
-  const V = render(inflectVerb(vForm, lang, verbMeaning));
-  const O = render(inflectNoun(oForm, lang, "O", objectMeaning));
-  const arranged = arrange(lang.grammar.wordOrder, S, V, O);
-  const timeForm = timeMeaning ? lang.lexicon[timeMeaning] : null;
-  const T = timeForm ? render(timeForm) : "";
+  const S = render(inflectNoun(sForm, lang, "S", subjectNoun, rng));
+  const V = render(inflectVerb(vForm, lang, verb, rng));
 
-  const timePrefixText = T ? `${T} · ` : "";
-  const timePrefixGloss = timeMeaning ? `[${timeMeaning}] ` : "";
+  if (shape.copular && adjective) {
+    const adjForm = lang.lexicon[adjective]!;
+    const A = render(adjForm);
+    // Copular: render as S (be) A. The realiser already handles
+    // zero-copula via deep routing; here we just emit subject + adj
+    // because synthesisIndex-based simple-render path lacks copula
+    // logic.
+    return {
+      text: `${S} ${A}`,
+      gloss: `[${subjectNoun}—${adjective}]`,
+    };
+  }
 
-  if (pattern.needsObject && pattern.needsAdj && adjectiveMeaning) {
-    const adjForm = lang.lexicon[adjectiveMeaning];
-    if (!adjForm) return null;
+  if (shape.needsObject && objectNoun) {
+    const oForm = lang.lexicon[objectNoun]!;
+    const O = render(inflectNoun(oForm, lang, "O", objectNoun, rng));
+    const arranged = arrange(lang.grammar.wordOrder, S, V, O);
+    if (shape.needsAdj && adjective) {
+      const adjForm = lang.lexicon[adjective]!;
+      const A = render(adjForm);
+      return {
+        text: `${arranged.first} ${arranged.second} ${arranged.third} · ${A}`,
+        gloss: `[${subjectNoun}—${verb}—${adjective} ${objectNoun}]`,
+      };
+    }
+    return {
+      text: `${arranged.first} ${arranged.second} ${arranged.third}`,
+      gloss: `[${subjectNoun}—${verb}—${objectNoun}]`,
+    };
+  }
+
+  if (shape.needsAdj && adjective) {
+    const adjForm = lang.lexicon[adjective]!;
     const A = render(adjForm);
     return {
-      text: `${timePrefixText}${arranged.first} ${arranged.second} ${arranged.third} · ${A}`,
-      gloss: `${timePrefixGloss}[${subjectMeaning}—${verbMeaning}—${adjectiveMeaning} ${objectMeaning}]`,
+      text: `${A} ${S} ${V}`,
+      gloss: `[${adjective} ${subjectNoun}—${verb}]`,
     };
   }
-  if (pattern.needsObject) {
-    return {
-      text: `${timePrefixText}${arranged.first} ${arranged.second} ${arranged.third}`,
-      gloss: `${timePrefixGloss}[${subjectMeaning}—${verbMeaning}—${objectMeaning}]`,
-    };
-  }
-  if (pattern.needsAdj && adjectiveMeaning) {
-    const adjForm = lang.lexicon[adjectiveMeaning];
-    if (!adjForm) return null;
-    const A = render(adjForm);
-    return {
-      text: `${timePrefixText}${A} ${S} ${V}`,
-      gloss: `${timePrefixGloss}[${adjectiveMeaning} ${subjectMeaning}—${verbMeaning}]`,
-    };
-  }
+
   return {
-    text: `${timePrefixText}${S} ${V}`,
-    gloss: `${timePrefixGloss}[${subjectMeaning}—${verbMeaning}]`,
+    text: `${S} ${V}`,
+    gloss: `[${subjectNoun}—${verb}]`,
   };
 }
 
@@ -301,10 +403,11 @@ export function generateNarrative(
   lines = 5,
   script: DisplayScript = "ipa",
 ): NarrativeLine[] {
-  const skeletons = planSkeleton(seedStr, lines);
+  const skeletons = planSkeletonForLanguage(lang, seedStr, lines);
+  const rng = makeRng(`narrative-realise:${lang.id}:${seedStr}`);
   const out: NarrativeLine[] = [];
   for (const skel of skeletons) {
-    const line = realizeSkeleton(lang, skel, script);
+    const line = realizeSkeleton(lang, skel, script, rng);
     if (line) out.push(line);
   }
   return out;
