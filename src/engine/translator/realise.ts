@@ -737,7 +737,8 @@ function realiseVerb(
     stack.push("verb.honor.formal");
   }
 
-  if (lang.grammar.classifierSystem) {
+  if (lang.grammar.classifierSystem &&
+      isFeatureActive(lang, "morphological:inflection-class", l => !!l.grammar.classifierSystem)) {
     const matchPdm = lang.morphology.paradigms["verb.cls.match"];
     if (matchPdm) stack.push("verb.cls.match");
   }

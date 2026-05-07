@@ -433,6 +433,13 @@ export function inflect(
     if (override && override.length > 0) return override.slice();
   }
   if (!paradigm) return base;
+  // Phase 46a-migration: paradigm dispatch gated on the paradigms
+  // module. Module-aware isolating languages (no paradigms in their
+  // module set) skip affix application — the analytic-language perf
+  // win. Legacy fallback: paradigms always applied (back-compat).
+  if (lang && lang.activeModules instanceof Set && !lang.activeModules.has("morphological:paradigms")) {
+    return base;
+  }
   let affix = pickAffixVariant(paradigm, base, lang, meaning);
   if (lang?.grammar.harmony && lang.grammar.harmony !== "none") {
     affix = harmonizeAffix(affix, base, lang.grammar.harmony);
