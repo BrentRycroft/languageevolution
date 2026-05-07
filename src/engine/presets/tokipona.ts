@@ -209,6 +209,36 @@ export function presetTokipona(): SimulationConfig {
     // Phase 31 Tranche 31d: Toki Pona is non-tonal by design.
     seedToneRegime: "non-tonal",
     seedPhonemeTarget: 14,
+    // Phase 47 T5: hand-authored decompositions. Complex meanings
+    // not directly lexicalised in Toki Pona's ~120-word inventory get
+    // expressed by composing primitives. Reuses existing seedCompounds
+    // infrastructure: at init these become lang.compounds entries; at
+    // runtime updateCompounds (with morphological:derivation active)
+    // rolls fossilisation per generation. Once fossilised the
+    // compound's lexicon entry drifts independently — the etymology
+    // becomes recoverable only via lang.fossilizedEtymologies (T10).
+    //
+    // Linguistic basis: small-lexicon natural languages (Pidgins,
+    // some Pacific isolates) routinely express complex meanings via
+    // stable compounds rather than lexical innovation.
+    seedCompounds: {
+      // computer = work + know (pali + sona — "knowledge work")
+      computer: { parts: ["work", "know"] },
+      // school = home + know (tomo + sona — "knowledge house")
+      school: { parts: ["home", "know"] },
+      // teacher = child + know (jan + sona — "knowing person";
+      //   "child" is Toki Pona "jan" generic person)
+      teacher: { parts: ["child", "know"] },
+      // book = paper + word (lipu + nimi)
+      book: { parts: ["paper", "word"] },
+      // doctor = child + know (same as teacher in Toki Pona — the
+      //   simulator collapses; specialisation requires a 3rd primitive)
+      doctor: { parts: ["child", "know"] },
+      // bridge = stone + earth (kiwen + ma — "earth stone")
+      bridge: { parts: ["stone", "earth"] },
+      // train = work + go (pali + tawa — "going work-thing")
+      train: { parts: ["work", "go"] },
+    },
     // Phase 46a-migration: Toki Pona is extreme-isolating — no case,
     // no articles, no inflection, no agreement, no derivation. Activate
     // only the typological minimum + reduplication-driven plural marking.
@@ -230,6 +260,13 @@ export function presetTokipona(): SimulationConfig {
       "grammatical:reference-tracking",
       "grammatical:numerals",
       "grammatical:demonstratives",
+      // Phase 47 T5: derivation module so updateCompounds runs and the
+      // hand-authored decompositions can fade. Toki Pona doesn't have
+      // productive affixation — but it DOES have stable compounds
+      // (seedCompounds above), and those need the fossilisation
+      // pathway to fade per the user's "shouldn't remain after the
+      // word decomposes" requirement.
+      "morphological:derivation",
     ],
     preset: "tokipona",
   };

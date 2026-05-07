@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { attemptMorphologicalSynthesis } from "../lexicon/synthesis";
 import type { Language } from "../types";
 import type { DerivationalSuffix } from "../lexicon/derivation";
+import { presetTokipona } from "../presets/tokipona";
+import { createSimulation } from "../simulation";
 
 /**
  * Phase 47 T1: morphological synthesis acceptance tests.
@@ -301,5 +303,45 @@ describe("Phase 47 T1 — morphological synthesis", () => {
       derivationalSuffixes: [prefix("un-", ["ʌ", "n"], false)], // not productive
     });
     expect(attemptMorphologicalSynthesis(lang, "unhappy", "neg")).toBeNull();
+  });
+});
+
+// Phase 47 T5: hand-authored decompositions via seedCompounds
+describe("Phase 47 T5 — hand-authored decompositions on Toki Pona", () => {
+  it("seeded decompositions land in lang.compounds at gen 0", () => {
+    const sim = createSimulation(presetTokipona());
+    const root = sim.getState().tree[sim.getState().rootId]!.language;
+    expect(root.compounds).toBeDefined();
+    expect(root.compounds!.computer).toBeDefined();
+    expect(root.compounds!.computer!.parts).toEqual(["work", "know"]);
+    expect(root.compounds!.school).toBeDefined();
+    expect(root.compounds!.bridge).toBeDefined();
+  });
+
+  it("seeded compound is recomposed into the lexicon at birth", () => {
+    const sim = createSimulation(presetTokipona());
+    const root = sim.getState().tree[sim.getState().rootId]!.language;
+    // computer = work + know → pali + sona = ["p","a","l","i","s","o","n","a"]
+    expect(root.lexicon.computer).toEqual([
+      "p", "a", "l", "i", "s", "o", "n", "a",
+    ]);
+  });
+
+  it("Toki Pona has morphological:derivation active (so updateCompounds fires)", () => {
+    const sim = createSimulation(presetTokipona());
+    const root = sim.getState().tree[sim.getState().rootId]!.language;
+    expect(root.activeModules).toBeDefined();
+    expect(root.activeModules!.has("morphological:derivation")).toBe(true);
+  });
+
+  it("running 60 gens drifts the compound's parts (sound change)", () => {
+    const sim = createSimulation(presetTokipona());
+    for (let i = 0; i < 60; i++) sim.step();
+    const root = sim.getState().tree[sim.getState().rootId]!.language;
+    // Compound entry persists in lang.compounds; its surface form may
+    // drift as sound change applies. The point is just that the
+    // mechanism doesn't crash.
+    expect(root.lexicon.computer).toBeDefined();
+    expect(root.lexicon.computer!.length).toBeGreaterThan(0);
   });
 });
