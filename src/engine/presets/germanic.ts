@@ -265,10 +265,20 @@ const LEXICON: Lexicon = {
   "-uŋgō.nmlz": ["u", "ŋ", "g", "oː"],
   "-laikaz.adj": ["l", "a", "j", "k", "a", "z"],
   "-skapiz.coll": ["s", "k", "a", "p", "i", "z"],
+  // Phase 47 T4: Germanic typology = SVO + balanced (Greenberg). Add
+  // prefixes covering negation, repetition, reversal, and away. These
+  // mirror the Proto-Germanic / Old English inventory.
+  "un-": ["u", "n"],
+  "ga-": ["g", "a"],
+  "fra-": ["f", "r", "a"],
+  "ufar-": ["u", "f", "a", "r"],
 };
 
 const GERMANIC_BOUND_MORPHEMES = new Set<string>([
   "-arja.agt", "-iþō.abs", "-uŋgō.nmlz", "-laikaz.adj", "-skapiz.coll",
+  // Phase 47 T4: derivational prefixes (un- is also negational; counted
+  // in NEGATIONAL_TAGS at synthesis time so it fires only on rung 5).
+  "un-", "ga-", "fra-", "ufar-",
 ]);
 
 // Phase 29 Tranche 5s: deepened Germanic frequency hints.

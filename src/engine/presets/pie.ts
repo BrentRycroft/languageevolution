@@ -389,10 +389,18 @@ const LEXICON: Lexicon = {
   "-eh₂.fem": ["e", "h₂"],
   "-tós.ptcp": ["t", "o", "s"],
   "-i̯o.adj": ["j", "o"],
+  // Phase 47 T4: PIE typology = SOV + suffix-heavy (Greenberg). Add
+  // more suffixes covering instrument, comparative, abstract,
+  // diminutive. Daughters inherit + erode these.
+  "-tro.inst": ["t", "r", "o"],
+  "-ter.cmp": ["t", "e", "r"],
+  "-nis.abs": ["n", "i", "s"],
+  "-ko.dim": ["k", "o"],
 };
 
 const PIE_BOUND_MORPHEMES = new Set<string>([
   "-tér.agt", "-mn̥.action", "-eh₂.fem", "-tós.ptcp", "-i̯o.adj",
+  "-tro.inst", "-ter.cmp", "-nis.abs", "-ko.dim",
 ]);
 
 // Phase 29 Tranche 5s: deepened PIE frequency hints.

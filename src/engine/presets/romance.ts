@@ -268,10 +268,20 @@ const LEXICON: Lexicon = {
   "-tas.abs": ["t", "a", "s"],
   "-arius.agt": ["a", "r", "i", "u", "s"],
   "-ulus.dim": ["u", "l", "u", "s"],
+  // Phase 47 T4: Latin-style prefixes (suffix-leaning SVO; few prefixes
+  // active in Late Latin → Romance). dis- separation, re- repetition,
+  // prae- before, in- inside (also negational in some words).
+  "dis-": ["d", "i", "s"],
+  "re-": ["r", "e"],
+  "prae-": ["p", "r", "a", "e"],
+  "in-": ["i", "n"],
 };
 
 const ROMANCE_BOUND_MORPHEMES = new Set<string>([
   "-tor.agt", "-tio.nmlz", "-tas.abs", "-arius.agt", "-ulus.dim",
+  // Phase 47 T4: derivational prefixes. dis-/in- are negational and
+  // fire only on rung 5; re-/prae- fire on the standard non-neg rung.
+  "dis-", "re-", "prae-", "in-",
 ]);
 
 // Phase 29 Tranche 5s: deepened from ~33 to ~80 entries to catch the
