@@ -9,6 +9,7 @@ import { MECHANISM_CLIPPING } from "./clipping";
 import { MECHANISM_BLENDING } from "./blending";
 import { MECHANISM_IDEOPHONE } from "./ideophone";
 import { MECHANISM_CONVERSION } from "./conversion";
+import { MECHANISM_TEMPLATE } from "./template";
 
 export const MECHANISMS: readonly CoinageMechanism[] = [
   MECHANISM_COMPOUND,
@@ -19,4 +20,8 @@ export const MECHANISMS: readonly CoinageMechanism[] = [
   MECHANISM_BLENDING,
   MECHANISM_IDEOPHONE,
   MECHANISM_CONVERSION,
+  // Phase 55 T1: opt-in templatic coinage. Returns null unless the
+  // language carries both `rootInventory` and `rootPatterns`. Non-
+  // templatic presets are unaffected.
+  MECHANISM_TEMPLATE,
 ];

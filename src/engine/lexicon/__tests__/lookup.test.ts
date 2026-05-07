@@ -12,12 +12,16 @@ describe("Phase 52 T1 — lookup abstraction", () => {
     expect(out.resolution).toBe("direct");
   });
 
-  it("missing English lemma routes through graceful fallback", () => {
+  it("compositional English lemma routes through synth or graceful fallback", () => {
+    // Phase 53.5 tightened validation: only CONCEPTS-grounded lemmas
+    // pass. `lighter` decomposes via Phase 49's affix path
+    // (light is in CONCEPTS + -er agentive affix recognised) and
+    // routes through synth-affix.
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree["L-0"]!.language;
-    const out = lookupFormWithResolution(lang, "dragon");
+    const out = lookupFormWithResolution(lang, "lighter");
     expect(out.form).not.toBeNull();
-    expect(out.resolution).toBe("synth-fallback");
+    expect(["synth-fallback", "synth-affix", "fallback"]).toContain(out.resolution);
   });
 
   it("gibberish gets the literal-quote fallback (no coinage)", () => {

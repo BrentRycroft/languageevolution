@@ -127,6 +127,29 @@ export interface Language {
     sourceLangName?: string;
     generation?: number;
   }>;
+  /**
+   * Phase 55 T1: root inventory for templatic (Semitic-style)
+   * languages. Each entry maps a root-meaning (e.g. "write") to its
+   * consonantal skeleton (`["k","t","b"]`). Non-templatic languages
+   * leave this undefined; the template coinage mechanism returns
+   * null for them.
+   */
+  rootInventory?: Record<Meaning, Phoneme[]>;
+  /**
+   * Phase 55 T1: CV templates that pair with rootInventory. Each
+   * pattern is a string of `C` (root-consonant slots, in order) and
+   * literal vowels (`a`, `i`, `u`, etc.). Example: `"CaCiC"` for
+   * Semitic agentive (kaːtib "writer"), `"CaCCaC"` for intensive.
+   */
+  rootPatterns?: string[];
+  /**
+   * Phase 55 T2: idiom storage. Multi-word lemmas (`kick the bucket`
+   * → die) bypass per-word translation. The phrase is normalised
+   * lower-case + space-joined. Optional `literal` flag tracks
+   * whether the language renders compositionally (literal:true) or
+   * as a fixed unit.
+   */
+  idioms?: Record<string, { parts: Meaning[]; form: import("./types").WordForm; literal?: boolean }>;
   morphology: import("./morphology/types").Morphology;
   localNeighbors: Record<Meaning, string[]>;
   /**

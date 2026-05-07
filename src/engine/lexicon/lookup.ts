@@ -229,3 +229,25 @@ export function lookupForm(
 ): WordForm | null {
   return lookupFormWithResolution(lang, meaning, context).form;
 }
+
+/**
+ * Phase 55 T2: idiom + multi-word lookup. Given a phrase (token
+ * list), return the language's lexicalised rendering if it stores
+ * the phrase as a fixed idiom; null otherwise (caller falls through
+ * to per-word translation).
+ *
+ * Phrases are normalised lower-case + space-joined for the key.
+ * `kick the bucket` → key `"kick the bucket"`. Adjacent words match
+ * the language's `idioms` map exactly.
+ */
+export function lookupIdiom(
+  lang: Language,
+  phrase: ReadonlyArray<Meaning>,
+): WordForm | null {
+  if (!lang.idioms) return null;
+  if (phrase.length < 2) return null;
+  const key = phrase.map((p) => p.toLowerCase()).join(" ");
+  const entry = lang.idioms[key];
+  if (!entry) return null;
+  return entry.form.slice();
+}
