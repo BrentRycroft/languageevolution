@@ -7,6 +7,7 @@ import { realiseSentence } from "./realise";
 import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
+import { attemptMorphologicalSynthesis } from "../lexicon/synthesis";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -41,7 +42,8 @@ export interface TranslatedToken {
     | "concept"
     | "colex"
     | "reverse-colex"
-    | "fallback";
+    | "fallback"
+    | "synth-affix";
 }
 
 export interface SentenceTranslation {
@@ -562,6 +564,19 @@ function resolveLemma(
         glossNote: `compound: ${meta.parts.join("+")}`,
       };
     }
+  }
+  // Phase 47 T1: on-demand morphological synthesis. If the lemma is
+  // not in the lexicon and not a registered compound, attempt to
+  // decompose it into stem + recognised productive affix.
+  // Example: "lighter" → light + -er when the language has a
+  // productive `-er` suffix and "light" is in the lexicon.
+  const synth = attemptMorphologicalSynthesis(lang, lemma);
+  if (synth) {
+    return {
+      form: synth.form,
+      resolution: synth.resolution,
+      glossNote: synth.glossNote,
+    };
   }
   if (isRegisteredConcept(lemma)) {
     for (const partner of colexWith(lemma)) {

@@ -4,7 +4,7 @@ export type Person = "1" | "2" | "3";
 export type Number_ = "sg" | "pl";
 export type Case = "nom" | "acc" | "dat" | "gen" | "obl" | "inst";
 
-export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback";
+export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback" | "synth-affix";
 
 export interface NounRef {
   lemma: string;

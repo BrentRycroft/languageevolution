@@ -17,10 +17,10 @@ export interface RealisedToken {
   form: WordForm;
   english: string;
   role: "S" | "V" | "AUX" | "O" | "ADJ" | "DET" | "PREP" | "POSTP" | "POSS" | "NUM" | "NEG" | "ADV" | "PP-NP";
-  resolution?: "direct" | "concept" | "colex" | "reverse-colex" | "fallback";
+  resolution?: LemmaResolution;
 }
 
-export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback";
+export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback" | "synth-affix";
 
 export interface RealiseDeps {
   resolveOpen: (lemma: string) => { form: WordForm | null; resolution: LemmaResolution };
