@@ -542,6 +542,83 @@ export function areMeaningsRelated(
   if (localA.includes(b)) return true;
   const localB = lang.localNeighbors?.[b] ?? [];
   if (localB.includes(a)) return true;
+  // Phase 48 T1: extend with derivational chain + compound-part
+  // membership. This lets the homonym-avoidance check (T2/T3) treat
+  // morphologically-related words as "related" — so e.g. a sound
+  // change that would make a derived form homophonous with its base
+  // is allowed (paradigm leveling), while one that would collide
+  // with an unrelated lexeme is inhibited.
+  if (originChainConnects(lang, a, b, 3)) return true;
+  if (compoundsShareMember(lang, a, b)) return true;
+  return false;
+}
+
+/**
+ * Phase 48 T1: BFS through `lang.wordOriginChain` looking for a path
+ * between `a` and `b` of at most `maxHops` edges. Each entry's `from`
+ * and `via` fields count as 1 hop each.
+ */
+function originChainConnects(
+  lang: Language,
+  a: Meaning,
+  b: Meaning,
+  maxHops: number,
+): boolean {
+  const chain = lang.wordOriginChain;
+  if (!chain) return false;
+  const visited = new Set<Meaning>([a]);
+  let frontier: Meaning[] = [a];
+  for (let depth = 0; depth < maxHops && frontier.length > 0; depth++) {
+    const next: Meaning[] = [];
+    for (const m of frontier) {
+      const entry = chain[m];
+      if (entry) {
+        if (entry.from && !visited.has(entry.from)) {
+          if (entry.from === b) return true;
+          visited.add(entry.from);
+          next.push(entry.from);
+        }
+        if (entry.via && !visited.has(entry.via)) {
+          if (entry.via === b) return true;
+          visited.add(entry.via);
+          next.push(entry.via);
+        }
+      }
+      // Reverse: any other meaning that lists `m` as parent counts too.
+      for (const [child, e] of Object.entries(chain)) {
+        if (visited.has(child)) continue;
+        if (e?.from === m || e?.via === m) {
+          if (child === b) return true;
+          visited.add(child);
+          next.push(child);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return false;
+}
+
+/**
+ * Phase 48 T1: two meanings are "compound-related" if either is a
+ * member of the other's compound parts, or both share a part. This
+ * keeps changes that shift the head of a compound from being
+ * inhibited when they'd collide with a part.
+ */
+function compoundsShareMember(
+  lang: Language,
+  a: Meaning,
+  b: Meaning,
+): boolean {
+  const compounds = lang.compounds;
+  if (!compounds) return false;
+  const ca = compounds[a];
+  if (ca && ca.parts.includes(b)) return true;
+  const cb = compounds[b];
+  if (cb && cb.parts.includes(a)) return true;
+  if (ca && cb) {
+    for (const p of ca.parts) if (cb.parts.includes(p)) return true;
+  }
   return false;
 }
 

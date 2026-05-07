@@ -159,6 +159,19 @@ export interface Language {
   activeRules: import("./phonology/generated-types").GeneratedRule[];
   retiredRules?: import("./phonology/generated-types").GeneratedRule[];
   ruleBias?: Record<string, number>;
+  /**
+   * Phase 48 T4: counter incremented every time a sound-change rule
+   * was inhibited by the homonym-avoidance check (T3). Surfaced in
+   * the narrative timeline + UI so the user can see when the inhibitor
+   * is firing.
+   */
+  homonymInhibitions?: number;
+  /**
+   * Phase 48 T4: per-language tunable for the homonym-avoidance
+   * inhibition probability. Defaults to 0.7. Set to 0 to disable;
+   * 1 to make every potential homonym collision strict.
+   */
+  homonymInhibition?: number;
   lexicalStress?: Record<string, number>;
   registerOf?: Record<string, "high" | "low">;
   coords?: { x: number; y: number };

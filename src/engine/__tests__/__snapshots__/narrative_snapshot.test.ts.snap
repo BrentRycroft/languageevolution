@@ -6,23 +6,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "ðə kiːŋ siːz ðə gʊdf",
+      "target": "ðə hɪge siːz ðə gʊdfe",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "ðə dɔgs siː ðə gʊdfs",
+      "target": "ðə bɔgez siː ðə gʊdfez",
     },
     {
       "english": "i give you the bread",
-      "target": "aj gɪvɪŋ ju",
+      "target": "aje gɪveɪŋ ju",
     },
     {
       "english": "the king walks at the river",
-      "target": "ðə kiːŋ gɔkɪŋz at ðə riːvər",
+      "target": "ðə hɪge gɔheɪŋz æte ðə bɪvəbe",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "ðə kiːŋ nat siːz ðə gʊdf",
+      "target": "ðə hɪge nate siːz ðə gʊdfe",
     },
   ],
   "preset": "english",
@@ -35,23 +35,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "raga βadarat lupuum",
+      "target": "rege βidereθ lupuum",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "kanai βadarant lupuium",
+      "target": "kanei βiderent lupuium",
     },
     {
       "english": "i give you the bread",
-      "target": "ago darao tuum",
+      "target": "ego dareo tuum",
     },
     {
       "english": "the king walks at the river",
-      "target": "raga ambularat fluma",
+      "target": "rege ambulareθ flume",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "raga non βadarat lupuum",
+      "target": "rege non βidereθ lupuum",
     },
   ],
   "preset": "romance",

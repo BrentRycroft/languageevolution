@@ -184,6 +184,11 @@ export function stepPhonology(
     // Phase 29 Tranche 5o: hand the lang to apply.ts so candidate
     // outputs are filtered by the OT ranking (soft constraint).
     langForOt: lang,
+    // Phase 48 T3: hand the lang to apply.ts so candidate outputs
+    // can be checked against the form-key index for homonym
+    // collisions with unrelated words. Default ON; per-language
+    // tunable via `lang.homonymInhibition`.
+    langForHomonym: lang,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   // Phase 29 Tranche 5d: record proto→daughter substitutions for

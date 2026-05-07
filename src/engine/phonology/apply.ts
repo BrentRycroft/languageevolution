@@ -14,6 +14,7 @@ import { isVowel } from "./ipa";
 import { stripTone } from "./tone";
 import { posOf } from "../lexicon/pos";
 import { otFit } from "./ot";
+import { wouldCreateUnrelatedHomonym } from "../lexicon/homonyms";
 import type { Language } from "../types";
 
 /**
@@ -150,6 +151,26 @@ export interface ApplyOptions {
    * caller (steps/phonology.ts) supplies `lang` here.
    */
   langForOt?: Pick<Language, "otRanking">;
+  /**
+   * Phase 48 T3: pass the language for homonym-avoidance lookups.
+   * When provided, candidate forms are checked against
+   * `lang.wordsByFormKey` for collisions with unrelated words; if a
+   * collision is detected, the rule application is inhibited with
+   * probability `INHIBIT_PROB` (default 0.7, override via
+   * `lang.homonymInhibition`). Without `langForHomonym` the check is
+   * skipped (back-compat).
+   *
+   * Linguistic basis: Martinet 1952 / Wedel et al. 2013 — speakers
+   * resist actuating word-specific changes that would create
+   * homonyms with unrelated words.
+   */
+  langForHomonym?: Language;
+  /**
+   * Phase 48 T3: feature flag for back-compat replay determinism.
+   * Defaults to `true` when omitted; pass `false` to disable the
+   * homonym-avoidance hook (e.g., for replay of pre-Phase-48 saves).
+   */
+  homonymAvoidance?: boolean;
   _orderedChanges?: SoundChange[];
 }
 
@@ -424,6 +445,26 @@ export function applyChangesToWord(
       const next = change.apply(current, rng);
       if (next === current) break;
       if (!isFormLegal(meaning, next)) break;
+      // Phase 48 T3: homonym-avoidance hook. When the language has
+      // `wordsByFormKey` populated and the candidate would collide
+      // with another (unrelated) word's form, inhibit the rule
+      // application with probability `INHIBIT_PROB`. Hidden behind
+      // `opts.homonymAvoidance` so replay of pre-Phase-48 saves is
+      // deterministic.
+      if (
+        (opts.homonymAvoidance ?? true) !== false &&
+        opts.langForHomonym &&
+        meaning &&
+        wouldCreateUnrelatedHomonym(opts.langForHomonym, meaning, next)
+      ) {
+        const inhibitP =
+          opts.langForHomonym.homonymInhibition ?? HOMONYM_INHIBIT_PROB_DEFAULT;
+        if (rng.chance(inhibitP)) {
+          opts.langForHomonym.homonymInhibitions =
+            (opts.langForHomonym.homonymInhibitions ?? 0) + 1;
+          break;
+        }
+      }
       // Phase 29 Tranche 5o: soft OT filter. Compare candidate vs
       // current under the language's OT ranking; if the candidate is
       // appreciably worse, reject probabilistically. Skip when the
@@ -442,6 +483,10 @@ export function applyChangesToWord(
   }
   return current;
 }
+
+/** Phase 48 T3: default inhibition probability for unrelated-homonym
+ *  candidates. Overridable per-language via `lang.homonymInhibition`. */
+const HOMONYM_INHIBIT_PROB_DEFAULT = 0.7;
 
 function samplePoissonBounded(lambda: number, rng: Rng): number {
   if (lambda <= 0) return 0;
