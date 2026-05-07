@@ -36,9 +36,12 @@ describe("Phase 46a-migration — behavioral", () => {
     expect(cfg.seedActiveModules).toContain("grammatical:case-marking");
   });
 
-  it("Toki Pona stays on the back-compat path (no seedActiveModules)", () => {
+  it("Toki Pona declares minimal seedActiveModules (no case/articles/morphology)", () => {
     const cfg = presetTokipona();
-    expect(cfg.seedActiveModules).toBeUndefined();
+    expect(cfg.seedActiveModules).toBeDefined();
+    expect(cfg.seedActiveModules).not.toContain("grammatical:case-marking");
+    expect(cfg.seedActiveModules).not.toContain("grammatical:articles");
+    expect(cfg.seedActiveModules).not.toContain("morphological:paradigms");
   });
 
   it("English root language has 28 active modules at gen 0", () => {

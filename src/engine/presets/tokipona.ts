@@ -209,6 +209,28 @@ export function presetTokipona(): SimulationConfig {
     // Phase 31 Tranche 31d: Toki Pona is non-tonal by design.
     seedToneRegime: "non-tonal",
     seedPhonemeTarget: 14,
+    // Phase 46a-migration: Toki Pona is extreme-isolating — no case,
+    // no articles, no inflection, no agreement, no derivation. Activate
+    // only the typological minimum + reduplication-driven plural marking.
+    seedActiveModules: [
+      "semantic:lexicon",
+      "semantic:clusters",
+      "semantic:frequency",
+      "semantic:synonymy",
+      "semantic:taboo",
+      "semantic:coinage",
+      "syntactical:wordOrder/svo",
+      "syntactical:alignment/nom-acc",
+      "syntactical:adj-placement",
+      "syntactical:poss-placement",
+      "syntactical:num-placement",
+      "syntactical:neg-placement",
+      "syntactical:coordination",
+      "grammatical:number-system",
+      "grammatical:reference-tracking",
+      "grammatical:numerals",
+      "grammatical:demonstratives",
+    ],
     preset: "tokipona",
   };
 }

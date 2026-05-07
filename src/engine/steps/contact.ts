@@ -8,6 +8,7 @@ import { pushEvent } from "./helpers";
 import { getWorldMap } from "../geo/map";
 import { bumpFrequency } from "../lexicon/frequencyDynamics";
 import { computeBilingualLinks } from "../contact/bilingual";
+import { isFeatureActive } from "../modules/legacyGate";
 
 const AREAL_PHONEME_PROBABILITY = 0.005;
 
@@ -35,14 +36,18 @@ export function stepContact(
 
   const worldMap = getWorldMap(config.mapMode ?? "random", config.seed);
   lang.bilingualLinks = computeBilingualLinks(lang, state.tree, worldMap);
-  const loan = tryBorrow(
-    lang,
-    state.tree,
-    rng,
-    config.contact.borrowProbabilityPerGeneration,
-    worldMap,
-    generation,
-  );
+  // Phase 46a-migration: borrowing gated on the borrowing module.
+  // Legacy fallback: always on (any language could borrow).
+  const loan = isFeatureActive(lang, "semantic:borrowing", () => true)
+    ? tryBorrow(
+        lang,
+        state.tree,
+        rng,
+        config.contact.borrowProbabilityPerGeneration,
+        worldMap,
+        generation,
+      )
+    : null;
   if (loan) {
     lang.wordOrigin[loan.meaning] = `borrow:${loan.donor}`;
     bumpFrequency(lang, loan.meaning, 0.1);
@@ -75,7 +80,7 @@ export function stepContact(
   // leaf has a transparent compound for a meaning the recipient
   // lacks, copy the *structure* and stitch it from the recipient's
   // own parts. Models compassio → Mitleid pattern.
-  if (lang.bilingualLinks) {
+  if (lang.bilingualLinks && isFeatureActive(lang, "semantic:calque", () => true)) {
     for (const partnerId of Object.keys(lang.bilingualLinks)) {
       if ((lang.bilingualLinks[partnerId] ?? 0) <= 0) continue;
       const donorNode = state.tree[partnerId];
@@ -105,7 +110,7 @@ export function stepContact(
   // bilingual pairs absorb each other's grammar features (word order,
   // articles, etc.). Fires at ~0.3%/gen, gated on link strength
   // ≥ 0.4 and dampened by recipient literacy.
-  if (lang.bilingualLinks) {
+  if (lang.bilingualLinks && isFeatureActive(lang, "semantic:reborrow", () => true)) {
     for (const partnerId of Object.keys(lang.bilingualLinks)) {
       const donorNode = state.tree[partnerId];
       if (!donorNode) continue;

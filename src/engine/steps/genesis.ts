@@ -20,6 +20,7 @@ import {
   registerSuffixUsage,
   categoryLabel,
 } from "../lexicon/derivation";
+import { isFeatureActive } from "../modules/legacyGate";
 
 export function stepGenesis(
   lang: Language,
@@ -28,6 +29,9 @@ export function stepGenesis(
   rng: Rng,
   generation: number,
 ): void {
+  // Phase 46a-migration: coinage gated on the coinage module.
+  // Legacy fallback: always on (coinage was unconditional).
+  if (!isFeatureActive(lang, "semantic:coinage", () => true)) return;
   const rules = genesisRulesFor(config);
   const lexSize = Object.keys(lang.lexicon).length;
   const capacity = lang.lexicalCapacity ?? lexicalCapacity(lang, generation);
