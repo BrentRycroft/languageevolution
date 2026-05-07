@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { attemptMorphologicalSynthesis, attemptConceptDecomposition } from "../lexicon/synthesis";
+import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
 import type { Language } from "../types";
 import type { DerivationalSuffix } from "../lexicon/derivation";
 import { presetTokipona } from "../presets/tokipona";
@@ -408,5 +408,83 @@ describe("Phase 47 T6 — CONCEPTS metadata + cross-linguistic decomposition", (
   it("returns null for unknown meanings (not in CONCEPTS)", () => {
     const lang = makeLang({ lexicon: {} });
     expect(attemptConceptDecomposition(lang, "nonexistent-meaning")).toBeNull();
+  });
+});
+
+// Phase 47 T9: cluster-emergent composition (last-resort fallback)
+describe("Phase 47 T9 — cluster-emergent composition", () => {
+  it("fires for small-lexicon language: 'horse' composes from cluster peers", () => {
+    // Small lexicon (under 200): triggers eligibility.
+    // Lexicon includes some animal cluster peers but not "horse".
+    const lang = makeLang({
+      lexicon: {
+        dog: ["w", "a", "n"],
+        cow: ["m", "u"],
+        wolf: ["k", "a", "i"],
+      },
+      grammar: {
+        wordOrder: "SVO", affixPosition: "suffix",
+        pluralMarking: "none", tenseMarking: "none",
+        hasCase: false, genderCount: 0,
+      },
+    });
+    const result = attemptClusterComposition(lang, "horse");
+    // Concept "horse" is in CONCEPTS, has cluster peers in the lexicon
+    // (dog/cow/wolf are in the same animal cluster).
+    expect(result).not.toBeNull();
+    expect(result!.parts).toHaveLength(2);
+    expect(result!.resolution).toBe("synth-cluster");
+    expect(result!.glossNote).toContain("cluster:");
+  });
+
+  it("does NOT fire for large-lexicon language (eligibility gate)", () => {
+    // Build a lexicon with > 200 entries to disqualify.
+    const lex: Record<string, string[]> = {};
+    for (let i = 0; i < 250; i++) lex[`meaning-${i}`] = ["x"];
+    lex.dog = ["d"];
+    lex.cow = ["c"];
+    const lang = makeLang({ lexicon: lex });
+    const result = attemptClusterComposition(lang, "horse");
+    expect(result).toBeNull();
+  });
+
+  it("fires for language with synthesisIndex < 0.4 (extreme isolating)", () => {
+    // High lexicon size but isolating grammar → eligible.
+    const lex: Record<string, string[]> = {};
+    for (let i = 0; i < 250; i++) lex[`meaning-${i}`] = ["x"];
+    lex.dog = ["d"];
+    lex.cow = ["c"];
+    lex.wolf = ["w"];
+    const lang = makeLang({
+      lexicon: lex,
+      grammar: {
+        wordOrder: "SVO", affixPosition: "suffix",
+        pluralMarking: "none", tenseMarking: "none",
+        hasCase: false, genderCount: 0,
+        synthesisIndex: 0.2, // isolating
+      },
+    });
+    const result = attemptClusterComposition(lang, "horse");
+    expect(result).not.toBeNull();
+  });
+
+  it("returns null for primitives (irreducible)", () => {
+    const lang = makeLang({
+      lexicon: { fire: ["f"], earth: ["e"] },
+    });
+    // "water" is a primitive — never decomposes
+    expect(attemptClusterComposition(lang, "water")).toBeNull();
+  });
+
+  it("returns null when fewer than 2 cluster peers in lexicon", () => {
+    const lang = makeLang({
+      lexicon: { dog: ["d"] },
+    });
+    expect(attemptClusterComposition(lang, "horse")).toBeNull();
+  });
+
+  it("returns null for meanings not in CONCEPTS", () => {
+    const lang = makeLang({ lexicon: { dog: ["d"], cow: ["c"] } });
+    expect(attemptClusterComposition(lang, "nonexistent-meaning")).toBeNull();
   });
 });

@@ -30,12 +30,29 @@
 import type { Language, WordForm, Meaning } from "../types";
 import type { DerivationalSuffix } from "./derivation";
 import { CONCEPTS } from "./concepts";
+import { relatedMeanings } from "../semantics/clusters";
+import { frequencyFor } from "./frequency";
 
 export interface SynthesisResult {
   form: WordForm;
   parts: Array<{ meaning: Meaning; form: WordForm }>;
   glossNote: string;
-  resolution: "synth-affix" | "synth-neg-affix" | "synth-concept";
+  resolution: "synth-affix" | "synth-neg-affix" | "synth-concept" | "synth-cluster";
+}
+
+/**
+ * Phase 47 T9: small-lexicon eligibility for cluster-emergent
+ * composition. Models the linguistic reality that small-lexicon
+ * languages (Pidgins, Creoles, isolating typology like Toki Pona)
+ * routinely express complex meanings via ad-hoc compositions, while
+ * mature large-lexicon languages lexicalise instead. The threshold is
+ * conservative: only fires for languages with <200 active lemmas OR
+ * synthesisIndex below 0.4 (extreme isolating).
+ */
+function smallLexiconEligible(lang: Language): boolean {
+  const lexSize = Object.keys(lang.lexicon).length;
+  const synth = lang.grammar.synthesisIndex ?? 0.5;
+  return lexSize < 200 || synth < 0.4;
 }
 
 /**
@@ -202,5 +219,63 @@ export function attemptConceptDecomposition(
     parts: partForms,
     glossNote: `compose: ${decomposition.join(" + ")}`,
     resolution: "synth-concept",
+  };
+}
+
+/**
+ * Phase 47 T9: cluster-emergent composition (last-resort fallback).
+ *
+ * For small-lexicon languages with no other resolution path, attempt
+ * to compose the meaning from semantically-adjacent words already in
+ * the lexicon. Uses semantic clusters + neighbors + concept-cluster
+ * inference to score candidate part pairs.
+ *
+ * Gating (the user's "in some languages these concepts are
+ * irreducible" caveat): fires ONLY for small-lexicon-eligible
+ * languages. Large-lexicon languages (English, Romance) skip this
+ * rung — their primary lexicalisations stay primary.
+ *
+ * Linguistic basis: matches Pidgin / Creole-style ad-hoc lexical fills
+ * where speakers compose unknown concepts on the fly from available
+ * vocabulary. Distinct from T6's CONCEPTS.decomposition path: T6 uses
+ * authored cross-linguistic defaults; T9 emerges from the language's
+ * own lexicon + cluster topology.
+ */
+export function attemptClusterComposition(
+  lang: Language,
+  lemma: string,
+): SynthesisResult | null {
+  if (!smallLexiconEligible(lang)) return null;
+  const concept = CONCEPTS[lemma];
+  if (!concept) return null;
+  if (concept.primitive) return null;
+
+  // Find candidate parts: cluster co-members + semantic neighbors,
+  // filtered to those present in lang.lexicon (excluding the target
+  // itself).
+  const peers = relatedMeanings(lemma);
+  const candidates: Array<{ meaning: Meaning; form: WordForm; freq: number }> = [];
+  for (const peer of peers) {
+    if (peer === lemma) continue;
+    const f = lang.lexicon[peer];
+    if (!f || f.length === 0) continue;
+    candidates.push({ meaning: peer, form: f.slice(), freq: frequencyFor(peer) });
+  }
+  if (candidates.length < 2) return null;
+
+  // Rank: prefer high-frequency primitives. Sort descending by freq.
+  candidates.sort((a, b) => b.freq - a.freq);
+  const a = candidates[0]!;
+  const b = candidates[1]!;
+  const composed: WordForm = [...a.form, ...b.form];
+
+  return {
+    form: composed,
+    parts: [
+      { meaning: a.meaning, form: a.form },
+      { meaning: b.meaning, form: b.form },
+    ],
+    glossNote: `cluster: ${a.meaning} + ${b.meaning}`,
+    resolution: "synth-cluster",
   };
 }

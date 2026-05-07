@@ -7,7 +7,7 @@ import { realiseSentence } from "./realise";
 import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
-import { attemptMorphologicalSynthesis, attemptConceptDecomposition } from "../lexicon/synthesis";
+import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -45,7 +45,8 @@ export interface TranslatedToken {
     | "fallback"
     | "synth-affix"
     | "synth-neg-affix"
-    | "synth-concept";
+    | "synth-concept"
+    | "synth-cluster";
 }
 
 export interface SentenceTranslation {
@@ -604,6 +605,20 @@ function resolveLemma(
       form: synthConcept.form,
       resolution: synthConcept.resolution,
       glossNote: synthConcept.glossNote,
+    };
+  }
+  // Phase 47 T9: cluster-emergent composition (rung 7, last resort
+  // before colex/concept fallback). Fires only for small-lexicon-
+  // eligible languages — Pidgin / Toki Pona-style ad-hoc fills from
+  // semantically-adjacent lexicon entries. Large-lexicon languages
+  // (English, Romance) skip this rung; their primary lexicalisations
+  // stay primary.
+  const synthCluster = attemptClusterComposition(lang, lemma);
+  if (synthCluster) {
+    return {
+      form: synthCluster.form,
+      resolution: synthCluster.resolution,
+      glossNote: synthCluster.glossNote,
     };
   }
   if (isRegisteredConcept(lemma)) {

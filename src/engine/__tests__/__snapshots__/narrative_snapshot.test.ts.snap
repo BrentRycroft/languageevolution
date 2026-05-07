@@ -64,7 +64,7 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Toki Pona preset
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "fewi mukiɳ fowemi",
+      "target": "ɳimiɳimi mukiɳ fowemi",
     },
     {
       "english": "the dogs see the wolves",
@@ -76,11 +76,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Toki Pona preset
     },
     {
       "english": "the king walks at the river",
-      "target": "fewi kawa faki ʈemo",
+      "target": "ɳimiɳimi kawaʈiwa faki ʈemofuːɳo",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "fewi ala mukiɳ fowemi",
+      "target": "ɳimiɳimi ala mukiɳ fowemi",
     },
   ],
   "preset": "tokipona",
