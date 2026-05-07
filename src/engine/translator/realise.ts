@@ -702,7 +702,10 @@ function realiseVerb(
     vp.verb.aspect === "habitual" ? "verb.aspect.hab" :
     vp.verb.aspect === "perfect" && useSyntheticPerfect ? "verb.aspect.perf" :
     vp.verb.aspect === "prospective" ? "verb.aspect.prosp" : null;
-  if (aspectCat) stack.push(aspectCat);
+  if (aspectCat &&
+      isFeatureActive(lang, "grammatical:aspect", l => (l.grammar.aspectMarking ?? "none") !== "none")) {
+    stack.push(aspectCat);
+  }
   const moodCat: MorphCategory | null =
     vp.verb.mood === "subjunctive" ? "verb.mood.subj" :
     vp.verb.mood === "imperative" ? "verb.mood.imp" :

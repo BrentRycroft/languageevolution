@@ -1,5 +1,6 @@
 import type { Language, WordForm } from "../types";
 import { fnv1a } from "../rng";
+import { isFeatureActive } from "../modules/legacyGate";
 
 export type ClosedClassLemma =
   | "the" | "a"
@@ -129,14 +130,23 @@ export function closedClassForm(
  * directly. Languages without T-V politeness keep bare `"you"`.
  */
 function remapDemonstrative(lang: Language, lemma: string): string {
+  // Phase 46a-migration: distance-mapping gated on the demonstratives
+  // module; politeness mapping gated on the politeness module. Legacy
+  // fallback reads the flat-flag for back-compat languages.
   if (lemma === "that") {
-    const d = lang.grammar.demonstrativeDistance ?? "two-way";
-    if (d === "three-way" || d === "four-way") return "that_near";
+    const demosActive = isFeatureActive(lang, "grammatical:demonstratives", () => true);
+    if (demosActive) {
+      const d = lang.grammar.demonstrativeDistance ?? "two-way";
+      if (d === "three-way" || d === "four-way") return "that_near";
+    }
     return "that";
   }
   if (lemma === "you") {
-    const reg = lang.grammar.politenessRegister ?? "none";
-    if (reg === "T-V" || reg === "binary") return "you_fml";
+    if (isFeatureActive(lang, "grammatical:politeness",
+        l => !!l.grammar.politenessRegister && l.grammar.politenessRegister !== "none")) {
+      const reg = lang.grammar.politenessRegister ?? "none";
+      if (reg === "T-V" || reg === "binary") return "you_fml";
+    }
   }
   return lemma;
 }
