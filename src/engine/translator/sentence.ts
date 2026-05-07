@@ -7,7 +7,7 @@ import { realiseSentence } from "./realise";
 import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
-import { attemptMorphologicalSynthesis } from "../lexicon/synthesis";
+import { attemptMorphologicalSynthesis, attemptConceptDecomposition } from "../lexicon/synthesis";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -44,7 +44,8 @@ export interface TranslatedToken {
     | "reverse-colex"
     | "fallback"
     | "synth-affix"
-    | "synth-neg-affix";
+    | "synth-neg-affix"
+    | "synth-concept";
 }
 
 export interface SentenceTranslation {
@@ -589,6 +590,20 @@ function resolveLemma(
       form: synthNeg.form,
       resolution: synthNeg.resolution,
       glossNote: synthNeg.glossNote,
+    };
+  }
+  // Phase 47 T6: cross-linguistic concept decomposition (rung 6).
+  // For meanings that have a CONCEPTS[lemma].decomposition default
+  // (e.g., "computer" → ["work", "know"]), compose if all parts are
+  // in the language's lexicon. Distinct from per-language seedCompounds
+  // (T5) which override these defaults at the language level.
+  // Skipped for primitives (NSM-style irreducibles).
+  const synthConcept = attemptConceptDecomposition(lang, lemma);
+  if (synthConcept) {
+    return {
+      form: synthConcept.form,
+      resolution: synthConcept.resolution,
+      glossNote: synthConcept.glossNote,
     };
   }
   if (isRegisteredConcept(lemma)) {

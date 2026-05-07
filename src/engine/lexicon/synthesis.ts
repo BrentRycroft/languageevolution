@@ -29,12 +29,13 @@
 
 import type { Language, WordForm, Meaning } from "../types";
 import type { DerivationalSuffix } from "./derivation";
+import { CONCEPTS } from "./concepts";
 
 export interface SynthesisResult {
   form: WordForm;
   parts: Array<{ meaning: Meaning; form: WordForm }>;
   glossNote: string;
-  resolution: "synth-affix" | "synth-neg-affix";
+  resolution: "synth-affix" | "synth-neg-affix" | "synth-concept";
 }
 
 /**
@@ -157,4 +158,49 @@ export function attemptMorphologicalSynthesis(
     };
   }
   return null;
+}
+
+/**
+ * Phase 47 T6: cross-linguistic concept decomposition.
+ *
+ * When the lemma isn't lexicalised in the language and morphological
+ * synthesis returned null, look up the concept's default
+ * decomposition from CONCEPTS[lemma].decomposition. If all parts are
+ * present in the language's lexicon, compose by concatenation.
+ *
+ * Distinct from per-language seedCompounds (T5): this fires for
+ * concepts that have a CROSS-LINGUISTIC default decomposition,
+ * applicable to any language whose lexicon happens to lack the
+ * concept. seedCompounds are language-specific overrides.
+ *
+ * Primitives (Concept.primitive === true) are never decomposed even
+ * if they have a decomposition field — matches NSM theory that
+ * conceptual primes are irreducible.
+ */
+export function attemptConceptDecomposition(
+  lang: Language,
+  lemma: string,
+): SynthesisResult | null {
+  const concept = CONCEPTS[lemma];
+  if (!concept) return null;
+  if (concept.primitive) return null;
+  const decomposition = concept.decomposition;
+  if (!decomposition || decomposition.length === 0) return null;
+
+  const partForms: Array<{ meaning: Meaning; form: WordForm }> = [];
+  for (const partMeaning of decomposition) {
+    const f = lang.lexicon[partMeaning];
+    if (!f || f.length === 0) return null;
+    partForms.push({ meaning: partMeaning, form: f.slice() });
+  }
+
+  const composed: WordForm = [];
+  for (const p of partForms) composed.push(...p.form);
+
+  return {
+    form: composed,
+    parts: partForms,
+    glossNote: `compose: ${decomposition.join(" + ")}`,
+    resolution: "synth-concept",
+  };
 }

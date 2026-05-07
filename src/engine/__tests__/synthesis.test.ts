@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { attemptMorphologicalSynthesis } from "../lexicon/synthesis";
+import { attemptMorphologicalSynthesis, attemptConceptDecomposition } from "../lexicon/synthesis";
 import type { Language } from "../types";
 import type { DerivationalSuffix } from "../lexicon/derivation";
 import { presetTokipona } from "../presets/tokipona";
 import { createSimulation } from "../simulation";
+import { CONCEPTS } from "../lexicon/concepts";
 
 /**
  * Phase 47 T1: morphological synthesis acceptance tests.
@@ -343,5 +344,69 @@ describe("Phase 47 T5 — hand-authored decompositions on Toki Pona", () => {
     // mechanism doesn't crash.
     expect(root.lexicon.computer).toBeDefined();
     expect(root.lexicon.computer!.length).toBeGreaterThan(0);
+  });
+});
+
+// Phase 47 T6: cross-linguistic concept decomposition
+describe("Phase 47 T6 — CONCEPTS metadata + cross-linguistic decomposition", () => {
+  it("CONCEPTS has decomposition metadata for non-primary meanings", () => {
+    expect(CONCEPTS["computer"]?.decomposition).toEqual(["work", "know"]);
+    expect(CONCEPTS["library"]?.decomposition).toEqual(["home", "book"]);
+    expect(CONCEPTS["factory"]?.decomposition).toEqual(["big", "work"]);
+    expect(CONCEPTS["morning"]?.decomposition).toEqual(["new", "day"]);
+    expect(CONCEPTS["story"]?.decomposition).toEqual(["many", "word"]);
+  });
+
+  it("CONCEPTS has primitive markers for NSM-style irreducibles", () => {
+    expect(CONCEPTS["i"]?.primitive).toBe(true);
+    expect(CONCEPTS["you"]?.primitive).toBe(true);
+    expect(CONCEPTS["know"]?.primitive).toBe(true);
+    expect(CONCEPTS["good"]?.primitive).toBe(true);
+    expect(CONCEPTS["water"]?.primitive).toBe(true);
+  });
+
+  it("CONCEPTS has canBeOpaqueCoined markers for etymologically-opaque concepts", () => {
+    expect(CONCEPTS["dog"]?.canBeOpaqueCoined).toBe(true);
+    expect(CONCEPTS["wolf"]?.canBeOpaqueCoined).toBe(true);
+    expect(CONCEPTS["child"]?.canBeOpaqueCoined).toBe(true);
+  });
+
+  it("attemptConceptDecomposition composes 'computer' from 'work' + 'know'", () => {
+    const lang = makeLang({
+      lexicon: {
+        work: ["v", "ɜ", "r", "k"],
+        know: ["n", "o"],
+      },
+    });
+    const result = attemptConceptDecomposition(lang, "computer");
+    expect(result).not.toBeNull();
+    expect(result!.form).toEqual(["v", "ɜ", "r", "k", "n", "o"]);
+    expect(result!.parts).toHaveLength(2);
+    expect(result!.parts[0]!.meaning).toBe("work");
+    expect(result!.parts[1]!.meaning).toBe("know");
+    expect(result!.glossNote).toBe("compose: work + know");
+    expect(result!.resolution).toBe("synth-concept");
+  });
+
+  it("returns null when not all decomposition parts are in lexicon", () => {
+    const lang = makeLang({
+      lexicon: { work: ["v", "ɜ", "r", "k"] }, // missing "know"
+    });
+    expect(attemptConceptDecomposition(lang, "computer")).toBeNull();
+  });
+
+  it("returns null for primitives (irreducible by definition)", () => {
+    const lang = makeLang({
+      lexicon: { water: ["w", "a", "t", "e", "r"] },
+    });
+    // "water" is marked primitive in PRIMITIVE_MEANINGS even though
+    // CONCEPTS["water"] doesn't have a decomposition. Even if it did,
+    // primitives must never decompose.
+    expect(attemptConceptDecomposition(lang, "water")).toBeNull();
+  });
+
+  it("returns null for unknown meanings (not in CONCEPTS)", () => {
+    const lang = makeLang({ lexicon: {} });
+    expect(attemptConceptDecomposition(lang, "nonexistent-meaning")).toBeNull();
   });
 });

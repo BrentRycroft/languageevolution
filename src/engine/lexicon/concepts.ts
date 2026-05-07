@@ -22,6 +22,31 @@ export interface Concept {
   tier: Tier;
   frequencyClass: FrequencyClass;
   colexWith?: readonly Meaning[];
+  // Phase 47 T6: word-dynamism metadata.
+  /**
+   * Default primitive parts for cross-linguistic decomposition. When
+   * a language doesn't have this meaning in its lexicon, the synthesis
+   * path can compose it from these parts (provided each part is in
+   * the language's lexicon). Distinct from per-language seedCompounds
+   * which are language-specific stable compositions; this is the
+   * cross-linguistic default fallback.
+   */
+  decomposition?: readonly Meaning[];
+  /**
+   * Explicit primitive marker. True for concepts that should never
+   * be decomposed even if they have a `decomposition` (e.g., NSM-style
+   * core primes: I, YOU, KNOW, GOOD, BIG). False/undefined for
+   * concepts that can be decomposed.
+   */
+  primitive?: boolean;
+  /**
+   * When true, the genesis pipeline may coin this meaning without
+   * recording an etymology — i.e., produce a phoneme sequence from
+   * the language's inventory and skip the wordOriginChain entry.
+   * Models concepts like English "dog" / "boy" / "girl" whose
+   * etymologies are disputed or lost.
+   */
+  canBeOpaqueCoined?: boolean;
 }
 
 const TIER_OVERRIDES: Partial<Record<Meaning, Tier>> = {
@@ -149,6 +174,83 @@ const BASIC_CLUSTER_OF: Record<Meaning, string> = (() => {
   return out;
 })();
 
+/**
+ * Phase 47 T6: cross-linguistic primitives (NSM-style core inventory).
+ * Concepts marked `primitive: true` are conceptually irreducible —
+ * the synthesis path will never try to decompose them even if they
+ * have a `decomposition` field. Inspired by Wierzbicka & Goddard's
+ * ~65 universal semantic primes; trimmed to a tractable starter set.
+ */
+const PRIMITIVE_MEANINGS: ReadonlySet<Meaning> = new Set([
+  // Substantives
+  "i", "you", "he", "she", "we", "they", "it", "child", "person",
+  // Determiners + quantifiers
+  "this", "that", "all", "many", "one", "two", "some",
+  // Mental predicates
+  "think", "know", "feel", "want", "see", "hear",
+  // Action / motion / contact
+  "do", "make", "go", "come", "give", "take", "say",
+  // Existence / possession
+  "be", "have", "live", "die",
+  // Time
+  "now", "before", "after", "day", "night",
+  // Space
+  "here", "there", "above", "below", "in", "on", "near", "far",
+  // Evaluators
+  "good", "bad", "big", "small",
+  // Descriptors
+  "hot", "cold", "new", "old",
+  // Body atoms
+  "body", "head", "hand", "eye", "mouth",
+  // Natural atoms
+  "water", "fire", "earth", "sky", "stone",
+]);
+
+/**
+ * Phase 47 T6: sample cross-linguistic decompositions. When a
+ * language's lexicon doesn't have the meaning AND morphological
+ * synthesis returned null, the synthesis path attempts to compose
+ * from these parts (provided each part is in the language's lexicon).
+ * Distinct from per-language seedCompounds (T5) which override these
+ * defaults.
+ *
+ * This is a STARTER set demonstrating the pattern. The plan's full
+ * ~2000-concept expansion (T7-T8) would land here in batches.
+ */
+const DEFAULT_DECOMPOSITIONS: Readonly<Record<Meaning, readonly Meaning[]>> = {
+  // Tools as compositions
+  computer: ["work", "know"],
+  phone: ["far", "speak"],
+  school: ["home", "know"],
+  hospital: ["home", "doctor"],
+  library: ["home", "book"],
+  // Places
+  city: ["big", "village"],
+  factory: ["big", "work"],
+  // Roles
+  teacher: ["person", "know"],
+  student: ["person", "learn"],
+  doctor: ["person", "medicine"],
+  // Time
+  morning: ["new", "day"],
+  evening: ["old", "day"],
+  // Concepts
+  language: ["all", "word"],
+  story: ["many", "word"],
+};
+
+/**
+ * Phase 47 T6: meanings that may be coined without recoverable
+ * etymology. Models the linguistic reality that not every word has
+ * an attestable origin (English "dog", "boy", "girl"). The genesis
+ * pipeline's coinage path may skip the wordOriginChain entry for
+ * meanings flagged here.
+ */
+const OPAQUE_COINAGE_ELIGIBLE: ReadonlySet<Meaning> = new Set([
+  "dog", "boy", "girl", "child", "wolf", "fox", "bear", "rabbit",
+  "fish", "bird", "tree", "stone", "river", "mountain",
+]);
+
 function inferCluster(id: Meaning): string {
   return BASIC_CLUSTER_OF[id] ?? "other";
 }
@@ -181,6 +283,10 @@ function buildRegistry(): Record<Meaning, Concept> {
       tier,
       frequencyClass,
       colexWith: nbr ? Array.from(nbr).sort() : undefined,
+      // Phase 47 T6: cross-linguistic decomposition metadata.
+      decomposition: DEFAULT_DECOMPOSITIONS[id],
+      primitive: PRIMITIVE_MEANINGS.has(id) ? true : undefined,
+      canBeOpaqueCoined: OPAQUE_COINAGE_ELIGIBLE.has(id) ? true : undefined,
     };
   }
   for (const exp of EXPANDED_CONCEPTS) {
@@ -193,6 +299,9 @@ function buildRegistry(): Record<Meaning, Concept> {
       tier: exp.tier,
       frequencyClass: inferFrequencyClass(exp.id),
       colexWith: nbr ? Array.from(nbr).sort() : undefined,
+      decomposition: DEFAULT_DECOMPOSITIONS[exp.id],
+      primitive: PRIMITIVE_MEANINGS.has(exp.id) ? true : undefined,
+      canBeOpaqueCoined: OPAQUE_COINAGE_ELIGIBLE.has(exp.id) ? true : undefined,
     };
   }
   return out;

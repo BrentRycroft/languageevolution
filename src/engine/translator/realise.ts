@@ -20,7 +20,7 @@ export interface RealisedToken {
   resolution?: LemmaResolution;
 }
 
-export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback" | "synth-affix" | "synth-neg-affix";
+export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback" | "synth-affix" | "synth-neg-affix" | "synth-concept";
 
 export interface RealiseDeps {
   resolveOpen: (lemma: string) => { form: WordForm | null; resolution: LemmaResolution };
