@@ -3,17 +3,32 @@ import type { Rng } from "../rng";
 import { isVowel, isConsonant } from "../phonology/ipa";
 
 /**
- * Categories of derivational suffix. Each language ideally has at least one
- * suffix in every category its tier supports, so the genesis loop can
- * reliably reach for the right kind when coining a target abstract.
+ * Categories of derivational morpheme. Each language ideally has at least
+ * one realisation in every category its tier supports, so the genesis loop
+ * can reach for the right kind when coining a target abstract.
  *
- * - agentive          (-er, -or)  — X who does Y
- * - abstractNoun      (-ness, -ity, -hood, -ship)  — quality of being
- * - dominionAbstract  (-dom, -ric)  — realm/state of (kingdom, freedom)
- * - nominalisation    (-tion, -ment, -age)  — act/result of
- * - diminutive        (-let, -kin)
- * - adjectival        (-ic, -al, -ish, -ous)
- * - denominal         (-ify, -ise)  — verb-from-noun
+ * Phase 49: extended with the categories formerly hidden inside
+ * `NEGATIONAL_TAGS` (negative) and the prefix categories
+ * (repetitive / temporal / intensifier). The category itself is now the
+ * abstract dispatch key for synthesis — surface tags are
+ * language-specific realisations a la Aronoff 1976 / Lieber 2004.
+ *
+ * - agentive               (-er, -or)              X who does Y
+ * - abstractNoun           (-ness, -ity, -hood)    quality of being Y
+ * - dominionAbstract       (-dom, -ric)            realm / state of Y
+ * - nominalisation         (-tion, -ment, -age)    act / result of Y
+ * - diminutive             (-let, -kin)            small Y
+ * - adjectival             (-ic, -al, -ish, -ous)  Y-like
+ * - denominal              (-ify, -ise)            verb-from-noun
+ * - negative               (un-, dis-, non-, in-)  not-Y
+ * - repetitive             (re-)                   do Y again
+ * - temporalBefore         (pre-)                  before Y
+ * - temporalAfter          (post-)                 after Y
+ * - intensifierExcess      (over-)                 too much Y
+ * - intensifierInsufficient(under-)                too little Y
+ * - mistaken               (mis-)                  wrong Y
+ * - adverbial              (-ly)                   in a Y manner
+ * - privative              (-less)                 without Y
  */
 export type DerivationCategory =
   | "agentive"
@@ -22,7 +37,16 @@ export type DerivationCategory =
   | "nominalisation"
   | "diminutive"
   | "adjectival"
-  | "denominal";
+  | "denominal"
+  | "negative"
+  | "repetitive"
+  | "temporalBefore"
+  | "temporalAfter"
+  | "intensifierExcess"
+  | "intensifierInsufficient"
+  | "mistaken"
+  | "adverbial"
+  | "privative";
 
 export interface DerivationalSuffix {
   affix: WordForm;
@@ -65,6 +89,15 @@ const CATEGORY_LABELS: Record<DerivationCategory, string> = {
   diminutive: "diminutive",
   adjectival: "adjective",
   denominal: "denominal verb",
+  negative: "negation",
+  repetitive: "repetition",
+  temporalBefore: "before",
+  temporalAfter: "after",
+  intensifierExcess: "excessive",
+  intensifierInsufficient: "insufficient",
+  mistaken: "mistaken",
+  adverbial: "adverb",
+  privative: "without",
 };
 
 /**
@@ -89,6 +122,20 @@ const TAGS_BY_CATEGORY: Record<DerivationCategory, readonly string[]> = {
   diminutive: ["-let", "-kin", "-ie"],
   adjectival: ["-ic", "-al", "-ish", "-ous"],
   denominal: ["-ify", "-ise"],
+  // Phase 49: surface-tag pools for the new categories. Tags ending
+  // with "-" are detected as prefixes by the synthesis layer; the
+  // remaining ones are suffixes. The selector treats these like every
+  // other surface form — so a language can rival e.g. "un-" with
+  // "non-" and the phonological-fit scorer picks between them.
+  negative: ["un-", "non-", "dis-", "in-", "anti-", "de-"],
+  repetitive: ["re-"],
+  temporalBefore: ["pre-", "ante-", "fore-"],
+  temporalAfter: ["post-"],
+  intensifierExcess: ["over-", "hyper-", "super-"],
+  intensifierInsufficient: ["under-", "sub-"],
+  mistaken: ["mis-", "mal-"],
+  adverbial: ["-ly"],
+  privative: ["-less"],
 };
 
 /**

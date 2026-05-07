@@ -1,37 +1,40 @@
 /**
- * Phase 47 (T1): on-demand morphological synthesis.
+ * Phase 47 (T1) / Phase 49: on-demand morphological synthesis.
  *
- * When the user asks the translator for a lemma that isn't in
- * `lang.lexicon` and isn't a known compound, this module attempts to
- * decompose the lemma into stem + recognised productive affix and
- * compose the surface form by concatenation.
+ * Two-phase architecture (Phase 49):
+ *   1. Input parser (`parseEnglishAffix`) maps the typed lemma onto a
+ *      `DerivationCategory` + position. English-biased on purpose:
+ *      it's the keyboard-side dictionary, not a property of the
+ *      simulated language.
+ *   2. Output selector (`selectAffixForCategory`) is language-
+ *      agnostic: given a category + stem, picks the productive affix
+ *      in `lang.derivationalSuffixes` whose concatenation scores best
+ *      on phonological fit (OT + boundary markedness).
  *
- * Example: typing "lighter" against an English-style language whose
- * lexicon has "light" and whose `derivationalSuffixes` contains a
- * productive `-er.agt` entry → returns { form: light + -er.agt, parts:
- * [light, -er.agt], glossNote: "light + -er.agt" }.
+ * The legacy literal-tag path (Phase 47 T1-T3) remains as a fallback
+ * so seedCompounds that explicitly reference tag strings (e.g.
+ * "-er.agt") still resolve. New code should prefer the category path.
  *
- * Productivity gate: only fires when the candidate suffix has
- * `productive === true` (the existing flag in derivation.ts). Fresh
- * languages with `usageCount: 0` won't synthesise — matches generative
+ * Productivity gate: only productive affixes fire — matches generative
  * morphology + Pinker's "Words and Rules" view that productive rules
- * fire only after attestation.
+ * apply only after attestation.
  *
  * No caching: synthesis is recomputed on every call. Caching into
- * `lang.lexicon` would risk the "-er-er" pyramid in
- * `attemptProductiveDerivation` (`targetedDerivation.ts:112`'s
- * `m.includes("-")` skip) and would force sound-change to walk
+ * `lang.lexicon` would risk an "-er-er" pyramid via the genesis
+ * loop's `m.includes("-")` skip and would force sound-change to walk
  * speculative entries.
  *
- * Recursion: depth-1 only in this tranche. Depth-2 ("lighterness" →
- * light + -er + -ness) is reserved for T2.
+ * Recursion: depth-1 only. Depth-2 ("lighterness" → light + -er +
+ * -ness) is deferred per Phase 47 / Phase 49.
  */
 
 import type { Language, WordForm, Meaning } from "../types";
-import type { DerivationalSuffix } from "./derivation";
+import type { DerivationalSuffix, DerivationCategory } from "./derivation";
 import { CONCEPTS } from "./concepts";
 import { relatedMeanings } from "../semantics/clusters";
 import { frequencyFor } from "./frequency";
+import { parseEnglishAffix } from "../translator/englishAffixes";
+import { selectAffixForCategory } from "./affixSelector";
 
 export interface SynthesisResult {
   form: WordForm;
@@ -56,21 +59,37 @@ function smallLexiconEligible(lang: Language): boolean {
 }
 
 /**
- * Phase 47 T3: tags treated as negational prefixes. They fire on a
- * separate (later) resolveLemma rung from the standard agentive /
- * abstractive synthesis, so a stem-without-negation derivation always
- * wins when both could apply. Models the linguistic reality that
- * negational affixes are productive but more constrained than
- * deriving suffixes (English "unhappy" is real but rarer than primary
- * "sad").
+ * Phase 47 T3 / Phase 49: categories treated as negational. The two-
+ * pass synthesis at `resolveLemma` rungs 4 and 5 partitions on this
+ * set: rung 4 fires non-negational categories first, rung 5 fires
+ * negational only after non-negational returned null. Models the
+ * linguistic reality that negational affixes are productive but more
+ * constrained than deriving suffixes (English "unhappy" is real but
+ * rarer than primary "sad").
+ *
+ * Phase 49: replaces the per-tag `NEGATIONAL_TAGS` set — the
+ * partition is now category-based, so any language whose surface
+ * realisation of `negative` is e.g. a circumfix or a non-Latinate
+ * prefix correctly fires on the negational rung.
  */
-const NEGATIONAL_TAGS: ReadonlySet<string> = new Set([
-  "un-", "dis-", "non-", "in-", "anti-", "de-",
+const NEGATIONAL_CATEGORIES: ReadonlySet<DerivationCategory> = new Set<DerivationCategory>([
+  "negative",
 ]);
 
-function isNegationalTag(tag: string): boolean {
-  return NEGATIONAL_TAGS.has(tag);
+function isNegationalCategory(c: DerivationCategory | undefined): boolean {
+  return c !== undefined && NEGATIONAL_CATEGORIES.has(c);
 }
+
+/**
+ * Phase 49: legacy fallback list for the literal-tag path. Old
+ * presets / seedCompounds may reference tag strings like "un-" /
+ * "dis-" without a `category` field on the entry; we partition those
+ * by surface tag the way Phase 47 did. New seeded entries go through
+ * the category-driven path and ignore this list.
+ */
+const LEGACY_NEGATIONAL_TAGS: ReadonlySet<string> = new Set([
+  "un-", "dis-", "non-", "in-", "anti-", "de-",
+]);
 
 export type SynthesisMode = "non-neg" | "neg";
 
@@ -83,6 +102,12 @@ export type SynthesisMode = "non-neg" | "neg";
  *   "-ness" → "ness"
  *   "un-" → "un"
  *   "re-" → "re"
+ *
+ * @deprecated Phase 49: use `parseEnglishAffix` (in
+ * translator/englishAffixes.ts) for input-side dispatch and
+ * `selectAffixForCategory` for output-side selection. This helper is
+ * retained only for the legacy literal-tag fallback, which still
+ * resolves seedCompounds that reference tag strings directly.
  */
 function tagToEnglishForm(tag: string): string {
   return tag.replace(/^-|-$/g, "").replace(/\..+$/, "");
@@ -100,13 +125,18 @@ function affixPosition(suffix: { tag: string; position?: "prefix" | "suffix" }):
 }
 
 /**
- * Try to decompose `lemma` as stem + suffix, where the suffix is one
- * of the language's productive `derivationalSuffixes`. Returns null
- * when no decomposition fits.
+ * Try to decompose `lemma` into stem + recognised affix. Phase 49 runs
+ * the input through `parseEnglishAffix` (English-biased input dict)
+ * to get an abstract `DerivationCategory`, then asks the language's
+ * own affix table for the best-fitting realisation. When the parser
+ * doesn't recognise the lemma OR the language has no affix in the
+ * requested category, falls back to the Phase 47 literal-tag path
+ * for back-compat with seedCompounds and untyped (legacy) suffixes.
  *
- * Greedy longest-match: tries the longest English-orthographic suffix
- * first (e.g., "-ness" before "-er"). The first productive suffix
- * whose stripped lemma yields a stem present in the lexicon wins.
+ * The mode partitions:
+ *   - "non-neg" (rung 4): skips entries whose category is in
+ *     NEGATIONAL_CATEGORIES (legacy tags: LEGACY_NEGATIONAL_TAGS).
+ *   - "neg" (rung 5): only fires for those entries.
  */
 export function attemptMorphologicalSynthesis(
   lang: Language,
@@ -116,16 +146,53 @@ export function attemptMorphologicalSynthesis(
   const affixes = lang.derivationalSuffixes;
   if (!affixes || affixes.length === 0) return null;
 
-  // Sort productive affixes by english-orthographic length descending
-  // for greedy longest-match. Non-productive affixes are excluded
-  // entirely — matches generative-morphology theory. The mode
-  // partitions the productive set into negational vs non-negational:
-  //   - "non-neg" (rung 4): excludes NEGATIONAL_TAGS
-  //   - "neg" (rung 5): includes only NEGATIONAL_TAGS, fires after
-  //     non-neg returned null so negational prefixes are strictly rare.
+  // Phase 49: category-driven path. Recognise the affix on the input
+  // side, dispatch the realisation choice to the language's own
+  // table.
+  const parsed = parseEnglishAffix(lemma);
+  if (parsed) {
+    const isNeg = isNegationalCategory(parsed.category);
+    if ((mode === "neg") === isNeg) {
+      for (const candidateStem of parsed.candidateStems) {
+        const stemForm = lang.lexicon[candidateStem];
+        if (!stemForm || stemForm.length === 0) continue;
+        const picked = selectAffixForCategory(
+          lang, parsed.category, stemForm, parsed.position,
+        );
+        if (!picked) continue;
+        const form = picked.position === "suffix"
+          ? [...stemForm, ...picked.affix]
+          : [...picked.affix, ...stemForm];
+        const glossNote = picked.position === "suffix"
+          ? `${candidateStem} + ${picked.tag}`
+          : `${picked.tag} + ${candidateStem}`;
+        const parts = picked.position === "suffix"
+          ? [
+              { meaning: candidateStem, form: stemForm.slice() },
+              { meaning: picked.tag, form: picked.affix.slice() },
+            ]
+          : [
+              { meaning: picked.tag, form: picked.affix.slice() },
+              { meaning: candidateStem, form: stemForm.slice() },
+            ];
+        return {
+          form,
+          parts,
+          glossNote,
+          resolution: mode === "neg" ? "synth-neg-affix" : "synth-affix",
+        };
+      }
+    }
+  }
+
+  // Phase 47 legacy fallback: literal-tag matching. Productive affixes
+  // sorted by surface length descending for greedy longest-match.
+  // Mode partition uses LEGACY_NEGATIONAL_TAGS by tag string.
   const candidates = affixes
     .filter((s): s is DerivationalSuffix & { productive: true } => s.productive === true)
-    .filter((s) => mode === "neg" ? isNegationalTag(s.tag) : !isNegationalTag(s.tag))
+    .filter((s) => mode === "neg"
+      ? LEGACY_NEGATIONAL_TAGS.has(s.tag)
+      : !LEGACY_NEGATIONAL_TAGS.has(s.tag))
     .map((s) => ({
       affix: s,
       eng: tagToEnglishForm(s.tag),

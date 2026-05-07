@@ -13,6 +13,7 @@ import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
+import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { assignAllGenders } from "../morphology/gender";
 import { activeModulesOf } from "../modules/registry";
 import { classifyLexicon } from "../morphology/inflectionClass";
@@ -257,21 +258,40 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       // them up for productive coinage. usageCount starts above
       // threshold for preset-seeded morphemes — they're already
       // productive at language birth.
+      //
+      // Phase 49: when a tag with the same name already exists (e.g.
+      // `seedDerivationalSuffixes` randomly picked "-dom" first), the
+      // seeded entry takes precedence — the preset has the canonical
+      // phoneme form for the affix, and seed bound morphemes are
+      // explicitly productive at gen 0. Pre-49 the duplicate was
+      // silently skipped, leaving "-dom" with random phonemes and
+      // productive=false — the user-reported "waterdom doesn't work"
+      // bug stemmed from exactly this collision.
       const affix = rootLang.lexicon[m];
-      if (affix && affix.length > 0 && !rootLang.derivationalSuffixes.some((s) => s.tag === m)) {
+      if (affix && affix.length > 0) {
         // Phase 47 T2: detect position from tag shape. Tags ending
         // with "-" (e.g. "re-", "un-") are prefixes; otherwise default
         // to suffix (e.g. "-er.agt", "-ness"). Synthesis path uses
         // this to choose concatenation order.
+        const meta = lookupAffixMetaByTag(m);
         const position: "prefix" | "suffix" =
-          m.endsWith("-") && !m.startsWith("-") ? "prefix" : "suffix";
-        rootLang.derivationalSuffixes.push({
+          meta?.position
+          ?? (m.endsWith("-") && !m.startsWith("-") ? "prefix" : "suffix");
+        const existingIdx =
+          rootLang.derivationalSuffixes.findIndex((s) => s.tag === m);
+        const entry = {
           affix: affix.slice(),
           tag: m,
           position,
+          ...(meta?.category ? { category: meta.category } : {}),
           usageCount: 5,
           productive: true,
-        });
+        };
+        if (existingIdx >= 0) {
+          rootLang.derivationalSuffixes[existingIdx] = entry;
+        } else {
+          rootLang.derivationalSuffixes.push(entry);
+        }
       }
     }
   }

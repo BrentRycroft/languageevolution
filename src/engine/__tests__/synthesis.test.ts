@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
 import type { Language } from "../types";
-import type { DerivationalSuffix } from "../lexicon/derivation";
+import type { DerivationalSuffix, DerivationCategory } from "../lexicon/derivation";
+import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { presetTokipona } from "../presets/tokipona";
 import { createSimulation } from "../simulation";
 import { CONCEPTS } from "../lexicon/concepts";
@@ -46,22 +47,36 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   };
 }
 
-function suffix(tag: string, affix: string[], productive = true): DerivationalSuffix {
+function categoryForTag(tag: string): DerivationCategory {
+  return lookupAffixMetaByTag(tag)?.category ?? "agentive";
+}
+
+function suffix(
+  tag: string,
+  affix: string[],
+  productive = true,
+  category: DerivationCategory = categoryForTag(tag),
+): DerivationalSuffix {
   return {
     affix,
     tag,
-    category: "agentive",
+    category,
     position: "suffix",
     usageCount: productive ? 5 : 0,
     productive,
   };
 }
 
-function prefix(tag: string, affix: string[], productive = true): DerivationalSuffix {
+function prefix(
+  tag: string,
+  affix: string[],
+  productive = true,
+  category: DerivationCategory = categoryForTag(tag),
+): DerivationalSuffix {
   return {
     affix,
     tag,
-    category: "agentive",
+    category,
     position: "prefix",
     usageCount: productive ? 5 : 0,
     productive,
