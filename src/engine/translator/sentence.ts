@@ -1,5 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
-import { isRegisteredConcept, CONCEPTS, colexWith } from "../lexicon/concepts";
+import { isRegisteredConcept, colexWith } from "../lexicon/concepts";
 import { posOf } from "../lexicon/pos";
 import { closedClassForm } from "./closedClass";
 import { parseSyntaxAll } from "./parse";
@@ -9,6 +9,8 @@ import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
 import { attemptGracefulFallback } from "./gracefulFallback";
+import { isValidEnglishLemma } from "./englishWordlist";
+import { attemptAbstractPivot } from "./abstraction";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -587,6 +589,20 @@ function resolveLemma(
       };
     }
   }
+  // Phase 51 T2: abstract pivot — English → concept (cluster + POS) →
+  // target language. When a CONCEPTS-registered lemma has a
+  // semantically-adjacent meaning already lexicalised in the target
+  // language, prefer that over coining a fresh form. Fires only for
+  // basic/common-frequency concepts so rare-lemma vocabularies don't
+  // collapse onto cluster representatives.
+  const abstractPivot = attemptAbstractPivot(lang, lemma);
+  if (abstractPivot) {
+    return {
+      form: abstractPivot.form,
+      resolution: "fallback",
+      glossNote: abstractPivot.glossNote,
+    };
+  }
   // Phase 47 T1: on-demand morphological synthesis (non-negational).
   // If the lemma is not in the lexicon and not a registered compound,
   // attempt to decompose it into stem + recognised productive affix
@@ -662,37 +678,23 @@ function resolveLemma(
       }
     }
   }
-  const concept = CONCEPTS[lemma];
-  if (concept) {
-    let bestMatch: Meaning | null = null;
-    for (const otherId of Object.keys(lang.lexicon)) {
-      const otherConcept = CONCEPTS[otherId];
-      if (!otherConcept) continue;
-      if (otherConcept.cluster !== concept.cluster) continue;
-      if (otherConcept.pos !== concept.pos) continue;
-      bestMatch = otherId;
-      break;
-    }
-    if (bestMatch) {
-      return {
-        form: lang.lexicon[bestMatch]!.slice(),
-        resolution: "fallback",
-        glossNote: `* ${bestMatch}`,
-      };
-    }
-  }
-  // Phase 50 T3: graceful fallback — coin a fresh form from the
-  // language's own phonotactics + mechanism set so the translator
-  // never returns a hard `?` on a lemma the user actually typed. The
-  // form is written to the lexicon as a real coinage event; the next
-  // lookup hits Rung 1 (direct).
+  // Phase 51 T2: the concept-cousin "fallback" rung that previously
+  // sat here was promoted earlier (see attemptAbstractPivot). What
+  // remains as the truly-last resort is the synth-fallback rung.
+  // Phase 50 T3 + Phase 51 T1: graceful fallback — coin a fresh form
+  // from the language's own phonotactics + mechanism set so the
+  // translator never returns a hard `?` on a lemma the user actually
+  // typed. The form is written to the lexicon as a real coinage event;
+  // the next lookup hits Rung 1 (direct).
   //
-  // Skip closed-class function words: `be` and the auxiliaries, which
-  // some languages legitimately omit (zero-copula, particle-marked
-  // tense, etc.). The realise pipeline detects these from a null form
-  // and elides them — coining a content-form here would re-insert
-  // them where the language wants them dropped.
-  if (!FALLBACK_SKIP.has(lemma)) {
+  // Skip when:
+  //   - The lemma is closed-class (be / aux); some languages legitimately
+  //     omit them (zero-copula, particle-marked tense). The realiser
+  //     detects these from a null form and elides them.
+  //   - The lemma fails English-word validation (Phase 51 T1) — single
+  //     letters, keyboard mash, typos. These get the literal-quote
+  //     fallback instead of polluting the lexicon with a coined form.
+  if (!FALLBACK_SKIP.has(lemma) && isValidEnglishLemma(lemma)) {
     const fallbackGen = lang.events?.at(-1)?.generation ?? 0;
     const synthFallback = attemptGracefulFallback(lang, lemma, fallbackGen);
     if (synthFallback) {
