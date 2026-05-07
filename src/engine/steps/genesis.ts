@@ -8,6 +8,7 @@ import { isFormLegal } from "../phonology/wordShape";
 import { lexicalCapacity } from "../lexicon/tier";
 import { realismMultiplier } from "../phonology/rate";
 import { DERIVATION_TARGETS } from "../lexicon/derivation_targets";
+import { CONCEPTS } from "../lexicon/concepts";
 import { assignInflectionClass } from "../morphology/inflectionClass";
 import {
   attemptTargetedDerivation,
@@ -249,6 +250,19 @@ export function stepGenesis(
           from: s.donorMeaning,
           via: `←${s.donorLangId}`,
         };
+      }
+    }
+    // Phase 47 T11: opaque coinage. When the meaning is marked
+    // canBeOpaqueCoined in CONCEPTS (e.g., "dog", "boy", "girl",
+    // "wolf"), with ~15% probability the etymology chain gets
+    // overwritten with an "opaque-coined" marker. Models the
+    // linguistic reality that some words have no recoverable
+    // etymology (English "dog", "girl" — origins disputed/lost).
+    if (!isReplacement) {
+      const concept = CONCEPTS[outcome.meaning];
+      if (concept?.canBeOpaqueCoined && rng.chance(0.15)) {
+        if (!lang.wordOriginChain) lang.wordOriginChain = {};
+        lang.wordOriginChain[outcome.meaning] = { tag: "opaque-coined" };
       }
     }
     pushEvent(lang, {
