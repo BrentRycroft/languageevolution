@@ -71,23 +71,13 @@ function scoreCandidate(
   );
 }
 
-/**
- * Pick the productive affix in `lang.derivationalSuffixes` whose
- * concatenation with `stem` scores highest, restricted to the
- * requested category and position.
- *
- * Returns null when no productive affix exists in the category — the
- * caller should treat that as "this language can't realise this
- * derivation" and fall back to the next resolution rung.
- */
-export function selectAffixForCategory(
+function gatherCandidates(
   lang: Language,
   category: DerivationCategory,
-  stem: WordForm,
   position: "prefix" | "suffix",
-): { affix: WordForm; tag: string; position: "prefix" | "suffix" } | null {
+): AffixCandidate[] {
   const all = lang.derivationalSuffixes;
-  if (!all || all.length === 0) return null;
+  if (!all || all.length === 0) return [];
   const candidates: AffixCandidate[] = [];
   for (const s of all) {
     if (!s.affix || s.affix.length === 0) continue;
@@ -104,6 +94,25 @@ export function selectAffixForCategory(
       usageCount: s.usageCount ?? 0,
     });
   }
+  return candidates;
+}
+
+/**
+ * Pick the productive affix in `lang.derivationalSuffixes` whose
+ * concatenation with `stem` scores highest, restricted to the
+ * requested category and position.
+ *
+ * Returns null when no productive affix exists in the category — the
+ * caller should treat that as "this language can't realise this
+ * derivation" and fall back to the next resolution rung.
+ */
+export function selectAffixForCategory(
+  lang: Language,
+  category: DerivationCategory,
+  stem: WordForm,
+  position: "prefix" | "suffix",
+): { affix: WordForm; tag: string; position: "prefix" | "suffix" } | null {
+  const candidates = gatherCandidates(lang, category, position);
   if (candidates.length === 0) return null;
 
   let best: AffixCandidate | null = null;
@@ -117,4 +126,46 @@ export function selectAffixForCategory(
   }
   if (!best) return null;
   return { affix: best.affix.slice(), tag: best.tag, position: best.position };
+}
+
+/**
+ * Phase 53 T5: return ALL productive affixes in the category whose
+ * scores fall within `tolerance` of the winner. The caller treats them
+ * as conceptual synonyms and registers each on the resulting word as
+ * a synonym sense (via lexicon/mutate's `addSynonym`).
+ *
+ * Linguistic basis: Aronoff's allomorphy view — multiple
+ * realisations of the same conceptual category coexist within a
+ * language and are interchangeable in many contexts. English's
+ * `-ness` and `-ity` (both abstractNoun) are the canonical example;
+ * whether `light + abstractNoun` surfaces as `lightness` or `lightity`
+ * depends on register, context, and individual speaker choice. The
+ * simulator now models both as valid.
+ *
+ * Returned array is sorted descending by score. Cap at `maxResults`
+ * (default 3) so a language with many productive affixes per
+ * category doesn't bloat the lexicon with low-quality variants.
+ */
+export function selectAffixesForCategory(
+  lang: Language,
+  category: DerivationCategory,
+  stem: WordForm,
+  position: "prefix" | "suffix",
+  opts: { tolerance?: number; maxResults?: number } = {},
+): Array<{ affix: WordForm; tag: string; position: "prefix" | "suffix"; score: number }> {
+  const tolerance = opts.tolerance ?? 0.05;
+  const maxResults = opts.maxResults ?? 3;
+  const candidates = gatherCandidates(lang, category, position);
+  if (candidates.length === 0) return [];
+
+  const scored = candidates.map((c) => ({
+    affix: c.affix.slice(),
+    tag: c.tag,
+    position: c.position,
+    score: scoreCandidate(c, stem, lang),
+  }));
+  scored.sort((a, b) => b.score - a.score);
+  const winner = scored[0]!;
+  const cutoff = winner.score - tolerance;
+  return scored.filter((c) => c.score >= cutoff).slice(0, maxResults);
 }

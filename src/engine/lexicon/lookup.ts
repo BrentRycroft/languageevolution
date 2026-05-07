@@ -126,7 +126,18 @@ export function lookupFormWithResolution(
     };
   }
   // Rung 4 (Phase 47 T1): non-negational morphological synthesis.
-  const synthNonNeg = attemptMorphologicalSynthesis(lang, meaning, "non-neg");
+  // Phase 53 T5: when the lemma isn't in the lexicon AND the caller
+  // permits writes, also register synonym variants — multiple
+  // productive affixes in the same DerivationCategory produce
+  // synonymous realisations (e.g. -ness + -ity).
+  const allowSynonymRegistration =
+    allowFallback && !lang.lexicon[meaning];
+  const synthGen = lang.events?.at(-1)?.generation ?? 0;
+  const synthNonNeg = attemptMorphologicalSynthesis(lang, meaning, "non-neg",
+    allowSynonymRegistration
+      ? { registerSynonyms: { generation: synthGen } }
+      : {},
+  );
   if (synthNonNeg) {
     return {
       form: synthNonNeg.form,
@@ -135,7 +146,11 @@ export function lookupFormWithResolution(
     };
   }
   // Rung 5 (Phase 47 T3): negational synthesis.
-  const synthNeg = attemptMorphologicalSynthesis(lang, meaning, "neg");
+  const synthNeg = attemptMorphologicalSynthesis(lang, meaning, "neg",
+    allowSynonymRegistration
+      ? { registerSynonyms: { generation: synthGen } }
+      : {},
+  );
   if (synthNeg) {
     return {
       form: synthNeg.form,

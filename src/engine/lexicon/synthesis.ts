@@ -34,7 +34,8 @@ import { CONCEPTS } from "./concepts";
 import { relatedMeanings } from "../semantics/clusters";
 import { frequencyFor } from "./frequency";
 import { parseEnglishAffix } from "../translator/englishAffixes";
-import { selectAffixForCategory } from "./affixSelector";
+import { selectAffixForCategory, selectAffixesForCategory } from "./affixSelector";
+import { addSynonym, setLexiconForm } from "./mutate";
 
 export interface SynthesisResult {
   form: WordForm;
@@ -142,6 +143,18 @@ export function attemptMorphologicalSynthesis(
   lang: Language,
   lemma: string,
   mode: SynthesisMode = "non-neg",
+  opts: {
+    /**
+     * Phase 53 T5: when set, also register every viable affix variant
+     * (within tolerance of the winning score) on the language's word
+     * list as a synonym. Realises the user's "affixes synonymous via
+     * the abstract concept system" requirement: a language with both
+     * `-ness` and `-ity` for abstractNoun produces both `kindness`
+     * and `kindity`, attached to the same meaning. Caller must supply
+     * the current generation for the synonym's bornGeneration.
+     */
+    registerSynonyms?: { generation: number };
+  } = {},
 ): SynthesisResult | null {
   const affixes = lang.derivationalSuffixes;
   if (!affixes || affixes.length === 0) return null;
@@ -175,6 +188,44 @@ export function attemptMorphologicalSynthesis(
               { meaning: picked.tag, form: picked.affix.slice() },
               { meaning: candidateStem, form: stemForm.slice() },
             ];
+        // Phase 53 T5: register synonym variants when caller asks.
+        // Multiple affixes in the same category → multiple valid
+        // realisations; user's mental model has them as conceptual
+        // synonyms. Writes the primary form to lang.lexicon so
+        // addSynonym can attach the alternates (addSynonym requires
+        // the meaning to be lexicalised first).
+        if (opts.registerSynonyms) {
+          const variants = selectAffixesForCategory(
+            lang, parsed.category, stemForm, parsed.position,
+          );
+          if (variants.length > 1) {
+            // Multiple viable realisations — commit the primary so
+            // alternates can attach as synonyms. Skip if a single
+            // winner; standard synth-affix path remains side-effect-
+            // free for those.
+            setLexiconForm(lang, lemma, form, {
+              bornGeneration: opts.registerSynonyms.generation,
+              origin: "synth-affix",
+              // Phase 53 T4 + T5: structural etymology on the new
+              // primary entry — base meaning + affix tag.
+              morphStructure: {
+                origin: "derivation",
+                base: candidateStem,
+                affix: picked.tag,
+              },
+            });
+            for (const variant of variants) {
+              if (variant.tag === picked.tag) continue;
+              const synonymForm = variant.position === "suffix"
+                ? [...stemForm, ...variant.affix]
+                : [...variant.affix, ...stemForm];
+              addSynonym(lang, lemma, synonymForm, {
+                bornGeneration: opts.registerSynonyms.generation,
+                origin: "synth-affix-synonym",
+              });
+            }
+          }
+        }
         return {
           form,
           parts,
