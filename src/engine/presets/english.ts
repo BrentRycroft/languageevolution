@@ -845,6 +845,43 @@ export function presetEnglish(): SimulationConfig {
     },
     seedBoundMorphemes: BOUND_MORPHEMES,
     seedPhonemeTarget: 44,
+    // Phase 46a-migration: declare the canonical English module set.
+    // Word-order is now module-owned (the realiser reads `meta.order`
+    // from the active wordOrder module instead of dispatching
+    // `sliceOrder` directly). When `lang.grammar.wordOrder` drifts at
+    // runtime, `steps/grammar.ts` swaps the active module to track
+    // the new order. Other modules in this list remain pass-through
+    // stubs until their own migration lands.
+    seedActiveModules: [
+      "semantic:lexicon",
+      "semantic:clusters",
+      "semantic:frequency",
+      "semantic:synonymy",
+      "semantic:colexification",
+      "semantic:borrowing",
+      "semantic:calque",
+      "semantic:reborrow",
+      "semantic:taboo",
+      "semantic:coinage",
+      "syntactical:wordOrder/svo",
+      "syntactical:alignment/nom-acc",
+      "syntactical:adj-placement",
+      "syntactical:poss-placement",
+      "syntactical:num-placement",
+      "syntactical:neg-placement",
+      "syntactical:relativiser",
+      "syntactical:coordination",
+      "grammatical:articles",
+      "grammatical:number-system",
+      "grammatical:aspect",
+      "grammatical:reference-tracking",
+      "grammatical:numerals",
+      "grammatical:demonstratives",
+      "morphological:paradigms",
+      "morphological:derivation",
+      "morphological:inflection-class",
+      "morphological:analogy",
+    ],
     preset: "english",
   };
 }

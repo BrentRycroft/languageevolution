@@ -10,6 +10,7 @@ import type { NP, PP, Sentence, VP } from "./syntax";
 import { sliceOrder } from "./wordOrder";
 import { runRealiseStage } from "./pipeline";
 import { classifierMeaningFor } from "./classifiers";
+import { isFeatureActive } from "../modules/legacyGate";
 
 export interface RealisedToken {
   surface: string;
@@ -49,8 +50,27 @@ export function realiseSentence(
   const alignment = lang.grammar.alignment ?? "nom-acc";
   const obj = s.predicate.object;
   const transitive = !!obj;
-  const subjectCaseSlot: import("../morphology/types").MorphCategory | null = alignmentSubjectCase(alignment, transitive);
-  const objectCaseSlot: import("../morphology/types").MorphCategory | null = alignmentObjectCase(alignment, transitive);
+  // Phase 46a-migration: resolve-alignment stage. Active alignment
+  // module writes ctx.subjectCaseSlot + ctx.objectCaseSlot. When no
+  // alignment module is active, the legacy switch is the fallback.
+  const alignMeta: {
+    stage: string;
+    transitive: boolean;
+    subjectCaseSlot?: import("../morphology/types").MorphCategory | null;
+    objectCaseSlot?: import("../morphology/types").MorphCategory | null;
+  } = { stage: "resolve-alignment", transitive };
+  runRealiseStage("resolve-alignment", lang, {
+    data: { sentence: s },
+    meta: alignMeta,
+  });
+  const subjectCaseSlot: import("../morphology/types").MorphCategory | null =
+    alignMeta.subjectCaseSlot !== undefined
+      ? alignMeta.subjectCaseSlot
+      : alignmentSubjectCase(alignment, transitive);
+  const objectCaseSlot: import("../morphology/types").MorphCategory | null =
+    alignMeta.objectCaseSlot !== undefined
+      ? alignMeta.objectCaseSlot
+      : alignmentObjectCase(alignment, transitive);
 
   // Phase 37: per-sentence synonym-rotation tracker. Each NP picks
   // a synonym for its head meaning; the tracker prevents the same
@@ -119,14 +139,18 @@ export function realiseSentence(
     ];
   const subjectFinal = dropSubject ? [] : subject;
 
-  // Phase 41c: stage hook — order-tokens. A wordOrder module can
-  // override the static sliceOrder dispatch. Falls through to legacy
-  // when no module is registered.
+  // Phase 46a-migration: order-tokens stage. Each wordOrder module
+  // (svo / sov / vso / vos / ovs / osv / free) writes the canonical
+  // S/V/O sequence into `meta.order`. When no module is active,
+  // fall through to the legacy `sliceOrder` dispatch.
+  const orderMeta: { stage: string; order?: Array<"S" | "V" | "O"> } = {
+    stage: "order-tokens",
+  };
   runRealiseStage("order-tokens", lang, {
     data: { sentence: s, subject, verbTokens, objectTokens, predPpTokens },
-    meta: { stage: "order-tokens" },
+    meta: orderMeta,
   });
-  const order = sliceOrder(lang.grammar.wordOrder);
+  const order = orderMeta.order ?? sliceOrder(lang.grammar.wordOrder);
   const isVFinal = order[order.length - 1] === "V";
   const slot: Record<"S" | "V" | "O", RealisedToken[]> = {
     S: subjectFinal,
@@ -157,7 +181,13 @@ export function realiseSentence(
   }
   if (s.leadingConj) {
     const isAnd = s.leadingConj.lemma === "and";
-    const dropForSVC = isAnd && !!lang.grammar.serialVerbConstructions;
+    // Phase 46a-migration: serial-verb decides whether to drop the
+    // conjunction. Module-aware languages: presence of the module
+    // signals "drop"; legacy languages keep reading the flat flag.
+    const svcActive = lang.activeModules instanceof Set
+      ? lang.activeModules.has("syntactical:serial-verb")
+      : !!lang.grammar.serialVerbConstructions;
+    const dropForSVC = isAnd && svcActive;
     if (!dropForSVC) {
       const cf = closedClassForm(lang, s.leadingConj.lemma) ?? [];
       if (cf.length > 0) {
@@ -302,21 +332,28 @@ function realiseNP(
     const p = lang.morphology.paradigms[cat];
     if (p) headForm = inflect(headForm, p, lang, meaning);
   }
-  if (np.head.number === "pl" && lang.grammar.pluralMarking === "affix") {
-    const p = lang.morphology.paradigms["noun.num.pl"];
-    if (p) headForm = inflect(headForm, p, lang, meaning);
-  } else if (np.head.number === "pl" && lang.grammar.pluralMarking === "reduplication") {
-    headForm = reduplicate(headForm, "partial-initial");
+  if (np.head.number === "pl" &&
+      isFeatureActive(lang, "grammatical:number-system",
+        l => !!l.grammar.numberSystem || (!!l.grammar.pluralMarking && l.grammar.pluralMarking !== "none"))) {
+    if (lang.grammar.pluralMarking === "affix") {
+      const p = lang.morphology.paradigms["noun.num.pl"];
+      if (p) headForm = inflect(headForm, p, lang, meaning);
+    } else if (lang.grammar.pluralMarking === "reduplication") {
+      headForm = reduplicate(headForm, "partial-initial");
+    }
   }
   let caseSlot: import("../morphology/types").MorphCategory | null = null;
   if (role === "POSS") caseSlot = "noun.case.gen";
   else if (role === "S") caseSlot = ctx.subjectCaseSlot ?? null;
   else if (role === "O") caseSlot = ctx.objectCaseSlot ?? (np.head.case === "acc" ? "noun.case.acc" : null);
-  if (caseSlot && lang.grammar.hasCase) {
+  if (caseSlot &&
+      isFeatureActive(lang, "grammatical:case-marking",
+        l => !!l.grammar.hasCase || l.grammar.caseStrategy === "case")) {
     const p = lang.morphology.paradigms[caseSlot];
     if (p) headForm = inflect(headForm, p, lang, meaning);
   }
-  if (np.determiner && (np.determiner.lemma === "the" || np.determiner.lemma === "a" || np.determiner.lemma === "an")) {
+  if (np.determiner && (np.determiner.lemma === "the" || np.determiner.lemma === "a" || np.determiner.lemma === "an") &&
+      isFeatureActive(lang, "grammatical:articles", l => l.grammar.articlePresence !== "none")) {
     const articleLemma = np.determiner.lemma === "an" ? "a" : np.determiner.lemma;
     const af = closedClassForm(lang, articleLemma) ?? [];
     // Phase 39j: enclitic/proclitic attach as adjacent-but-stretched
@@ -343,16 +380,25 @@ function realiseNP(
   if (np.determiner) {
     const lemma = np.determiner.lemma;
     if (lemma === "the" || lemma === "a" || lemma === "an") {
-      if (ctx.articlePresence === "free") {
+      // Phase 46a-migration: free-article DET emission gated on the
+      // articles module. When the module isn't active, fall back to
+      // the legacy `articlePresence === "free"` check.
+      if (ctx.articlePresence === "free" &&
+          isFeatureActive(lang, "grammatical:articles", l => l.grammar.articlePresence !== "none")) {
         const af = closedClassForm(lang, lemma === "an" ? "a" : lemma) ?? [];
         if (af.length > 0) {
           detTokens.push({ surface: af.join(""), form: af, english: lemma, role: "DET" });
         }
       }
     } else {
-      const df = closedClassForm(lang, lemma) ?? [];
-      if (df.length > 0) {
-        detTokens.push({ surface: df.join(""), form: df, english: lemma, role: "DET" });
+      // Demonstratives + other determiners — gated on the
+      // demonstratives module presence (everything that's not "the/a/an"
+      // is a demonstrative-class lemma).
+      if (isFeatureActive(lang, "grammatical:demonstratives", () => true)) {
+        const df = closedClassForm(lang, lemma) ?? [];
+        if (df.length > 0) {
+          detTokens.push({ surface: df.join(""), form: df, english: lemma, role: "DET" });
+        }
       }
     }
   }
@@ -476,6 +522,13 @@ function attachRelativeClause(
 ): RealisedToken[] {
   const rc = np.relative;
   if (!rc) return npTokens;
+  // Phase 46a-migration: relative-clause attachment gated on the
+  // relativiser module. Legacy fallback: always attach (the
+  // pre-migration default strategy was "relativizer" if undefined,
+  // so the previous code path always emitted a relative clause).
+  if (!isFeatureActive(lang, "syntactical:relativiser", () => true)) {
+    return npTokens;
+  }
   const strategy = lang.grammar.relativeClauseStrategy ?? "relativizer";
 
   const stripped: NP = { ...np, relative: undefined };
@@ -649,7 +702,10 @@ function realiseVerb(
     vp.verb.aspect === "habitual" ? "verb.aspect.hab" :
     vp.verb.aspect === "perfect" && useSyntheticPerfect ? "verb.aspect.perf" :
     vp.verb.aspect === "prospective" ? "verb.aspect.prosp" : null;
-  if (aspectCat) stack.push(aspectCat);
+  if (aspectCat &&
+      isFeatureActive(lang, "grammatical:aspect", l => (l.grammar.aspectMarking ?? "none") !== "none")) {
+    stack.push(aspectCat);
+  }
   const moodCat: MorphCategory | null =
     vp.verb.mood === "subjunctive" ? "verb.mood.subj" :
     vp.verb.mood === "imperative" ? "verb.mood.imp" :
@@ -659,11 +715,14 @@ function realiseVerb(
     vp.verb.mood === "irrealis" ? "verb.mood.irr" :
     vp.verb.mood === "dubitative" ? "verb.mood.dub" :
     vp.verb.mood === "hortative" ? "verb.mood.hort" : null;
-  if (moodCat) stack.push(moodCat);
+  if (moodCat && isFeatureActive(lang, "grammatical:mood", l => (l.grammar.moodMarking ?? "declarative") !== "declarative")) {
+    stack.push(moodCat);
+  }
   if (vp.verb.voice === "passive") stack.push("verb.voice.pass");
 
   const evidMode = lang.grammar.evidentialMarking ?? "none";
-  if (evidMode !== "none" && vp.verb.evidential) {
+  if (vp.verb.evidential &&
+      isFeatureActive(lang, "grammatical:evidentials", l => (l.grammar.evidentialMarking ?? "none") !== "none")) {
     const evidCat: MorphCategory | null =
       vp.verb.evidential === "direct" ? "verb.evid.dir" :
       vp.verb.evidential === "reportative" ? "verb.evid.rep" :
@@ -673,11 +732,13 @@ function realiseVerb(
     }
   }
 
-  if (vp.verb.honorific && lang.grammar.politenessRegister && lang.grammar.politenessRegister !== "none") {
+  if (vp.verb.honorific &&
+      isFeatureActive(lang, "grammatical:politeness", l => !!l.grammar.politenessRegister && l.grammar.politenessRegister !== "none")) {
     stack.push("verb.honor.formal");
   }
 
-  if (lang.grammar.classifierSystem) {
+  if (lang.grammar.classifierSystem &&
+      isFeatureActive(lang, "morphological:inflection-class", l => !!l.grammar.classifierSystem)) {
     const matchPdm = lang.morphology.paradigms["verb.cls.match"];
     if (matchPdm) stack.push("verb.cls.match");
   }
@@ -686,7 +747,8 @@ function realiseVerb(
   // a matching `verb.cls.N` paradigm exists, push that category onto
   // the inflection stack so the verb prefixes the agreement marker.
   const subjClass = vp.subjectNounClass;
-  if (subjClass !== undefined) {
+  if (subjClass !== undefined &&
+      isFeatureActive(lang, "morphological:agreement", l => !!l.nounClassAssignments && Object.keys(l.nounClassAssignments).length > 0)) {
     const cat = `verb.cls.${subjClass}` as MorphCategory;
     if (lang.morphology.paradigms[cat]) stack.push(cat);
   }
@@ -696,7 +758,8 @@ function realiseVerb(
   const refTrack = lang.grammar.referenceTracking ?? "none";
   if (
     (refTrack === "switch-reference" || refTrack === "both") &&
-    vp.subordSubjectCoreference !== undefined
+    vp.subordSubjectCoreference !== undefined &&
+    isFeatureActive(lang, "grammatical:reference-tracking", l => (l.grammar.referenceTracking ?? "none") !== "none")
   ) {
     const cat = vp.subordSubjectCoreference === "same" ? "verb.subord.ss" : "verb.subord.ds";
     if (lang.morphology.paradigms[cat]) stack.push(cat);

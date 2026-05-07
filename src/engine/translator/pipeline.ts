@@ -55,7 +55,7 @@ export function runRealiseStage(
   lang: Language,
   payload: PipelinePayload,
 ): PipelinePayload {
-  if (!lang.activeModules || lang.activeModules.size === 0) return payload;
+  if (!lang.activeModules || !(lang.activeModules instanceof Set) || lang.activeModules.size === 0) return payload;
   if (!lang.moduleState) return payload;
   const modules = activeModulesOf(lang);
   let current = payload;

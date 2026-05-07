@@ -1,13 +1,14 @@
 /**
- * Phase 43b: nominative-accusative alignment module.
+ * Phase 43b / 46a-migration: nominative-accusative alignment module.
  *
- * Owns the `alignment === "nom-acc"` branch. S and A get nominative,
- * O gets accusative — the default for English, Latin, Greek,
- * Romance, Germanic, Slavic, most IE descendants.
+ * Owns S/A/O case-slot resolution under nom-acc alignment. S and A
+ * get nominative (no overt slot in the simulator), O gets accusative.
  *
- * Currently legacy in `realise.ts:218-251`
- * (`alignmentSubjectCase` / `alignmentObjectCase`). This module is
- * the canonical owner once Phase 46a removes the legacy switch.
+ * Realise hook writes `ctx.subjectCaseSlot` + `ctx.objectCaseSlot`.
+ * `meta.transitive` is read off ctx (the realiser sets it before
+ * dispatching). The realiser uses these values; the legacy
+ * `alignmentSubjectCase`/`alignmentObjectCase` switch is the
+ * back-compat fallback.
  */
 
 import { registerModule } from "../../registry";
@@ -17,7 +18,11 @@ const nomAccModule: SimulationModule = {
   id: "syntactical:alignment/nom-acc",
   kind: "syntactical",
   realiseStage: "resolve-alignment",
-  realise(input) {
+  realise(input, _lang, _state, ctx) {
+    const c = ctx as Record<string, unknown>;
+    const transitive = !!c.transitive;
+    c.subjectCaseSlot = null;
+    c.objectCaseSlot = transitive ? "noun.case.acc" : null;
     return input;
   },
 };

@@ -269,7 +269,7 @@ export function createSimulation(
       // the active set are skipped entirely (the perf win).
       // Phases 42-45 progressively replace legacy step calls above
       // with module hooks here.
-      if (lang.activeModules && lang.moduleState) {
+      if (lang.activeModules instanceof Set && lang.moduleState) {
         const ctx = { generation: nextGen, rng, config, state };
         for (const m of activeModulesOf(lang)) {
           if (!m.step) continue;

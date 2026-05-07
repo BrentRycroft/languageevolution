@@ -56,6 +56,34 @@ export function registerSyntacticalModules(): void {
   registerSerialVerbModule();
 }
 
+/**
+ * Phase 46a-migration: map a `Language.grammar.wordOrder` value to
+ * the canonical module id. Used by `grammar/evolve.ts` to swap the
+ * active wordOrder module when drift flips the legacy field.
+ */
+export function wordOrderModuleId(
+  wo: "SOV" | "SVO" | "VSO" | "VOS" | "OVS" | "OSV",
+): string {
+  switch (wo) {
+    case "SOV": return "syntactical:wordOrder/sov";
+    case "SVO": return "syntactical:wordOrder/svo";
+    case "VSO": return "syntactical:wordOrder/vso";
+    case "VOS": return "syntactical:wordOrder/vos";
+    case "OVS": return "syntactical:wordOrder/ovs";
+    case "OSV": return "syntactical:wordOrder/osv";
+  }
+}
+
+export const WORD_ORDER_MODULE_IDS: ReadonlySet<string> = new Set([
+  "syntactical:wordOrder/sov",
+  "syntactical:wordOrder/svo",
+  "syntactical:wordOrder/vso",
+  "syntactical:wordOrder/vos",
+  "syntactical:wordOrder/ovs",
+  "syntactical:wordOrder/osv",
+  "syntactical:wordOrder/free",
+]);
+
 export const SYNTACTICAL_MODULE_IDS = [
   "syntactical:wordOrder/sov",
   "syntactical:wordOrder/svo",

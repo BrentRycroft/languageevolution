@@ -20,6 +20,9 @@ import { maybeReanalyse } from "../lexicon/reanalysis";
 import { maybeSpawnSynonym, maybeSuppressHomonym, maybeReplacePrimary } from "../lexicon/synonyms";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
+import { activateModule, deactivateModule } from "../modules/registry";
+import { wordOrderModuleId, WORD_ORDER_MODULE_IDS } from "../modules/syntactical";
+import { isFeatureActive } from "../modules/legacyGate";
 
 export function stepGrammar(
   lang: Language,
@@ -56,6 +59,19 @@ export function stepGrammar(
       kind: "grammar_shift",
       description: `${orderShift.feature}: ${String(orderShift.from)} → ${String(orderShift.to)}`,
     });
+    // Phase 46a-migration: swap the active wordOrder module so the
+    // realiser tracks the new order. Idempotent; only fires when
+    // the language is module-aware.
+    if (lang.activeModules instanceof Set) {
+      const fromId = wordOrderModuleId(orderShift.from as Language["grammar"]["wordOrder"]);
+      const toId = wordOrderModuleId(orderShift.to as Language["grammar"]["wordOrder"]);
+      if (fromId !== toId) {
+        for (const id of WORD_ORDER_MODULE_IDS) {
+          if (id !== toId) deactivateModule(lang, id);
+        }
+        activateModule(lang, toId, { generation, rng, config });
+      }
+    }
   }
   // Soft typological-consistency repair: low-probability nudge of features
   // that violate well-attested implicational universals.
@@ -184,7 +200,9 @@ export function stepMorphology(
     }
   }
   // Phase 36 Tranche 36h: derivational morpheme replacement.
-  if (lang.boundMorphemes && lang.boundMorphemes.size >= 2) {
+  if (lang.boundMorphemes && lang.boundMorphemes.size >= 2 &&
+      isFeatureActive(lang, "morphological:derivation",
+        l => !!(l.boundMorphemes && l.boundMorphemes.size > 0) || !!(l.compounds && Object.keys(l.compounds).length > 0))) {
     const repl = maybeAffixReplacement(lang, rng, 0.002 * lang.conservatism * gramMult);
     if (repl) {
       const origin = lang.boundMorphemeOrigin?.[repl.meaning];
@@ -200,7 +218,9 @@ export function stepMorphology(
   // Phase 36 Tranche 36s: back-formation. When a fossilised compound
   // ends in a recognised productive bound morpheme, speakers may
   // re-extract the base as a new lexeme (editor → edit pattern).
-  if (lang.compounds && lang.boundMorphemes && lang.boundMorphemes.size > 0) {
+  if (lang.compounds && lang.boundMorphemes && lang.boundMorphemes.size > 0 &&
+      isFeatureActive(lang, "morphological:derivation",
+        l => !!(l.boundMorphemes && l.boundMorphemes.size > 0) || !!(l.compounds && Object.keys(l.compounds).length > 0))) {
     const bf = maybeBackformation(lang, rng, 0.001 * lang.conservatism * gramMult);
     if (bf) {
       pushEvent(lang, {
@@ -216,12 +236,10 @@ export function stepMorphology(
   // (mirroring English house/abode, big/large). Tier-scaled — higher
   // tiers spawn synonyms more readily because of literacy and prestige
   // pressures.
-  {
+  // Phase 46a-migration: synonym genesis gated on the synonymy module.
+  // Legacy fallback: always on (synonym genesis was unconditional).
+  if (isFeatureActive(lang, "semantic:synonymy", () => true)) {
     const tier = (lang.culturalTier ?? 0) as 0 | 1 | 2 | 3;
-    // Phase 39b: tripled from 0.003 to 0.009 — real diachrony has
-    // more lexical replacement than sound-change erosion. Combined
-    // with the 0.4→0.25 GENERATION_RATE_SCALE cut, the synonym/erosion
-    // ratio shifts from ~3:97 toward ~60:40 (matching real proportion).
     const synRate = 0.009 * (1 + tier) * lang.conservatism * gramMult;
     const synEvent = maybeSpawnSynonym(lang, rng, synRate);
     if (synEvent) {
@@ -237,13 +255,7 @@ export function stepMorphology(
   // meanings share a form AND the loser has a synonym, swap the
   // loser to its synonym. Slower than spawn so synonyms accrete
   // before suppression vacates them.
-  {
-    // Phase 39b: quadrupled from 0.002 to 0.008 — homonym swaps now
-    // happen visibly, modelling real synonym-takes-over-from-homonym.
-    // Phase 39 calibration pass: trimmed 0.008 → 0.003. Real homonyms
-    // persist for centuries (English bank/bank still distinct after
-    // 600 yrs). 0.008/gen gave 80% cumulative suppression over 200
-    // gens — too aggressive. 0.003 → ~45% over 200 gens matches.
+  if (isFeatureActive(lang, "semantic:synonymy", () => true)) {
     const supEvent = maybeSuppressHomonym(lang, rng, 0.003 * lang.conservatism * gramMult);
     if (supEvent) {
       pushEvent(lang, {
@@ -257,11 +269,7 @@ export function stepMorphology(
   // Phase 39b: stylistic-preference primary swap. Low-rate (0.4%/gen)
   // promotion of an existing synonym to primary, demoting old form
   // to synonym slot. Models real cross-generational lexical shifts.
-  {
-    // Phase 39 calibration: 0.004 → 0.002. At 25y/gen, primary swaps
-    // happen at most once per word per millennium. 0.004/gen
-    // (one swap per ~250 yrs at the language level) was OK; trim
-    // slightly so it doesn't dominate over true sound-change drift.
+  if (isFeatureActive(lang, "semantic:synonymy", () => true)) {
     const repEvent = maybeReplacePrimary(lang, rng, 0.002 * lang.conservatism * gramMult);
     if (repEvent) {
       pushEvent(lang, {
@@ -274,7 +282,7 @@ export function stepMorphology(
   }
   const analogyRate =
     (config.morphology.analogyProbability ?? 0) * lang.conservatism;
-  if (analogyRate > 0) {
+  if (analogyRate > 0 && isFeatureActive(lang, "morphological:analogy", () => true)) {
     const ana = maybeAnalogicalLevel(lang, rng, analogyRate);
     if (ana) {
       pushEvent(lang, {
@@ -296,7 +304,9 @@ export function stepMorphology(
     }
   }
   const reanalysisRate = 0.004 * lang.conservatism * gramMult;
-  if (reanalysisRate > 0) {
+  if (reanalysisRate > 0 &&
+      isFeatureActive(lang, "morphological:derivation",
+        l => !!(l.boundMorphemes && l.boundMorphemes.size > 0) || !!(l.compounds && Object.keys(l.compounds).length > 0))) {
     const ev = maybeReanalyse(lang, rng, reanalysisRate);
     if (ev) {
       pushEvent(lang, {

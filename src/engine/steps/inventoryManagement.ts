@@ -10,6 +10,7 @@ import { disambiguateCoreCollisions } from "../lexicon/disambiguate";
 import { updateCompounds } from "../lexicon/compound";
 import { tryUniverbation } from "../lexicon/univerbation";
 import { pushEvent } from "./helpers";
+import { isFeatureActive } from "../modules/legacyGate";
 
 /**
  * Phase 28a: unified inventory-management step. Combines what used to
@@ -250,7 +251,11 @@ export function stepInventoryManagement(
   // pruning + collision repair so any drift in the parts propagates
   // to the compound surface AND the disambiguator sees the up-to-
   // date forms.
-  const compoundUpdate = updateCompounds(lang, rng, generation);
+  // Phase 46a-migration: compound update gated on derivation module.
+  const compoundUpdate = isFeatureActive(lang, "morphological:derivation",
+    l => !!(l.boundMorphemes && l.boundMorphemes.size > 0) || !!(l.compounds && Object.keys(l.compounds).length > 0))
+    ? updateCompounds(lang, rng, generation)
+    : { recomposed: 0, fossilized: 0 };
   if (compoundUpdate.fossilized > 0) {
     pushEvent(lang, {
       generation,

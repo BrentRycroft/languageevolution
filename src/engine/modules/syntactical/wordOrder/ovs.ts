@@ -12,7 +12,8 @@ const ovsModule: SimulationModule = {
   id: "syntactical:wordOrder/ovs",
   kind: "syntactical",
   realiseStage: "order-tokens",
-  realise(input) {
+  realise(input, _lang, _state, ctx) {
+    (ctx as Record<string, unknown>).order = ["O", "V", "S"];
     return input;
   },
 };

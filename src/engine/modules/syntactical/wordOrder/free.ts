@@ -19,7 +19,18 @@ const freeModule: SimulationModule = {
   id: "syntactical:wordOrder/free",
   kind: "syntactical",
   realiseStage: "order-tokens",
-  realise(input) {
+  realise(input, lang, _state, ctx) {
+    // Free word order: fall back to whatever `lang.grammar.wordOrder`
+    // declares as the surface default. Pragmatic-driven reordering
+    // is out of scope here.
+    const wo = lang.grammar.wordOrder;
+    (ctx as Record<string, unknown>).order =
+      wo === "SOV" ? ["S", "O", "V"]
+      : wo === "VSO" ? ["V", "S", "O"]
+      : wo === "VOS" ? ["V", "O", "S"]
+      : wo === "OVS" ? ["O", "V", "S"]
+      : wo === "OSV" ? ["O", "S", "V"]
+      : ["S", "V", "O"];
     return input;
   },
 };
