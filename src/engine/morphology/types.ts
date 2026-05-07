@@ -98,12 +98,66 @@ export interface ParadigmVariant {
   affix: Phoneme[];
 }
 
+/**
+ * Phase 52 T2: paradigm kind discriminator. Pre-Phase-52 the engine
+ * supported only concatenative `affix` (prefix/suffix) paradigms.
+ * Adding kinds extends `applyParadigm` (`morphology/apply.ts`) without
+ * any caller change — translator + narrative go through the
+ * abstraction layer (Phase 52 T1), so a new paradigm kind is invisible
+ * to them.
+ *
+ * - `affix`: prefix or suffix concatenation (legacy default).
+ * - `infix`: insert affix into the stem at `insertionPoint`. Tagalog
+ *   `-um-` (sulat → sumulat).
+ * - `circumfix`: split affix into prefix + suffix halves, separated
+ *   by `_`. German `ge_t` (kauf → gekauft).
+ * - `reduplicate`: full / partial-initial / partial-final copy of
+ *   the stem (Bantu, Austronesian).
+ * - `ablaut`: vowel mutation per `ablautMap`. Strong-verb sing → sang.
+ * - `template`: Semitic root + CV template. k-t-b + CaCiC → katib.
+ * - `conversion`: identity transformation; zero-derivation.
+ */
+export type ParadigmKind =
+  | "affix"
+  | "infix"
+  | "circumfix"
+  | "reduplicate"
+  | "ablaut"
+  | "template"
+  | "conversion";
+
+export type ParadigmInsertionPoint =
+  | "after-first-V"
+  | "before-last-V"
+  | "before-last-C";
+
+export type ParadigmReduplicationMode =
+  | "full"
+  | "partial-initial"
+  | "partial-final";
+
 export interface Paradigm {
   affix: Phoneme[];
   position: "prefix" | "suffix";
   category: MorphCategory;
   variants?: ParadigmVariant[];
   source?: { meaning: string; pathway: string };
+  // Phase 52 T2: optional kind discriminator. Defaults to `"affix"` for
+  // back-compat with every save / preset shipped before Phase 52.
+  kind?: ParadigmKind;
+  // Used by `kind: "infix"` to declare where the affix is spliced.
+  insertionPoint?: ParadigmInsertionPoint;
+  // Used by `kind: "circumfix"`: the affix is split on the literal
+  // `_` separator — `["g","e","_","t"]` means prefix `ge` + suffix `t`.
+  // Falls back to using the whole affix as prefix if no separator.
+  // Used by `kind: "reduplicate"`: which mode to apply.
+  reduplication?: ParadigmReduplicationMode;
+  // Used by `kind: "ablaut"`: replace each occurrence of key with value.
+  ablautMap?: Record<string, string>;
+  // Used by `kind: "template"`: Semitic-style CV template, `C` slots
+  // filled by root consonants, `V` slots by `templateVowel` (or `i`).
+  templatePattern?: string;
+  templateVowel?: string;
 }
 
 export interface Morphology {

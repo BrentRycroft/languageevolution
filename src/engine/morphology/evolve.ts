@@ -4,8 +4,7 @@ import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargets } from "../semantics/grammaticalization";
 import { posOf, isClosedClass } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
-import { harmonizeAffix } from "./harmony";
-import { genderOf } from "./gender";
+import { applyParadigm, isVowelLike } from "./apply";
 
 export interface MorphShift {
   kind: "affix_erode" | "category_merge" | "grammaticalization";
@@ -440,13 +439,10 @@ export function inflect(
   if (lang && lang.activeModules instanceof Set && !lang.activeModules.has("morphological:paradigms")) {
     return base;
   }
-  let affix = pickAffixVariant(paradigm, base, lang, meaning);
-  if (lang?.grammar.harmony && lang.grammar.harmony !== "none") {
-    affix = harmonizeAffix(affix, base, lang.grammar.harmony);
-  }
-  return paradigm.position === "prefix"
-    ? [...affix, ...base]
-    : [...base, ...affix];
+  // Phase 52 T1: paradigm application is now in apply.ts so future
+  // non-concatenative paradigm kinds (infix/template/reduplicate/etc.)
+  // get applied uniformly across every caller.
+  return applyParadigm(base, paradigm, lang, meaning);
 }
 
 export interface CascadeResult {
@@ -491,38 +487,6 @@ export function inflectCascade(
   }
 
   return { form, applied };
-}
-
-function pickAffixVariant(
-  paradigm: Paradigm,
-  base: WordForm,
-  lang?: Language,
-  meaning?: string,
-): WordForm {
-  const variants = paradigm.variants;
-  if (!variants || variants.length === 0) return paradigm.affix;
-
-  // Gender-conditioned variant takes precedence when applicable.
-  if (lang && meaning && (lang.grammar.genderCount ?? 0) > 0) {
-    const g = genderOf(lang, meaning);
-    const genderMatch = variants.find((v) => v.when === `gender:${g}`);
-    if (genderMatch) return genderMatch.affix;
-  }
-
-  const last = base[base.length - 1];
-  if (!last) return paradigm.affix;
-  const isVowelFinal = isVowelLike(last);
-  const want: "vowel-final" | "consonant-final" = isVowelFinal
-    ? "vowel-final"
-    : "consonant-final";
-  const match = variants.find((v) => v.when === want);
-  return match ? match.affix : paradigm.affix;
-}
-
-function isVowelLike(p: string): boolean {
-  const base = p.replace(/[ːˈˌ˥˧˩]/g, "");
-  if (base.length === 0) return false;
-  return /^[aeiouɛɔəɨɯøyœæáéíóúàèìòùâêîôûāēīōūãẽĩõũ]/i.test(base);
 }
 
 export function maybeSuppletion(

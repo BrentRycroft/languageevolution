@@ -1,5 +1,4 @@
 import type { Language, Meaning, WordForm } from "../types";
-import { isRegisteredConcept, colexWith } from "../lexicon/concepts";
 import { posOf } from "../lexicon/pos";
 import { closedClassForm } from "./closedClass";
 import { parseSyntaxAll } from "./parse";
@@ -7,10 +6,7 @@ import { realiseSentence } from "./realise";
 import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
-import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
-import { attemptGracefulFallback } from "./gracefulFallback";
-import { isValidEnglishLemma } from "./englishWordlist";
-import { attemptAbstractPivot } from "./abstraction";
+import { lookupFormWithResolution } from "../lexicon/lookup";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -96,18 +92,10 @@ const AUX_VERBS = new Set([
 ]);
 const COPULAS = new Set(["am", "is", "are", "was", "were", "be"]);
 
-// Phase 50 T3: lemmas that should NOT trigger graceful-fallback
-// coinage. These are closed-class English function words; some
-// languages legitimately omit them (zero-copula, no auxiliaries, etc.)
-// and the realise layer's isZeroCopula / drop-aux logic depends on
-// resolveLemma returning null for them.
-const FALLBACK_SKIP = new Set<string>([
-  ...COPULAS,
-  "have", "has", "had", "having",
-  "do", "does", "did", "doing",
-  "will", "would", "shall", "should", "can", "could", "may", "might", "must",
-  "the", "a", "an",
-]);
+// Phase 52 T1: FALLBACK_SKIP moved into lexicon/lookup.ts (the
+// canonical home of the resolution cascade). resolveLemma is now a
+// thin adapter; the closed-class skip list is enforced inside
+// lookupFormWithResolution.
 const NEGATORS = new Set(["not", "n't", "never"]);
 const INTERJECTIONS = new Set([
   "yes", "no", "ok", "okay", "yeah", "nope",
@@ -560,153 +548,12 @@ function resolveLemma(
   resolution: TranslatedToken["resolution"];
   glossNote: string;
 } {
-  if (lang.lexicon[lemma]) {
-    return {
-      form: lang.lexicon[lemma]!.slice(),
-      resolution: "direct",
-      glossNote: "",
-    };
-  }
-  // Phase 39c: compound resolution. If the lemma is registered as a
-  // compound (Phase 34a — e.g., "stranger" = strange + -er.agt),
-  // recompose from the parts. Models the user's complaint that
-  // typing "stranger" against English silently fails.
-  if (lang.compounds && lang.compounds[lemma]) {
-    const meta = lang.compounds[lemma]!;
-    const parts: string[] = [];
-    let allFound = true;
-    for (const partMeaning of meta.parts) {
-      const f = lang.lexicon[partMeaning];
-      if (!f || f.length === 0) { allFound = false; break; }
-      parts.push(...f);
-      if (meta.linker) parts.push(...meta.linker);
-    }
-    if (allFound && parts.length > 0) {
-      return {
-        form: parts,
-        resolution: "direct",
-        glossNote: `compound: ${meta.parts.join("+")}`,
-      };
-    }
-  }
-  // Phase 51 T2: abstract pivot — English → concept (cluster + POS) →
-  // target language. When a CONCEPTS-registered lemma has a
-  // semantically-adjacent meaning already lexicalised in the target
-  // language, prefer that over coining a fresh form. Fires only for
-  // basic/common-frequency concepts so rare-lemma vocabularies don't
-  // collapse onto cluster representatives.
-  const abstractPivot = attemptAbstractPivot(lang, lemma);
-  if (abstractPivot) {
-    return {
-      form: abstractPivot.form,
-      resolution: "fallback",
-      glossNote: abstractPivot.glossNote,
-    };
-  }
-  // Phase 47 T1: on-demand morphological synthesis (non-negational).
-  // If the lemma is not in the lexicon and not a registered compound,
-  // attempt to decompose it into stem + recognised productive affix
-  // from the non-negational set (agentive, abstractive, etc.).
-  // Example: "lighter" → light + -er.
-  const synthNonNeg = attemptMorphologicalSynthesis(lang, lemma, "non-neg");
-  if (synthNonNeg) {
-    return {
-      form: synthNonNeg.form,
-      resolution: synthNonNeg.resolution,
-      glossNote: synthNonNeg.glossNote,
-    };
-  }
-  // Phase 47 T3: negational synthesis (rung 5). Fires only after the
-  // non-negational pass returned null, so negational prefixes are
-  // strictly rarer than agentive/abstractive — matches English usage
-  // ("unhappy" exists but is less common than primary "sad").
-  const synthNeg = attemptMorphologicalSynthesis(lang, lemma, "neg");
-  if (synthNeg) {
-    return {
-      form: synthNeg.form,
-      resolution: synthNeg.resolution,
-      glossNote: synthNeg.glossNote,
-    };
-  }
-  // Phase 47 T6: cross-linguistic concept decomposition (rung 6).
-  // For meanings that have a CONCEPTS[lemma].decomposition default
-  // (e.g., "computer" → ["work", "know"]), compose if all parts are
-  // in the language's lexicon. Distinct from per-language seedCompounds
-  // (T5) which override these defaults at the language level.
-  // Skipped for primitives (NSM-style irreducibles).
-  const synthConcept = attemptConceptDecomposition(lang, lemma);
-  if (synthConcept) {
-    return {
-      form: synthConcept.form,
-      resolution: synthConcept.resolution,
-      glossNote: synthConcept.glossNote,
-    };
-  }
-  // Phase 47 T9: cluster-emergent composition (rung 7, last resort
-  // before colex/concept fallback). Fires only for small-lexicon-
-  // eligible languages — Pidgin / Toki Pona-style ad-hoc fills from
-  // semantically-adjacent lexicon entries. Large-lexicon languages
-  // (English, Romance) skip this rung; their primary lexicalisations
-  // stay primary.
-  const synthCluster = attemptClusterComposition(lang, lemma);
-  if (synthCluster) {
-    return {
-      form: synthCluster.form,
-      resolution: synthCluster.resolution,
-      glossNote: synthCluster.glossNote,
-    };
-  }
-  if (isRegisteredConcept(lemma)) {
-    for (const partner of colexWith(lemma)) {
-      if (lang.lexicon[partner]) {
-        return {
-          form: lang.lexicon[partner]!.slice(),
-          resolution: "colex",
-          glossNote: `↔ ${partner}`,
-        };
-      }
-    }
-  }
-  if (lang.colexifiedAs) {
-    for (const [winner, losers] of Object.entries(lang.colexifiedAs)) {
-      if (losers.includes(lemma) && lang.lexicon[winner]) {
-        return {
-          form: lang.lexicon[winner]!.slice(),
-          resolution: "reverse-colex",
-          glossNote: `↔ ${winner}`,
-        };
-      }
-    }
-  }
-  // Phase 51 T2: the concept-cousin "fallback" rung that previously
-  // sat here was promoted earlier (see attemptAbstractPivot). What
-  // remains as the truly-last resort is the synth-fallback rung.
-  // Phase 50 T3 + Phase 51 T1: graceful fallback — coin a fresh form
-  // from the language's own phonotactics + mechanism set so the
-  // translator never returns a hard `?` on a lemma the user actually
-  // typed. The form is written to the lexicon as a real coinage event;
-  // the next lookup hits Rung 1 (direct).
-  //
-  // Skip when:
-  //   - The lemma is closed-class (be / aux); some languages legitimately
-  //     omit them (zero-copula, particle-marked tense). The realiser
-  //     detects these from a null form and elides them.
-  //   - The lemma fails English-word validation (Phase 51 T1) — single
-  //     letters, keyboard mash, typos. These get the literal-quote
-  //     fallback instead of polluting the lexicon with a coined form.
-  if (!FALLBACK_SKIP.has(lemma) && isValidEnglishLemma(lemma)) {
-    const fallbackGen = lang.events?.at(-1)?.generation ?? 0;
-    const synthFallback = attemptGracefulFallback(lang, lemma, fallbackGen);
-    if (synthFallback) {
-      return {
-        form: synthFallback.form.slice(),
-        resolution: "synth-fallback",
-        glossNote: synthFallback.glossNote,
-      };
-    }
-  }
+  // Phase 52 T1: the 8-rung resolution cascade now lives in
+  // `lexicon/lookup.ts` so translator + narrative call the same
+  // abstraction. resolveLemma is a thin adapter that preserves the
+  // legacy signature for in-file callers.
   void posOf;
-  return { form: null, resolution: "fallback", glossNote: "?" };
+  return lookupFormWithResolution(lang, lemma);
 }
 
 /**
