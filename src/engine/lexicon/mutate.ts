@@ -44,6 +44,12 @@ export function setLexiconForm(
     origin: opts.origin,
     weight: opts.weight,
   });
+  // Phase 50 T3: invalidate the reverse-lookup cache so subsequent
+  // reverseTranslate calls see new lexicon entries (specifically: the
+  // forms coined by the translator's graceful-fallback rung). Pre-50
+  // only addSynonym / removeSynonymSense invalidated; primary-form
+  // additions slipped past the cache.
+  invalidateReverseLexCache(lang);
 }
 
 /**
