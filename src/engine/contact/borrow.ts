@@ -152,6 +152,12 @@ export function tryBorrow(
         bornGeneration: generation,
         register: prestige,
         origin: "borrow",
+        // Phase 53 T4: borrowed form records the donor language + meaning.
+        morphStructure: {
+          origin: "borrow",
+          donorLanguageId: donor.id,
+          donorMeaning: meaning,
+        },
       },
     );
     if (!commit.committed) return null;

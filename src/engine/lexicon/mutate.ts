@@ -26,12 +26,20 @@ export function setLexiconForm(
     register?: "high" | "low" | "neutral";
     origin?: string;
     weight?: number;
+    /** Phase 53 T4: structural etymology threaded onto the new Word. */
+    morphStructure?: import("../types").WordMorphStructure;
   },
 ): void {
   lang.lexicon[meaning] = form;
   if (!lang.words) return;
   const primary = findPrimaryWordForMeaning(lang, meaning);
   if (primary && primary.formKey === undefined) return; // defensive
+  // Phase 53 T4: when the caller didn't pass an explicit morphStructure
+  // but the existing primary Word had one (set at original coinage),
+  // preserve it across the form-update. compound-recompose / variant-
+  // actuation / phonology-driven respellings shouldn't erase the
+  // record of how a word was originally formed.
+  const preservedStructure = opts.morphStructure ?? primary?.morphStructure;
   if (primary) {
     // Same meaning, possibly new form: drop the old primary sense and
     // re-attach to the new form. addWord handles the polysemy case
@@ -43,6 +51,7 @@ export function setLexiconForm(
     register: opts.register,
     origin: opts.origin,
     weight: opts.weight,
+    morphStructure: preservedStructure,
   });
   // Phase 50 T3: invalidate the reverse-lookup cache so subsequent
   // reverseTranslate calls see new lexicon entries (specifically: the

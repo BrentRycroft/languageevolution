@@ -112,6 +112,9 @@ export function cloneLanguage(lang: Language): Language {
     recentLoanGens: lang.recentLoanGens ? lang.recentLoanGens.slice() : undefined,
     // Phase 21a: deep-clone the form-centric words table so daughter
     // languages don't share Word/sense references with the parent.
+    // Phase 53 T4: include morphStructure so the etymology survives
+    // tree splits (otherwise daughter languages lose all structural
+    // metadata at gen 1).
     words: lang.words
       ? lang.words.map((w) => ({
           form: w.form.slice(),
@@ -120,6 +123,12 @@ export function cloneLanguage(lang: Language): Language {
           primarySenseIndex: w.primarySenseIndex,
           bornGeneration: w.bornGeneration,
           origin: w.origin,
+          morphStructure: w.morphStructure
+            ? {
+                ...w.morphStructure,
+                parts: w.morphStructure.parts?.slice(),
+              }
+            : undefined,
         }))
       : undefined,
   };

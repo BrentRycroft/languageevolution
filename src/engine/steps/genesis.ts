@@ -1,4 +1,11 @@
-import type { Language, SimulationConfig, SimulationState } from "../types";
+import type {
+  Language,
+  SimulationConfig,
+  SimulationState,
+  WordMorphStructure,
+  WordMorphStructureOrigin,
+} from "../types";
+import type { CoinageOutcome } from "../genesis/apply";
 import { tryCoin } from "../genesis/apply";
 import { lexicalNeed } from "../genesis/need";
 import { neighborsOf } from "../semantics/neighbors";
@@ -22,6 +29,50 @@ import {
   categoryLabel,
 } from "../lexicon/derivation";
 import { isFeatureActive } from "../modules/legacyGate";
+
+/**
+ * Phase 53 T4: convert a coinage mechanism's `originTag` + `sources`
+ * into a structural-etymology record that lives on the resulting
+ * Word. Lets the UI etymology view, sound-change boundary detection,
+ * and reanalysis read HOW the form was coined without reverse-
+ * engineering it from the surface.
+ */
+function buildMorphStructure(
+  outcome: CoinageOutcome,
+): WordMorphStructure | undefined {
+  const origin = outcome.originTag as WordMorphStructureOrigin;
+  const sources = outcome.sources;
+  // Map origin tags onto the structural enum. Tags we don't know
+  // about return undefined (no metadata is better than wrong metadata).
+  const KNOWN: ReadonlyArray<WordMorphStructureOrigin> = [
+    "compound", "derivation", "ablaut", "reduplication",
+    "template", "conversion", "borrow", "blending", "clipping",
+    "ideophone", "calque", "seed",
+  ];
+  if (!KNOWN.includes(origin)) return undefined;
+  const out: WordMorphStructure = { origin };
+  if (sources?.partMeanings && sources.partMeanings.length > 0) {
+    if (origin === "compound") {
+      out.parts = sources.partMeanings.slice();
+    } else {
+      // derivation / ablaut / reduplication: first part is the base.
+      out.base = sources.partMeanings[0];
+      if (sources.partMeanings.length > 1) {
+        out.parts = sources.partMeanings.slice();
+      }
+    }
+  }
+  if (sources?.via && origin === "derivation") {
+    out.affix = sources.via;
+  }
+  if (sources?.donorLangId) {
+    out.donorLanguageId = sources.donorLangId;
+  }
+  if (sources?.donorMeaning) {
+    out.donorMeaning = sources.donorMeaning;
+  }
+  return out;
+}
 
 export function stepGenesis(
   lang: Language,
@@ -93,6 +144,12 @@ export function stepGenesis(
             {
               bornGeneration: generation,
               origin: "derivation",
+              // Phase 53 T4: targeted derivation knows base + suffix.
+              morphStructure: {
+                origin: "derivation",
+                base: derived.rootMeaning,
+                affix: derived.suffixTag,
+              },
             },
           );
           if (!commit.committed) continue;
@@ -166,6 +223,10 @@ export function stepGenesis(
     }
     // Phase 21c: collision-aware commit. The form may already exist as
     // a word for another meaning; in that case roll polysemy/reject.
+    // Phase 53 T4: build the structural-etymology record for the new
+    // word from the mechanism's reported sources, so the UI etymology
+    // view + sound-change boundary detection can read it later.
+    const morphStructure = buildMorphStructure(outcome);
     const commit = tryCommitCoinage(
       lang,
       outcome.meaning,
@@ -175,6 +236,7 @@ export function stepGenesis(
         bornGeneration: generation,
         register: outcome.register,
         origin: isReplacement ? "lexical-replacement" : outcome.originTag,
+        morphStructure,
       },
     );
     if (!commit.committed) continue;

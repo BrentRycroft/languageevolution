@@ -100,6 +100,13 @@ export function addCompound(
     setLexiconForm(lang, meaning, initial, {
       bornGeneration,
       origin: "compound",
+      // Phase 53 T4: addCompound has explicit parts; expose them as
+      // structural etymology so downstream consumers (UI, sound-change
+      // boundary detection) can read.
+      morphStructure: {
+        origin: "compound",
+        parts: parts.slice(),
+      },
     });
   }
 }

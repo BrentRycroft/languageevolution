@@ -1,4 +1,10 @@
-import type { Language, Meaning, WordForm } from "../types";
+import type {
+  Language,
+  Meaning,
+  WordForm,
+  WordMorphStructure,
+  WordMorphStructureOrigin,
+} from "../types";
 import { fnv1a, makeRng } from "../rng";
 import { MECHANISM_COMPOUND } from "../genesis/mechanisms/compound";
 import { MECHANISM_DERIVATION } from "../genesis/mechanisms/derivation";
@@ -9,6 +15,7 @@ import { phonotacticFit } from "../genesis/phonotactics";
 import { otFit } from "../phonology/ot";
 import { isFormLegal } from "../phonology/wordShape";
 import { setLexiconForm } from "../lexicon/mutate";
+import { findWordByForm } from "../lexicon/word";
 
 /**
  * Phase 50 T3 + Phase 53 T1: graceful translator fallback.
@@ -72,7 +79,14 @@ export function attemptGracefulFallback(
   const seed = fnv1a(`fallback|${lang.id}|${lemma}`);
   const rng = makeRng(seed);
 
-  let best: { form: WordForm; mechanism: string; score: number } | null = null;
+  let best:
+    | {
+        form: WordForm;
+        mechanism: string;
+        score: number;
+        sources?: { partMeanings?: string[]; via?: string };
+      }
+    | null = null;
   for (const mech of FALLBACK_MECHANISMS) {
     let candidate;
     try {
@@ -86,7 +100,12 @@ export function attemptGracefulFallback(
     const score =
       0.5 * phonotacticFit(candidate.form, lang) + 0.5 * otFit(candidate.form, lang);
     if (!best || score > best.score) {
-      best = { form: candidate.form, mechanism: mech.id, score };
+      best = {
+        form: candidate.form,
+        mechanism: mech.id,
+        score,
+        sources: candidate.sources,
+      };
     }
     if (best.score >= 0.7) break;
   }
@@ -99,6 +118,34 @@ export function attemptGracefulFallback(
   });
   if (!lang.wordOrigin) lang.wordOrigin = {};
   lang.wordOrigin[lemma] = `translator-coined:${best.mechanism}`;
+  // Phase 53 T4: structural etymology on the new Word.
+  const word = findWordByForm(lang, best.form);
+  if (word) {
+    const originTag = best.mechanism.replace("mechanism.", "");
+    const KNOWN: ReadonlyArray<WordMorphStructureOrigin> = [
+      "compound", "derivation", "ablaut", "reduplication", "template",
+      "conversion", "borrow", "blending", "clipping", "ideophone",
+      "calque", "seed",
+    ];
+    if (KNOWN.includes(originTag as WordMorphStructureOrigin)) {
+      const morphStructure: WordMorphStructure = {
+        origin: originTag as WordMorphStructureOrigin,
+      };
+      const partMeanings = best.sources?.partMeanings;
+      if (partMeanings && partMeanings.length > 0) {
+        if (originTag === "compound") {
+          morphStructure.parts = partMeanings.slice();
+        } else {
+          morphStructure.base = partMeanings[0];
+          if (partMeanings.length > 1) morphStructure.parts = partMeanings.slice();
+        }
+      }
+      if (best.sources?.via && originTag === "derivation") {
+        morphStructure.affix = best.sources.via;
+      }
+      word.morphStructure = morphStructure;
+    }
+  }
   if (!lang.events) lang.events = [];
   lang.events.push({
     generation,

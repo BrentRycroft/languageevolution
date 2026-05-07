@@ -122,6 +122,12 @@ export function addWord(
     register?: "high" | "low" | "neutral";
     origin?: string;
     synonym?: boolean;
+    /**
+     * Phase 53 T4: structural etymology recorded on the Word. Set
+     * by genesis mechanisms at coinage time so the UI etymology
+     * view + sound-change boundary detection can read it later.
+     */
+    morphStructure?: import("../types").WordMorphStructure;
   },
 ): Word {
   if (!lang.words) lang.words = [];
@@ -164,6 +170,7 @@ export function addWord(
     primarySenseIndex: 0,
     bornGeneration: opts.bornGeneration,
     origin: opts.origin,
+    morphStructure: opts.morphStructure,
   };
   lang.words.push(word);
   if (lang.wordsByFormKey) lang.wordsByFormKey.set(key, word);
@@ -655,6 +662,8 @@ export function tryCommitCoinage(
     origin?: string;
     polysemyProbRelated?: number;
     polysemyProbUnrelated?: number;
+    /** Phase 53 T4: structural etymology threaded through. */
+    morphStructure?: import("../types").WordMorphStructure;
   },
 ): { committed: boolean; viaPolysemy: boolean } {
   const polyRel = opts.polysemyProbRelated ?? 0.4;

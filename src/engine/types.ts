@@ -666,6 +666,49 @@ export interface Word {
   primarySenseIndex: number;
   bornGeneration: number;
   origin?: string;
+  /**
+   * Phase 53 T4: structural etymology. Records HOW this form was
+   * coined: from which parts (compound), which base + affix
+   * (derivation), via which sound mutation (ablaut), via which donor
+   * language (borrow), or via which template (Semitic-style coinage).
+   *
+   * Read by the UI's etymology view, by sound-change rules that need
+   * to detect morpheme boundaries (don't fuse syllables across a
+   * compound boundary unless the language has reached opacity), and
+   * by reanalysis logic that re-derives forms when paradigms shift.
+   *
+   * Optional for back-compat: pre-Phase-53 saves don't carry it. New
+   * coinages populate it; the migration leaves old entries undefined.
+   */
+  morphStructure?: WordMorphStructure;
+}
+
+export type WordMorphStructureOrigin =
+  | "compound"
+  | "derivation"
+  | "ablaut"
+  | "reduplication"
+  | "template"
+  | "conversion"
+  | "borrow"
+  | "blending"
+  | "clipping"
+  | "ideophone"
+  | "calque"
+  | "seed";
+
+export interface WordMorphStructure {
+  origin: WordMorphStructureOrigin;
+  /** For compound: the part meanings (in order). */
+  parts?: Meaning[];
+  /** For derivation / ablaut / reduplication: the base meaning. */
+  base?: Meaning;
+  /** For derivation: tag of the derivational affix used. */
+  affix?: string;
+  /** For borrow / calque: id of the donor language. */
+  donorLanguageId?: string;
+  /** For borrow / calque: meaning in the donor language. */
+  donorMeaning?: Meaning;
 }
 
 export interface FormVariant {
