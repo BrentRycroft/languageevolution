@@ -6,11 +6,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "və gɪŋ noz və wulf",
+      "target": "ðə kɪŋ siːz ðə wulf",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "və dʌgʂ no və wulfʂ",
+      "target": "ðə dʌgs siː ðə wulfs",
     },
     {
       "english": "i give you the bread",
@@ -18,11 +18,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
     },
     {
       "english": "the king walks at the river",
-      "target": "və gɪŋ wʌgɪŋz æd və ɹɪvəɹ",
+      "target": "ðə kɪŋ wʌkɪŋz æt ðə dɪvəd",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "və gɪŋ nat noz və wulf",
+      "target": "ðə kɪŋ nat siːz ðə wulf",
     },
   ],
   "preset": "english",
