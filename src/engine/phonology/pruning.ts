@@ -3,12 +3,22 @@ import type { Rng } from "../rng";
 import { featuresOf } from "./features";
 import { stripTone, capToneStacking } from "./tone";
 import { isFormLegal } from "./wordShape";
-import { functionalLoadMap } from "./functionalLoad";
+import { functionalLoadMap, phonemeFunctionalLoad } from "./functionalLoad";
 import { SWADESH_LIST } from "../semantics/lexicostat";
 
 const MAX_RARE_OCCURRENCES = 2;
 const MIN_INVENTORY_TO_PRUNE = 12;
 const LOW_LOAD_THRESHOLD = 0.05; // ≤5% homophone-creation rate is "low load"
+
+/** Phase 48 D4-A: pairwise functional-load merger-inhibition gate.
+ *  Loads above this threshold are subject to probabilistic rejection.
+ *  0.20 = 20% homophone-creation rate; mergers above this rate would
+ *  collapse meaningful contrasts. */
+const FL_INHIBIT_THRESHOLD = 0.20;
+
+/** Phase 48 D4-A: gain on the rejection probability. With this gain,
+ *  load 0.20 → 0% reject (at threshold); load 1.0 → 80% reject. */
+const FL_INHIBIT_GAIN = 1.0;
 
 // Phase 40a: Swadesh-100 protection during homeostatic pruning.
 // Pre-Phase-40 pruning rewrote every word containing the candidate
@@ -177,6 +187,26 @@ export function prunePhonemes(
     }
   }
   if (!candidate || !neighbour) return null;
+
+  // Phase 48 D4-A: pairwise functional-load inhibition. Even when a
+  // low-load candidate is picked by the weighted-random selection
+  // above, the SPECIFIC merger of (candidate → neighbour) may still
+  // collapse a high-load contrast. Compute the pairwise load and
+  // reject the merger probabilistically when it would erase a lot
+  // of minimal pairs. Linguistic basis: Surendran & Niyogi 2003;
+  // Wedel et al. 2013 — high-functional-load contrasts resist
+  // diachronic merger.
+  const pairwiseLoad = phonemeFunctionalLoad(lang, candidate);
+  // The candidate's load is already the merger's homophone-creation
+  // rate (loadForPhoneme returns homophones/withPhoneme), so it IS
+  // pairwise vs. its nearest neighbour.
+  if (pairwiseLoad > FL_INHIBIT_THRESHOLD) {
+    const inhibitP = Math.min(0.85, (pairwiseLoad - FL_INHIBIT_THRESHOLD) * FL_INHIBIT_GAIN);
+    if (rng.chance(inhibitP)) {
+      lang.functionalLoadInhibitions = (lang.functionalLoadInhibitions ?? 0) + 1;
+      return null;
+    }
+  }
 
   let affected = 0;
   let swadeshSkipped = 0;

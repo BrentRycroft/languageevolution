@@ -172,6 +172,12 @@ export interface Language {
    * 1 to make every potential homonym collision strict.
    */
   homonymInhibition?: number;
+  /**
+   * Phase 48 D4-A: counter incremented every time a phoneme-merger
+   * was inhibited by the pairwise-functional-load gate. Surfaced
+   * in the diagnostics view.
+   */
+  functionalLoadInhibitions?: number;
   lexicalStress?: Record<string, number>;
   registerOf?: Record<string, "high" | "low">;
   coords?: { x: number; y: number };
