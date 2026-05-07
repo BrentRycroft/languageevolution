@@ -87,7 +87,10 @@ export interface LanguageEvent {
     | "merger"
     | "tier_transition"
     | "kinship_simplification"
-    | "grammar_cascade";
+    | "grammar_cascade"
+    // Phase 48 D4-D: phonologisation event — a phoneme's contextual
+    // diversity rose past the threshold and a new contrast emerged.
+    | "phonologisation";
   description: string;
   meta?: {
     donorId?: string;
@@ -178,6 +181,18 @@ export interface Language {
    * in the diagnostics view.
    */
   functionalLoadInhibitions?: number;
+  /**
+   * Phase 48 D4-D: per-phoneme context-diversity snapshot from the
+   * previous generation. Compared against the current snapshot to
+   * detect phonologization events (contrasts emerging via context
+   * diversification). Hyman 2008.
+   */
+  contextDiversitySnapshot?: Record<string, number>;
+  /**
+   * Phase 48 D4-D: count of phonologization events logged. Surfaced
+   * in diagnostics + narrative timeline.
+   */
+  phonologisationEvents?: number;
   lexicalStress?: Record<string, number>;
   registerOf?: Record<string, "high" | "low">;
   coords?: { x: number; y: number };

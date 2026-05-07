@@ -15,6 +15,7 @@ import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/v
 import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import { syncWordsAfterPhonology } from "../lexicon/word";
+import { detectPhonologisation } from "../phonology/phonologization";
 import { volatilityMultiplier } from "./volatility";
 import { inventorySizePressure } from "./inventoryManagement";
 import { stripTone } from "../phonology/tone";
@@ -511,6 +512,22 @@ export function stepPhonology(
           birthGeneration: generation,
         });
       }
+    }
+  }
+  // Phase 48 D4-D: phonologization detection. Compare current
+  // per-phoneme context-diversity against last gen's snapshot; emit
+  // narrative events for phonemes whose diversity rose past the
+  // threshold (allophonic → phonemic, Hyman 2008).
+  const phonologisationEvents = detectPhonologisation(lang, generation);
+  if (phonologisationEvents.length > 0) {
+    lang.phonologisationEvents =
+      (lang.phonologisationEvents ?? 0) + phonologisationEvents.length;
+    for (const ev of phonologisationEvents) {
+      pushEvent(lang, {
+        generation,
+        kind: "phonologisation",
+        description: `phonologisation: /${ev.phoneme}/ now appears in ${ev.toDiversity} contexts (was ${ev.fromDiversity}); contrast emergent`,
+      });
     }
   }
 }
