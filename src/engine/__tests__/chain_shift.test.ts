@@ -45,7 +45,10 @@ describe("chain shift pairing", () => {
   it("pairs a push rule when the target vowel already exists", () => {
     const sim = createSimulation(defaultConfig());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
-    lang.phonemeInventory.segmental = ["a", "e", "i", "o", "u", "p", "t", "k"];
+    // Phase 48 T7: inventory deliberately omits the next-up height
+    // target ("i") so the push chain can introduce it. With "i" in
+    // inventory, shiftHeight("e", 1) → "i" already present → null.
+    lang.phonemeInventory.segmental = ["a", "e", "o", "u", "p", "t", "k"];
     const seed: GeneratedRule = {
       id: "z",
       family: "vowel_shift",

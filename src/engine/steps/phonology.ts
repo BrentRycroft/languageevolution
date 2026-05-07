@@ -16,6 +16,7 @@ import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagio
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import { syncWordsAfterPhonology } from "../lexicon/word";
 import { detectPhonologisation } from "../phonology/phonologization";
+import { detectChainShiftPressure } from "../phonology/chainShift";
 import { volatilityMultiplier } from "./volatility";
 import { inventorySizePressure } from "./inventoryManagement";
 import { stripTone } from "../phonology/tone";
@@ -529,6 +530,17 @@ export function stepPhonology(
         description: `phonologisation: /${ev.phoneme}/ now appears in ${ev.toDiversity} contexts (was ${ev.fromDiversity}); contrast emergent`,
       });
     }
+  }
+  // Phase 48 D4-C: vowel-space chain-shift pressure detection.
+  // Compute per-vowel crowding metric; emit chain-shift events when
+  // pressure rises past threshold. Martinet 1955; Labov 1994.
+  const chainShiftEvents = detectChainShiftPressure(lang, generation);
+  for (const ev of chainShiftEvents) {
+    pushEvent(lang, {
+      generation,
+      kind: "chain_shift",
+      description: `chain-shift pressure: /${ev.vowel}/ pressure rose ${ev.fromPressure}→${ev.toPressure}; vowel-space crowding`,
+    });
   }
 }
 

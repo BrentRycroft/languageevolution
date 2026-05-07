@@ -193,6 +193,13 @@ export interface Language {
    * in diagnostics + narrative timeline.
    */
   phonologisationEvents?: number;
+  /**
+   * Phase 48 D4-C: per-vowel pressure scores derived from
+   * height/backness crowding in the inventory. Tracked across
+   * generations so chain-shift events fire when pressure rises past
+   * threshold. Martinet 1955; Labov 1994.
+   */
+  vowelShiftPressure?: Record<string, number>;
   lexicalStress?: Record<string, number>;
   registerOf?: Record<string, "high" | "low">;
   coords?: { x: number; y: number };
