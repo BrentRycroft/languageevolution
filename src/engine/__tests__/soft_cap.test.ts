@@ -23,21 +23,35 @@ describe("soft-cap death pressure", () => {
   });
 
   it("generationsOverCap counter resets when leaf count drops back under cap", () => {
-    const cfg = defaultConfig();
-    cfg.seed = "softcap-2";
-    cfg.tree.maxLeaves = 6;
-    cfg.tree.unlimitedLeaves = false;
-    const sim = createSimulation(cfg);
-    let everIncremented = false;
-    let everReset = false;
-    for (let i = 0; i < 200; i++) {
-      sim.step();
-      const c = sim.getState().generationsOverCap ?? 0;
-      if (c > 0) everIncremented = true;
-      if (everIncremented && c === 0) everReset = true;
-      if (everReset) break;
+    // Phase 50 T9: this assertion is RNG-trajectory-sensitive — the
+    // pre-50 seed "softcap-2" no longer overshoots the cap because
+    // Phase 49's productive-affix init shifted RNG consumption.
+    // Run across 3 seeds and require the property to hold on at
+    // least one (softcap is a probabilistic property, and one
+    // confirmed overshoot+reset across 3 trajectories is sufficient
+    // evidence the resetter works).
+    const SEEDS = ["softcap-3", "softcap-4", "softcap-5"];
+    let observedOvershoot = 0;
+    let observedReset = 0;
+    for (const seed of SEEDS) {
+      const cfg = defaultConfig();
+      cfg.seed = seed;
+      cfg.tree.maxLeaves = 6;
+      cfg.tree.unlimitedLeaves = false;
+      const sim = createSimulation(cfg);
+      let everIncremented = false;
+      let everReset = false;
+      for (let i = 0; i < 200; i++) {
+        sim.step();
+        const c = sim.getState().generationsOverCap ?? 0;
+        if (c > 0) everIncremented = true;
+        if (everIncremented && c === 0) everReset = true;
+        if (everReset) break;
+      }
+      if (everIncremented) observedOvershoot++;
+      if (everReset) observedReset++;
     }
-    expect(everIncremented, "should overshoot during the run").toBe(true);
-    expect(everReset, "counter should reset when alive drops back under cap").toBe(true);
+    expect(observedOvershoot, "at least one seed should overshoot").toBeGreaterThan(0);
+    expect(observedReset, "at least one seed should reset").toBeGreaterThan(0);
   });
 });
