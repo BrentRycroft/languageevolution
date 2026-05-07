@@ -348,7 +348,11 @@ export function LexiconView() {
                   }
                   rows.push(
                 <tr key={meaning}>
-                  <td className="meaning" onClick={() => selectMeaning(meaning)}>
+                  <td
+                    className="meaning"
+                    data-meaning={meaning}
+                    onClick={() => selectMeaning(meaning)}
+                  >
                     {meaning}
                     {(() => {
                       // Phase 30 Tranche 30i: inflection-class badge

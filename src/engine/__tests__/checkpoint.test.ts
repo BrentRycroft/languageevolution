@@ -22,7 +22,14 @@ describe("checkpoint save/restore", () => {
     const cfg = { ...defaultConfig(), seed: "checkpoint-test" };
     const simA = createSimulation(cfg);
     for (let i = 0; i < 80; i++) simA.step();
-    const snapshot = JSON.parse(JSON.stringify(simA.getState()));
+    // Phase 50 T1: structuredClone preserves Set-valued state
+    // (activeModules, boundMorphemes). JSON.parse(JSON.stringify(...))
+    // coerces Sets to {}, which silently broke determinism on resume —
+    // the module step()s became no-ops post-restore. Real persistence
+    // (idbSet) goes through structured-clone, so this matches the
+    // production path. restoreState also rehydrates any non-Set Set
+    // fields it finds (defensive guard for the JSON-only path).
+    const snapshot = structuredClone(simA.getState());
 
     const simB = createSimulation(cfg);
     simB.restoreState(snapshot);

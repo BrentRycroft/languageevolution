@@ -5,6 +5,8 @@ import { isVowel, isSyllabic } from "../engine/phonology/ipa";
 import { profileBadge } from "../engine/phonology/phonotactics";
 import { functionalLoadMap } from "../engine/phonology/functionalLoad";
 import type { Phoneme } from "../engine/types";
+import { EmptyState } from "./components/EmptyState";
+import { ExportButtons } from "./components/ExportButtons";
 
 export function PhonemeInventoryView() {
   const state = useSimStore((s) => s.state);
@@ -69,9 +71,11 @@ export function PhonemeInventoryView() {
 
   if (!lang) {
     return (
-      <div style={{ color: "var(--muted)", padding: 12, fontSize: "var(--fs-2)" }}>
-        Pick a language to see its phoneme inventory.
-      </div>
+      <EmptyState
+        icon="🔤"
+        title="Select a language"
+        hint="Pick a language from the tree to see its phoneme inventory."
+      />
     );
   }
 
@@ -114,8 +118,22 @@ export function PhonemeInventoryView() {
             ? ` · syllable ${profileBadge(lang.phonotacticProfile)}`
             : ""}
         </span>
-        <span className="label-line">
-          <span style={{ color: "var(--accent-2)" }}>●</span> innovative vs proto · 🤝 areal · 🔧 internal rule · faded = low functional load
+        <span className="label-line" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span>
+            <span style={{ color: "var(--accent-2)" }}>●</span> innovative vs proto · 🤝 areal · 🔧 internal rule · faded = low functional load
+          </span>
+          <ExportButtons
+            filenameBase={`phonemes-${lang.name}`}
+            csvHeader={["section", "phoneme"]}
+            csvRows={sections.flatMap(([label, items]) =>
+              items.map((p) => [label, p]),
+            )}
+            copyText={() =>
+              sections
+                .map(([label, items]) => `${label}\t${items.join(" ")}`)
+                .join("\n")
+            }
+          />
         </span>
       </div>
 

@@ -20,8 +20,9 @@ describe("Phase 18a — quick fixes", () => {
       expect(cfg.seedSuppletion!.be!["verb.tense.past"]?.join("")).toBe("waz");
       expect(cfg.seedSuppletion!.go!["verb.tense.past"]?.join("")).toBe("wɛnt");
       expect(cfg.seedSuppletion!.mouse!["noun.num.pl"]?.join("")).toBe("majs");
-      expect(cfg.seedSuppletion!.child!["noun.num.pl"]?.join("")).toBe("tʃɪldrən");
-      expect(cfg.seedSuppletion!.good!["adj.degree.cmp"]?.join("")).toBe("bɛtər");
+      // Phase 48 IPA-2020: English /r/ encoded as alveolar approximant ɹ.
+      expect(cfg.seedSuppletion!.child!["noun.num.pl"]?.join("")).toBe("tʃɪldɹən");
+      expect(cfg.seedSuppletion!.good!["adj.degree.cmp"]?.join("")).toBe("bɛtəɹ");
     });
 
     it("createSimulation(presetEnglish()) gives the proto language tier 3 + suppletion", () => {

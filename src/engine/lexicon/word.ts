@@ -125,6 +125,12 @@ export function addWord(
   },
 ): Word {
   if (!lang.words) lang.words = [];
+  // Phase 50 T3: defensive coercion — JSON-roundtripped saves and some
+  // test fixtures carry `wordsByFormKey` as a plain object instead of
+  // a Map. Detect and rebuild rather than crashing on `.get`.
+  if (lang.wordsByFormKey && !(lang.wordsByFormKey instanceof Map)) {
+    lang.wordsByFormKey = undefined;
+  }
   const key = formKeyOf(form);
   // Phase 29 Tranche 1e: prefer the O(1) index when present; falls
   // back to linear scan for v6 saves that haven't been touched yet.

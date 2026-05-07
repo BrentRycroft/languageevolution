@@ -201,7 +201,7 @@ export const CATALOG: SoundChange[] = [
     stressFilter: "unstressed",
     description: "Drop unstressed word-final vowel (if a nucleus still remains). Latin → French (rosa → rose), Old English → Middle English -e loss.",
     probabilityFor: (w) => {
-      if (w.length < 4) return 0;
+      if (w.length < 3) return 0;
       if (!isVowel(w[w.length - 1]!)) return 0;
       const remainder = w.slice(0, -1);
       if (!remainder.some((p) => isSyllabic(p))) return 0;

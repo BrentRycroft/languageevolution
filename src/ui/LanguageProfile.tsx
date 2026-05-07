@@ -240,6 +240,11 @@ export function LanguageProfile() {
           </div>
         </Section>
       )}
+      {lang.activeModules instanceof Set && lang.activeModules.size > 0 && (
+        <Section title="Active modules">
+          <ActiveModulesPanel lang={lang} />
+        </Section>
+      )}
 
       {aliveLeaves.length > 1 && (
         <div style={{ marginTop: 12, fontSize: "var(--fs-1)" }}>
@@ -612,6 +617,50 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 8, marginBottom: 4 }}>
       <span className="t-muted">{label}</span>
       <span>{children}</span>
+    </div>
+  );
+}
+
+/**
+ * Phase 50 T6: surfaces the per-language active-module set so the UI
+ * makes the Phase-41+ module abstraction visible. Each chip shows a
+ * module id (e.g. "grammatical:tense", "morphological:agreement") and
+ * a kind prefix tint. Clicking is a no-op for now; the chip is
+ * informational.
+ */
+function ActiveModulesPanel({ lang }: { lang: import("../engine/types").Language }) {
+  if (!(lang.activeModules instanceof Set) || lang.activeModules.size === 0) {
+    return <div className="t-muted">no modules active</div>;
+  }
+  const modules = Array.from(lang.activeModules).sort();
+  const KIND_HUE: Record<string, number> = {
+    grammatical: 200,
+    morphological: 30,
+    semantic: 140,
+    syntactical: 280,
+  };
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+      {modules.map((id) => {
+        const kind = id.split(":")[0] ?? "";
+        const hue = KIND_HUE[kind] ?? 0;
+        return (
+          <span
+            key={id}
+            title={`Active module · ${id}`}
+            style={{
+              fontSize: 10,
+              padding: "2px 6px",
+              borderRadius: 999,
+              border: `1px solid hsl(${hue} 60% 45% / 0.35)`,
+              color: `hsl(${hue} 70% 65%)`,
+              background: `hsl(${hue} 50% 25% / 0.18)`,
+            }}
+          >
+            {id}
+          </span>
+        );
+      })}
     </div>
   );
 }

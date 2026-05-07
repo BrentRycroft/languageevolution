@@ -368,6 +368,7 @@ describe("Phase 21a — backward-compat invariant: lexicon[m] still works", () =
     expect(lang.lexicon["water"]).toBeDefined();
     expect(lang.lexicon["fire"]).toBeDefined();
     // Same form-content as the seed preset's lexicon — no behavior change.
-    expect(lang.lexicon["water"]).toEqual(["w", "ɔ", "t", "ə", "r"]);
+    // Phase 48 IPA-2020: English /r/ encoded as alveolar approximant ɹ.
+    expect(lang.lexicon["water"]).toEqual(["w", "ɔ", "t", "ə", "ɹ"]);
   });
 });

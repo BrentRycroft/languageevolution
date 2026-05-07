@@ -8,6 +8,7 @@ import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
+import { attemptGracefulFallback } from "./gracefulFallback";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -46,7 +47,12 @@ export interface TranslatedToken {
     | "synth-affix"
     | "synth-neg-affix"
     | "synth-concept"
-    | "synth-cluster";
+    | "synth-cluster"
+    // Phase 50 T3: graceful fallback — when no resolution rung
+    // matches, the translator coins a fresh form from the language's
+    // own phonotactics + mechanism set and writes it to the lexicon
+    // as a real coinage event. Subsequent lookups hit "direct".
+    | "synth-fallback";
 }
 
 export interface SentenceTranslation {
@@ -87,6 +93,19 @@ const AUX_VERBS = new Set([
   "have", "has", "had",
 ]);
 const COPULAS = new Set(["am", "is", "are", "was", "were", "be"]);
+
+// Phase 50 T3: lemmas that should NOT trigger graceful-fallback
+// coinage. These are closed-class English function words; some
+// languages legitimately omit them (zero-copula, no auxiliaries, etc.)
+// and the realise layer's isZeroCopula / drop-aux logic depends on
+// resolveLemma returning null for them.
+const FALLBACK_SKIP = new Set<string>([
+  ...COPULAS,
+  "have", "has", "had", "having",
+  "do", "does", "did", "doing",
+  "will", "would", "shall", "should", "can", "could", "may", "might", "must",
+  "the", "a", "an",
+]);
 const NEGATORS = new Set(["not", "n't", "never"]);
 const INTERJECTIONS = new Set([
   "yes", "no", "ok", "okay", "yeah", "nope",
@@ -662,6 +681,28 @@ function resolveLemma(
       };
     }
   }
+  // Phase 50 T3: graceful fallback — coin a fresh form from the
+  // language's own phonotactics + mechanism set so the translator
+  // never returns a hard `?` on a lemma the user actually typed. The
+  // form is written to the lexicon as a real coinage event; the next
+  // lookup hits Rung 1 (direct).
+  //
+  // Skip closed-class function words: `be` and the auxiliaries, which
+  // some languages legitimately omit (zero-copula, particle-marked
+  // tense, etc.). The realise pipeline detects these from a null form
+  // and elides them — coining a content-form here would re-insert
+  // them where the language wants them dropped.
+  if (!FALLBACK_SKIP.has(lemma)) {
+    const fallbackGen = lang.events?.at(-1)?.generation ?? 0;
+    const synthFallback = attemptGracefulFallback(lang, lemma, fallbackGen);
+    if (synthFallback) {
+      return {
+        form: synthFallback.form.slice(),
+        resolution: "synth-fallback",
+        glossNote: synthFallback.glossNote,
+      };
+    }
+  }
   void posOf;
   return { form: null, resolution: "fallback", glossNote: "?" };
 }
@@ -1101,12 +1142,96 @@ function translateFragment(
   };
 }
 
+/**
+ * Phase 50 T1 (§gap-7 fix): English-side auxiliary cues mapped to
+ * abstract aspect/mood/voice features on the parsed verb. This
+ * pre-pass runs before the language-driven overrides; cues set
+ * here are language-agnostic (they reflect what the English INPUT
+ * said), and the realiser picks the matching paradigm if the
+ * target language has one.
+ *
+ * Patterns:
+ *   "is/are/was/were V-ing"       → aspect=progressive
+ *   "has/have/had V-en"           → aspect=perfect
+ *   "was/were V-ed/V-en"          → voice=passive
+ *   "should/would/could/may/might V" → mood=subjunctive
+ *   "let us V" / "let's V"        → mood=hortative
+ *   verb-initial (no subject)     → mood=imperative
+ */
+const SUBJUNCTIVE_AUX = new Set([
+  "should", "would", "could", "may", "might", "ought", "must",
+]);
+const PROGRESSIVE_AUX = new Set(["am", "is", "are", "was", "were", "be", "been", "being"]);
+const PERFECT_AUX = new Set(["have", "has", "had"]);
+const PASSIVE_AUX = new Set(["am", "is", "are", "was", "were", "be", "been", "being"]);
+
+function applyAuxiliaryCues(
+  englishTokens: EnglishToken[],
+  parsedAll: import("./syntax").Sentence[],
+): void {
+  const verbLemmaToSentence = new Map<string, import("./syntax").Sentence>();
+  for (const s of parsedAll) {
+    if (s.predicate.verb) verbLemmaToSentence.set(s.predicate.verb.lemma, s);
+  }
+  for (let i = 0; i < englishTokens.length; i++) {
+    const tok = englishTokens[i]!;
+    if (tok.tag !== "V") continue;
+    const sentence = verbLemmaToSentence.get(tok.lemma);
+    if (!sentence) continue;
+    const verb = sentence.predicate.verb;
+    if (!verb) continue;
+
+    let look = i - 1;
+    while (look >= 0 && englishTokens[look]!.tag !== "V" && englishTokens[look]!.tag !== "AUX") look--;
+    const prev = look >= 0 ? englishTokens[look] : null;
+    const prev2 = look >= 1 ? englishTokens[look - 1] : null;
+
+    if (prev && prev.tag === "AUX") {
+      const auxLemma = prev.lemma.toLowerCase();
+      const verbSurface = tok.surface.toLowerCase();
+      const isIngForm = /ing$/.test(verbSurface);
+      const isEdEnForm = /ed$|en$/.test(verbSurface);
+      if (!verb.aspect && PROGRESSIVE_AUX.has(auxLemma) && isIngForm) {
+        verb.aspect = "progressive";
+      } else if (!verb.aspect && PERFECT_AUX.has(auxLemma) && isEdEnForm) {
+        verb.aspect = "perfect";
+      } else if (!verb.voice && PASSIVE_AUX.has(auxLemma) && isEdEnForm) {
+        verb.voice = "passive";
+      } else if (!verb.mood && SUBJUNCTIVE_AUX.has(auxLemma)) {
+        verb.mood = "subjunctive";
+      } else if (
+        !verb.mood &&
+        auxLemma === "let" &&
+        prev2 &&
+        prev2.tag === "PRON" &&
+        (prev2.lemma.toLowerCase() === "us" || prev2.lemma.toLowerCase() === "me")
+      ) {
+        verb.mood = "hortative";
+      }
+    }
+
+    // Verb-initial input → imperative.
+    if (
+      !verb.mood &&
+      i === 0 &&
+      !sentence.subject?.head?.lemma
+    ) {
+      verb.mood = "imperative";
+    }
+  }
+}
+
 function translateViaTree(
   lang: Language,
   english: string,
   englishTokens: EnglishToken[],
   parsedAll: import("./syntax").Sentence[],
 ): SentenceTranslation {
+  // Phase 50 T1 (§gap-7): English-side auxiliary cues set
+  // aspect/mood/voice on the parsed verb. Runs before the
+  // language-driven overrides so language settings can re-override
+  // if needed, but cues never get silently dropped.
+  applyAuxiliaryCues(englishTokens, parsedAll);
   // Phase 36 Tranche 36d: language-driven aspect override. Walk
   // each parsed VP and, when the language has a grammaticalised
   // aspect system, override the verb's aspect based on its class

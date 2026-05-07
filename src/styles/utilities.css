@@ -68,6 +68,13 @@
   align-items: flex-start;
   font-family: var(--font-mono);
   min-width: 60px;
+  position: relative;
+}
+.token-card[data-resolution="synth-fallback"] {
+  border-bottom: 2px dotted #ffd166;
+}
+.token-card[data-resolution="fallback"] {
+  border-bottom: 2px dotted #ff6363;
 }
 .token-form {
   font-size: var(--fs-2);
@@ -76,6 +83,13 @@
 .token-gloss {
   font-size: 10px;
   color: var(--muted);
+}
+.token-chip {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+  opacity: 0.85;
 }
 
 .footer-note {

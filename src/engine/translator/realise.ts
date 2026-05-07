@@ -20,7 +20,7 @@ export interface RealisedToken {
   resolution?: LemmaResolution;
 }
 
-export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback" | "synth-affix" | "synth-neg-affix" | "synth-concept" | "synth-cluster";
+export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" | "fallback" | "synth-affix" | "synth-neg-affix" | "synth-concept" | "synth-cluster" | "synth-fallback";
 
 export interface RealiseDeps {
   resolveOpen: (lemma: string) => { form: WordForm | null; resolution: LemmaResolution };
@@ -702,8 +702,18 @@ function realiseVerb(
     vp.verb.aspect === "habitual" ? "verb.aspect.hab" :
     vp.verb.aspect === "perfect" && useSyntheticPerfect ? "verb.aspect.perf" :
     vp.verb.aspect === "prospective" ? "verb.aspect.prosp" : null;
-  if (aspectCat &&
-      isFeatureActive(lang, "grammatical:aspect", l => (l.grammar.aspectMarking ?? "none") !== "none")) {
+  // Phase 50 T1 (§gap-7): apply aspect paradigm whenever an aspect was
+  // explicitly set on the verb AND the language has a paradigm for it,
+  // independent of `grammar.aspectMarking`. Explicit aspect comes from
+  // English-side AUX cues like "is X-ing" (sentence.ts:applyAuxiliaryCues);
+  // those should never be silently dropped just because the language
+  // defaults to "none" aspect marking.
+  if (aspectCat && lang.morphology.paradigms[aspectCat]) {
+    stack.push(aspectCat);
+  } else if (
+    aspectCat &&
+    isFeatureActive(lang, "grammatical:aspect", l => (l.grammar.aspectMarking ?? "none") !== "none")
+  ) {
     stack.push(aspectCat);
   }
   const moodCat: MorphCategory | null =
@@ -715,7 +725,16 @@ function realiseVerb(
     vp.verb.mood === "irrealis" ? "verb.mood.irr" :
     vp.verb.mood === "dubitative" ? "verb.mood.dub" :
     vp.verb.mood === "hortative" ? "verb.mood.hort" : null;
-  if (moodCat && isFeatureActive(lang, "grammatical:mood", l => (l.grammar.moodMarking ?? "declarative") !== "declarative")) {
+  // Phase 50 T1 (§gap-7): same logic as aspect — apply mood paradigm
+  // when paradigm exists, independent of grammar.moodMarking, so AUX-
+  // driven explicit mood (should/would → subj, verb-initial → imp)
+  // isn't silently dropped.
+  if (moodCat && lang.morphology.paradigms[moodCat]) {
+    stack.push(moodCat);
+  } else if (
+    moodCat &&
+    isFeatureActive(lang, "grammatical:mood", l => (l.grammar.moodMarking ?? "declarative") !== "declarative")
+  ) {
     stack.push(moodCat);
   }
   if (vp.verb.voice === "passive") stack.push("verb.voice.pass");

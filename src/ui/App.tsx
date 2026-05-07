@@ -21,6 +21,7 @@ import { UpdateBanner } from "./UpdateBanner";
 import { DebugOverlay } from "./DebugOverlay";
 import { PhonemeInventoryView } from "./PhonemeInventoryView";
 import { AboutModal } from "./AboutModal";
+import { HelpOverlay } from "./HelpOverlay";
 import { StatsPanel } from "./StatsPanel";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
@@ -109,6 +110,7 @@ export function App() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("tree");
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     const payload = readShareFromLocation();
@@ -142,6 +144,7 @@ export function App() {
     setActiveTab,
     activeTab,
     openGlobalSearch: requestGlobalSearchOpen,
+    toggleHelp: () => setHelpOpen((h) => !h),
   });
 
   useEffect(() => {
@@ -183,6 +186,7 @@ export function App() {
       <UpdateBanner />
       <DebugOverlay />
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
+      <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
       <header className="header">
         <button
           className="menu-toggle ghost icon-only"
@@ -205,6 +209,16 @@ export function App() {
           gen {generation} <span className="t-muted" style={{ fontWeight: "normal", marginLeft: 4 }}>· {formatElapsed(generation, yearsPerGen)}</span>
         </span>
         <GlobalSearch onJumpToLexicon={() => setActiveTab("dictionary")} />
+        <button
+          type="button"
+          className="ghost icon-only"
+          onClick={() => setHelpOpen(true)}
+          aria-label="Show keyboard shortcuts"
+          title="Keyboard shortcuts (?)"
+          style={{ fontSize: 12 }}
+        >
+          ?
+        </button>
         <div className="playback">
           <button className="primary icon-only" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
             {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
@@ -313,6 +327,7 @@ export function App() {
         {activeTab === "dictionary" && (
           <div className="panel panel-single" role="tabpanel" id="tabpanel-dictionary" aria-labelledby="tab-dictionary">
             <h3>Dictionary</h3>
+            <LanguageProfile />
             <DictionaryView />
           </div>
         )}
@@ -398,24 +413,14 @@ export function App() {
           <div className="panel panel-single" role="tabpanel" id="tabpanel-stats" aria-labelledby="tab-stats">
             <h3>Stats</h3>
             <StatsPanel />
+            <h3 style={{ marginTop: 24 }}>Lexicostatistics &amp; Glottochronology</h3>
+            <LexicostatView />
           </div>
         )}
         {activeTab === "map" && (
           <div className="panel panel-single" role="tabpanel" id="tabpanel-map" aria-labelledby="tab-map">
             <h3>World Map</h3>
             <MapView />
-          </div>
-        )}
-        {activeTab === "profile" && (
-          <div className="panel panel-single" role="tabpanel" id="tabpanel-profile" aria-labelledby="tab-profile">
-            <h3>Language Profile</h3>
-            <LanguageProfile />
-          </div>
-        )}
-        {activeTab === "lexicostat" && (
-          <div className="panel panel-single" role="tabpanel" id="tabpanel-lexicostat" aria-labelledby="tab-lexicostat">
-            <h3>Lexicostatistics &amp; Glottochronology</h3>
-            <LexicostatView />
           </div>
         )}
       </main>

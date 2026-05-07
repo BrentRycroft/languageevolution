@@ -524,9 +524,31 @@ function buildRegistry(): Record<Meaning, Concept> {
       canBeOpaqueCoined: OPAQUE_COINAGE_ELIGIBLE.has(id) ? true : undefined,
     };
   }
+  // Phase 50 T1: dedupe EXPANDED_CONCEPTS by id, keeping the first
+  // occurrence. The list grew over many sprints and now has some
+  // entries appearing twice with different tiers (e.g. merchant tier
+  // 2 then tier 1). The first occurrence is the canonical one.
+  const expandedDedup = new Map<Meaning, (typeof EXPANDED_CONCEPTS)[number]>();
   for (const exp of EXPANDED_CONCEPTS) {
-    if (out[exp.id]) continue;
+    if (!expandedDedup.has(exp.id)) expandedDedup.set(exp.id, exp);
+  }
+  for (const exp of expandedDedup.values()) {
     const nbr = colexOf[exp.id];
+    const existing = out[exp.id];
+    if (existing) {
+      // Phase 50 T1: when a concept appears in both BASIC_240 and
+      // EXPANDED_CONCEPTS, the curated EXPANDED_CONCEPTS metadata is
+      // authoritative for pos / cluster / tier — the BASIC_240 loop
+      // uses heuristics (`posOf`, `inferCluster`) that return "other"
+      // for body parts, abstract nouns, etc.
+      out[exp.id] = {
+        ...existing,
+        pos: exp.pos,
+        cluster: exp.cluster,
+        tier: exp.tier,
+      };
+      continue;
+    }
     out[exp.id] = {
       id: exp.id,
       pos: exp.pos,
