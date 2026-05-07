@@ -2,6 +2,19 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
+// Phase 48 T15: Germanic preset notation notes.
+//
+// - Word-final `ã` represents Proto-Germanic neuter / masculine
+//   accusative singular endings (*-ą / *-an), reconstructed with a
+//   nasalised final vowel. These are NOT phonemic nasal-vowel
+//   contrasts (PGmc had no /ã/ vs /a/ contrast); they're the
+//   reconstruction-tradition realisation of *-an/*-ą with the nasal
+//   eroding into the preceding vowel. Daughters denasalise via
+//   regular sound change.
+// - Labiovelars (`kʷ`, `xʷ`) and palatalised stops (`kʲ`, `gʲ`) are
+//   inherited from PIE. PGmc lost most labiovelars (a few survive in
+//   reconstructions like *kʷena- "woman").
+// - Long vowels marked with `ː`. Length is phonemic in PGmc.
 const LEXICON: Lexicon = {
   water: ["w", "a", "t", "a", "r"],
   fire: ["f", "u", "r"],

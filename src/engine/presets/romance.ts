@@ -2,6 +2,23 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
+// Phase 48 T15: Romance preset notation notes.
+//
+// This preset represents Vulgar Latin / Proto-Romance — NOT
+// Classical Latin. Differences:
+//
+// - Vowel system: 7-vowel Vulgar Latin /a ɛ e i ɔ o u/. Phonemic
+//   vowel length (Classical Latin /aː eː iː oː uː/) was lost by
+//   Vulgar Latin and replaced by the quality contrast (open-mid
+//   /ɛ ɔ/ vs close-mid /e o/). So entries DO NOT use `ː`.
+// - Spirantisation: intervocalic `b` → `β` already underway in
+//   Vulgar Latin (e.g., `niβe` "snow", `silβa` "forest"). Encoded
+//   as `β` not `b` in those positions.
+// - The seedGrammar declares `caseStrategy: "case"` reflecting
+//   inherited Classical Latin morphology that Vulgar Latin retained
+//   in form even as the actual case distinctions were collapsing.
+//   Daughters lose case morphology via regular drift.
+
 const LEXICON: Lexicon = {
   water: ["a", "k", "w", "a"],
   fire: ["f", "ɔ", "k", "u"],
