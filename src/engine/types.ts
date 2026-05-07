@@ -87,7 +87,10 @@ export interface LanguageEvent {
     | "merger"
     | "tier_transition"
     | "kinship_simplification"
-    | "grammar_cascade";
+    | "grammar_cascade"
+    // Phase 48 D4-D: phonologisation event — a phoneme's contextual
+    // diversity rose past the threshold and a new contrast emerged.
+    | "phonologisation";
   description: string;
   meta?: {
     donorId?: string;
@@ -159,6 +162,44 @@ export interface Language {
   activeRules: import("./phonology/generated-types").GeneratedRule[];
   retiredRules?: import("./phonology/generated-types").GeneratedRule[];
   ruleBias?: Record<string, number>;
+  /**
+   * Phase 48 T4: counter incremented every time a sound-change rule
+   * was inhibited by the homonym-avoidance check (T3). Surfaced in
+   * the narrative timeline + UI so the user can see when the inhibitor
+   * is firing.
+   */
+  homonymInhibitions?: number;
+  /**
+   * Phase 48 T4: per-language tunable for the homonym-avoidance
+   * inhibition probability. Defaults to 0.7. Set to 0 to disable;
+   * 1 to make every potential homonym collision strict.
+   */
+  homonymInhibition?: number;
+  /**
+   * Phase 48 D4-A: counter incremented every time a phoneme-merger
+   * was inhibited by the pairwise-functional-load gate. Surfaced
+   * in the diagnostics view.
+   */
+  functionalLoadInhibitions?: number;
+  /**
+   * Phase 48 D4-D: per-phoneme context-diversity snapshot from the
+   * previous generation. Compared against the current snapshot to
+   * detect phonologization events (contrasts emerging via context
+   * diversification). Hyman 2008.
+   */
+  contextDiversitySnapshot?: Record<string, number>;
+  /**
+   * Phase 48 D4-D: count of phonologization events logged. Surfaced
+   * in diagnostics + narrative timeline.
+   */
+  phonologisationEvents?: number;
+  /**
+   * Phase 48 D4-C: per-vowel pressure scores derived from
+   * height/backness crowding in the inventory. Tracked across
+   * generations so chain-shift events fire when pressure rises past
+   * threshold. Martinet 1955; Labov 1994.
+   */
+  vowelShiftPressure?: Record<string, number>;
   lexicalStress?: Record<string, number>;
   registerOf?: Record<string, "high" | "low">;
   coords?: { x: number; y: number };
@@ -871,6 +912,21 @@ export interface SimulationConfig {
    * (the Phase 41-45 back-compat default).
    */
   seedActiveModules?: ReadonlyArray<string>;
+  /**
+   * Phase 48 T10: profile flag for languages whose rhotic is the
+   * alveolar approximant ɹ rather than the trill r (English-style).
+   * When true, the preset validator flags any seedLexicon entry
+   * containing raw `r` as an IPA error.
+   */
+  rhoticApproximant?: boolean;
+  /**
+   * Phase 48 T10: profile flag for presets that use the
+   * reconstruction-tradition notation for proto-languages (laryngeals
+   * h₁/h₂/h₃ and triple-diacritic stops like gʲʰ). Required for PIE.
+   * When false (default), the validator flags those phonemes as
+   * outside standard IPA-2020.
+   */
+  reconstructionMode?: boolean;
   /**
    * Phase 39a: per-preset declared phoneme inventory target. When
    * absent, the simulator falls back to `seedLexicon`'s observed

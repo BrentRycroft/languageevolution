@@ -28,6 +28,7 @@ const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   tier_transition: "#ffd07a",
   kinship_simplification: "#d6c1ff",
   grammar_cascade: "#ffe580",
+  phonologisation: "#a3c8ff",
 };
 
 const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
@@ -50,6 +51,7 @@ const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
   tier_transition: "tier",
   kinship_simplification: "kinship",
   grammar_cascade: "cascade",
+  phonologisation: "phonemicisation",
 };
 
 export function EventsLog() {

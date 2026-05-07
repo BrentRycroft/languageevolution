@@ -581,6 +581,11 @@ export function presetPIE(): SimulationConfig {
       "morphological:agreement",
       "morphological:analogy",
     ],
+    // Phase 48 T13: PIE uses reconstruction-tradition notation
+    // (laryngeals h₁/h₂/h₃, triple-diacritic stops gʲʰ etc.). Flag
+    // tells the validator to allow these as valid phonemes for this
+    // preset. Other presets remain held to standard IPA-2020.
+    reconstructionMode: true,
     preset: "pie",
   };
 }

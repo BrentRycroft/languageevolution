@@ -18,12 +18,14 @@ export type Manner =
   | "stop"
   | "affricate"
   | "fricative"
+  | "lateral-fricative"
   | "nasal"
   | "liquid"
   | "tap"
   | "trill"
   | "glide"
-  | "approximant";
+  | "approximant"
+  | "lateral-approximant";
 
 export type Height = "high" | "mid-high" | "mid" | "mid-low" | "low";
 export type Backness = "front" | "central" | "back";
@@ -36,6 +38,11 @@ export interface ConsonantFeatures {
   aspirated?: boolean;
   palatalised?: boolean;
   labialised?: boolean;
+  // Phase 48 T5: phonation contrasts. Implosive (ɓ ɗ ʄ ɠ ʛ), breathy
+  // (b̤ d̤ — Indo-Aryan murmured stops), creaky (b̰ — !Xóõ, Atayal).
+  implosive?: boolean;
+  breathy?: boolean;
+  creaky?: boolean;
 }
 
 export interface VowelFeatures {
@@ -46,6 +53,12 @@ export interface VowelFeatures {
   nasal?: boolean;
   long?: boolean;
   tense?: boolean;
+  // Phase 48 T5: vowel diacritic flags for the missing IPA cardinals.
+  // `centralized` → ̈ (a centralised vowel), `advanced` → ̟,
+  // `retracted` → ̠. Used by `findVowel` for feature-based search.
+  centralized?: boolean;
+  advanced?: boolean;
+  retracted?: boolean;
 }
 
 export type FeatureBundle = ConsonantFeatures | VowelFeatures;
@@ -182,6 +195,55 @@ export const PHONE_FEATURES: Record<string, FeatureBundle> = {
   "ĩ": { type: "vowel", height: "high", backness: "front", round: false, nasal: true },
   "õ": { type: "vowel", height: "mid-high", backness: "back", round: true, nasal: true },
   "ũ": { type: "vowel", height: "high", backness: "back", round: true, nasal: true },
+
+  // Phase 48 T6: missing pulmonic consonants from IPA-2020.
+  // Plosives
+  "c": { type: "consonant", place: "palatal", manner: "stop", voice: false },
+  "ɟ": { type: "consonant", place: "palatal", manner: "stop", voice: true },
+  "ɢ": { type: "consonant", place: "uvular", manner: "stop", voice: true },
+  // Nasals
+  "ɱ": { type: "consonant", place: "labiodental", manner: "nasal", voice: true },
+  "ɴ": { type: "consonant", place: "uvular", manner: "nasal", voice: true },
+  // Trills + taps
+  "ʙ": { type: "consonant", place: "labial", manner: "trill", voice: true },
+  "ⱱ": { type: "consonant", place: "labiodental", manner: "tap", voice: true },
+  "ɽ": { type: "consonant", place: "retroflex", manner: "tap", voice: true },
+  // Fricatives
+  "ɸ": { type: "consonant", place: "labial", manner: "fricative", voice: false },
+  "ç": { type: "consonant", place: "palatal", manner: "fricative", voice: false },
+  "ʝ": { type: "consonant", place: "palatal", manner: "fricative", voice: true },
+  "χ": { type: "consonant", place: "uvular", manner: "fricative", voice: false },
+  "ʁ": { type: "consonant", place: "uvular", manner: "fricative", voice: true },
+  "ʕ": { type: "consonant", place: "pharyngeal", manner: "fricative", voice: true },
+  "ɦ": { type: "consonant", place: "glottal", manner: "fricative", voice: true },
+  // Lateral fricatives (new manner)
+  "ɬ": { type: "consonant", place: "alveolar", manner: "lateral-fricative", voice: false },
+  "ɮ": { type: "consonant", place: "alveolar", manner: "lateral-fricative", voice: true },
+  // Approximants
+  "ʋ": { type: "consonant", place: "labiodental", manner: "approximant", voice: true },
+  "ɻ": { type: "consonant", place: "retroflex", manner: "approximant", voice: true },
+  "ɰ": { type: "consonant", place: "velar", manner: "approximant", voice: true },
+  // Lateral approximants (uses new manner)
+  "ɭ": { type: "consonant", place: "retroflex", manner: "lateral-approximant", voice: true },
+  "ʎ": { type: "consonant", place: "palatal", manner: "lateral-approximant", voice: true },
+  "ʟ": { type: "consonant", place: "velar", manner: "lateral-approximant", voice: true },
+
+  // Phase 48 T7: voiced implosives (ɓ ɗ ʄ ɠ ʛ).
+  "ɓ": { type: "consonant", place: "labial", manner: "stop", voice: true, implosive: true },
+  "ɗ": { type: "consonant", place: "alveolar", manner: "stop", voice: true, implosive: true },
+  "ʄ": { type: "consonant", place: "palatal", manner: "stop", voice: true, implosive: true },
+  "ɠ": { type: "consonant", place: "velar", manner: "stop", voice: true, implosive: true },
+  "ʛ": { type: "consonant", place: "uvular", manner: "stop", voice: true, implosive: true },
+
+  // Phase 48 T7: missing IPA cardinal vowels.
+  "ɘ": { type: "vowel", height: "mid-high", backness: "central", round: false },
+  "ɵ": { type: "vowel", height: "mid-high", backness: "central", round: true },
+  "ɤ": { type: "vowel", height: "mid-high", backness: "back", round: false },
+  "ɞ": { type: "vowel", height: "mid-low", backness: "central", round: true },
+  "ɜ": { type: "vowel", height: "mid-low", backness: "central", round: false },
+  "ɐ": { type: "vowel", height: "low", backness: "central", round: false, advanced: true },
+  "ɶ": { type: "vowel", height: "low", backness: "front", round: true },
+  "ä": { type: "vowel", height: "low", backness: "central", round: false, centralized: true },
 };
 
 export type FeatureQuery =
@@ -292,26 +354,10 @@ export function shiftHeight(p: Phoneme, n: number): Phoneme | undefined {
   return undefined;
 }
 
-function findVowel(v: VowelFeatures): Phoneme | undefined {
-  for (const [p, bundle] of Object.entries(PHONE_FEATURES)) {
-    if (bundle.type !== "vowel") continue;
-    if (
-      bundle.height === v.height &&
-      bundle.backness === v.backness &&
-      bundle.round === v.round &&
-      !!bundle.long === !!v.long
-    ) {
-      return p;
-    }
-  }
-  for (const [p, bundle] of Object.entries(PHONE_FEATURES)) {
-    if (bundle.type !== "vowel") continue;
-    if (bundle.height === v.height && bundle.backness === v.backness) return p;
-  }
-  return undefined;
-}
+// (findVowel exported below — see Phase 48 T7 expanded version.)
 
 export function findConsonant(c: ConsonantFeatures): Phoneme | undefined {
+  // Pass 1: full match — every feature flag must agree.
   for (const [p, bundle] of Object.entries(PHONE_FEATURES)) {
     if (bundle.type !== "consonant") continue;
     if (
@@ -320,17 +366,60 @@ export function findConsonant(c: ConsonantFeatures): Phoneme | undefined {
       bundle.voice === c.voice &&
       !!bundle.aspirated === !!c.aspirated &&
       !!bundle.palatalised === !!c.palatalised &&
-      !!bundle.labialised === !!c.labialised
+      !!bundle.labialised === !!c.labialised &&
+      // Phase 48 T5 + T7: phonation contrasts must match too.
+      !!bundle.implosive === !!c.implosive &&
+      !!bundle.breathy === !!c.breathy &&
+      !!bundle.creaky === !!c.creaky
     ) {
       return p;
     }
   }
+  // Pass 2: relaxed match — only place/manner/voice agree.
   for (const [p, bundle] of Object.entries(PHONE_FEATURES)) {
     if (bundle.type !== "consonant") continue;
     if (
       bundle.place === c.place &&
       bundle.manner === c.manner &&
       bundle.voice === c.voice
+    ) {
+      return p;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Phase 48 T7: feature-based vowel search.
+ *
+ * Pass 1 enforces every flag (height, backness, round, nasal, long,
+ * tense, centralized, advanced, retracted). Pass 2 relaxes to just
+ * height/backness/round so a query for "any mid-high back unrounded
+ * vowel" still recovers something even if no exact match exists.
+ */
+export function findVowel(v: VowelFeatures): Phoneme | undefined {
+  for (const [p, bundle] of Object.entries(PHONE_FEATURES)) {
+    if (bundle.type !== "vowel") continue;
+    if (
+      bundle.height === v.height &&
+      bundle.backness === v.backness &&
+      bundle.round === v.round &&
+      !!bundle.nasal === !!v.nasal &&
+      !!bundle.long === !!v.long &&
+      !!bundle.tense === !!v.tense &&
+      !!bundle.centralized === !!v.centralized &&
+      !!bundle.advanced === !!v.advanced &&
+      !!bundle.retracted === !!v.retracted
+    ) {
+      return p;
+    }
+  }
+  for (const [p, bundle] of Object.entries(PHONE_FEATURES)) {
+    if (bundle.type !== "vowel") continue;
+    if (
+      bundle.height === v.height &&
+      bundle.backness === v.backness &&
+      bundle.round === v.round
     ) {
       return p;
     }

@@ -15,6 +15,8 @@ import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/v
 import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
 import { syncWordsAfterPhonology } from "../lexicon/word";
+import { detectPhonologisation } from "../phonology/phonologization";
+import { detectChainShiftPressure } from "../phonology/chainShift";
 import { volatilityMultiplier } from "./volatility";
 import { inventorySizePressure } from "./inventoryManagement";
 import { stripTone } from "../phonology/tone";
@@ -184,6 +186,11 @@ export function stepPhonology(
     // Phase 29 Tranche 5o: hand the lang to apply.ts so candidate
     // outputs are filtered by the OT ranking (soft constraint).
     langForOt: lang,
+    // Phase 48 T3: hand the lang to apply.ts so candidate outputs
+    // can be checked against the form-key index for homonym
+    // collisions with unrelated words. Default ON; per-language
+    // tunable via `lang.homonymInhibition`.
+    langForHomonym: lang,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   // Phase 29 Tranche 5d: record proto→daughter substitutions for
@@ -507,6 +514,33 @@ export function stepPhonology(
         });
       }
     }
+  }
+  // Phase 48 D4-D: phonologization detection. Compare current
+  // per-phoneme context-diversity against last gen's snapshot; emit
+  // narrative events for phonemes whose diversity rose past the
+  // threshold (allophonic → phonemic, Hyman 2008).
+  const phonologisationEvents = detectPhonologisation(lang, generation);
+  if (phonologisationEvents.length > 0) {
+    lang.phonologisationEvents =
+      (lang.phonologisationEvents ?? 0) + phonologisationEvents.length;
+    for (const ev of phonologisationEvents) {
+      pushEvent(lang, {
+        generation,
+        kind: "phonologisation",
+        description: `phonologisation: /${ev.phoneme}/ now appears in ${ev.toDiversity} contexts (was ${ev.fromDiversity}); contrast emergent`,
+      });
+    }
+  }
+  // Phase 48 D4-C: vowel-space chain-shift pressure detection.
+  // Compute per-vowel crowding metric; emit chain-shift events when
+  // pressure rises past threshold. Martinet 1955; Labov 1994.
+  const chainShiftEvents = detectChainShiftPressure(lang, generation);
+  for (const ev of chainShiftEvents) {
+    pushEvent(lang, {
+      generation,
+      kind: "chain_shift",
+      description: `chain-shift pressure: /${ev.vowel}/ pressure rose ${ev.fromPressure}→${ev.toPressure}; vowel-space crowding`,
+    });
   }
 }
 

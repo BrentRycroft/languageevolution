@@ -16,6 +16,8 @@ export const VOWELS: ReadonlySet<Phoneme> = new Set([
   // `nasalization.vowel_before_nasal` rule.
   "ɛ̃", "ɔ̃", "ɑ̃", "œ̃",
   "aː̃", "ẽː", "ĩː", "õː", "ũː", "ɛ̃ː", "ɔ̃ː",
+  // Phase 48 T7: missing IPA cardinal vowels.
+  "ɘ", "ɵ", "ɤ", "ɞ", "ɜ", "ɐ", "ɶ", "ä",
 ]);
 
 export const CONSONANTS: ReadonlySet<Phoneme> = new Set([
@@ -39,6 +41,16 @@ export const CONSONANTS: ReadonlySet<Phoneme> = new Set([
   "ǀ", "ǃ", "ǂ", "ǁ", "ʘ",
   "ⁿ",
   "ⁿp", "ⁿb", "ⁿt", "ⁿd", "ⁿk", "ⁿg", "ⁿj",
+  // Phase 48 T6: missing pulmonic consonants from IPA-2020.
+  "c", "ɟ", "ɢ",                            // palatal/uvular plosives
+  "ɱ", "ɴ",                                  // labiodental + uvular nasals
+  "ʙ", "ⱱ", "ɽ",                            // bilabial trill, labiodental tap, retroflex tap
+  "ɸ", "ç", "ʝ", "χ", "ʁ", "ʕ", "ɦ",      // missing fricatives
+  "ɬ", "ɮ",                                  // lateral fricatives
+  "ʋ", "ɻ", "ɰ",                            // missing approximants
+  "ɭ", "ʎ", "ʟ",                            // missing lateral approximants
+  // Phase 48 T7: voiced implosives (ɓ ɗ ʄ ɠ ʛ).
+  "ɓ", "ɗ", "ʄ", "ɠ", "ʛ",
 ]);
 
 const IS_VOWEL_CACHE: Record<string, boolean> = Object.create(null);

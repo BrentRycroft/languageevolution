@@ -14,6 +14,8 @@ import { isVowel } from "./ipa";
 import { stripTone } from "./tone";
 import { posOf } from "../lexicon/pos";
 import { otFit } from "./ot";
+import { wouldCreateUnrelatedHomonym } from "../lexicon/homonyms";
+import { markednessDelta } from "./markedness";
 import type { Language } from "../types";
 
 /**
@@ -150,6 +152,31 @@ export interface ApplyOptions {
    * caller (steps/phonology.ts) supplies `lang` here.
    */
   langForOt?: Pick<Language, "otRanking">;
+  /**
+   * Phase 48 T3: pass the language for homonym-avoidance lookups.
+   * When provided, candidate forms are checked against
+   * `lang.wordsByFormKey` for collisions with unrelated words; if a
+   * collision is detected, the rule application is inhibited with
+   * probability `INHIBIT_PROB` (default 0.7, override via
+   * `lang.homonymInhibition`). Without `langForHomonym` the check is
+   * skipped (back-compat).
+   *
+   * Linguistic basis: Martinet 1952 / Wedel et al. 2013 — speakers
+   * resist actuating word-specific changes that would create
+   * homonyms with unrelated words.
+   */
+  langForHomonym?: Language;
+  /**
+   * Phase 48 T3: feature flag for back-compat replay determinism.
+   * Defaults to `true` when omitted; pass `false` to disable the
+   * homonym-avoidance hook (e.g., for replay of pre-Phase-48 saves).
+   */
+  homonymAvoidance?: boolean;
+  /**
+   * Phase 48 D4-B: feature flag for the markedness-asymmetry hook.
+   * Defaults to `true`. Set false for back-compat replay.
+   */
+  markednessBias?: boolean;
   _orderedChanges?: SoundChange[];
 }
 
@@ -424,6 +451,43 @@ export function applyChangesToWord(
       const next = change.apply(current, rng);
       if (next === current) break;
       if (!isFormLegal(meaning, next)) break;
+      // Phase 48 T3: homonym-avoidance hook. When the language has
+      // `wordsByFormKey` populated and the candidate would collide
+      // with another (unrelated) word's form, inhibit the rule
+      // application with probability `INHIBIT_PROB`. Hidden behind
+      // `opts.homonymAvoidance` so replay of pre-Phase-48 saves is
+      // deterministic.
+      if (
+        (opts.homonymAvoidance ?? true) !== false &&
+        opts.langForHomonym &&
+        meaning &&
+        wouldCreateUnrelatedHomonym(opts.langForHomonym, meaning, next)
+      ) {
+        const inhibitP =
+          opts.langForHomonym.homonymInhibition ?? HOMONYM_INHIBIT_PROB_DEFAULT;
+        if (rng.chance(inhibitP)) {
+          opts.langForHomonym.homonymInhibitions =
+            (opts.langForHomonym.homonymInhibitions ?? 0) + 1;
+          break;
+        }
+      }
+      // Phase 48 D4-B: markedness asymmetry. Sound changes that
+      // INTRODUCE marked segments (e.g., produce ʔ, ɸ, ɮ, click
+      // consonants, implosives) are probabilistically inhibited;
+      // changes that REMOVE marked segments are not. Linguistic
+      // basis: Greenberg 1966; Jakobson 1941; Maddieson 1984.
+      // Marked phonemes are rarer cross-linguistically and more
+      // prone to merger / loss diachronically, not introduction.
+      // Hidden behind `opts.markednessBias` for replay determinism.
+      if ((opts.markednessBias ?? true) !== false) {
+        const delta = markednessDelta(current, next);
+        if (delta < -MARKEDNESS_DELTA_THRESHOLD) {
+          // Negative delta = candidate has more total markedness than
+          // current. Reject probabilistically.
+          const rejectP = Math.min(0.85, -delta * MARKEDNESS_REJECT_GAIN);
+          if (rng.chance(rejectP)) break;
+        }
+      }
       // Phase 29 Tranche 5o: soft OT filter. Compare candidate vs
       // current under the language's OT ranking; if the candidate is
       // appreciably worse, reject probabilistically. Skip when the
@@ -442,6 +506,20 @@ export function applyChangesToWord(
   }
   return current;
 }
+
+/** Phase 48 T3: default inhibition probability for unrelated-homonym
+ *  candidates. Overridable per-language via `lang.homonymInhibition`. */
+const HOMONYM_INHIBIT_PROB_DEFAULT = 0.7;
+
+/** Phase 48 D4-B: markedness-delta threshold below which the inhibitor
+ *  fires. Small deltas are tolerated (rule introduces a slightly more
+ *  marked segment); only sizeable jumps in markedness get rolled back. */
+const MARKEDNESS_DELTA_THRESHOLD = 0.15;
+
+/** Phase 48 D4-B: gain on the rejection probability. With this gain
+ *  and the threshold, a delta of -0.5 rejects with p≈0.5; -0.85 rejects
+ *  with the cap p=0.85. */
+const MARKEDNESS_REJECT_GAIN = 1.0;
 
 function samplePoissonBounded(lambda: number, rng: Rng): number {
   if (lambda <= 0) return 0;

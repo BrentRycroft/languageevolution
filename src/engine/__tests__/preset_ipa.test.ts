@@ -53,3 +53,54 @@ describe("preset IPA conformance", () => {
     });
   }
 });
+
+describe("Phase 48 T10/T11 — hardened validator", () => {
+  it("English uses ɹ (alveolar approximant), not raw r", () => {
+    const config = PRESETS.find((p) => p.id === "english")!.build();
+    const issues = validatePresetIpa(config);
+    const rawR = issues.filter((i) => i.code === "raw_r_in_rhotic_approximant");
+    if (rawR.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error(
+        `English has ${rawR.length} raw-r issue(s):\n` +
+          summarizePresetIssues(rawR),
+      );
+    }
+    expect(rawR).toEqual([]);
+  });
+
+  it("PIE allows reconstruction phonemes (laryngeals, gʲʰ-style stacks)", () => {
+    const config = PRESETS.find((p) => p.id === "pie")!.build();
+    const issues = validatePresetIpa(config);
+    const reconstructionIssues = issues.filter(
+      (i) => i.code === "reconstruction_phoneme_outside_mode",
+    );
+    expect(reconstructionIssues).toEqual([]);
+  });
+
+  it("non-reconstruction presets reject laryngeals", () => {
+    const englishCfg = PRESETS.find((p) => p.id === "english")!.build();
+    // Synthetic injection: add a laryngeal to the English lexicon.
+    const lex = { ...englishCfg.seedLexicon, fakeWord: ["h₂", "a"] };
+    const polluted = { ...englishCfg, seedLexicon: lex };
+    const issues = validatePresetIpa(polluted);
+    const reconstructionIssues = issues.filter(
+      (i) => i.code === "reconstruction_phoneme_outside_mode",
+    );
+    expect(reconstructionIssues.length).toBeGreaterThan(0);
+  });
+
+  it("Toki Pona is clean of all hardened checks (stale_freq is a warning, not failure)", () => {
+    const config = PRESETS.find((p) => p.id === "tokipona")!.build();
+    const issues = validatePresetIpa(config);
+    const hardChecks = issues.filter(
+      (i) =>
+        i.code === "raw_r_in_rhotic_approximant" ||
+        i.code === "missing_tone" ||
+        i.code === "reconstruction_phoneme_outside_mode" ||
+        i.code === "unknown_phoneme" ||
+        i.code === "empty_form",
+    );
+    expect(hardChecks).toEqual([]);
+  });
+});

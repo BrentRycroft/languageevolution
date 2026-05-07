@@ -15,7 +15,15 @@ import { featuresOf } from "../phonology/features";
  * introduce non-IPA characters or stale references.
  */
 export interface PresetValidationIssue {
-  code: "unknown_phoneme" | "empty_form" | "stale_freq" | "stale_suppletion";
+  code:
+    | "unknown_phoneme"
+    | "empty_form"
+    | "stale_freq"
+    | "stale_suppletion"
+    // Phase 48 T10: hardened checks
+    | "raw_r_in_rhotic_approximant"
+    | "missing_tone"
+    | "reconstruction_phoneme_outside_mode";
   meaning?: string;
   detail: string;
 }
@@ -23,6 +31,19 @@ export interface PresetValidationIssue {
 export function validatePresetIpa(config: SimulationConfig): PresetValidationIssue[] {
   const issues: PresetValidationIssue[] = [];
   const lex = config.seedLexicon ?? {};
+
+  // Phase 48 T10: per-preset profile flags. `rhoticApproximant` flags
+  // languages that should use ɹ (English) not the alveolar trill r.
+  // `tonal` flags languages where every vowel nucleus must carry a
+  // tone mark. `reconstructionMode` allows laryngeals/triple-diacritic
+  // phonemes (PIE-style) without flagging them.
+  const cfgWithFlags = config as SimulationConfig & {
+    rhoticApproximant?: boolean;
+    reconstructionMode?: boolean;
+  };
+  const tonal = config.seedToneRegime === "tonal";
+  const rhoticApprox = cfgWithFlags.rhoticApproximant === true;
+  const reconstructionMode = cfgWithFlags.reconstructionMode === true;
 
   for (const [meaning, form] of Object.entries(lex)) {
     if (!form || form.length === 0) {
@@ -33,6 +54,7 @@ export function validatePresetIpa(config: SimulationConfig): PresetValidationIss
       });
       continue;
     }
+    let hasToneMark = false;
     for (const phoneme of form as WordForm) {
       if (!isKnownPhoneme(phoneme)) {
         issues.push({
@@ -41,6 +63,34 @@ export function validatePresetIpa(config: SimulationConfig): PresetValidationIss
           detail: `seedLexicon["${meaning}"] contains unknown phoneme "${phoneme}" (codepoints: ${codepoints(phoneme)})`,
         });
       }
+      // Phase 48 T10 (b): English-style preset using raw `r` should
+      // use ɹ (alveolar approximant). Flag only when the preset has
+      // declared `rhoticApproximant: true`.
+      if (rhoticApprox && phoneme === "r") {
+        issues.push({
+          code: "raw_r_in_rhotic_approximant",
+          meaning,
+          detail: `seedLexicon["${meaning}"] uses raw "r" (alveolar trill); rhotic-approximant preset should use "ɹ"`,
+        });
+      }
+      // Phase 48 T10 (d): laryngeals + triple-diacritic phonemes
+      // outside an explicit reconstructionMode flag.
+      if (!reconstructionMode && isReconstructionPhoneme(phoneme)) {
+        issues.push({
+          code: "reconstruction_phoneme_outside_mode",
+          meaning,
+          detail: `seedLexicon["${meaning}"] contains reconstruction-only phoneme "${phoneme}"; set reconstructionMode: true to allow`,
+        });
+      }
+      if (TONE_MARKS_REGEX.test(phoneme)) hasToneMark = true;
+    }
+    // Phase 48 T10 (c): tonal-preset entries lacking any tone mark.
+    if (tonal && !hasToneMark) {
+      issues.push({
+        code: "missing_tone",
+        meaning,
+        detail: `seedLexicon["${meaning}"] has no tone mark; tonal presets should mark every vowel nucleus`,
+      });
     }
   }
 
@@ -78,6 +128,27 @@ function isKnownPhoneme(p: string): boolean {
   // featuresOf strips tone marks internally; if it returns undefined, the
   // base phoneme is unknown.
   return featuresOf(p) !== undefined;
+}
+
+/**
+ * Phase 48 T10: tone-mark detection. The simulator stores tones as
+ * combining marks attached to vowels (˩ ˧ ˥) or as integrated
+ * diacritics (á è ē). Match either style.
+ */
+const TONE_MARKS_REGEX = /[˥˦˧˨˩̀-̏]/;
+
+/**
+ * Phase 48 T10: reconstruction-only phonemes. Laryngeals (h₁/h₂/h₃)
+ * and triple-stacked diacritic phonemes (gʲʰ, kʲʰ) are PIE-tradition
+ * notation, not standard IPA-2020. Allowed only under
+ * `reconstructionMode: true`.
+ */
+function isReconstructionPhoneme(p: string): boolean {
+  if (p === "h₁" || p === "h₂" || p === "h₃") return true;
+  // Triple-diacritic stacks: contains both palatalised (ʲ) and
+  // aspirated (ʰ) modifiers.
+  if (p.includes("ʲ") && p.includes("ʰ")) return true;
+  return false;
 }
 
 function codepoints(s: string): string {
