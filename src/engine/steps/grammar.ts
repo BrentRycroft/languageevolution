@@ -200,7 +200,9 @@ export function stepMorphology(
     }
   }
   // Phase 36 Tranche 36h: derivational morpheme replacement.
-  if (lang.boundMorphemes && lang.boundMorphemes.size >= 2) {
+  if (lang.boundMorphemes && lang.boundMorphemes.size >= 2 &&
+      isFeatureActive(lang, "morphological:derivation",
+        l => !!(l.boundMorphemes && l.boundMorphemes.size > 0) || !!(l.compounds && Object.keys(l.compounds).length > 0))) {
     const repl = maybeAffixReplacement(lang, rng, 0.002 * lang.conservatism * gramMult);
     if (repl) {
       const origin = lang.boundMorphemeOrigin?.[repl.meaning];
@@ -216,7 +218,9 @@ export function stepMorphology(
   // Phase 36 Tranche 36s: back-formation. When a fossilised compound
   // ends in a recognised productive bound morpheme, speakers may
   // re-extract the base as a new lexeme (editor → edit pattern).
-  if (lang.compounds && lang.boundMorphemes && lang.boundMorphemes.size > 0) {
+  if (lang.compounds && lang.boundMorphemes && lang.boundMorphemes.size > 0 &&
+      isFeatureActive(lang, "morphological:derivation",
+        l => !!(l.boundMorphemes && l.boundMorphemes.size > 0) || !!(l.compounds && Object.keys(l.compounds).length > 0))) {
     const bf = maybeBackformation(lang, rng, 0.001 * lang.conservatism * gramMult);
     if (bf) {
       pushEvent(lang, {
@@ -300,7 +304,9 @@ export function stepMorphology(
     }
   }
   const reanalysisRate = 0.004 * lang.conservatism * gramMult;
-  if (reanalysisRate > 0) {
+  if (reanalysisRate > 0 &&
+      isFeatureActive(lang, "morphological:derivation",
+        l => !!(l.boundMorphemes && l.boundMorphemes.size > 0) || !!(l.compounds && Object.keys(l.compounds).length > 0))) {
     const ev = maybeReanalyse(lang, rng, reanalysisRate);
     if (ev) {
       pushEvent(lang, {
