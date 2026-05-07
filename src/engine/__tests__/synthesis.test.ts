@@ -246,4 +246,60 @@ describe("Phase 47 T1 — morphological synthesis", () => {
     expect(er).not.toBeNull();
     expect(er!.parts[1]!.meaning).toBe("-er.agt");
   });
+
+  // Phase 47 T3: negational rare path
+  it("negational synthesis: 'unhappy' from 'un-' + 'happy' in neg mode", () => {
+    const lang = makeLang({
+      lexicon: { happy: ["h", "æ", "p", "i"] },
+      derivationalSuffixes: [prefix("un-", ["ʌ", "n"])],
+    });
+    // Default mode (non-neg): "un-" excluded, returns null.
+    expect(attemptMorphologicalSynthesis(lang, "unhappy")).toBeNull();
+    // Explicit neg mode: "un-" eligible, fires.
+    const result = attemptMorphologicalSynthesis(lang, "unhappy", "neg");
+    expect(result).not.toBeNull();
+    expect(result!.form).toEqual(["ʌ", "n", "h", "æ", "p", "i"]);
+    expect(result!.resolution).toBe("synth-neg-affix");
+  });
+
+  it("non-neg mode excludes negational tags (un-, dis-, non-, in-, anti-, de-)", () => {
+    const lang = makeLang({
+      lexicon: { happy: ["h", "æ", "p", "i"] },
+      derivationalSuffixes: [
+        prefix("un-", ["ʌ", "n"]),
+        prefix("dis-", ["d", "ɪ", "s"]),
+        prefix("non-", ["n", "ɑ", "n"]),
+        prefix("in-", ["ɪ", "n"]),
+        prefix("anti-", ["æ", "n", "t", "i"]),
+        prefix("de-", ["d", "iː"]),
+      ],
+    });
+    expect(attemptMorphologicalSynthesis(lang, "unhappy", "non-neg")).toBeNull();
+    expect(attemptMorphologicalSynthesis(lang, "dishappy", "non-neg")).toBeNull();
+    expect(attemptMorphologicalSynthesis(lang, "nonhappy", "non-neg")).toBeNull();
+    expect(attemptMorphologicalSynthesis(lang, "inhappy", "non-neg")).toBeNull();
+    expect(attemptMorphologicalSynthesis(lang, "antihappy", "non-neg")).toBeNull();
+    expect(attemptMorphologicalSynthesis(lang, "dehappy", "non-neg")).toBeNull();
+  });
+
+  it("neg mode INCLUDES negational tags but excludes ordinary affixes", () => {
+    const lang = makeLang({
+      lexicon: { happy: ["h", "æ", "p", "i"], light: ["l", "a", "j", "t"] },
+      derivationalSuffixes: [
+        prefix("un-", ["ʌ", "n"]),                  // negational
+        suffix("-er.agt", ["ə", "r"]),              // non-neg
+      ],
+    });
+    // Neg mode: "un-" fires for "unhappy"; "-er" rejected.
+    expect(attemptMorphologicalSynthesis(lang, "unhappy", "neg")).not.toBeNull();
+    expect(attemptMorphologicalSynthesis(lang, "lighter", "neg")).toBeNull();
+  });
+
+  it("non-productive negational prefix is rejected even in neg mode", () => {
+    const lang = makeLang({
+      lexicon: { happy: ["h", "æ", "p", "i"] },
+      derivationalSuffixes: [prefix("un-", ["ʌ", "n"], false)], // not productive
+    });
+    expect(attemptMorphologicalSynthesis(lang, "unhappy", "neg")).toBeNull();
+  });
 });

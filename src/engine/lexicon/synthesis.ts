@@ -34,8 +34,27 @@ export interface SynthesisResult {
   form: WordForm;
   parts: Array<{ meaning: Meaning; form: WordForm }>;
   glossNote: string;
-  resolution: "synth-affix";
+  resolution: "synth-affix" | "synth-neg-affix";
 }
+
+/**
+ * Phase 47 T3: tags treated as negational prefixes. They fire on a
+ * separate (later) resolveLemma rung from the standard agentive /
+ * abstractive synthesis, so a stem-without-negation derivation always
+ * wins when both could apply. Models the linguistic reality that
+ * negational affixes are productive but more constrained than
+ * deriving suffixes (English "unhappy" is real but rarer than primary
+ * "sad").
+ */
+const NEGATIONAL_TAGS: ReadonlySet<string> = new Set([
+  "un-", "dis-", "non-", "in-", "anti-", "de-",
+]);
+
+function isNegationalTag(tag: string): boolean {
+  return NEGATIONAL_TAGS.has(tag);
+}
+
+export type SynthesisMode = "non-neg" | "neg";
 
 /**
  * Strip the tag's leading/trailing hyphen and any disambiguator
@@ -74,15 +93,21 @@ function affixPosition(suffix: { tag: string; position?: "prefix" | "suffix" }):
 export function attemptMorphologicalSynthesis(
   lang: Language,
   lemma: string,
+  mode: SynthesisMode = "non-neg",
 ): SynthesisResult | null {
   const affixes = lang.derivationalSuffixes;
   if (!affixes || affixes.length === 0) return null;
 
   // Sort productive affixes by english-orthographic length descending
   // for greedy longest-match. Non-productive affixes are excluded
-  // entirely — matches generative-morphology theory.
+  // entirely — matches generative-morphology theory. The mode
+  // partitions the productive set into negational vs non-negational:
+  //   - "non-neg" (rung 4): excludes NEGATIONAL_TAGS
+  //   - "neg" (rung 5): includes only NEGATIONAL_TAGS, fires after
+  //     non-neg returned null so negational prefixes are strictly rare.
   const candidates = affixes
     .filter((s): s is DerivationalSuffix & { productive: true } => s.productive === true)
+    .filter((s) => mode === "neg" ? isNegationalTag(s.tag) : !isNegationalTag(s.tag))
     .map((s) => ({
       affix: s,
       eng: tagToEnglishForm(s.tag),
@@ -124,7 +149,12 @@ export function attemptMorphologicalSynthesis(
           { meaning: stem, form: stemForm.slice() },
         ];
 
-    return { form, parts, glossNote, resolution: "synth-affix" };
+    return {
+      form,
+      parts,
+      glossNote,
+      resolution: mode === "neg" ? "synth-neg-affix" : "synth-affix",
+    };
   }
   return null;
 }

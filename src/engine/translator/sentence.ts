@@ -43,7 +43,8 @@ export interface TranslatedToken {
     | "colex"
     | "reverse-colex"
     | "fallback"
-    | "synth-affix";
+    | "synth-affix"
+    | "synth-neg-affix";
 }
 
 export interface SentenceTranslation {
@@ -565,17 +566,29 @@ function resolveLemma(
       };
     }
   }
-  // Phase 47 T1: on-demand morphological synthesis. If the lemma is
-  // not in the lexicon and not a registered compound, attempt to
-  // decompose it into stem + recognised productive affix.
-  // Example: "lighter" → light + -er when the language has a
-  // productive `-er` suffix and "light" is in the lexicon.
-  const synth = attemptMorphologicalSynthesis(lang, lemma);
-  if (synth) {
+  // Phase 47 T1: on-demand morphological synthesis (non-negational).
+  // If the lemma is not in the lexicon and not a registered compound,
+  // attempt to decompose it into stem + recognised productive affix
+  // from the non-negational set (agentive, abstractive, etc.).
+  // Example: "lighter" → light + -er.
+  const synthNonNeg = attemptMorphologicalSynthesis(lang, lemma, "non-neg");
+  if (synthNonNeg) {
     return {
-      form: synth.form,
-      resolution: synth.resolution,
-      glossNote: synth.glossNote,
+      form: synthNonNeg.form,
+      resolution: synthNonNeg.resolution,
+      glossNote: synthNonNeg.glossNote,
+    };
+  }
+  // Phase 47 T3: negational synthesis (rung 5). Fires only after the
+  // non-negational pass returned null, so negational prefixes are
+  // strictly rarer than agentive/abstractive — matches English usage
+  // ("unhappy" exists but is less common than primary "sad").
+  const synthNeg = attemptMorphologicalSynthesis(lang, lemma, "neg");
+  if (synthNeg) {
+    return {
+      form: synthNeg.form,
+      resolution: synthNeg.resolution,
+      glossNote: synthNeg.glossNote,
     };
   }
   if (isRegisteredConcept(lemma)) {
