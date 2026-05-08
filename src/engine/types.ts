@@ -899,6 +899,27 @@ export interface GrammarFeatures {
    * Yoruba). "both" enables both mechanisms.
    */
   referenceTracking?: "none" | "switch-reference" | "logophoric" | "both";
+  /**
+   * Phase 63: verb theme/citation markers. When present, the
+   * inflector strips a matching theme from the verb's surface form
+   * before appending tense/person/aspect/mood/voice paradigms. Models
+   * fusional morphology where the dictionary form (e.g. Latin
+   * "cantāre" with theme "-āre") is a derived shape whose theme is
+   * dropped before tense+person are appended (cantāre → cant- → cantó
+   * for Spanish 3sg.PST).
+   *
+   * Each entry is a phoneme sequence to match at the END of a verb's
+   * lexicon form. The longest matching theme wins. The phonology
+   * pipeline mutates these alongside the lexicon so a language that
+   * starts with "-aɾe / -eɾe / -iɾe" will track its own sound changes
+   * (rhotacism, vowel reduction, etc.) and continue to find the right
+   * substring to strip.
+   *
+   * This is a general feature: any preset can declare initial themes,
+   * and the simulator's grammaticalisation logic can introduce or
+   * remove them as the language evolves.
+   */
+  verbThemes?: Phoneme[][];
 }
 
 export interface SimulationConfig {

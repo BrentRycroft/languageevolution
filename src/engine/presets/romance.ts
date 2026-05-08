@@ -437,6 +437,19 @@ export function presetRomance(): SimulationConfig {
       // Phase 36 Tranche 36k: Romance languages have T-V (tu/vous,
       // tú/usted, tu/Lei). Seed at the proto so daughters inherit.
       politenessRegister: "T-V",
+      // Phase 63: Latin verb-theme markers. The four Classical
+      // conjugations end in -āre / -ēre / -ere / -īre. Stripping
+      // these before tense+person paradigms apply is the mechanism
+      // that gives Romance "cantó" (not "cantarió") and "comió"
+      // (not "comerió"). Sound changes mutate these alongside the
+      // lexicon as the language evolves, so daughters that have
+      // shifted /ɾ/→/d/ or lost final /e/ continue to find the
+      // matching theme to strip.
+      verbThemes: [
+        ["a", "ɾ", "e"],
+        ["e", "ɾ", "e"],
+        ["i", "ɾ", "e"],
+      ],
     },
     // Phase 31 Tranche 31d: Latin non-tonal.
     seedToneRegime: "non-tonal",

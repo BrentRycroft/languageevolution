@@ -35,11 +35,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "deːbeː βideɾet luːpuːum",
+      "target": "deːbeː βidt luːpuːum",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "baːneː βideɾenθ luːpuːum",
+      "target": "baːneː βidnθ luːpuːum",
     },
     {
       "english": "i give you the bread",
@@ -47,11 +47,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset t
     },
     {
       "english": "the king walks at the river",
-      "target": "deːbeː aːdduːlaːdeːt sluːdeː",
+      "target": "deːbeː aːdduːlt sluːdeː",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "deːbeː non βideɾet luːpuːum",
+      "target": "deːbeː non βidt luːpuːum",
     },
   ],
   "preset": "romance",

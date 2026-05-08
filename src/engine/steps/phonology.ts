@@ -194,6 +194,16 @@ export function stepPhonology(
     langForHomonym: lang,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
+  // Phase 63: theme-stripping happens at inflect time off
+  // `lang.grammar.verbThemes`. Themes are intentionally NOT pushed
+  // through the global sound-change pipeline — Swadesh-protected
+  // verbs evolve at a different cadence than uniform changes, so if
+  // we mutated themes globally we'd desync them from the lemmas they
+  // were meant to strip. Instead each theme stays at its proto shape
+  // until a phoneme it relies on is fully pruned from the inventory
+  // (handled in pruning.ts), at which point the theme is rewritten
+  // through the merger substitution. Verbs whose endings have
+  // drifted away from any registered theme simply skip stripping.
   // Phase 29 Tranche 5d: record proto→daughter substitutions for
   // every position-aligned change to surface systematic correspondences
   // (Grimm's-Law-grade shifts) in the UI / audit reports.

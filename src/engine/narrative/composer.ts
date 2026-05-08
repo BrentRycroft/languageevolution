@@ -210,32 +210,31 @@ function inflectNoun(
       notes.push("case.acc");
     }
   }
-  // Phase 61: heavy-synthesis stack — at synthesisIndex >= 2, occasionally
-  // also stack a number, classifier, or oblique-case marker. Probabilities
-  // are gated on the language having the paradigm registered, so we don't
-  // invent morphology that doesn't exist for that language.
+  // Phase 61 / Phase 63: optional oblique case stack at synthesisIndex
+  // ≥ 2. Phase 61 stacked spurious plural + oblique on the SAME noun
+  // (so a subject could end up with num.pl + case.gen even when the
+  // shape didn't ask for plural), inflating noun length. Phase 63
+  // drops the spurious-plural addition and tightens the oblique-case
+  // probability so it fires rarely. Romance languages dropped case
+  // marking entirely — `lang.grammar.hasCase` gates this off for them.
   const idx = lang.grammar.synthesisIndex ?? 1.5;
   const rng = composeOptions.rng;
-  if (rng && idx >= 2.0) {
-    if (!opts.plural && lang.morphology.paradigms["noun.num.pl"] && rng.chance(0.2 * (idx - 1.5))) {
-      out = inflect(out, lang.morphology.paradigms["noun.num.pl"]!, lang, meaning);
-      notes.push("num.pl");
-    }
-    // Phase 61: oblique case (gen / loc / inst) — heavy-synthesis
-    // languages naturally use these for partitive / locative
-    // arguments. Gated on lang.grammar.hasCase + paradigm presence so
-    // we never invent morphology the language doesn't have.
-    if (!opts.objectCase && lang.grammar.hasCase && rng.chance(0.15 * (idx - 1.5))) {
-      const oblique = pickOne(rng, [
-        "noun.case.gen",
-        "noun.case.loc",
-        "noun.case.inst",
-      ] as const);
-      const p = lang.morphology.paradigms[oblique];
-      if (p) {
-        out = inflect(out, p, lang, meaning);
-        notes.push(oblique.replace(/^noun\./, ""));
-      }
+  if (
+    rng &&
+    idx >= 2.0 &&
+    !opts.objectCase &&
+    lang.grammar.hasCase &&
+    rng.chance(Math.min(0.15, 0.08 * (idx - 1.5)))
+  ) {
+    const oblique = pickOne(rng, [
+      "noun.case.gen",
+      "noun.case.loc",
+      "noun.case.inst",
+    ] as const);
+    const p = lang.morphology.paradigms[oblique];
+    if (p) {
+      out = inflect(out, p, lang, meaning);
+      notes.push(oblique.replace(/^noun\./, ""));
     }
   }
   return { form: out, glossNote: notes.join(",") };
@@ -286,8 +285,6 @@ function inflectVerb(
       order.push(moodChoice);
     }
   }
-  // Phase 61: rare voice / evidential stack at very heavy synthesis
-  // (idx >= 3) — gives polysynthetic-style verbs.
   if (rng && idx >= 3.0 && rng.chance(0.15)) {
     const evidChoice = pickOne(rng, [
       "verb.evid.dir",

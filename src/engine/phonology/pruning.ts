@@ -332,6 +332,32 @@ export function prunePhonemes(
       affected++;
     }
   }
+  // Phase 63: extend verbThemes with mutated variants alongside the
+  // proto themes. Swadesh-protected lemmas may keep the pre-merger
+  // theme shape (e.g. /komedeɾe/ "eat" stays put while /ɾ/ → /b/
+  // fires across non-protected vocab), so we keep BOTH the proto
+  // theme and the post-merger form available as match candidates at
+  // strip time. Proto themes (the originally seeded ones) are
+  // preserved at the head of the list and never evicted.
+  if (lang.grammar.verbThemes && lang.grammar.verbThemes.length > 0) {
+    const updated: typeof lang.grammar.verbThemes = lang.grammar.verbThemes.slice();
+    for (const theme of lang.grammar.verbThemes) {
+      const next = theme.map((raw) => {
+        const tone = raw.length > stripTone(raw).length ? raw.slice(stripTone(raw).length) : "";
+        const base = stripTone(raw);
+        return base === candidate ? capToneStacking(neighbour + tone) : raw;
+      });
+      const isDup =
+        next.length === theme.length && next.every((p, i) => p === theme[i]);
+      if (isDup) continue;
+      const alreadyHas = updated.some(
+        (t) => t.length === next.length && t.every((p, i) => p === next[i]),
+      );
+      if (!alreadyHas) updated.push(next);
+    }
+    lang.grammar.verbThemes = updated;
+  }
+
   // Phase 40a: only shrink inventory when no Swadesh words still
   // hold the candidate. Otherwise the phoneme stays and the
   // protected words keep it, drifting independently via the gated

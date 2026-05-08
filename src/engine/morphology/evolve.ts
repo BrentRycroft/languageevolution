@@ -461,7 +461,44 @@ export function inflectCascade(
   const cap = Math.max(1, Math.round(synth));
   const slice = available.slice(0, cap);
 
+  // Phase 63: verb theme stripping. When the language declares
+  // `grammar.verbThemes` (citation-form markers like Romance -aɾe /
+  // -eɾe / -iɾe < Latin -āre / -ēre / -īre) and we're applying at
+  // least one verb category, drop the longest matching theme suffix
+  // from the base BEFORE appending paradigms. Without this step, a
+  // Romance-style verb like /komedeɾe/ "eat" would receive tense
+  // suffixes on top of the infinitive (/komedeɾe + aβi/ → 6 syllables);
+  // with stripping it inflects from the bare stem (/komed + aβi/ →
+  // 4 syllables) the way real Romance does (Spanish "comió" not
+  // "comerió"). Suppletion overrides still apply via the inflect
+  // call below — they never see the stripped stem.
   let form = base;
+  const themes = lang.grammar.verbThemes;
+  if (
+    themes &&
+    themes.length > 0 &&
+    slice.some((c) => c.startsWith("verb."))
+  ) {
+    let bestThemeLen = 0;
+    for (const theme of themes) {
+      if (theme.length === 0 || theme.length > form.length) continue;
+      if (theme.length <= bestThemeLen) continue;
+      let match = true;
+      for (let i = 0; i < theme.length; i++) {
+        if (form[form.length - theme.length + i] !== theme[i]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) bestThemeLen = theme.length;
+    }
+    // Always leave at least 1 phoneme of stem so we don't reduce a
+    // verb to its bare theme.
+    if (bestThemeLen > 0 && form.length - bestThemeLen >= 1) {
+      form = form.slice(0, form.length - bestThemeLen);
+    }
+  }
+
   const fusion = lang.grammar.fusionIndex ?? 0.5;
   const applied: MorphCategory[] = [];
 

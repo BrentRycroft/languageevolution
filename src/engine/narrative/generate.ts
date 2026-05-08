@@ -205,10 +205,13 @@ export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
 
 /**
  * Phase 53 T6 / Phase 61: morphology stack chosen by `synthesisIndex`.
- * Phase 61 expands the available aspect / mood / voice / evidential
- * markers and gates each on the paradigm being registered for that
- * language. Heavier synthesis = thicker stack. Each addition is RNG-
- * gated so two back-to-back lines produce visibly different verbs.
+ * Heavier synthesis = thicker stack. Each addition is RNG-gated so
+ * back-to-back lines produce visibly different verbs. Phase 63 keeps
+ * the broad stack but introduces verb-theme stripping at the inflect
+ * layer (see `lang.grammar.verbThemes`) so fusional languages don't
+ * suffer concatenative blow-up — the citation-form theme is dropped
+ * before paradigms are appended, the way Latin `cantāre` → Spanish
+ * `canta-` does.
  */
 function morphologyStackForVerb(lang: Language, rng: Rng): MorphCategory[] {
   const idx = lang.grammar.synthesisIndex ?? 1.5;
@@ -239,7 +242,7 @@ function morphologyStackForVerb(lang: Language, rng: Rng): MorphCategory[] {
       stack.push(available[rng.int(available.length)]!);
     }
   }
-  // Mood — at synthesisIndex >= 2 (lowered from 2.5).
+  // Mood — at synthesisIndex >= 2.
   if (idx >= 2.0 && rng.chance(0.4)) {
     const moodPool: MorphCategory[] = [
       "verb.mood.subj",
