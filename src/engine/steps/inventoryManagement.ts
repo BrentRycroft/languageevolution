@@ -8,6 +8,7 @@ import { setLexiconForm } from "../lexicon/mutate";
 import { syncWordsAfterPhonology } from "../lexicon/word";
 import { disambiguateCoreCollisions } from "../lexicon/disambiguate";
 import { updateCompounds } from "../lexicon/compound";
+import { findSaturatedPhoneme, proposeOneRule } from "../phonology/propose";
 import { tryUniverbation } from "../lexicon/univerbation";
 import { pushEvent } from "./helpers";
 import { isFeatureActive } from "../modules/legacyGate";
@@ -300,6 +301,30 @@ export function stepInventoryManagement(
   // changes are already reflected in lang.words.
   if ((merged || resolved > 0 || compoundUpdate.recomposed > 0) && lang.words) {
     syncWordsAfterPhonology(lang, generation);
+  }
+  // Phase 59 T1+T2: pressure-driven procedural-rule proposal. When a
+  // phoneme is significantly over-saturated, fire proposeOneRule
+  // with the matching rule family + elevated initial strength so the
+  // language responds with its own custom rule (instead of relying
+  // on the catalog-driven homeostatic prune above). This is the
+  // primary divergence lever for daughter languages.
+  if (generation > 0 && generation % 5 === 0) {
+    const sat = findSaturatedPhoneme(lang);
+    if (sat) {
+      const newRule = proposeOneRule(lang, rng, generation, {
+        pressureFamily: sat.family,
+        initialStrength: 0.5,
+      });
+      if (newRule) {
+        if (!lang.activeRules) lang.activeRules = [];
+        lang.activeRules.push(newRule);
+        pushEvent(lang, {
+          generation,
+          kind: "actuation",
+          description: `pressure-driven rule: ${newRule.description} (saturation /${sat.phoneme}/ ${sat.ratio.toFixed(1)}×)`,
+        });
+      }
+    }
   }
 }
 

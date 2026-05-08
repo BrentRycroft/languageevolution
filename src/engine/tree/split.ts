@@ -72,6 +72,20 @@ function jitterBias(
     const delta = (rng.next() * 2 - 1) * scale;
     out[family] = Math.max(0.15, w + delta);
   }
+  // Phase 59 T4: at split time, occasionally zero out one family per
+  // daughter (controlled jitter). Daughters of the same parent get
+  // independently rolled disablements, so siblings diverge in
+  // phonological character — one daughter loses interest in
+  // metathesis, another in tonogenesis, etc. Floor: at least 4
+  // families remain enabled per daughter.
+  if (rng.chance(0.35)) {
+    const familyKeys = Object.keys(out);
+    const enabled = familyKeys.filter((k) => (out[k] ?? 0) >= 0.05);
+    if (enabled.length > 4) {
+      const toDisable = enabled[rng.int(enabled.length)]!;
+      out[toDisable] = 0;
+    }
+  }
   return out;
 }
 

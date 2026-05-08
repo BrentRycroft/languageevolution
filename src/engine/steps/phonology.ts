@@ -9,11 +9,12 @@ import { stepToneSandhi } from "../phonology/sandhi";
 import { recordCorrespondences } from "../phonology/soundLaws";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import { literaryStabilityFor } from "../lexicon/literacy";
-import { ageAndRetire, proposeOneRule, proposePushChain, reinforce } from "../phonology/propose";
+import { ageAndRetire, proposeOneRule, proposePushChain, proposeMutationOf, reinforce } from "../phonology/propose";
 import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
 import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/variants";
 import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
+import { repairOutputMapByFeatures } from "../phonology/featureGeometry";
 import { syncWordsAfterPhonology } from "../lexicon/word";
 import { detectPhonologisation } from "../phonology/phonologization";
 import { detectChainShiftPressure } from "../phonology/chainShift";
@@ -515,6 +516,27 @@ export function stepPhonology(
       }
     }
   }
+  // Phase 59 T6: low-rate wildcard rule mutation. Pick an active
+  // rule and tweak one of its fields, producing rules that don't
+  // trace back to any template. Drives long-tail divergence between
+  // sister languages.
+  if (
+    generation > 0 &&
+    generation % PROPOSAL_CADENCE === 0 &&
+    rng.chance(0.005 * lang.conservatism) &&
+    (lang.activeRules?.length ?? 0) > 0
+  ) {
+    const mutated = proposeMutationOf(lang, rng, generation);
+    if (mutated) {
+      if (!lang.activeRules) lang.activeRules = [];
+      lang.activeRules.push(mutated);
+      pushEvent(lang, {
+        generation,
+        kind: "actuation",
+        description: `wildcard rule mutation: ${mutated.description}`,
+      });
+    }
+  }
   // Phase 48 D4-D: phonologization detection. Compare current
   // per-phoneme context-diversity against last gen's snapshot; emit
   // narrative events for phonemes whose diversity rose past the
@@ -580,11 +602,23 @@ export function stepArealWaves(
       anyMatch = true;
       if (sister.activeRules?.some((r) => r.templateId === wave.rule.templateId)) continue;
       if (!rng.chance(AREAL_BASE_PROBABILITY)) continue;
+      // Phase 59 T5: functional areal adoption. Pre-Phase-59 the
+      // recipient cloned the donor's rule verbatim (same outputMap),
+      // homogenising sisters phonologically. Now the recipient
+      // adopts the INPUT (which phonemes are targeted) but proposes
+      // its OWN output by feature-distance against its inventory.
+      // Spreads the phenomenon (sisters all undergo "lenite stops")
+      // without forcing identical surface outcomes (one daughter
+      // chooses [β], another [v], another [ɸ]).
+      const recipientInventory = sister.phonemeInventory.segmental;
+      const repaired = repairOutputMapByFeatures(wave.rule.outputMap, recipientInventory);
+      if (!repaired) continue;
       const adopted = {
         ...wave.rule,
         id: `${sister.id}.g${generation}.areal.${wave.rule.templateId}`,
         birthGeneration: generation,
         lastFireGeneration: generation,
+        outputMap: repaired,
       };
       if (!hasAnyMatch(adopted, sister)) continue;
       if (!sister.activeRules) sister.activeRules = [];

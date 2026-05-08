@@ -6,11 +6,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "ðə kɪŋ siːz ðə wulh",
+      "target": "ðə kiːg siːz ðə wʊlf",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "ðə dɔgs siː ðə wulhs",
+      "target": "ðə dɔːdɔːg siː ðə wʊwʊlf",
     },
     {
       "english": "i give you the bread",
@@ -18,11 +18,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
     },
     {
       "english": "the king walks at the river",
-      "target": "ðə kɪŋ wɔkɪŋz æt ðə ɹɪvəɹ",
+      "target": "ðə kiːg wɔːkɪŋz æt ðə ɹiːvəɹ",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "ðə kɪŋ nat siːz ðə wulh",
+      "target": "ðə kiːg nat siːz ðə wʊlf",
     },
   ],
   "preset": "english",
@@ -39,7 +39,7 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset t
     },
     {
       "english": "the dogs see the wolves",
-      "target": "kakane βideɾent lulupuum",
+      "target": "kanei βideɾent lupuium",
     },
     {
       "english": "i give you the bread",
@@ -47,7 +47,7 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset t
     },
     {
       "english": "the king walks at the river",
-      "target": "ɾege ambulaɾet slume",
+      "target": "ɾege ambulaɾet flume",
     },
     {
       "english": "the king does not see the wolf",
@@ -64,11 +64,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Toki Pona preset
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "niminimi lukin toweli",
+      "target": "niminimi lukin soːweːliwasoː",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "totoweli lukin totoweli",
+      "target": "soːsoːweːli lukin soːsoːweːliwasoː",
     },
     {
       "english": "i give you the bread",
@@ -76,11 +76,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Toki Pona preset
     },
     {
       "english": "the king walks at the river",
-      "target": "niminimi tawatawo taki telotuno",
+      "target": "niminimi tawatowa sape telosunoː",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "niminimi ala lukin toweli",
+      "target": "niminimi ala lukin soːweːliwasoː",
     },
   ],
   "preset": "tokipona",
