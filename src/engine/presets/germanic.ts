@@ -278,20 +278,20 @@ const LEXICON: Lexicon = {
   "-uŋgō.nmlz": ["u", "ŋ", "g", "oː"],
   "-laikaz.adj": ["l", "a", "j", "k", "a", "z"],
   "-skapiz.coll": ["s", "k", "a", "p", "i", "z"],
-  // Phase 47 T4: Germanic typology = SVO + balanced (Greenberg). Add
-  // prefixes covering negation, repetition, reversal, and away. These
-  // mirror the Proto-Germanic / Old English inventory.
+  // Phase 47 T4 + Phase 58.6: Germanic prefixes. un- shares its tag
+  // with English (negative). ga-/fra-/ufar- are Germanic-specific —
+  // tag-shorthand routes them via the abstract category dispatcher
+  // so an English `over-` input finds Germanic's `ufar-`, etc.
   "un-": ["u", "n"],
-  "ga-": ["g", "a"],
-  "fra-": ["f", "ɾ", "a"],
-  "ufar-": ["u", "f", "a", "ɾ"],
+  "ga-.repet": ["g", "a"],
+  "fra-.privative": ["f", "ɾ", "a"],
+  "ufar-.repet": ["u", "f", "a", "ɾ"],
 };
 
 const GERMANIC_BOUND_MORPHEMES = new Set<string>([
   "-arja.agt", "-iþō.abs", "-uŋgō.nmlz", "-laikaz.adj", "-skapiz.coll",
-  // Phase 47 T4: derivational prefixes (un- is also negational; counted
-  // in NEGATIONAL_TAGS at synthesis time so it fires only on rung 5).
-  "un-", "ga-", "fra-", "ufar-",
+  "un-",
+  "ga-.repet", "fra-.privative", "ufar-.repet",
 ]);
 
 // Phase 29 Tranche 5s: deepened Germanic frequency hints.

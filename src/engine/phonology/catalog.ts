@@ -1518,6 +1518,38 @@ export const CATALOG: SoundChange[] = [
       return word;
     },
   },
+  // Phase 58.6: general delabialisation + deaspiration rules. PIE-
+  // descended presets seed labialised + breathy stops (gʷ, kʷ, gʰ,
+  // bʰ, dʰ) heavily; without decay paths these accumulate in
+  // descendants. These rules make the marked variants gradually
+  // simplify toward unmarked counterparts — Latin / Greek / Sanskrit
+  // each independently lost most laryngeals + delabialised over
+  // millennia.
+  mappingSub(
+    "delab.gw_to_g",
+    "gʷ → g",
+    "delabialisation",
+    [
+      ["gʷ", "g"],
+      ["kʷ", "k"],
+      ["gʷʰ", "g"],
+    ],
+    0.06,
+    "Delabialisation of labialised dorsals: PIE *gʷ → Latin/Greek g, English k. The marked feature drops first under contact + freq pressure.",
+  ),
+  mappingSub(
+    "deasp.bh_to_b",
+    "bʰ/dʰ/gʰ → b/d/g",
+    "deaspiration",
+    [
+      ["bʰ", "b"],
+      ["dʰ", "d"],
+      ["gʰ", "g"],
+      ["gʲʰ", "gʲ"],
+    ],
+    0.05,
+    "Deaspiration of voiced aspirates: PIE breathy *bʰ/*dʰ/*gʰ collapse to plain b/d/g (Italic, Celtic, Germanic via Grimm). Real path of attestation in IE descendants.",
+  ),
 ];
 
 const FRONT_VOWEL_SET: ReadonlySet<string> = new Set([

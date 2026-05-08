@@ -24,7 +24,9 @@ export type SoundChangeCategory =
   | "glottalization"
   | "stress"
   | "inventory"
-  | "retroflex";
+  | "retroflex"
+  | "delabialisation"
+  | "deaspiration";
 
 export type PositionBias = "initial" | "final" | "internal" | "any";
 

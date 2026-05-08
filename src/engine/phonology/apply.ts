@@ -226,6 +226,8 @@ const CATEGORY_PRIORITY: Record<SoundChange["category"], number> = {
   devoicing: 0.6,
   inventory: 0.55,
   fortition: 0.5,
+  delabialisation: 1.4,
+  deaspiration: 1.4,
 };
 
 /**
@@ -262,6 +264,8 @@ const CATEGORY_NATURAL_BIAS: Record<SoundChange["category"], number> = {
   retroflex: 0.55,
   fortition: 0.5,
   inventory: 0.4,
+  delabialisation: 1.2,
+  deaspiration: 1.2,
 };
 
 function priorityFor(change: SoundChange): number {

@@ -242,12 +242,61 @@ export function parseEnglishAffix(lemma: string): ParsedEnglishAffix | null {
  * the entry. Returns null when the tag is not in our English table —
  * e.g. genesis-coined tags or non-English presets.
  */
+/**
+ * Phase 58.6: shorthand-to-category map for non-English preset
+ * morpheme tags. PIE / Romance / Germanic tag bound morphemes with
+ * a "form.shorthand" pattern (e.g. "-tér.agt", "-tio.nmlz",
+ * "-iþō.abs") where the shorthand identifies the abstract
+ * derivational category. The English table doesn't carry these
+ * specific surface forms, but the category is the same — a Romance
+ * `-tor.agt` is conceptually agentive identically to English `-er`.
+ *
+ * Mapping these here lets `selectAffixForCategory` find the
+ * language's own affix when the user types an English-form input
+ * (e.g. typing `undone` produces un- + do, the language's negative
+ * prefix and its `do` form).
+ */
+const SHORTHAND_TO_CATEGORY: Record<string, DerivationCategory> = {
+  agt: "agentive",
+  nmlz: "nominalisation",
+  action: "nominalisation",
+  abs: "abstractNoun",
+  dim: "diminutive",
+  adj: "adjectival",
+  ptcp: "adjectival",
+  inst: "nominalisation",   // instrument — closest abstract category
+  coll: "nominalisation",   // collective
+  cmp: "adjectival",        // comparative
+  fem: "adjectival",        // feminine — no perfect cat; treat as adjectival
+  // Phase 58.6: shorthands used by non-English presets for prefixes.
+  neg: "negative",
+  tbef: "temporalBefore",
+  taft: "temporalAfter",
+  repet: "repetitive",
+  privative: "privative",
+};
+
 export function lookupAffixMetaByTag(
   tag: string,
 ): { category: DerivationCategory; position: "prefix" | "suffix" } | null {
   for (const entry of ENGLISH_AFFIX_TABLE) {
     if (entry.tag === tag) {
       return { category: entry.category, position: entry.position };
+    }
+  }
+  // Phase 58.6: tag not in English table. Try the shorthand map.
+  // Tag shapes: `{form}.{shorthand}` for suffixes (e.g. "-tér.agt"),
+  //             `{form}-.{shorthand}` for prefixes (e.g. "n̥-.neg"),
+  //             `{form}-` for canonical-tag prefixes already in table.
+  const dotIdx = tag.lastIndexOf(".");
+  if (dotIdx >= 0) {
+    const shorthand = tag.slice(dotIdx + 1);
+    const category = SHORTHAND_TO_CATEGORY[shorthand];
+    if (category) {
+      const head = tag.slice(0, dotIdx);
+      const position: "prefix" | "suffix" =
+        head.endsWith("-") && !head.startsWith("-") ? "prefix" : "suffix";
+      return { category, position };
     }
   }
   return null;
