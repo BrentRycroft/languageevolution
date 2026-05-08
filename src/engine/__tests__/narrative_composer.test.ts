@@ -53,7 +53,10 @@ describe("Narrative composer — target-side composition", () => {
     const seeIdx = surfaceLemmas.indexOf("see");
     expect(dogIdx).toBeLessThan(breadIdx);
     expect(breadIdx).toBeLessThan(seeIdx);
-    expect(out.english.toLowerCase()).toMatch(/dog\s+sees\s+the\s+bread/);
+    // Phase 65 T1: first-mention NPs surface as indefinite "a" not
+    // definite "the". Both subject and object are previously
+    // unmentioned, so both get "a".
+    expect(out.english.toLowerCase()).toMatch(/dog\s+sees\s+a\s+bread/);
   });
 
   it("intransitive past with topicSubject produces a pronoun and English uses 'it'/'he'/'she'", () => {

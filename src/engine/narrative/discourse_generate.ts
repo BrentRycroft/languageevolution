@@ -17,6 +17,8 @@ import {
   endTurn,
   makeDiscourse,
   mention,
+  pushQuotedFrame,
+  popQuotedFrame,
   type DiscourseContext,
   type DiscourseGenre,
 } from "./discourse";
@@ -392,4 +394,113 @@ function generatePoetryStanza(
     text: s.text,
     gloss: "", // poetry mode doesn't render the morphological gloss line
   }));
+}
+
+/**
+ * Phase 65 T2: generate a 2-line quoted-speech sequence.
+ *
+ * Line 1: "the king said something" (matrix clause; introduces the
+ *         matrix subject as topic).
+ * Line 2: "[3sg.log] did Z" (embedded clause with the logophoric
+ *         pronoun referring back to the matrix subject).
+ *
+ * This is the surface mechanism that makes logophoric pronouns
+ * visible: when `referenceTracking === "logophoric" || === "both"`,
+ * the embedded clause emits the closed-class `3sg.log` form rather
+ * than the regular he/she/it pronoun. Pre-Phase-65 the logophoric
+ * field was set on languages but NEVER surfaced.
+ */
+export function generateQuotedSpeech(
+  lang: Language,
+  seedStr: string,
+  options: {
+    matrixSubject?: Meaning;
+    matrixVerb?: Meaning;
+    embeddedVerb?: Meaning;
+    embeddedObject?: Meaning;
+    script?: DisplayScript;
+  } = {},
+): DiscourseLine[] {
+  const script: DisplayScript = options.script ?? "ipa";
+  const rng = makeRng(`narrative.quoted.${seedStr}`);
+  const ctx = makeDiscourse("legend");
+  const out: DiscourseLine[] = [];
+
+  // Pick defaults if not supplied.
+  const matrixSubject = options.matrixSubject ?? "king";
+  const matrixVerb = options.matrixVerb ?? "say";
+  const embeddedVerb = options.embeddedVerb ?? "see";
+  const embeddedObject = options.embeddedObject ?? "wolf";
+
+  // Line 1: matrix clause introducing the speaker.
+  const matrixTpl: AbstractTemplate = {
+    shape: "transitive",
+    tense: "past",
+    needs: { subject: true, object: true, adjective: false, time: false, place: false },
+    introducesEntity: true,
+  };
+  const matrixSlots: SlotAssignment = {
+    verb: matrixVerb,
+    subject: matrixSubject,
+    object: embeddedObject,
+  };
+  const subjEnt = mention(ctx, matrixSubject);
+  mention(ctx, embeddedObject);
+  const composed1 = composeTargetSentence(
+    lang,
+    matrixTpl,
+    matrixSlots,
+    ctx,
+    script,
+    { rng, pickAltProbability: 0.05, genreRegister: "high", genre: "legend" },
+  );
+  if (composed1.tokens.length > 0) {
+    out.push({
+      english: composed1.english,
+      text: composed1.surface,
+      gloss: morphologicalGloss(composed1.tokens),
+    });
+  }
+  endTurn(ctx);
+
+  // Push the quoted frame: the matrix subject becomes the
+  // logophoric center for the embedded clause. Also reset the
+  // discourse topic to the matrix subject so the embedded clause's
+  // pronoun emit refers to him/her — which is exactly the state the
+  // logophoric pronoun marks.
+  pushQuotedFrame(ctx, subjEnt);
+  ctx.topic = subjEnt;
+
+  // Line 2: embedded clause with topic = matrix subject. The
+  // pronoun emission path consults `ctx.logophoricCenter` and emits
+  // the logophoric form (`3sg.log`) rather than `he/she/it`.
+  const embeddedTpl: AbstractTemplate = {
+    shape: "topic_trans",
+    tense: "past",
+    needs: { subject: false, object: true, adjective: false, time: false, place: false },
+    topicSubject: true,
+  };
+  const embeddedSlots: SlotAssignment = {
+    verb: embeddedVerb,
+    object: embeddedObject,
+  };
+  const composed2 = composeTargetSentence(
+    lang,
+    embeddedTpl,
+    embeddedSlots,
+    ctx,
+    script,
+    { rng, pickAltProbability: 0.05, genreRegister: "high", genre: "legend" },
+  );
+  if (composed2.tokens.length > 0) {
+    out.push({
+      english: composed2.english,
+      text: composed2.surface,
+      gloss: morphologicalGloss(composed2.tokens),
+    });
+  }
+  popQuotedFrame(ctx);
+  endTurn(ctx);
+
+  return out;
 }

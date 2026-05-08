@@ -8,6 +8,7 @@ import { formToString } from "../phonology/ipa";
 import { formatForm, type DisplayScript } from "../phonology/display";
 import { glossToEnglish } from "../translator/glossToEnglish";
 import { pickSynonymForGenre } from "./genre_bias";
+import { closedClassForm } from "../translator/closedClass";
 
 export type TemplateShape =
   | "transitive"
@@ -300,18 +301,47 @@ function inflectVerb(
   return { form: out, glossNote: notes.join(",") };
 }
 
-function articleRoleToken(lang: Language, script: DisplayScript): RoleToken | null {
+/**
+ * Phase 65 T1: discourse-aware article emission.
+ *
+ * - `meaning` undefined → fall back to the legacy "always emit the"
+ *   behaviour (used by adjuncts where definiteness isn't tracked).
+ * - First mention of an entity (mentionCount === 1) → indefinite
+ *   article from `lang.lexicon["a"]`. Falls through to no article
+ *   when the language doesn't have an indefinite form (Latin-style).
+ * - Subsequent mentions (mentionCount > 1) → definite "the".
+ *
+ * This wires the existing `DiscourseEntity.mentionCount` (Phase 65)
+ * into emission so Romance/English narratives stop emitting "the"
+ * five times per sentence.
+ */
+function articleRoleToken(
+  lang: Language,
+  script: DisplayScript,
+  ctx?: DiscourseContext,
+  meaning?: Meaning,
+): RoleToken | null {
   if (lang.grammar.articlePresence !== "free") return null;
-  const form = lang.lexicon["the"];
+  let lemma: "the" | "a" = "the";
+  if (ctx && meaning) {
+    const ent = ctx.entities.get(meaning);
+    const count = ent?.mentionCount ?? 0;
+    if (count <= 1) lemma = "a";
+    else lemma = "the";
+  }
+  let form = lang.lexicon[lemma];
+  // If indefinite isn't lexicalised, fall back to definite — better
+  // a slight definiteness mismatch than no article at all.
+  if (!form && lemma === "a") form = lang.lexicon["the"];
   if (!form) return null;
   return {
     role: "DET",
     token: makeToken({
-      englishLemma: "the",
+      englishLemma: lemma,
       englishTag: "DET",
       glossNote: "",
       targetForm: form,
-      targetSurface: renderForm(form, lang, script, "the"),
+      targetSurface: renderForm(form, lang, script, lemma),
     }),
   };
 }
@@ -323,6 +353,35 @@ function pronounRoleToken(
 ): RoleToken | null {
   if (!ctx.topic) return null;
   const target = ctx.topic.pronoun;
+
+  // Phase 65 T2: when the language has a logophoric reference system
+  // AND the current topic IS the logophoric center (i.e., the matrix
+  // subject of an active quoted frame), emit the logophoric pronoun
+  // form rather than the regular he/she/it/they. Closed-class slot
+  // `3sg.log` / `3pl.log` is consulted; falls through to the regular
+  // pronoun if no logophoric form is registered.
+  const refTracking = lang.grammar.referenceTracking;
+  const logophoricActive =
+    (refTracking === "logophoric" || refTracking === "both") &&
+    ctx.logophoricCenter?.meaning === ctx.topic.meaning;
+  if (logophoricActive) {
+    const isPlural = ctx.topic.pronoun === "they";
+    const slot = isPlural ? "3pl.log" : "3sg.log";
+    const logoForm = closedClassForm(lang, slot);
+    if (logoForm && logoForm.length > 0) {
+      return {
+        role: "PRON",
+        token: makeToken({
+          englishLemma: slot,
+          englishTag: "PRON",
+          glossNote: "logophoric",
+          targetForm: logoForm,
+          targetSurface: renderForm(logoForm, lang, script, slot),
+        }),
+      };
+    }
+  }
+
   const candidates: Meaning[] = [target, "it", "he", "she", "they"];
   const found = fallbackForm(lang, candidates);
   if (!found) return null;
@@ -578,7 +637,9 @@ function buildSubjectGroup(
     }
   }
   if (!meaning) return out;
-  const det = articleRoleToken(lang, script);
+  // Phase 65 T1: pass ctx + meaning so the article gate can emit
+  // indefinite "a" on first mention and definite "the" on later.
+  const det = articleRoleToken(lang, script, ctx, meaning);
   if (det) out.push(det);
   const adjPos = lang.grammar.adjectivePosition ?? "pre";
   if (adj && adjPos === "pre") {
@@ -607,9 +668,10 @@ function buildObjectGroup(
   adj: Meaning | undefined,
   script: DisplayScript,
   composeOptions: ComposeOptions = {},
+  ctx?: DiscourseContext,
 ): RoleToken[] {
   const out: RoleToken[] = [];
-  const det = articleRoleToken(lang, script);
+  const det = articleRoleToken(lang, script, ctx, meaning);
   if (det) out.push(det);
   const adjPos = lang.grammar.adjectivePosition ?? "pre";
   if (adj && adjPos === "pre") {
@@ -854,6 +916,7 @@ export function composeTargetSentence(
       adjOnObject ? slots.adjective : undefined,
       script,
       options,
+      ctx,
     );
   } else if (template.needs.place && slots.place && !usesDirectional) {
     objectGroup = placeRoleTokens(lang, slots.place, script);
