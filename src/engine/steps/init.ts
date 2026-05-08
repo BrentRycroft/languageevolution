@@ -43,7 +43,6 @@ import {
 import {
   getWorldMap,
   randomLandCell,
-  suggestedEarthOrigin,
   territoryCentroid,
 } from "../geo/map";
 
@@ -353,12 +352,13 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       ? config.originCellId
       : null;
   if (originId === null) {
-    if (mapMode === "earth") {
-      originId = suggestedEarthOrigin(config.preset, worldMap);
-    }
-    if (originId === null) {
-      originId = randomLandCell(worldMap, rng);
-    }
+    // Phase 58.8: removed preset-specific Earth-origin lookup
+    // (suggestedEarthOrigin keyed on config.preset → hardcoded
+    // PIE-in-Anatolia, Bantu-in-central-Africa, etc.). Each preset
+    // now lands on a random land cell in earth mode, same as random
+    // mode. The historical-mode rollout will reinstate per-preset
+    // origins as an opt-in, not a default.
+    originId = randomLandCell(worldMap, rng);
   }
   if (originId !== null && worldMap.cells[originId]) {
     rootLang.territory = { cells: [originId] };

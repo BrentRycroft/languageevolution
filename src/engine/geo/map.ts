@@ -283,31 +283,13 @@ export function generateEarthMap(): WorldMap {
   };
 }
 
-const PRESET_EARTH_ORIGINS: Record<string, { x: number; y: number }> = {
-  pie: { x: 620, y: 220 },
-  germanic: { x: 580, y: 200 },
-  romance: { x: 600, y: 250 },
-  bantu: { x: 540, y: 400 },
-  tokipona: { x: 600, y: 220 },
-  default: { x: 600, y: 220 },
-};
-
-export function suggestedEarthOrigin(presetId: string | undefined, map: WorldMap): number | null {
-  const target = PRESET_EARTH_ORIGINS[presetId ?? "default"] ?? PRESET_EARTH_ORIGINS.default!;
-  let best: number | null = null;
-  let bestDist = Infinity;
-  for (const cell of map.cells) {
-    if (cell.biome === "ocean") continue;
-    const dx = cell.centroid.x - target.x;
-    const dy = cell.centroid.y - target.y;
-    const d = Math.sqrt(dx * dx + dy * dy);
-    if (d < bestDist) {
-      bestDist = d;
-      best = cell.id;
-    }
-  }
-  return best;
-}
+// Phase 58.8: removed PRESET_EARTH_ORIGINS + suggestedEarthOrigin.
+// They keyed each preset (PIE → Anatolia, Bantu → central Africa,
+// Romance → Italy) to a real-world historical homeland — exactly the
+// kind of preset-specific behaviour the user asked to remove. Each
+// preset now lands on a random land cell in earth mode, same as
+// random mode. Per-preset historical placement will reappear as an
+// opt-in "historical mode" in a future phase.
 
 export function randomLandCell(map: WorldMap, rng: Rng): number | null {
   const land = map.cells.filter((c) => c.biome !== "ocean");

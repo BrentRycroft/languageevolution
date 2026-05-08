@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   generateRandomContinent,
-  generateEarthMap,
   getWorldMap,
   randomLandCell,
-  suggestedEarthOrigin,
   sharedEdgeCount,
   territoryCentroid,
 } from "../geo/map";
@@ -67,13 +65,10 @@ describe("§C — geo / map module", () => {
     expect(differences).toBeGreaterThan(0);
   });
 
-  it("Earth map has the suggested-origin per preset on land", () => {
-    const earth = generateEarthMap();
-    for (const presetId of ["pie", "germanic", "romance", "bantu", "tokipona"]) {
-      const cellId = suggestedEarthOrigin(presetId, earth);
-      expect(cellId).not.toBeNull();
-      if (cellId !== null) expect(earth.cells[cellId]!.biome).not.toBe("ocean");
-    }
+  it.skip("Earth map has the suggested-origin per preset on land", () => {
+    // Phase 58.8: removed per-preset Earth origins to eliminate
+    // preset-specific behaviour. Will reappear as an opt-in
+    // historical mode.
   });
 
   it("getWorldMap memoises by mode + seed", () => {

@@ -3,7 +3,6 @@ import { useSimStore } from "../state/store";
 import {
   getWorldMap,
   randomLandCell,
-  suggestedEarthOrigin,
   type MapCell,
   type WorldMap,
 } from "../engine/geo/map";
@@ -34,13 +33,9 @@ export function WorldMapPicker() {
   };
 
   const useSuggested = () => {
-    let id: number | null = null;
-    if (mode === "earth") {
-      id = suggestedEarthOrigin(config.preset, worldMap);
-    }
-    if (id === null) {
-      id = randomLandCell(worldMap, makeRng(config.seed + ":origin"));
-    }
+    // Phase 58.8: removed preset-specific Earth origins. Suggest
+    // a random land cell for any mode/preset.
+    const id = randomLandCell(worldMap, makeRng(config.seed + ":origin"));
     setOriginId(id);
   };
 
