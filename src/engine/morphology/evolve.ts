@@ -25,6 +25,24 @@ export function applyPhonologyToAffixes(
         v.affix = mutate(v.affix);
       }
     }
+    // Phase 64 T2: ablaut maps must also track sound change. When /i/
+    // merges into /e/, an ablautMap `{i: "a"}` can no longer fire
+    // because no stem contains /i/ anymore — the key needs to follow
+    // the merger so sing/sang shifts to seng/sang in the new
+    // phonology. Both keys AND values are mutated; entries that
+    // collide (different keys mapping to same source vowel) are
+    // collapsed.
+    if (pdm.ablautMap) {
+      const next: Record<string, string> = {};
+      for (const [src, dst] of Object.entries(pdm.ablautMap)) {
+        const newSrc = mutate([src])[0] ?? src;
+        const newDst = mutate([dst])[0] ?? dst;
+        if (newSrc === newDst) continue; // identity → drop entry
+        // First write wins on collision (keep older mapping).
+        if (!(newSrc in next)) next[newSrc] = newDst;
+      }
+      pdm.ablautMap = next;
+    }
   }
 }
 

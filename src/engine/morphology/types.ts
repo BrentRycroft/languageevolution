@@ -82,6 +82,18 @@ export type StemShape = "vowel-final" | "consonant-final";
 export type InflectionClass = 1 | 2 | 3 | 4;
 
 /**
+ * Phase 64 T1: noun declension class. Real languages partition
+ * nouns into declension buckets: Latin has 5 declensions (-a stems,
+ * -o/-us, consonant stems, -u stems, -e stems); Russian has 3;
+ * Bantu has 10+. Each declension takes a different case-ending set.
+ *
+ * Default 1. Languages without a noun-declension system leave
+ * `lang.nounDeclensionClass` unpopulated and pickAffixVariant falls
+ * through to gender / stem-shape matching as before.
+ */
+export type NounDeclensionClass = 1 | 2 | 3 | 4 | 5;
+
+/**
  * A `when` predicate selects an affix variant for a given stem.
  *
  * - `"vowel-final"` / `"consonant-final"` — match the last segment.

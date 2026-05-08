@@ -365,6 +365,21 @@ export interface Language {
    */
   inflectionClass?: Record<Meaning, import("./morphology/types").InflectionClass>;
   /**
+   * Phase 64 T1: per-noun declension class assignment. Latin's 5
+   * declensions, Russian's 3, etc. Drives variant lookup in
+   * `pickAffixVariant` for `noun.*` paradigms when the paradigm
+   * declares `variants` keyed on `class:N`.
+   */
+  nounDeclensionClass?: Record<Meaning, import("./morphology/types").NounDeclensionClass>;
+  /**
+   * Phase 64 T2: per-verb ablaut class assignment. Strong verbs
+   * (sing/sang/sung) belong to ablaut class ≥ 1; "weak" / regular
+   * verbs default to 0. Values 1-5 enumerate distinct vowel-mutation
+   * series the language has developed. Read by inflectVerb to decide
+   * whether to apply an ablaut paradigm vs the regular tense suffix.
+   */
+  ablautClassAssignment?: Record<Meaning, number>;
+  /**
    * Per-noun gender assignment when grammar.genderCount > 0.
    * Values are 0..(genderCount-1). Set lazily; missing entries get
    * heuristically assigned the first time they are needed.
@@ -880,7 +895,16 @@ export interface GrammarFeatures {
   alignment?: "nom-acc" | "erg-abs" | "tripartite" | "split-S";
   harmony?: "none" | "front-back" | "rounding" | "atr";
   evidentialMarking?: "none" | "direct-only" | "three-way";
-  classifierTable?: Record<string, string>;
+  /**
+   * Phase 64 T3: classifier table maps a noun's semantic class
+   * (`human` / `animal` / `long_thin` / `flat` / `round` / `liquid`
+   * / `vehicle` / `default`) to either a lexicon meaning string OR a
+   * phoneme form to emit directly. The dual type lets languages store
+   * classifiers either as proper words (looked up in the lexicon and
+   * subject to evolution like any other lemma) OR as bound forms not
+   * exposed in the open lexicon.
+   */
+  classifierTable?: Record<string, string | Phoneme[]>;
   relativeClauseStrategy?: "gap" | "resumptive" | "relativizer" | "internal-headed";
   serialVerbConstructions?: boolean;
   /**

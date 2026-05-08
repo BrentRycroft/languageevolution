@@ -45,15 +45,23 @@ describe("Phase 29 Tranche 5e — inflection classes", () => {
     expect(class3 / total).toBeGreaterThan(0.18);
   });
 
-  it("classifyLexicon assigns a class to every meaning in a fresh language", () => {
+  it("classifyLexicon assigns a class to every content meaning in a fresh language", async () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
+    // Phase 64 T1: verbs get `inflectionClass`; nouns/other get
+    // `nounDeclensionClass`. Together they cover all content meanings.
     expect(lang.inflectionClass).toBeDefined();
-    let unclassified = 0;
+    expect(lang.nounDeclensionClass).toBeDefined();
+    const { posOf } = await import("../lexicon/pos");
+    let unclassifiedVerbs = 0;
+    let unclassifiedNouns = 0;
     for (const m of Object.keys(lang.lexicon)) {
-      if (!lang.inflectionClass![m]) unclassified++;
+      const p = posOf(m);
+      if (p === "verb" && !lang.inflectionClass![m]) unclassifiedVerbs++;
+      if ((p === "noun" || p === "other") && !lang.nounDeclensionClass![m]) unclassifiedNouns++;
     }
-    expect(unclassified).toBe(0);
+    expect(unclassifiedVerbs).toBe(0);
+    expect(unclassifiedNouns).toBe(0);
   });
 
   it("Romance preset produces a Latin-style class distribution after a 50-gen run", () => {

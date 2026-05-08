@@ -16,7 +16,8 @@ import { lexicalCapacity } from "../lexicon/tier";
 import { realismMultiplier } from "../phonology/rate";
 import { DERIVATION_TARGETS } from "../lexicon/derivation_targets";
 import { CONCEPTS } from "../lexicon/concepts";
-import { assignInflectionClass } from "../morphology/inflectionClass";
+import { assignInflectionClass, assignNounDeclensionClass } from "../morphology/inflectionClass";
+import { posOf } from "../lexicon/pos";
 import {
   attemptTargetedDerivation,
   attemptProductiveDerivation,
@@ -285,15 +286,24 @@ export function stepGenesis(
     if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
       lang.registerOf[outcome.meaning] = outcome.register ?? "low";
     }
-    // Phase 29 Tranche 5e: assign an inflection class for the new
-    // coinage. Lexical replacement preserves the existing class
-    // (the meaning's grammar slot doesn't change just because the
-    // form did); pure new coinages get a freshly-rolled class biased
-    // by the form's phonological shape.
+    // Phase 29 Tranche 5e + Phase 64 T1: assign inflection /
+    // declension class for the new coinage. Verbs get
+    // `inflectionClass` (Latin 4-way: -āre / -ēre / -ere / -īre);
+    // nouns get `nounDeclensionClass` (Latin 5-way: -a / -o / cons /
+    // -u / -e). Lexical replacement preserves the existing class —
+    // the grammar slot doesn't change just because the form did.
     if (!isReplacement) {
-      if (!lang.inflectionClass) lang.inflectionClass = {};
-      if (!lang.inflectionClass[outcome.meaning]) {
-        lang.inflectionClass[outcome.meaning] = assignInflectionClass(outcome.form, rng);
+      const pos = posOf(outcome.meaning);
+      if (pos === "verb") {
+        if (!lang.inflectionClass) lang.inflectionClass = {};
+        if (!lang.inflectionClass[outcome.meaning]) {
+          lang.inflectionClass[outcome.meaning] = assignInflectionClass(outcome.form, rng);
+        }
+      } else if (pos === "noun" || pos === "other") {
+        if (!lang.nounDeclensionClass) lang.nounDeclensionClass = {};
+        if (!lang.nounDeclensionClass[outcome.meaning]) {
+          lang.nounDeclensionClass[outcome.meaning] = assignNounDeclensionClass(outcome.form, rng);
+        }
       }
     }
     // Phase 29 Tranche 4i: when the mechanism surfaced its

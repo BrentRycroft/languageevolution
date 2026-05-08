@@ -3,6 +3,7 @@ import type { Paradigm, MorphCategory } from "./types";
 import { harmonizeAffix } from "./harmony";
 import { genderOf } from "./gender";
 import { reduplicate } from "./reduplication";
+import { getInflectionClass, getNounDeclensionClass } from "./inflectionClass";
 
 /**
  * Phase 52 T1: morphology-application abstraction.
@@ -63,6 +64,20 @@ export function applyParadigm(
       );
     case "affix":
     default: {
+      // Phase 64 T2: strong-verb ablaut. When the paradigm has an
+      // ablautMap AND the meaning is tagged into an ablaut class,
+      // apply the vowel mutation INSTEAD of the suffix (English
+      // sing → sang, German sah, not sing-ed). Regular verbs keep
+      // the suffix path. This way the same paradigm serves both
+      // strong and weak inflection — the per-verb class assignment
+      // gates which path fires.
+      if (
+        paradigm.ablautMap &&
+        meaning &&
+        lang?.ablautClassAssignment?.[meaning]
+      ) {
+        return applyAblaut(stem, paradigm.ablautMap);
+      }
       let affix: Phoneme[] = pickAffixVariant(paradigm, stem, lang, meaning);
       if (lang?.grammar.harmony && lang.grammar.harmony !== "none") {
         affix = harmonizeAffix(affix, stem, lang.grammar.harmony);
@@ -203,6 +218,24 @@ export function pickAffixVariant(
 ): WordForm {
   const variants = paradigm.variants;
   if (!variants || variants.length === 0) return paradigm.affix;
+
+  // Phase 64 T1: class-conditioned variant takes precedence over
+  // gender / stem-shape. For `noun.*` paradigms we consult
+  // `nounDeclensionClass`; for `verb.*` paradigms `inflectionClass`.
+  // Either is per-meaning; default 1 if unset. The variant.when key
+  // looks like `class:1`, `class:2`, etc.
+  if (lang && meaning) {
+    const cat = paradigm.category;
+    if (cat.startsWith("noun.")) {
+      const cls = getNounDeclensionClass(lang, meaning);
+      const classMatch = variants.find((v) => v.when === `class:${cls}`);
+      if (classMatch) return classMatch.affix;
+    } else if (cat.startsWith("verb.")) {
+      const cls = getInflectionClass(lang, meaning);
+      const classMatch = variants.find((v) => v.when === `class:${cls}`);
+      if (classMatch) return classMatch.affix;
+    }
+  }
 
   // Gender-conditioned variant takes precedence when applicable.
   if (lang && meaning && (lang.grammar.genderCount ?? 0) > 0) {

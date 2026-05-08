@@ -339,12 +339,71 @@ const FREQ: Record<Meaning, number> = {
 
 const MORPHOLOGY: Morphology = {
   paradigms: {
-    "noun.case.nom": { affix: ["u", "s"], position: "suffix", category: "noun.case.nom" },
-    "noun.case.acc": { affix: ["u", "m"], position: "suffix", category: "noun.case.acc" },
-    "noun.case.gen": { affix: ["i"], position: "suffix", category: "noun.case.gen" },
-    "noun.case.dat": { affix: ["o"], position: "suffix", category: "noun.case.dat" },
-    "noun.case.abl": { affix: ["o"], position: "suffix", category: "noun.case.abl" },
-    "noun.num.pl": { affix: ["i"], position: "suffix", category: "noun.num.pl" },
+    // Phase 64 T1: Latin 5-declension variant sets. Each `class:N`
+    // matches a noun assigned to that declension via
+    // `nounDeclensionClass`; pickAffixVariant routes accordingly.
+    // Pattern: 1st (a-stem) puella-m, 2nd (o-stem) dominu-m, 3rd
+    // (cons-stem) reg-em, 4th (u-stem) manu-m, 5th (e-stem) re-m.
+    "noun.case.nom": {
+      affix: ["u", "s"], position: "suffix", category: "noun.case.nom",
+      variants: [
+        { when: "class:1", affix: ["a"] },           // puella
+        { when: "class:2", affix: ["u", "s"] },      // dominus
+        { when: "class:3", affix: [] },              // rex (zero ending)
+        { when: "class:4", affix: ["u", "s"] },      // manus
+        { when: "class:5", affix: ["e", "s"] },      // res
+      ],
+    },
+    "noun.case.acc": {
+      affix: ["u", "m"], position: "suffix", category: "noun.case.acc",
+      variants: [
+        { when: "class:1", affix: ["a", "m"] },      // puellam
+        { when: "class:2", affix: ["u", "m"] },      // dominum
+        { when: "class:3", affix: ["e", "m"] },      // regem
+        { when: "class:4", affix: ["u", "m"] },      // manum
+        { when: "class:5", affix: ["e", "m"] },      // rem
+      ],
+    },
+    "noun.case.gen": {
+      affix: ["i"], position: "suffix", category: "noun.case.gen",
+      variants: [
+        { when: "class:1", affix: ["a", "e"] },      // puellae
+        { when: "class:2", affix: ["i"] },           // domini
+        { when: "class:3", affix: ["i", "s"] },      // regis
+        { when: "class:4", affix: ["u", "s"] },      // manus
+        { when: "class:5", affix: ["e", "i"] },      // rei
+      ],
+    },
+    "noun.case.dat": {
+      affix: ["o"], position: "suffix", category: "noun.case.dat",
+      variants: [
+        { when: "class:1", affix: ["a", "e"] },      // puellae
+        { when: "class:2", affix: ["o"] },           // domino
+        { when: "class:3", affix: ["i"] },           // regi
+        { when: "class:4", affix: ["u", "i"] },      // manui
+        { when: "class:5", affix: ["e", "i"] },      // rei
+      ],
+    },
+    "noun.case.abl": {
+      affix: ["o"], position: "suffix", category: "noun.case.abl",
+      variants: [
+        { when: "class:1", affix: ["a"] },           // puellā
+        { when: "class:2", affix: ["o"] },           // dominō
+        { when: "class:3", affix: ["e"] },           // rege
+        { when: "class:4", affix: ["u"] },           // manū
+        { when: "class:5", affix: ["e"] },           // rē
+      ],
+    },
+    "noun.num.pl": {
+      affix: ["i"], position: "suffix", category: "noun.num.pl",
+      variants: [
+        { when: "class:1", affix: ["a", "e"] },      // puellae
+        { when: "class:2", affix: ["i"] },           // domini
+        { when: "class:3", affix: ["e", "s"] },      // reges
+        { when: "class:4", affix: ["u", "s"] },      // manus
+        { when: "class:5", affix: ["e", "s"] },      // res
+      ],
+    },
     "verb.tense.past": { affix: ["a", "β", "i"], position: "suffix", category: "verb.tense.past" },
     "verb.tense.fut": { affix: ["a", "b", "o"], position: "suffix", category: "verb.tense.fut" },
     "verb.aspect.pfv": { affix: ["a", "β", "i"], position: "suffix", category: "verb.aspect.pfv" },

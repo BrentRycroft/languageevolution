@@ -6,11 +6,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "faː kig siː faː gʊlh",
+      "target": "vəː giːŋ siːz vəː gulh",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "faː dɔdɔg siː faː gʊgʊlh",
+      "target": "vəː dɔːdɔːg siː vəː gugulh",
     },
     {
       "english": "i give you the bread",
@@ -18,11 +18,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
     },
     {
       "english": "the king walks at the river",
-      "target": "faː kig gɔkɪŋ æt faː ɹifaːɹ",
+      "target": "vəː giːŋ gɔːgɪŋz æd vəː ɹiːfəːɹ",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "faː kig nat siː faː gʊlh",
+      "target": "vəː giːŋ nat siːz vəː gulh",
     },
   ],
   "preset": "english",
@@ -35,23 +35,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "deːbeː βidt luːpuːum",
+      "target": "bebe βidt duːpuːum",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "baːneː βidnθ luːpuːum",
+      "target": "gaːbeae βidnt duːpuːium",
     },
     {
       "english": "i give you the bread",
-      "target": "ego daːd tuum",
+      "target": "ego do tuam",
     },
     {
       "english": "the king walks at the river",
-      "target": "deːbeː aːdduːlt sluːdeː",
+      "target": "bebe aːbbuːdt fduːbe",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "deːbeː non βidt luːpuːum",
+      "target": "bebe non βidt duːpuːum",
     },
   ],
   "preset": "romance",
@@ -64,23 +64,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Toki Pona preset
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "foːjeːpoːfeː soːjeːli lukin",
+      "target": "ʃuulukəl fowel luki",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "soːsoːjeːli soːsoːjeːli lukin",
+      "target": "fowel fowel luki",
     },
     {
       "english": "i give you the bread",
-      "target": "mi sina pala",
+      "target": "mi sin kəl",
     },
     {
       "english": "the king walks at the river",
-      "target": "foːjeːpoːfeː sapi fiːlaʂeːl leːl",
+      "target": "ʃuulukəl fək tel kəw",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "foːjeːpoːfeː soːjeːli ala lukin",
+      "target": "ʃuulukəl fowel al luki",
     },
   ],
   "preset": "tokipona",

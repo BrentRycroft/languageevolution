@@ -3,6 +3,7 @@ import { driftGrammar, maybeDriftWordOrder } from "../grammar/evolve";
 import { decayAffixProductivity } from "../morphology/decay";
 import { enforceTypologicalUniversals } from "../grammar/universals";
 import { pickNextStressForDrift } from "../grammar/stressTransitions";
+import { proposeAblautEmergence, decayAblautClasses } from "../morphology/ablaut";
 import {
   maybeGrammaticalize,
   maybeMergeParadigms,
@@ -138,6 +139,13 @@ export function stepMorphology(
   const activeCascade = lang.grammaticalisationCascade && generation < lang.grammaticalisationCascade.until;
   const cascadeMult = activeCascade ? lang.grammaticalisationCascade!.multiplier : 0.3;
   const gramMult = litMult * cascadeMult;
+  // Phase 64 T2: ablaut chain emergence + decay. Background process —
+  // a small chance per gen for high-frequency verbs to acquire a
+  // strong-verb ablaut alternation. Decay step removes ablaut entries
+  // whose source vowel is no longer in the inventory.
+  proposeAblautEmergence(lang, rng, generation);
+  decayAblautClasses(lang, generation);
+
   const gShift = maybeGrammaticalize(
     lang,
     rng,

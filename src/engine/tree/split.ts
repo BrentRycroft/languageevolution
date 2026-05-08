@@ -188,6 +188,17 @@ export function splitLeaf(
       inflectionClass: parentLang.inflectionClass
         ? { ...parentLang.inflectionClass }
         : undefined,
+      // Phase 64 T1: same for noun-declension class assignments. Without
+      // this hook daughters had no nounDeclensionClass at all and every
+      // case-acc emit fell through to the class-1 default.
+      nounDeclensionClass: parentLang.nounDeclensionClass
+        ? { ...parentLang.nounDeclensionClass }
+        : undefined,
+      // Phase 64 T2: ablaut class assignments inherited; daughters
+      // can extend or decay independently from this baseline.
+      ablautClassAssignment: parentLang.ablautClassAssignment
+        ? { ...parentLang.ablautClassAssignment }
+        : undefined,
       // Phase 34 Tranche 34a: daughters inherit the compound metadata.
       // After the split each daughter's compounds drift independently
       // (transparent ones recompose from the daughter's parts; fossilised

@@ -65,9 +65,32 @@ export function classifierKeyFor(meaning: Meaning): string {
 
 export function classifierMeaningFor(
   meaning: Meaning,
-  table?: Record<string, string>,
+  table?: Record<string, string | import("../types").Phoneme[]>,
 ): string {
   const key = classifierKeyFor(meaning);
   const t = table ?? DEFAULT_CLASSIFIER_TABLE;
-  return t[key] ?? t.default ?? "thing";
+  const entry = t[key] ?? t.default;
+  if (typeof entry === "string") return entry;
+  // Phase 64 T3: when the table holds direct phoneme forms, fall
+  // through to the default-table meaning string so callers that look
+  // up the lexicon by meaning still find a hit. The realiser
+  // (realise.ts:444) reads the form via lang.grammar.classifierTable
+  // directly when it's a Phoneme[].
+  return DEFAULT_CLASSIFIER_TABLE[key] ?? "thing";
+}
+
+/**
+ * Phase 64 T3: read the classifier form directly when the table
+ * holds a Phoneme[] entry. Returns null when the table holds a
+ * string (caller should look up `lang.lexicon[meaning]`).
+ */
+export function classifierFormFor(
+  meaning: Meaning,
+  table?: Record<string, string | import("../types").Phoneme[]>,
+): import("../types").Phoneme[] | null {
+  if (!table) return null;
+  const key = classifierKeyFor(meaning);
+  const entry = table[key] ?? table.default;
+  if (Array.isArray(entry)) return entry.slice();
+  return null;
 }

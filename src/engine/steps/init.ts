@@ -14,6 +14,7 @@ import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
+import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
 import { assignAllGenders } from "../morphology/gender";
 import { activeModulesOf } from "../modules/registry";
 import { classifyLexicon } from "../morphology/inflectionClass";
@@ -335,6 +336,32 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     }
   }
   assignAllGenders(rootLang);
+  // Phase 64 T3: when the language is seeded with a classifier
+  // system but no table, generate distinct one-syllable classifier
+  // forms (CV) for each semantic class. Direct phoneme forms are
+  // used so we don't depend on the lexicon containing meanings like
+  // "person" / "creature" / "round-thing" — many presets don't have
+  // those.
+  if (rootLang.grammar.classifierSystem && !rootLang.grammar.classifierTable) {
+    const classes = Object.keys(DEFAULT_CLASSIFIER_TABLE);
+    // Pull consonants + vowels available in the inventory.
+    const inv = rootLang.phonemeInventory.segmental;
+    const cons = inv.filter((p) => !"aeiouɛɔəɪʊæɑøœɯyɨ".includes(p));
+    const vows = inv.filter((p) => "aeiouɛɔəɪʊæɑøœɯyɨ".includes(p));
+    const safeC = cons.length > 0 ? cons : ["k", "p", "t", "m", "n"];
+    const safeV = vows.length > 0 ? vows : ["a", "i", "u", "e", "o"];
+    const table: Record<string, string | import("../types").Phoneme[]> = {};
+    let cIdx = 0;
+    let vIdx = 0;
+    for (const cls of classes) {
+      const c = safeC[cIdx % safeC.length]!;
+      const v = safeV[vIdx % safeV.length]!;
+      table[cls] = [c, v];
+      cIdx++;
+      if (cIdx % safeC.length === 0) vIdx++;
+    }
+    rootLang.grammar.classifierTable = table;
+  }
   // Phase 29 Tranche 5e: bucket every seed meaning into an inflection
   // class (Latin-style 1/2/3/4) biased by phonological shape. The
   // class is stable across the language's lifetime and consulted by

@@ -9,7 +9,7 @@ import { fnv1a } from "../rng";
 import type { NP, PP, Sentence, VP } from "./syntax";
 import { sliceOrder } from "./wordOrder";
 import { runRealiseStage } from "./pipeline";
-import { classifierMeaningFor } from "./classifiers";
+import { classifierMeaningFor, classifierFormFor } from "./classifiers";
 import { isFeatureActive } from "../modules/legacyGate";
 
 export interface RealisedToken {
@@ -442,15 +442,25 @@ function realiseNP(
             resolution: lex ? "direct" : "concept",
           });
           if (lang.grammar.classifierSystem) {
+            // Phase 64 T3: classifier form resolution. Try direct
+            // form on the table first (e.g., Phoneme[] entry); else
+            // look up the meaning in the lexicon; else fall back to
+            // closed-class CLF slot. Skip emission only when nothing
+            // resolves.
             const clfMeaning = classifierMeaningFor(np.head.lemma, lang.grammar.classifierTable);
-            const clfForm = lang.lexicon[clfMeaning] ?? closedClassForm(lang, "CLF") ?? [];
+            const directForm = classifierFormFor(np.head.lemma, lang.grammar.classifierTable);
+            const clfForm =
+              (directForm && directForm.length > 0 ? directForm : null) ??
+              lang.lexicon[clfMeaning] ??
+              closedClassForm(lang, "CLF") ??
+              [];
             if (clfForm.length > 0) {
               out.push({
                 surface: clfForm.join(""),
                 form: clfForm,
                 english: `CLF:${clfMeaning}`,
                 role: "NUM" as const,
-                resolution: lang.lexicon[clfMeaning] ? "direct" : "concept",
+                resolution: lang.lexicon[clfMeaning] || directForm ? "direct" : "concept",
               });
             }
           }
