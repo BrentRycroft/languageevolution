@@ -39,14 +39,33 @@ interface SentenceShape {
   needsAdj: boolean;
   /** True if the shape is a copular predication ("S is X"). */
   copular: boolean;
+  /**
+   * Phase 61: when set, the rendered line will plug an extra adjective
+   * onto the OBJECT instead of (or in addition to) the subject. Lets
+   * sibling shapes diverge — "the angry king sees the wolf" vs "the
+   * king sees the angry wolf".
+   */
+  adjOnObject?: boolean;
+  /** Phase 61: when set, force plural number marking on the subject. */
+  pluralSubject?: boolean;
+  /** Phase 61: when set, force plural number marking on the object. */
+  pluralObject?: boolean;
 }
 
+// Phase 61: expanded from 5 to 9 shapes so the chaos picker has more
+// variety to roll. Includes adj-on-object, plural-subject, and
+// plural-object variants — gives readers a wider per-line surprise
+// profile without inventing new template strings.
 const SHAPES: ReadonlyArray<SentenceShape> = [
   { needsObject: true,  needsAdj: false, copular: false }, // S V O
   { needsObject: false, needsAdj: false, copular: false }, // S V
   { needsObject: true,  needsAdj: true,  copular: false }, // adj S V O
   { needsObject: false, needsAdj: true,  copular: false }, // adj S V
   { needsObject: false, needsAdj: true,  copular: true  }, // S is adj
+  { needsObject: true,  needsAdj: true,  copular: false, adjOnObject: true }, // S V adj O
+  { needsObject: true,  needsAdj: false, copular: false, pluralSubject: true }, // Spl V O
+  { needsObject: true,  needsAdj: false, copular: false, pluralObject: true }, // S V Opl
+  { needsObject: false, needsAdj: false, copular: false, pluralSubject: true }, // Spl V
 ];
 
 /**
@@ -57,14 +76,28 @@ const SHAPES: ReadonlyArray<SentenceShape> = [
  * `wordFrequencyHints`).
  */
 function pickShape(lang: Language, rng: Rng): SentenceShape {
-  const weights: number[] = [
-    0.45, // S V O
-    0.20, // S V
-    0.15, // adj S V O
-    0.10, // adj S V
-    lang.lexicon["be"] ? 0.10 : 0.0, // S is adj — only if the lang has a copula
+  // Phase 61: weights jittered per call so back-to-back shapes diverge
+  // even when the underlying language is identical. The base weights
+  // give roughly even coverage across the 9 SHAPES while keeping
+  // copular gated on the language having "be".
+  const hasCopula = !!lang.lexicon["be"];
+  const supportsPlural = lang.grammar.pluralMarking === "affix";
+  const baseWeights: number[] = [
+    0.30, // S V O
+    0.18, // S V
+    0.10, // adj S V O
+    0.08, // adj S V
+    hasCopula ? 0.08 : 0.0, // S is adj
+    0.10, // S V adj O
+    supportsPlural ? 0.06 : 0.0, // Spl V O
+    supportsPlural ? 0.05 : 0.0, // S V Opl
+    supportsPlural ? 0.05 : 0.0, // Spl V
   ];
+  // Per-line jitter: 0.5..1.5× multiplier so the same language emits
+  // visibly different shape mixes across lines.
+  const weights = baseWeights.map((w) => w * (0.5 + rng.next()));
   const total = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) return SHAPES[0]!;
   let roll = rng.next() * total;
   for (let i = 0; i < SHAPES.length; i++) {
     roll -= weights[i]!;
@@ -90,8 +123,12 @@ function pickMeaningByPOS(
     if (posOf(m) !== pos) continue;
     if (m.includes("-")) continue; // skip compounds for shape simplicity
     const freq = lang.wordFrequencyHints[m] ?? 0.4;
-    // smooth: bias toward common but admit rare lemmas.
-    candidates.push({ m, w: freq + 0.05 });
+    // Phase 61: smoothing floor 0.05 → 0.12 widens the long tail
+    // without flattening the frequency curve. Pre-Phase-61 only the
+    // top ~50 frequent lemmas surfaced in a 1500-word lexicon; the
+    // bumped floor lets less-common words appear proportional to
+    // their frequency hint without crowding out the staples.
+    candidates.push({ m, w: freq + 0.12 });
   }
   if (candidates.length === 0) return null;
   const total = candidates.reduce((acc, c) => acc + c.w, 0);
@@ -167,27 +204,64 @@ export function planSkeleton(seedStr: string, lines: number): Skeleton[] {
 }
 
 /**
- * Phase 53 T6: morphology stack chosen by `synthesisIndex`. Heavy-
- * synthesis languages stack many categories; isolating ones stay bare.
+ * Phase 53 T6 / Phase 61: morphology stack chosen by `synthesisIndex`.
+ * Phase 61 expands the available aspect / mood / voice / evidential
+ * markers and gates each on the paradigm being registered for that
+ * language. Heavier synthesis = thicker stack. Each addition is RNG-
+ * gated so two back-to-back lines produce visibly different verbs.
  */
 function morphologyStackForVerb(lang: Language, rng: Rng): MorphCategory[] {
   const idx = lang.grammar.synthesisIndex ?? 1.5;
   const stack: MorphCategory[] = [];
-  // Tense first — always high probability.
+  const has = (cat: MorphCategory): boolean =>
+    !!lang.morphology?.paradigms?.[cat];
+
+  // Tense — always high probability.
   if (rng.chance(Math.min(0.95, idx * 0.4))) {
-    stack.push(rng.chance(0.6) ? "verb.tense.past" : "verb.tense.fut");
+    const choice = rng.chance(0.6) ? "verb.tense.past" : "verb.tense.fut";
+    if (has(choice)) stack.push(choice);
   }
   // Person/agreement.
-  if (rng.chance(Math.min(0.9, idx * 0.35))) {
+  if (rng.chance(Math.min(0.9, idx * 0.35)) && has("verb.person.3sg")) {
     stack.push("verb.person.3sg");
   }
-  // Aspect — only if synthesisIndex >= 1.5.
-  if (idx >= 1.5 && rng.chance(0.4)) {
-    stack.push(rng.chance(0.5) ? "verb.aspect.ipfv" : "verb.aspect.pfv");
+  // Aspect — broaden choice set at synthesisIndex >= 1.5.
+  if (idx >= 1.5 && rng.chance(0.5)) {
+    const aspectPool: MorphCategory[] = [
+      "verb.aspect.ipfv",
+      "verb.aspect.pfv",
+      "verb.aspect.prog",
+      "verb.aspect.hab",
+      "verb.aspect.perf",
+    ];
+    const available = aspectPool.filter(has);
+    if (available.length > 0) {
+      stack.push(available[rng.int(available.length)]!);
+    }
   }
-  // Mood — only at high synthesis.
-  if (idx >= 2.5 && rng.chance(0.3)) {
-    stack.push("verb.mood.subj");
+  // Mood — at synthesisIndex >= 2 (lowered from 2.5).
+  if (idx >= 2.0 && rng.chance(0.4)) {
+    const moodPool: MorphCategory[] = [
+      "verb.mood.subj",
+      "verb.mood.cond",
+      "verb.mood.opt",
+      "verb.mood.imp",
+    ];
+    const available = moodPool.filter(has);
+    if (available.length > 0) {
+      stack.push(available[rng.int(available.length)]!);
+    }
+  }
+  // Voice / evidential at very heavy synthesis (≥3).
+  if (idx >= 3.0 && rng.chance(0.25)) {
+    const polyPool: MorphCategory[] = [
+      "verb.voice.pass",
+      "verb.evid.dir",
+    ];
+    const available = polyPool.filter(has);
+    if (available.length > 0) {
+      stack.push(available[rng.int(available.length)]!);
+    }
   }
   return stack;
 }
@@ -199,17 +273,41 @@ function morphologyStackForNoun(
 ): MorphCategory[] {
   const idx = lang.grammar.synthesisIndex ?? 1.5;
   const stack: MorphCategory[] = [];
+  const has = (cat: MorphCategory): boolean =>
+    !!lang.morphology?.paradigms?.[cat];
+
   if (
     role === "O" &&
     lang.grammar.hasCase &&
-    rng.chance(Math.min(0.95, idx * 0.5))
+    rng.chance(Math.min(0.95, idx * 0.5)) &&
+    has("noun.case.acc")
   ) {
     stack.push("noun.case.acc");
   }
-  // Number marking — sometimes plural.
+  // Phase 61: oblique cases for synthesisIndex >= 2. Gated on
+  // lang.grammar.hasCase + paradigm presence so we never invent
+  // morphology the language doesn't have.
+  if (
+    idx >= 2.0 &&
+    lang.grammar.hasCase &&
+    rng.chance(Math.min(0.4, 0.2 * (idx - 1.0)))
+  ) {
+    const oblique: MorphCategory[] = [
+      "noun.case.gen",
+      "noun.case.dat",
+      "noun.case.loc",
+      "noun.case.inst",
+    ];
+    const available = oblique.filter(has);
+    if (available.length > 0) {
+      stack.push(available[rng.int(available.length)]!);
+    }
+  }
+  // Number marking.
   if (
     lang.grammar.pluralMarking === "affix" &&
-    rng.chance(Math.min(0.5, idx * 0.25))
+    rng.chance(Math.min(0.5, idx * 0.25)) &&
+    has("noun.num.pl")
   ) {
     stack.push("noun.num.pl");
   }
@@ -222,8 +320,21 @@ function inflectNoun(
   role: "S" | "O",
   meaning: string,
   rng: Rng,
+  forcePlural = false,
 ): WordForm {
   const stack = morphologyStackForNoun(lang, role, rng);
+  // Phase 61: shape-driven plural override. When the SHAPE specifies
+  // pluralSubject/pluralObject, force a number marker even if the
+  // stochastic stack didn't emit one. Skip if the language doesn't
+  // have plural marking or the paradigm is missing.
+  if (
+    forcePlural &&
+    lang.grammar.pluralMarking === "affix" &&
+    !stack.includes("noun.num.pl") &&
+    lang.morphology?.paradigms?.["noun.num.pl"]
+  ) {
+    stack.push("noun.num.pl");
+  }
   if (stack.length === 0) return form;
   return inflectCascade(form, stack, lang, meaning).form;
 }
@@ -339,7 +450,7 @@ function realizeSkeleton(
   const render = (form: WordForm): string =>
     script === "ipa" ? formToString(form) : formatForm(form, lang, script);
 
-  const S = render(inflectNoun(sForm, lang, "S", subjectNoun, rng));
+  const S = render(inflectNoun(sForm, lang, "S", subjectNoun, rng, !!shape.pluralSubject));
   const V = render(inflectVerb(vForm, lang, verb, rng));
 
   if (shape.copular && adjective) {
@@ -357,11 +468,23 @@ function realizeSkeleton(
 
   if (shape.needsObject && objectNoun) {
     const oForm = lang.lexicon[objectNoun]!;
-    const O = render(inflectNoun(oForm, lang, "O", objectNoun, rng));
+    const O = render(inflectNoun(oForm, lang, "O", objectNoun, rng, !!shape.pluralObject));
     const arranged = arrange(lang.grammar.wordOrder, S, V, O);
     if (shape.needsAdj && adjective) {
       const adjForm = lang.lexicon[adjective]!;
       const A = render(adjForm);
+      // Phase 61: when shape.adjOnObject, render the adj inline next to
+      // the object inside the SVO arrangement; otherwise keep the
+      // legacy "S V O · A" trailing-modifier form.
+      if (shape.adjOnObject) {
+        const adjPos = lang.grammar.adjectivePosition ?? "pre";
+        const objPhrase = adjPos === "post" ? `${O} ${A}` : `${A} ${O}`;
+        const arr2 = arrange(lang.grammar.wordOrder, S, V, objPhrase);
+        return {
+          text: `${arr2.first} ${arr2.second} ${arr2.third}`,
+          gloss: `[${subjectNoun}—${verb}—${adjective} ${objectNoun}]`,
+        };
+      }
       return {
         text: `${arranged.first} ${arranged.second} ${arranged.third} · ${A}`,
         gloss: `[${subjectNoun}—${verb}—${adjective} ${objectNoun}]`,

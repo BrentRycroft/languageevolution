@@ -62,10 +62,20 @@ function pickTemplate(
 }
 
 /**
- * Slot filler — picks from the language's actual lexicon (frequency-
- * weighted) when it's rich enough, falls back to the small genre pools
- * when the language is sparse. Sparse-language fallback ensures narratives
- * still render for fresh proto-languages with <50 words.
+ * Slot filler — Phase 61: strict lexicon-driven, no English filler
+ * pools. Pulls from `subjectPool / objectPool / verbPool / etc.` which
+ * walk `lang.lexicon` directly. The legacy hand-curated pools
+ * (SUBJECT_NOUN_POOL, OBJECT_NOUN_POOL, etc.) are used only as a
+ * **last-resort** fallback when the language has no lexicalised
+ * candidates of the right POS at all — typical post-genesis languages
+ * with 100+ words skip this branch entirely.
+ *
+ * Verbs: transitive/intransitive split still uses the legacy
+ * verb-class pool as a hint when filtering large lexicons (so we
+ * don't pick a clearly-intransitive verb for a transitive template),
+ * but we INTERSECT it with `verbPool(lang)` rather than overriding —
+ * if the language has a transitive verb in its lexicon, that wins
+ * over the curated pool.
  */
 function fillSlots(
   template: AbstractTemplate,
@@ -79,25 +89,37 @@ function fillSlots(
   const timesLex = timePool(lang);
   const placesLex = placePool(lang);
 
-  // Need at least ~6 entries to weight-sample meaningfully; otherwise fall
-  // back to the legacy hand-picked pool.
-  const subjects = subjectsLex.length >= 6 ? subjectsLex : SUBJECT_NOUN_POOL.slice();
-  const objects = objectsLex.length >= 6 ? objectsLex : OBJECT_NOUN_POOL.slice();
-  const adjs = adjsLex.length >= 4 ? adjsLex : ADJECTIVE_POOL.slice();
-  const times = timesLex.length >= 2 ? timesLex : TIME_POOL.slice();
-  const places = placesLex.length >= 2 ? placesLex : PLACE_POOL.slice();
+  // Phase 61: prefer lexicon-derived pools at any non-empty size; fall
+  // through to the curated pool only if the language has zero of that
+  // POS. (Most languages by gen 5 have well over 100 entries; the
+  // 6-minimum gate was a Phase 53 artifact.)
+  const subjects =
+    subjectsLex.length > 0 ? subjectsLex : SUBJECT_NOUN_POOL.slice();
+  const objects =
+    objectsLex.length > 0 ? objectsLex : OBJECT_NOUN_POOL.slice();
+  const adjs = adjsLex.length > 0 ? adjsLex : ADJECTIVE_POOL.slice();
+  const times = timesLex.length > 0 ? timesLex : TIME_POOL.slice();
+  const places = placesLex.length > 0 ? placesLex : PLACE_POOL.slice();
 
-  // For verbs, transitive vs intransitive split is hard to derive from POS
-  // alone; keep the legacy hand-picked verb pool as the source of truth
-  // for the trans/intrans distinction, but extend with all lexicon verbs
-  // as a last-resort fallback.
-  const verbPoolForTemplate = template.needs.object
+  // Phase 61: verbs sample from lang.lexicon; the curated transitive /
+  // intransitive lists are used as a *filter* against the lexicon
+  // pool. If the lexicon has matches in the appropriate class, we keep
+  // those; otherwise we fall through to the full lexicon verb pool;
+  // and finally to the curated pool if the lexicon has no verbs at all.
+  const wantTrans = template.needs.object;
+  const verbHints = wantTrans
     ? TRANSITIVE_VERB_POOL
-    : INTRANSITIVE_VERB_POOL.length > 0
-      ? INTRANSITIVE_VERB_POOL
-      : VERB_POOL;
+    : INTRANSITIVE_VERB_POOL;
+  const hintsSet = new Set<string>(verbHints);
+  const filteredLexVerbs = verbsLex.filter((v) => hintsSet.has(v));
   const verbs =
-    verbPoolForTemplate.length > 0 ? verbPoolForTemplate.slice() : verbsLex;
+    filteredLexVerbs.length > 0
+      ? filteredLexVerbs
+      : verbsLex.length > 0
+        ? verbsLex
+        : verbHints.length > 0
+          ? verbHints.slice()
+          : VERB_POOL.slice();
 
   const slots: SlotAssignment = {
     verb: pickWeighted(lang, verbs, rng) ?? pick(verbs, rng),
@@ -115,8 +137,13 @@ function fillSlots(
     const framed: string[] = slots.verb
       ? filterByFrame(slots.verb, objects).slice()
       : objects;
+    // Phase 61: when the frame filter wipes everything (lexicon has
+    // no semantically-compatible objects), fall back to the unfiltered
+    // lexicon pool rather than to the curated English set — keeps the
+    // output sourced from the language's own vocabulary.
+    const objectPoolFinal = framed.length > 0 ? framed : objects;
     slots.object =
-      pickWeighted(lang, framed, rng) ?? pick(framed, rng);
+      pickWeighted(lang, objectPoolFinal, rng) ?? pick(objectPoolFinal, rng);
   }
   if (template.needs.adjective) {
     slots.adjective = pickWeighted(lang, adjs, rng) ?? pick(adjs, rng);
@@ -256,6 +283,7 @@ export function generateDiscourseNarrative(
       rng,
       pickAltProbability: altRate,
       genreRegister: genreRegisterFor(genre),
+      genre,
     });
     if (composed.tokens.length === 0) {
       endTurn(ctx);
@@ -287,6 +315,7 @@ export function generateDiscourseNarrative(
         rng,
         pickAltProbability: 0.1,
         genreRegister: genreRegisterFor(genre),
+        genre,
       });
       if (composed2.tokens.length > 0) {
         // Phase 29-2c: previously this branch built two unused
@@ -343,6 +372,7 @@ function generatePoetryStanza(
       rng,
       pickAltProbability: 0.2, // bias toward alts (high-register selected via genreRegisterFor)
       genreRegister: "high",
+      genre: "poetry",
     });
     if (composed.tokens.length === 0) continue;
     candidates.push({

@@ -1,12 +1,13 @@
 import type { Language, Meaning, WordForm } from "../types";
 import type { TranslatedToken } from "../translator/sentence";
 import type { EnglishTag } from "../translator/tokens";
-import type { DiscourseContext } from "./discourse";
+import type { DiscourseContext, DiscourseGenre } from "./discourse";
 import { inflect, inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { formToString } from "../phonology/ipa";
 import { formatForm, type DisplayScript } from "../phonology/display";
 import { glossToEnglish } from "../translator/glossToEnglish";
+import { pickSynonymForGenre } from "./genre_bias";
 
 export type TemplateShape =
   | "transitive"
@@ -80,6 +81,21 @@ export interface ComposeOptions {
   rng?: { next: () => number; chance: (p: number) => boolean; int: (n: number) => number };
   pickAltProbability?: number;
   genreRegister?: "high" | "low" | "neutral";
+  /**
+   * Phase 61: when set, slot-form picking routes through
+   * `pickSynonymForGenre` so Phase 53 T5 affix-derived synonyms +
+   * Phase 57 borrow synonyms surface in narratives proportional to
+   * the genre's register weighting. Without `genre`, the composer
+   * falls back to the language's primary lexicon entry.
+   */
+  genre?: DiscourseGenre;
+  /**
+   * Phase 61: probability per slot of swapping the bare synonym for
+   * its sister synonym (Phase 53 T5 / Phase 57). Default 0.35 — high
+   * enough that synonyms surface in most lines for synonym-rich
+   * languages, low enough that the canonical form still dominates.
+   */
+  synonymPickProbability?: number;
 }
 
 interface RoleToken {
@@ -120,9 +136,16 @@ function makeToken(opts: {
 }
 
 /**
- * If the language has altForms for `meaning` and the composer is given
- * a non-zero pickAltProbability, return a random alt's form (biased by
- * genre register). Otherwise return the primary form unchanged.
+ * Phase 61: route slot-form picking through Phase 53 T5 / Phase 57
+ * synonyms first (via `pickSynonymForGenre`), then layer the legacy
+ * `altForms` swap on top.
+ *
+ * - `genre` set + multiple Words for `meaning` + RNG roll passes →
+ *   genre-weighted synonym Word's primary form is chosen.
+ * - Otherwise the primary lexicon entry is used.
+ * - Then with `pickAltProbability` we may swap to an `altForms` entry
+ *   (legacy Phase 20d altForms still active for languages that haven't
+ *   migrated all their alts to Word entries).
  */
 function pickFormWithAlts(
   lang: Language,
@@ -131,13 +154,28 @@ function pickFormWithAlts(
 ): WordForm | null {
   const primary = lang.lexicon[meaning];
   if (!primary) return null;
+  const {
+    rng,
+    pickAltProbability = 0,
+    genreRegister = "neutral",
+    genre,
+    synonymPickProbability = 0.35,
+  } = options;
+
+  // Phase 61: if a genre is supplied and the language has multiple
+  // lexicalised forms for this meaning, roll for a synonym swap.
+  let chosen: WordForm = primary;
+  if (rng && genre && synonymPickProbability > 0 && rng.chance(synonymPickProbability)) {
+    const synPick = pickSynonymForGenre(lang, meaning, genre, rng as import("../rng").Rng);
+    if (synPick && synPick.word.form.length > 0) {
+      chosen = synPick.word.form;
+    }
+  }
+
   const alts = lang.altForms?.[meaning] ?? [];
-  if (alts.length === 0) return primary;
-  const { rng, pickAltProbability = 0, genreRegister = "neutral" } = options;
-  if (!rng || pickAltProbability <= 0) return primary;
-  if (!rng.chance(pickAltProbability)) return primary;
-  // Bias by register: high-register genre prefers high-register alts; low
-  // prefers low. With no register-tag info, pick uniformly.
+  if (alts.length === 0) return chosen;
+  if (!rng || pickAltProbability <= 0) return chosen;
+  if (!rng.chance(pickAltProbability)) return chosen;
   const registers = lang.altRegister?.[meaning] ?? [];
   const matching = alts.filter(
     (_, i) =>
@@ -146,7 +184,7 @@ function pickFormWithAlts(
       registers[i] === undefined,
   );
   const pool = matching.length > 0 ? matching : alts;
-  return pool[rng.int(pool.length)] ?? primary;
+  return pool[rng.int(pool.length)] ?? chosen;
 }
 
 function inflectNoun(
@@ -154,6 +192,7 @@ function inflectNoun(
   meaning: Meaning,
   form: WordForm,
   opts: { plural: boolean; objectCase: boolean },
+  composeOptions: ComposeOptions = {},
 ): { form: WordForm; glossNote: string } {
   let out = form;
   const notes: string[] = [];
@@ -171,7 +210,42 @@ function inflectNoun(
       notes.push("case.acc");
     }
   }
+  // Phase 61: heavy-synthesis stack — at synthesisIndex >= 2, occasionally
+  // also stack a number, classifier, or oblique-case marker. Probabilities
+  // are gated on the language having the paradigm registered, so we don't
+  // invent morphology that doesn't exist for that language.
+  const idx = lang.grammar.synthesisIndex ?? 1.5;
+  const rng = composeOptions.rng;
+  if (rng && idx >= 2.0) {
+    if (!opts.plural && lang.morphology.paradigms["noun.num.pl"] && rng.chance(0.2 * (idx - 1.5))) {
+      out = inflect(out, lang.morphology.paradigms["noun.num.pl"]!, lang, meaning);
+      notes.push("num.pl");
+    }
+    // Phase 61: oblique case (gen / loc / inst) — heavy-synthesis
+    // languages naturally use these for partitive / locative
+    // arguments. Gated on lang.grammar.hasCase + paradigm presence so
+    // we never invent morphology the language doesn't have.
+    if (!opts.objectCase && lang.grammar.hasCase && rng.chance(0.15 * (idx - 1.5))) {
+      const oblique = pickOne(rng, [
+        "noun.case.gen",
+        "noun.case.loc",
+        "noun.case.inst",
+      ] as const);
+      const p = lang.morphology.paradigms[oblique];
+      if (p) {
+        out = inflect(out, p, lang, meaning);
+        notes.push(oblique.replace(/^noun\./, ""));
+      }
+    }
+  }
   return { form: out, glossNote: notes.join(",") };
+}
+
+function pickOne<T>(
+  rng: { int: (n: number) => number },
+  arr: readonly T[],
+): T {
+  return arr[rng.int(arr.length)]!;
 }
 
 function inflectVerb(
@@ -179,11 +253,51 @@ function inflectVerb(
   meaning: Meaning,
   form: WordForm,
   opts: { tense: "past" | "present" | "future"; person3sg: boolean },
+  composeOptions: ComposeOptions = {},
 ): { form: WordForm; glossNote: string } {
   const order: MorphCategory[] = [];
   if (opts.tense === "past") order.push("verb.tense.past");
   else if (opts.tense === "future") order.push("verb.tense.fut");
   if (opts.person3sg) order.push("verb.person.3sg");
+
+  // Phase 61: heavy-synthesis stack. At synthesisIndex >= 2 the verb may
+  // pick up an aspect marker, and at >= 2.5 a mood marker. Each is gated
+  // on the paradigm existing in the language so we never invent morphology.
+  const idx = lang.grammar.synthesisIndex ?? 1.5;
+  const rng = composeOptions.rng;
+  if (rng && idx >= 2.0 && rng.chance(Math.min(0.5, 0.3 * (idx - 1.5)))) {
+    const aspectChoice = pickOne(rng, [
+      "verb.aspect.pfv",
+      "verb.aspect.ipfv",
+      "verb.aspect.prog",
+      "verb.aspect.hab",
+    ] as const);
+    if (lang.morphology.paradigms[aspectChoice]) {
+      order.push(aspectChoice);
+    }
+  }
+  if (rng && idx >= 2.5 && rng.chance(Math.min(0.4, 0.25 * (idx - 1.5)))) {
+    const moodChoice = pickOne(rng, [
+      "verb.mood.subj",
+      "verb.mood.cond",
+      "verb.mood.opt",
+    ] as const);
+    if (lang.morphology.paradigms[moodChoice]) {
+      order.push(moodChoice);
+    }
+  }
+  // Phase 61: rare voice / evidential stack at very heavy synthesis
+  // (idx >= 3) — gives polysynthetic-style verbs.
+  if (rng && idx >= 3.0 && rng.chance(0.15)) {
+    const evidChoice = pickOne(rng, [
+      "verb.evid.dir",
+      "verb.voice.pass",
+    ] as const);
+    if (lang.morphology.paradigms[evidChoice]) {
+      order.push(evidChoice);
+    }
+  }
+
   const { form: out, applied } = inflectCascade(form, order, lang, meaning);
   const notes = applied.map((c) => c.replace(/^verb\./, ""));
   return { form: out, glossNote: notes.join(",") };
@@ -237,7 +351,7 @@ function nounRoleToken(
 ): RoleToken | null {
   const base = pickFormWithAlts(lang, meaning, composeOptions);
   if (!base) return null;
-  const { form, glossNote } = inflectNoun(lang, meaning, base, opts);
+  const { form, glossNote } = inflectNoun(lang, meaning, base, opts, composeOptions);
   return {
     role,
     token: makeToken({
@@ -259,7 +373,7 @@ function verbRoleToken(
 ): RoleToken | null {
   const base = pickFormWithAlts(lang, meaning, composeOptions);
   if (!base) return null;
-  const { form, glossNote } = inflectVerb(lang, meaning, base, opts);
+  const { form, glossNote } = inflectVerb(lang, meaning, base, opts, composeOptions);
   return {
     role: "V",
     token: makeToken({
