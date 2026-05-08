@@ -39,8 +39,12 @@ describe("Phase 67 T4 — relative-clause typological constraints", () => {
       relativeClauseStrategy: "relativizer",
     });
     const rng = makeRng("rc-vo");
+    // Phase 68a T2: pin wordOrder + hasCase per iteration so other
+    // drift rules can't flip the constraints out from under us.
     for (let i = 0; i < 200; i++) {
-      driftGrammar(lang, rng, 1.0);
+      driftGrammar(lang.grammar, rng, 1.0, 1000);
+      lang.grammar.wordOrder = "SVO";
+      lang.grammar.hasCase = false;
     }
     expect(lang.grammar.relativeClauseStrategy).not.toBe("internal-headed");
   });
@@ -53,7 +57,9 @@ describe("Phase 67 T4 — relative-clause typological constraints", () => {
     });
     const rng = makeRng("rc-nocase");
     for (let i = 0; i < 200; i++) {
-      driftGrammar(lang, rng, 1.0);
+      driftGrammar(lang.grammar, rng, 1.0, 1000);
+      lang.grammar.wordOrder = "SVO";
+      lang.grammar.hasCase = false;
     }
     expect(lang.grammar.relativeClauseStrategy).not.toBe("resumptive");
   });

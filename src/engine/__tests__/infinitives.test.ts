@@ -34,7 +34,14 @@ describe("Phase 26b — infinitive morphology", () => {
   it("Romance preset uses affix-suffix '-re' strategy", () => {
     const lang = langFromPreset(presetRomance());
     expect(lang.infinitiveStrategy?.kind).toBe("affix-suffix");
-    expect(lang.infinitiveStrategy?.affix).toEqual(["r", "e"]);
+    // Phase 68a T2b: Romance preset evolved its alveolar liquid to /ɾ/
+    // (alveolar tap, the dominant Romance reflex of Latin /r/ — Spanish,
+    // Portuguese). Italian retained /r/ as a trill. Accept either as a
+    // valid Romance reflex of the Latin -re infinitive marker.
+    const affix = lang.infinitiveStrategy?.affix ?? [];
+    expect(affix.length).toBe(2);
+    expect(["r", "ɾ"]).toContain(affix[0]);
+    expect(affix[1]).toBe("e");
   });
 
   it("Romance citation form is single-token with -re suffix", () => {
@@ -49,8 +56,8 @@ describe("Phase 26b — infinitive morphology", () => {
     expect(cit!.kind).toBe("single");
     if (cit && cit.kind === "single") {
       const surface = cit.form.join("");
-      // ends in re or has re inside (suffix appended)
-      expect(surface.endsWith("re")).toBe(true);
+      // Phase 68a T2b: accept /r/ or /ɾ/ for the Romance liquid (see above).
+      expect(/(re|ɾe)$/.test(surface)).toBe(true);
     }
   });
 

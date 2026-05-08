@@ -147,5 +147,14 @@ export function deleteMeaning(lang: Language, meaning: Meaning): void {
   if (lang.variants) delete lang.variants[meaning];
   if (lang.wordOriginChain) delete lang.wordOriginChain[meaning];
   if (lang.colexifiedAs) delete lang.colexifiedAs[meaning];
+  // Phase 68a T1: purge Phase 64/66 per-meaning metadata so stale
+  // entries don't survive bleaching / recarving / obsolescence.
+  // Without this, `progressGrammaticalizationChain` could try to
+  // advance a deleted meaning and `decayAblautClasses` would read
+  // garbage. Symmetric with the legacy delete list above.
+  if (lang.inflectionClass) delete lang.inflectionClass[meaning];
+  if (lang.nounDeclensionClass) delete lang.nounDeclensionClass[meaning];
+  if (lang.ablautClassAssignment) delete lang.ablautClassAssignment[meaning];
+  if (lang.grammaticalizationStage) delete lang.grammaticalizationStage[meaning];
   removeSense(lang, meaning);
 }
