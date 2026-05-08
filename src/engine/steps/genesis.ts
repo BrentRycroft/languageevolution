@@ -88,9 +88,14 @@ export function stepGenesis(
   const lexSize = Object.keys(lang.lexicon).length;
   const capacity = lang.lexicalCapacity ?? lexicalCapacity(lang, generation);
   const deficit = Math.max(0, capacity - lexSize);
-  const base = 0.2 + 0.05 * deficit;
+  // Phase 60: aggressive coinage volume — user wanted "magnitudes
+  // higher" coinage. Pre-Phase-60 base was 0.2 + 0.05*deficit (1-3
+  // attempts/gen). New base 1.5 + 0.25*deficit produces 4-25
+  // attempts/gen so coinage events surface as a major event family
+  // alongside sound-change.
+  const base = 1.5 + 0.25 * deficit;
   const noise = 0.5 + rng.next();
-  const target = Math.max(1, Math.round(base * noise * lang.conservatism));
+  const target = Math.max(2, Math.round(base * noise * lang.conservatism));
   const atCapacity = lexSize >= capacity;
   // Phase 38g: literary brake on coinage rate. Tier-2+ literate
   // languages still coin words but at a measured pace; drops the

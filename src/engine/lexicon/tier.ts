@@ -103,6 +103,11 @@ export function lexicalCapacity(lang: Language, generation: number): number {
   // Phase 38g: amplify tier scaling so lexicons grow toward
   // realistic sizes: tier 0 → ~500, tier 3 mature → ~2000-3000.
   // Pre-38g this capped at ~720; far short of real lexicon growth.
-  const ageFactor = Math.min(400, age / 25);
-  return Math.round(400 + 250 * tier + ageFactor + popFactor);
+  // Phase 60: bumped capacity so the post-rebalance higher coinage
+  // rate has room to land. Pre-Phase-60 base 400 + 250*tier hit
+  // ceiling at ~1150 by gen 50 — coinage events stalled. New base
+  // 600 + 400*tier + age/15 (capped 600) gives tier-3 a 1800-2400
+  // sustained ceiling, matching real-language vocabulary growth.
+  const ageFactor = Math.min(600, age / 15);
+  return Math.round(600 + 400 * tier + ageFactor + popFactor);
 }

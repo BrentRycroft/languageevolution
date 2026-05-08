@@ -32,8 +32,16 @@ export function defaultConfig(): SimulationConfig {
       taboo: true,
       copula: true,
     },
+    // Phase 60: rebalanced rates. User reported sound changes were
+    // dominating event logs while coinages, grammar drift, semantic
+    // shifts, etc. were too sparse. Phonology was rolled per-word per
+    // gen at 0.22 — hundreds of dice per gen — while every other
+    // event family was at single-digit-percent per-gen-per-language.
+    // New rates: phonology slightly down, every other family 2.5–3×
+    // up. Coinage gets the largest bump (3× globalRate + 2× target
+    // base in steps/genesis.ts).
     phonology: {
-      globalRate: 0.22,
+      globalRate: 0.05,
       enabledChangeIds: enabled,
       changeWeights: weights,
     },
@@ -46,38 +54,38 @@ export function defaultConfig(): SimulationConfig {
       minGenerationsBeforeDeath: 20,
     },
     genesis: {
-      globalRate: 0.35,
+      globalRate: 1.0,
       enabledRuleIds: genesisEnabled,
       ruleWeights: genesisWeights,
     },
     grammar: {
-      driftProbabilityPerGeneration: 0.025,
+      driftProbabilityPerGeneration: 0.12,
     },
     semantics: {
-      driftProbabilityPerGeneration: 0.018,
-      recarveProbabilityPerGeneration: 0.0025,
+      driftProbabilityPerGeneration: 0.10,
+      recarveProbabilityPerGeneration: 0.015,
     },
     obsolescence: {
-      probabilityPerPairPerGeneration: 0.03,
+      probabilityPerPairPerGeneration: 0.07,
       maxDistanceForRivalry: 1,
-      copulaLossProbability: 0.004,
-      copulaGenesisProbability: 0.002,
+      copulaLossProbability: 0.012,
+      copulaGenesisProbability: 0.008,
     },
     morphology: {
-      grammaticalizationProbability: 0.015,
-      paradigmMergeProbability: 0.008,
-      analogyProbability: 0.012,
-      cliticizationProbability: 0.012,
-      suppletionProbability: 0.005,
+      grammaticalizationProbability: 0.04,
+      paradigmMergeProbability: 0.025,
+      analogyProbability: 0.035,
+      cliticizationProbability: 0.035,
+      suppletionProbability: 0.015,
     },
     contact: {
-      borrowProbabilityPerGeneration: 0.04,
+      borrowProbabilityPerGeneration: 0.10,
     },
     phonology_lawful: {
       regularChangeProbability: 0.04,
     },
     taboo: {
-      replacementProbability: 0.006,
+      replacementProbability: 0.02,
     },
     evolutionSpeed: "standard",
     seedLexicon: DEFAULT_LEXICON,
