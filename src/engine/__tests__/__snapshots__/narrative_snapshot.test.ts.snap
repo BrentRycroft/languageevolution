@@ -6,23 +6,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > English preset t
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "ðə kiŋe siːz ðə wʊlhe",
+      "target": "ðə kɪŋ siːz ðə wulh",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "ðə dɔgez siː ðə wʊlhez",
+      "target": "ðə dɔgs siː ðə wulhs",
     },
     {
       "english": "i give you the bread",
-      "target": "aje gɪveɪŋe ju",
+      "target": "aj gɪvɪŋ ju",
     },
     {
       "english": "the king walks at the river",
-      "target": "ðə kiŋe wɔkeɪŋez æte ðə ɹivəɹe",
+      "target": "ðə kɪŋ wɔkɪŋz æt ðə ɹɪvəɹ",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "ðə kiŋe nate siːz ðə wʊlhe",
+      "target": "ðə kɪŋ nat siːz ðə wulh",
     },
   ],
   "preset": "english",
@@ -43,11 +43,11 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Romance preset t
     },
     {
       "english": "i give you the bread",
-      "target": "ego daɾɾeo tuum",
+      "target": "ego daɾeo tuum",
     },
     {
       "english": "the king walks at the river",
-      "target": "ɾege ambulaɾet flume",
+      "target": "ɾege ambulaɾet slume",
     },
     {
       "english": "the king does not see the wolf",
@@ -64,23 +64,23 @@ exports[`Phase 29 Tranche 7c — narrative snapshot stability > Toki Pona preset
   "outputs": [
     {
       "english": "the king sees the wolf",
-      "target": "nibinibi luːkin soːjeni",
+      "target": "niminimi lukin toweli",
     },
     {
       "english": "the dogs see the wolves",
-      "target": "soːsoːjeni luːkin soːsoːjeni",
+      "target": "totoweli lukin totoweli",
     },
     {
       "english": "i give you the bread",
-      "target": "mi pænæ sina",
+      "target": "mi pana sina",
     },
     {
       "english": "the king walks at the river",
-      "target": "nibinibi kæjætawo sæki teloːsuːnoː",
+      "target": "niminimi tawatawo taki telotuno",
     },
     {
       "english": "the king does not see the wolf",
-      "target": "nibinibi ala luːkin soːjeni",
+      "target": "niminimi ala lukin toweli",
     },
   ],
   "preset": "tokipona",

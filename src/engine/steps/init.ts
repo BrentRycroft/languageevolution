@@ -149,13 +149,25 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   const rng = makeRng(config.seed);
   const rootId = "L-0";
   const enabled = config.phonology.enabledChangeIds.slice().sort();
+  // Phase 58.7: per-seed sound-change weight jitter. Each enabled
+  // rule gets a multiplier in [0.5, 1.5] derived from a sub-RNG
+  // seeded by `${config.seed}:weight:${ruleId}` — independent per
+  // rule so adding/removing one rule from the enabled set doesn't
+  // shift the multipliers of unrelated rules. Different simulation
+  // seeds therefore produce different "phonological tempos": some
+  // seeds amplify lenition, others amplify deletion, others slow
+  // delabialisation. Models real language-family variation in
+  // which sound changes dominate. Uses dedicated sub-RNGs so the
+  // main step-RNG sequence is unaffected.
   const weights: Record<string, number> = {};
   for (const id of enabled) {
     const base = config.phonology.changeWeights[id] ?? CATALOG_BY_ID[id]?.baseWeight ?? 1;
     // Phase 40d: preset-level rule-weight priors. Multiplicative on
     // top of the catalog/config base weight. Soft prior, not cap.
     const priorMult = config.seedRuleBias?.[id] ?? 1;
-    weights[id] = base * priorMult;
+    const jitterRng = makeRng(`${config.seed}:weight:${id}`);
+    const jitterMult = 0.5 + jitterRng.next();
+    weights[id] = base * priorMult * jitterMult;
   }
   const seedLex = cloneLexicon(config.seedLexicon);
   const rootLang: Language = {
