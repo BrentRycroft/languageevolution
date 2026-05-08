@@ -9,10 +9,10 @@
  *   npx tsx scripts/probes/phase67_t4_relative.ts
  */
 import { createSimulation } from "../../src/engine/simulation";
-import { presetPie } from "../../src/engine/presets/pie";
+import { presetPIE } from "../../src/engine/presets/pie";
 import { leafIds } from "../../src/engine/tree/split";
 
-const sim = createSimulation({ ...presetPie(), seed: "phase67-t4-rc" });
+const sim = createSimulation({ ...presetPIE(), seed: "phase67-t4-rc" });
 for (let i = 0; i < 200; i++) sim.step();
 const state = sim.getState();
 const leaves = leafIds(state.tree).filter((id) => !state.tree[id]!.language.extinct);
