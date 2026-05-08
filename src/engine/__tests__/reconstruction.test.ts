@@ -5,6 +5,14 @@ import { defaultConfig } from "../config";
 import { levenshtein } from "../phonology/ipa";
 import type { LanguageTree, WordForm } from "../types";
 
+/**
+ * reconstruction.test.ts
+ *
+ * Test suite for: "comparative reconstruction".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("comparative reconstruction", () => {
   it("reconstructs a single descendant's form trivially", () => {
     const lang = {

@@ -1,5 +1,13 @@
 import type { SimulationState, Meaning, WordForm } from "../engine/types";
 
+/**
+ * history.ts
+ *
+ * Zustand store + history / activity recording. Key exports: MAX_HISTORY, MAX_ACTIVITY, TimelineEntry.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const MAX_HISTORY = 500;
 export const MAX_ACTIVITY = 200;
 

@@ -1,6 +1,14 @@
 import { useEffect } from "react";
 import { useSimStore } from "../state/store";
 
+/**
+ * PersistenceToast.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: PersistenceToast.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function PersistenceToast() {
   const notice = useSimStore((s) => s.persistenceNotice);
   const dismiss = useSimStore((s) => s.dismissPersistenceNotice);

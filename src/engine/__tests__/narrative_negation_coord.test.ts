@@ -5,6 +5,14 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeDiscourse } from "../narrative/discourse";
 
+/**
+ * narrative_negation_coord.test.ts
+ *
+ * Test suite for: "Phase 20c: negation + coordination in narratives".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function englishLang() {
   const sim = createSimulation(presetEnglish());
   return sim.getState().tree[sim.getState().rootId]!.language;

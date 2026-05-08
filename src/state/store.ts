@@ -23,6 +23,14 @@ import {
   clearAutosave,
 } from "../persistence/autosave";
 
+/**
+ * store.ts
+ *
+ * Zustand store + history / activity recording. Key exports: PersistenceNotice, ConfirmRequest, useSimStore.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface PersistenceNotice {
   kind: "quota" | "future-version" | "corrupt" | "migration-failed" | "save-error";
   message: string;

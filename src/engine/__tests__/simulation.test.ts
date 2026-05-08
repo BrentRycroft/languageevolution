@@ -3,6 +3,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import type { Lexicon, LanguageTree } from "../types";
 
+/**
+ * simulation.test.ts
+ *
+ * Test suite for: "simulation determinism".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function serializeLeafLexicons(tree: LanguageTree): Record<string, Lexicon> {
   const out: Record<string, Lexicon> = {};
   for (const id of Object.keys(tree).sort()) {

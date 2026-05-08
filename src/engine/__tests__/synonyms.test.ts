@@ -4,6 +4,14 @@ import { buildInitialState } from "../steps/init";
 import { addSynonym, removeSynonym, setLexiconForm } from "../lexicon/mutate";
 import { selectSynonyms, findWordsByMeaning, findPrimaryWordForMeaning, formKeyOf } from "../lexicon/word";
 
+/**
+ * synonyms.test.ts
+ *
+ * Test suite for: "Phase 37 — bidirectional word ↔ meaning mapping".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshLang() {
   const cfg = { ...presetEnglish(), seed: "syn-test" };
   const state = buildInitialState(cfg);

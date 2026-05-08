@@ -1,5 +1,13 @@
 import type { Meaning } from "../types";
 
+/**
+ * frequency.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: DEFAULT_FREQUENCY_HINTS, frequencyFor.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const DEFAULT_FREQUENCY_HINTS: Record<Meaning, number> = {
   water: 0.95,
   fire: 0.8,

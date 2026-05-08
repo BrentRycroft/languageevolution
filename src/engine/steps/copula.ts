@@ -3,6 +3,14 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
 
+/**
+ * copula.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepCopulaErosion, stepCopulaGenesis.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function stepCopulaErosion(
   lang: Language,
   config: SimulationConfig,

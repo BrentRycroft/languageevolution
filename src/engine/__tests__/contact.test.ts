@@ -5,6 +5,14 @@ import { leafIds } from "../tree/split";
 import { tryBorrow } from "../contact/borrow";
 import { makeRng } from "../rng";
 
+/**
+ * contact.test.ts
+ *
+ * Test suite for: "contact / loanwords".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("contact / loanwords", () => {
   it("records a borrow event somewhere in a 300-gen run", () => {
     const cfg = { ...defaultConfig(), seed: "contact-test" };

@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { classifyShift } from "../semantics/drift";
 
+/**
+ * classifyShift.test.ts
+ *
+ * Test suite for: "classifyShift (review fix)".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("classifyShift (review fix)", () => {
   it("same-cluster high-similarity pairs → metonymy", () => {
     expect(classifyShift("hand", "foot")).toBe("metonymy");

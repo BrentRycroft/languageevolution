@@ -2,6 +2,14 @@ import type { LanguageTree, SimulationState } from "../engine/types";
 import { leafIds } from "../engine/tree/split";
 import { formToString, sanitizeForNewick } from "../engine/phonology/ipa";
 
+/**
+ * export.ts
+ *
+ * Save format, autosave, schema migrations, user presets, export. Key exports: exportLexiconsJSON, exportLexiconsCSV, exportTreeNewick.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function triggerDownload(filename: string, content: string, mime: string): void {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);

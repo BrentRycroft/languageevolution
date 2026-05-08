@@ -2,6 +2,14 @@ import type { Language, LanguageNode, LanguageTree, SimulationConfig, Simulation
 import { LATEST_SAVE_VERSION, migrateSavedRun } from "./migrate";
 import { idbGet, idbSet, idbRemove, type IdbWriteResult } from "./idb";
 
+/**
+ * autosave.ts
+ *
+ * Save format, autosave, schema migrations, user presets, export. Key exports: StorageWriteResult, saveAutosave, AutosaveLoaded.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const AUTOSAVE_KEY = "lev.autosave.v2";
 const AUTOSAVE_VERSION = LATEST_SAVE_VERSION;
 

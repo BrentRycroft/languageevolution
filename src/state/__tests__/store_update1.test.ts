@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useSimStore } from "../store";
 
+/**
+ * store_update1.test.ts
+ *
+ * Test suite for: "store Update 1 actions".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("store Update 1 actions", () => {
   beforeEach(() => {
     useSimStore.getState().reset();

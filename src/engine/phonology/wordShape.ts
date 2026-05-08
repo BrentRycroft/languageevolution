@@ -1,6 +1,14 @@
 import type { Meaning, WordForm } from "../types";
 import { isSyllabic, isVowel } from "./ipa";
 
+/**
+ * wordShape.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: repairSyllabicity, ALLOWED_MONOSYLLABIC, hasSyllabicNucleus.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const RESONANT_BASES: Record<string, string> = {
   l: "l̩",
   r: "r̩",

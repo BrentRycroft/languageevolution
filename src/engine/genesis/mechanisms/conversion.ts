@@ -1,6 +1,14 @@
 import type { CoinageMechanism } from "./types";
 import { clusterOf } from "../../semantics/clusters";
 
+/**
+ * conversion.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: MECHANISM_CONVERSION.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const MECHANISM_CONVERSION: CoinageMechanism = {
   id: "mechanism.conversion",
   label: "zero-derivation",

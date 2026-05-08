@@ -6,6 +6,14 @@ import { isFormLegal } from "../phonology/wordShape";
 import { setLexiconForm } from "./mutate";
 import { isClosedClass, posOf } from "./pos";
 
+/**
+ * taboo.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: TabooEvent, maybeTabooReplace.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface TabooEvent {
   meaning: Meaning;
   oldForm: string;

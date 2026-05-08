@@ -7,6 +7,14 @@ import {
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * volatility.test.ts
+ *
+ * Test suite for: "Phase 25 — volatility regimes".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(): Language {
   return {
     id: "L",

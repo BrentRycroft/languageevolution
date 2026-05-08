@@ -5,6 +5,14 @@ import { leafIds } from "../tree/leafIds";
 import { arealShareAffinity } from "../geo/territory";
 import { getWorldMap } from "../geo/map";
 
+/**
+ * creolization.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepCreolization.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const PER_GEN_PROBABILITY = 0.0005;
 
 const MIN_ADJACENCY = 0.4;

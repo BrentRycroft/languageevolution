@@ -3,6 +3,14 @@ import { exportRun, importRunJson, importAndSaveRun, listRuns, deleteRun } from 
 import { defaultConfig } from "../../engine/config";
 import type { SavedRun } from "../../engine/types";
 
+/**
+ * storage_import.test.ts
+ *
+ * Test suite for: "storage import/export".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 beforeEach(async () => {
   if (typeof localStorage !== "undefined") localStorage.clear();
   // Phase 38+: clear the IDB-backed runs index too.

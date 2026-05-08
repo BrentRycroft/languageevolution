@@ -6,6 +6,14 @@ import { MECHANISMS } from "./mechanisms";
 import { lexicalNeed, sampleNeededMeaning } from "./need";
 import { changesForLang } from "../steps/helpers";
 
+/**
+ * apply.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: CoinageOutcome, tryCoin.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface CoinageOutcome {
   meaning: Meaning;
   form: WordForm;

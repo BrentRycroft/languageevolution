@@ -1,6 +1,14 @@
 import type { Lexicon } from "../types";
 import { fillMissing, type FormPhonology } from "./basic240";
 
+/**
+ * defaults.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: DEFAULT_LEXICON.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const DEFAULT_PHONOLOGY: FormPhonology = {
   onsets: ["p", "t", "k", "b", "d", "g", "m", "n", "s", "l", "r", "w", "j", "h", "f"],
   vowels: ["a", "e", "i", "o", "u"],

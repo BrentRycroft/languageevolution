@@ -8,6 +8,14 @@ import { presetRomance } from "../presets/romance";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 
+/**
+ * conjugation_tables.test.ts
+ *
+ * Test suite for: "Phase 26a — full conjugation tables".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function langFromPreset(preset: ReturnType<typeof presetRomance>) {
   const sim = createSimulation(preset);
   return sim.getState().tree[sim.getState().rootId]!.language;

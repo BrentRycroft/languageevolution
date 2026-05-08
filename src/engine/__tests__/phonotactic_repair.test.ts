@@ -7,6 +7,14 @@ import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * phonotactic_repair.test.ts
+ *
+ * Test suite for: "Phase 27c — stepPhonotacticRepair".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshLang(buildPreset: () => ReturnType<typeof presetEnglish>): Language {
   const sim = createSimulation(buildPreset());
   return sim.getState().tree[sim.getState().rootId]!.language;

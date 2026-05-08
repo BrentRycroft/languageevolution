@@ -2,6 +2,14 @@ import { useMemo } from "react";
 import { useSimStore } from "../state/store";
 import { buildStemma, stemmaMatrix, type StemmaNode } from "../engine/analysis/stemma";
 
+/**
+ * StemmaView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: StemmaView.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function StemmaView() {
   const state = useSimStore((s) => s.state);
   const { root, edges } = useMemo(() => {

@@ -5,6 +5,14 @@ import { leafIds, splitLeaf } from "../tree/split";
 import { makeRng } from "../rng";
 import type { GeneratedRule } from "../phonology/generated";
 
+/**
+ * procedural_integration.test.ts
+ *
+ * Test suite for: "procedural sound-change integration".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("procedural sound-change integration", () => {
   it("after 80 generations at least one leaf has invented an active rule", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "proc" });

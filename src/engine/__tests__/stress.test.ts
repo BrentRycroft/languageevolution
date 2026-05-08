@@ -7,6 +7,14 @@ import {
 } from "../phonology/stress";
 import { makeRng } from "../rng";
 
+/**
+ * stress.test.ts
+ *
+ * Test suite for: "stress placement + sensitivity".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("stress placement + sensitivity", () => {
   it("single-vowel word is stressed on that vowel", () => {
     expect(penultimateStressIndex(["d", "o"])).toBe(1);

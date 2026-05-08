@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { erosionResistance } from "../phonology/apply";
 
+/**
+ * erosion_resistance.test.ts
+ *
+ * Test suite for: "Phase 24 — soft erosion resistance curve".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 24 — soft erosion resistance curve", () => {
   it("returns 1.0 (full rate) at full seed length for an erosive category", () => {
     expect(erosionResistance("deletion", 5, 5)).toBeCloseTo(1, 5);

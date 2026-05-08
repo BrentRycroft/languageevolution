@@ -8,6 +8,14 @@ import { presetBantu } from "../presets/bantu";
 import { presetTokipona } from "../presets/tokipona";
 import { leafIds } from "../tree/split";
 
+/**
+ * smoke_2k.test.ts
+ *
+ * Test suite.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const SMOKE_ENABLED = !!(
   (globalThis as { process?: { env?: Record<string, string | undefined> } })
     .process?.env?.SMOKE_2K

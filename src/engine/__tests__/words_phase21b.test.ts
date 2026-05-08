@@ -10,6 +10,14 @@ import {
 import { reverseLookupForm, reverseTranslate } from "../translator/reverse";
 import type { Language } from "../types";
 
+/**
+ * words_phase21b.test.ts
+ *
+ * Test suite for: "Phase 21b — disambiguateSense".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",

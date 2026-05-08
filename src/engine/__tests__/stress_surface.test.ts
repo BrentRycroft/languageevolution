@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 
+/**
+ * stress_surface.test.ts
+ *
+ * Test suite for: "Phase 67 T1 — stress-pattern surface effects".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 67 T1 — stress-pattern surface effects", () => {
   it("languages with fixed stress evolve more reduction events than lexical-stress languages", () => {
     // Heuristic: side-by-side runs of identical seed across two

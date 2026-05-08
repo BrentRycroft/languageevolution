@@ -1,3 +1,11 @@
+/**
+ * index.ts
+ *
+ * engine barrel export — the public entry point for the engine package.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export * from "./types";
 export { makeRng, fnv1a } from "./rng";
 export type { Rng } from "./rng";

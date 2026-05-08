@@ -1,5 +1,13 @@
 import type { SimulationConfig, SimulationState } from "./types";
 
+/**
+ * workerClient.ts
+ *
+ * client-side handle for postMessage to the engine Web Worker. Key exports: EngineWorkerClient, createEngineWorker.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface EngineWorkerClient {
   stepN: (n: number) => Promise<SimulationState>;
   restore: (state: SimulationState) => Promise<void>;

@@ -2,6 +2,14 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
+/**
+ * english.ts
+ *
+ * Built-in language seeds (PIE, Germanic, Romance, Bantu, Toki Pona, English). Key exports: presetEnglish.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const LEXICON: Lexicon = {
   water: ["w", "ɔ", "t", "ə", "ɹ"],
   fire: ["f", "a", "j", "ə", "ɹ"],

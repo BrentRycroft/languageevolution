@@ -1,3 +1,11 @@
+/**
+ * rng.ts
+ *
+ * deterministic seeded Mulberry32 RNG. Every step() threads this; Math.random() is BANNED outside this module. Key exports: Rng, fnv1a, makeRng.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface Rng {
   next: () => number;
   int: (maxExclusive: number) => number;

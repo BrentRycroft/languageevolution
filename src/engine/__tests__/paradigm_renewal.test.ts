@@ -6,6 +6,14 @@ import {
   detectAndLogParadigmRenewal,
 } from "../morphology/renewal";
 
+/**
+ * paradigm_renewal.test.ts
+ *
+ * Test suite for: "Phase 56 T2 — paradigm renewal detector".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 56 T2 — paradigm renewal detector", () => {
   it("detects no collisions in a fresh language", () => {
     const sim = createSimulation(presetEnglish());

@@ -13,6 +13,14 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 
+/**
+ * narrative_pools.test.ts
+ *
+ * Test suite for: "narrative pools".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function englishLang() {
   const sim = createSimulation(presetEnglish());
   return sim.getState().tree[sim.getState().rootId]!.language;

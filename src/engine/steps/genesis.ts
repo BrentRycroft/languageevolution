@@ -37,6 +37,14 @@ import {
 import { isFeatureActive } from "../modules/legacyGate";
 
 /**
+ * genesis.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepGenesis, bootstrapNeologismNeighbors.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
+/**
  * Phase 53 T4: convert a coinage mechanism's `originTag` + `sources`
  * into a structural-etymology record that lives on the resulting
  * Word. Lets the UI etymology view, sound-change boundary detection,

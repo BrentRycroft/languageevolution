@@ -6,6 +6,14 @@ import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 
+/**
+ * propose.test.ts
+ *
+ * Test suite for: "phonology/propose".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function sampleLang(): Language {
   const inv = ["p", "t", "k", "b", "d", "g", "a", "e", "i", "o", "u", "s", "n", "m", "h"];
   return {

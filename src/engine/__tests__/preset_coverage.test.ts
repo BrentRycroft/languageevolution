@@ -11,6 +11,14 @@ import {
   INTRANSITIVE_VERB_POOL,
 } from "../narrative/genres";
 
+/**
+ * preset_coverage.test.ts
+ *
+ * Test suite for: "preset closed-class coverage — every preset seeds the basics".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("preset closed-class coverage — every preset seeds the basics", () => {
   const PRONOUNS = ["i", "you", "he", "she", "it", "we", "they"] as const;
   const COORDS = ["and", "or"] as const;

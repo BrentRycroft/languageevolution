@@ -6,6 +6,14 @@ import { releaseTerritory } from "../geo/territory";
 import { getWorldMap } from "../geo/map";
 import { realismMultiplier } from "../phonology/rate";
 
+/**
+ * tree.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepTreeSplit, precomputeClosenessVector, stepDeath.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function stepTreeSplit(
   state: SimulationState,
   leafId: string,

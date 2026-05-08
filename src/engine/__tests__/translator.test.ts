@@ -4,6 +4,14 @@ import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
 
+/**
+ * translator.test.ts
+ *
+ * Test suite for: "translator".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function sampleLang(): Language {
   return {
     id: "L-0",

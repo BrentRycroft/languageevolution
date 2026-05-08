@@ -1,5 +1,13 @@
 import { Component, type ReactNode } from "react";
 
+/**
+ * ErrorBoundary.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: ErrorBoundary.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface Props {
   children: ReactNode;
 }

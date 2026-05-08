@@ -1,5 +1,13 @@
 import type { Meaning } from "../types";
 
+/**
+ * discourse.ts
+ *
+ * Discourse-genre narrative composer (target-side composer.ts), legacy skeleton mode (generate.ts), discourse model (mention / logophoric). Key exports: DiscourseGenre, DiscourseEntity, DiscourseContext.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type DiscourseGenre = "myth" | "legend" | "daily" | "dialogue" | "poetry";
 
 export interface DiscourseEntity {

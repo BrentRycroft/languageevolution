@@ -6,6 +6,14 @@ import { leafIds } from "../engine/tree/split";
 import { useDebounced } from "./hooks/useDebounced";
 import { SearchIcon } from "./icons";
 
+/**
+ * GlobalSearch.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: GlobalSearch.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface Hit {
   langId: string;
   langName: string;

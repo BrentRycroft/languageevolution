@@ -1,5 +1,13 @@
 import { YEARS_PER_GENERATION } from "./constants";
 
+/**
+ * time.ts
+ *
+ * generation ↔ year-anchor conversions (uses YEARS_PER_GENERATION). Key exports: generationToYears, formatElapsed, formatGenWithElapsed.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function generationToYears(
   generation: number,
   yearsPerGen: number = YEARS_PER_GENERATION,

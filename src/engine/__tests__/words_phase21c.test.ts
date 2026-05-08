@@ -8,6 +8,14 @@ import {
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * words_phase21c.test.ts
+ *
+ * Test suite for: "Phase 21c — areMeaningsRelated".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",

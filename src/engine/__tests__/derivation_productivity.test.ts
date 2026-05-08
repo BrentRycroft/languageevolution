@@ -13,6 +13,14 @@ import { stepGenesis } from "../steps/genesis";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * derivation_productivity.test.ts
+ *
+ * Test suite for: "Phase 22 — categoryLabel".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 22 — categoryLabel", () => {
   it("returns the readable name for every DerivationCategory", () => {
     expect(categoryLabel("agentive")).toBe("agent noun");

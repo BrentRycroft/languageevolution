@@ -2,6 +2,14 @@ import type { CoinageMechanism } from "./types";
 import type { Phoneme, WordForm } from "../../types";
 import { isVowel, isConsonant } from "../../phonology/ipa";
 
+/**
+ * ideophone.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: MECHANISM_IDEOPHONE.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const MECHANISM_IDEOPHONE: CoinageMechanism = {
   id: "mechanism.ideophone",
   label: "ideophone",

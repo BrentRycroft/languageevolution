@@ -9,6 +9,14 @@ import {
   type UserPreset,
 } from "../persistence/userPresets";
 
+/**
+ * PresetPicker.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: PresetPicker.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function PresetPicker() {
   const config = useSimStore((s) => s.config);
   const loadConfig = useSimStore((s) => s.loadConfig);

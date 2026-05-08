@@ -7,6 +7,14 @@ import { YEARS_PER_GENERATION } from "../engine/constants";
 import { EmptyState } from "./components/EmptyState";
 import { ExportButtons } from "./components/ExportButtons";
 
+/**
+ * StatsPanel.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: StatsPanel.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function tempoBadge(conservatism: number): { icon: string; label: string; hue: number } {
   if (conservatism >= 1.3) return { icon: "🐢", label: "conservative", hue: 200 };
   if (conservatism <= 0.7) return { icon: "🐇", label: "innovative", hue: 30 };

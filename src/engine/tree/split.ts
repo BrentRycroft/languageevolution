@@ -14,6 +14,14 @@ import { leafIds } from "./leafIds";
 import { CONSERVATISM_MIN, CONSERVATISM_MAX } from "../constants";
 import { applyFounderInnovation } from "./founder";
 
+/**
+ * split.ts
+ *
+ * Phylogenetic split mechanics, leafIds, founder selection, MSA-based proto reconstruction. Key exports: pickFirstSplitChildCount, SplitOptions, splitLeaf.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export { leafIds };
 
 const INCOMPATIBLE_RULE_PAIRS: ReadonlyArray<readonly [string, string]> = [

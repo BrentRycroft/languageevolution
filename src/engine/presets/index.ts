@@ -7,6 +7,14 @@ import { presetTokipona } from "./tokipona";
 import { presetEnglish } from "./english";
 import { defaultConfig } from "../config";
 
+/**
+ * index.ts
+ *
+ * Built-in language seeds (PIE, Germanic, Romance, Bantu, Toki Pona, English). Key exports: PresetDescriptor, PRESETS, findPreset.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface PresetDescriptor {
   id: string;
   label: string;

@@ -4,6 +4,14 @@ import { createSimulation } from "../simulation";
 import { parseEnglishAffix } from "../translator/englishAffixes";
 import { translateSentence } from "../translator/sentence";
 
+/**
+ * undone_regression.test.ts
+ *
+ * Test suite for: "Phase 58.5 — undone regression + compound-only coining".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 58.5 — undone regression + compound-only coining", () => {
   it("parseEnglishAffix(undone) returns un- + done with `do` as a candidate stem", () => {
     const parsed = parseEnglishAffix("undone");

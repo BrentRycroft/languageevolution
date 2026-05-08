@@ -2,6 +2,14 @@ import type { Meaning } from "../types";
 import type { DiscourseGenre } from "./discourse";
 import type { AbstractTemplate } from "./composer";
 
+/**
+ * genres.ts
+ *
+ * Discourse-genre narrative composer (target-side composer.ts), legacy skeleton mode (generate.ts), discourse model (mention / logophoric). Key exports: templatesFor, SUBJECT_NOUN_POOL, OBJECT_NOUN_POOL.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const MYTH_TEMPLATES: AbstractTemplate[] = [
   { shape: "long_ago_trans",     tense: "past",   needs: { subject: true,  object: true,  adjective: false, time: false, place: false }, introducesEntity: true },
   { shape: "time_prefix_intrans", tense: "past",  needs: { subject: true,  object: false, adjective: false, time: true,  place: false }, introducesEntity: true },

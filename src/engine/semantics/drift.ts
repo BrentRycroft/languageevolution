@@ -7,6 +7,14 @@ import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS, isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
+/**
+ * drift.ts
+ *
+ * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: SemanticShiftKind, SemanticDrift, classifyShift.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 // Phase 26e: corenessResistance import removed. Swadesh-membership-based
 // drift protection was redundant with Phase 24c's frequency-direction
 // split (high-freq content words are already conservative via

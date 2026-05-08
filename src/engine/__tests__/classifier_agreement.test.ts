@@ -8,6 +8,14 @@ import {
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 
+/**
+ * classifier_agreement.test.ts
+ *
+ * Test suite for: "Phase 64 T3 — classifier agreement on counted nouns".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 64 T3 — classifier agreement on counted nouns", () => {
   it("classifierKeyFor maps nouns to semantic classes", () => {
     expect(classifierKeyFor("mother")).toBe("human");

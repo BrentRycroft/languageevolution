@@ -8,6 +8,14 @@ import { makeRng } from "../rng";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
 
+/**
+ * realism_round3.test.ts
+ *
+ * Test suite for: "realism round 3".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function minimalLanguage(overrides: Partial<Language> = {}): Language {
   return {
     id: "L-test",

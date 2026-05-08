@@ -4,6 +4,14 @@ import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
 
+/**
+ * ot.test.ts
+ *
+ * Test suite for: "OT constraints".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function baseLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L-0",

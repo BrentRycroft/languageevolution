@@ -1,5 +1,26 @@
 import type { Rng } from "./rng";
 
+/**
+ * types.ts — engine-wide shared types.
+ *
+ * The central type vocabulary the simulator speaks. Defines the
+ * SimulationState / Language / Word / Paradigm / Grammar shapes
+ * passed between every layer (config → engine → UI). The Language
+ * interface in particular is the canonical state shape; per-meaning
+ * maps (lexicon, wordFrequencyHints, inflectionClass,
+ * nounDeclensionClass, ablautClassAssignment, grammaticalizationStage,
+ * etc.) all live here.
+ *
+ * When adding a per-meaning field, also update:
+ *   - tree/split.ts (inherit on daughter split)
+ *   - lexicon/mutate.ts:deleteMeaning (purge on delete)
+ *   - contact/borrow.ts (decide if borrowed entries get assigned)
+ *   - persistence/migrate.ts (schema migration if persisted)
+ *
+ * See CLAUDE.md for the full per-phase feature catalogue and
+ * ARCHITECTURE.md for the design walkthrough.
+ */
+
 export type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
 import type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
 

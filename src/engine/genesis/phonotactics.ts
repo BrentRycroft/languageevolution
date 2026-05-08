@@ -1,6 +1,14 @@
 import type { Language, Phoneme } from "../types";
 import { isVowel } from "../phonology/ipa";
 
+/**
+ * phonotactics.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: phonotacticFit.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function phonotacticFit(form: Phoneme[], lang: Language): number {
   if (form.length === 0) return 0;
   const lexSize = Object.keys(lang.lexicon).length;

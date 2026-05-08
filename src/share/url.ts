@@ -1,5 +1,13 @@
 import type { SimulationConfig, SimulationState } from "../engine/types";
 
+/**
+ * url.ts
+ *
+ * URL-encoded share-link encoding/decoding. Key exports: SharePayload, encodeShare, decodeShare.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface SharePayload {
   v: 1 | 2;
   seed: string;

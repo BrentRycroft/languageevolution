@@ -3,6 +3,14 @@ import type { Rng } from "../rng";
 import { isToneBearing, stripTone, toneOf, capToneStacking } from "./tone";
 import { setLexiconForm } from "../lexicon/mutate";
 
+/**
+ * tone_spread.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: maybeSpreadTone.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function maybeSpreadTone(
   lang: Language,
   rng: Rng,

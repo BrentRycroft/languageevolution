@@ -3,6 +3,14 @@ import { PRESETS } from "../presets";
 import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 
+/**
+ * presets.test.ts
+ *
+ * Test suite for: "presets".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("presets", () => {
   for (const preset of PRESETS) {
     it(`${preset.id}: builds and runs 50 generations without crashing`, () => {

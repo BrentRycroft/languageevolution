@@ -2,6 +2,14 @@ import type { Language } from "../types";
 import type { Rng } from "../rng";
 import { deleteMeaning } from "../lexicon/mutate";
 
+/**
+ * bleaching.ts
+ *
+ * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: BleachResult, stepSemanticBleaching.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const BLEACH_CADENCE = 6;
 const DROP_THRESHOLD = 0.18;
 

@@ -2,6 +2,14 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
+/**
+ * tokipona.ts
+ *
+ * Built-in language seeds (PIE, Germanic, Romance, Bantu, Toki Pona, English). Key exports: presetTokipona.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const LEXICON: Lexicon = {
   water: ["t", "e", "l", "o"],
   fire: ["s", "e", "l", "i"],

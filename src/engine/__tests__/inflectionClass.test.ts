@@ -10,6 +10,14 @@ import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { makeRng } from "../rng";
 
+/**
+ * inflectionClass.test.ts
+ *
+ * Test suite for: "Phase 29 Tranche 5e — inflection classes".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 29 Tranche 5e — inflection classes", () => {
   it("assignInflectionClass picks a class in 1-4", () => {
     const rng = makeRng("inf-1");

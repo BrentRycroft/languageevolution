@@ -17,6 +17,14 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import type { Language } from "../types";
 
+/**
+ * poetry.test.ts
+ *
+ * Test suite for: "Phase 26d — rhyme primitives".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshEnglish(): Language {
   const sim = createSimulation(presetEnglish());
   return sim.getState().tree[sim.getState().rootId]!.language;

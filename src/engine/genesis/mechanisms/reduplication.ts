@@ -2,6 +2,14 @@ import type { CoinageMechanism } from "./types";
 import type { WordForm } from "../../types";
 import { isVowel, isConsonant } from "../../phonology/ipa";
 
+/**
+ * reduplication.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: MECHANISM_REDUPLICATION.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const MECHANISM_REDUPLICATION: CoinageMechanism = {
   id: "mechanism.reduplication",
   label: "A → AA",

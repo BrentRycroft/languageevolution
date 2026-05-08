@@ -3,6 +3,14 @@ import { romanize } from "../phonology/orthography";
 import { presetEnglish } from "../presets/english";
 import type { Language } from "../types";
 
+/**
+ * english_romanize.test.ts
+ *
+ * Test suite for: "English-baseline romanization".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const fakeLang = { orthography: {} } as unknown as Language;
 
 describe("English-baseline romanization", () => {

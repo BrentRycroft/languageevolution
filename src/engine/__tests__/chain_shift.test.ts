@@ -4,6 +4,14 @@ import type { GeneratedRule } from "../phonology/generated";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 
+/**
+ * chain_shift.test.ts
+ *
+ * Test suite for: "chain shift pairing".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("chain shift pairing", () => {
   it("returns null for non-single-raise rules", () => {
     const sim = createSimulation(defaultConfig());

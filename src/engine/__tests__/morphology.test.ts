@@ -3,6 +3,14 @@ import { inflect, applyPhonologyToAffixes } from "../morphology/evolve";
 import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
 import type { Morphology } from "../morphology/types";
 
+/**
+ * morphology.test.ts
+ *
+ * Test suite for: "morphology".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("morphology", () => {
   it("inflect appends suffixes correctly", () => {
     const paradigm = DEFAULT_MORPHOLOGY.paradigms["verb.tense.past"];

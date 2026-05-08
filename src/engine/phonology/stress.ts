@@ -2,6 +2,14 @@ import type { WordForm } from "../types";
 import { isVowel, isSyllabic } from "./ipa";
 import { stripTone } from "./tone";
 
+/**
+ * stress.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: vowelIndices, StressPattern, stressIndex.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function vowelIndices(form: WordForm): number[] {
   const idxs: number[] = [];
   for (let i = 0; i < form.length; i++) {

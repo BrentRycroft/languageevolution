@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { reconstructProtoForm } from "../tree/reconstruction";
 import type { LanguageTree, LanguageNode, Language } from "../types";
 
+/**
+ * reconstruction_msa.test.ts
+ *
+ * Test suite for: "reconstruction MSA — handles insertions and deletions".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function leaf(id: string, form: string[]): LanguageNode {
   const lang: Language = {
     id,

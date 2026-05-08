@@ -3,6 +3,14 @@ import type { Rng } from "../rng";
 import { sharedEdgeCount, territoryCentroid, type WorldMap } from "./map";
 import { leafIds } from "../tree/leafIds";
 
+/**
+ * territory.ts
+ *
+ * World map, territory, areal-share affinity. Key exports: tickTerritory, partitionTerritory, nearestLandCell.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const GROWTH_PROBABILITY_BASE = 0.04;
 
 export function tickTerritory(

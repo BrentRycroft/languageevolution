@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { weightedSample } from "../utils/sampling";
 import { makeRng } from "../rng";
 
+/**
+ * sampling.test.ts
+ *
+ * Test suite for: "weightedSample".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("weightedSample", () => {
   it("returns null for empty input", () => {
     expect(weightedSample([], () => 1, makeRng("a"))).toBeNull();

@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { t, setLocale, listKeys } from "../i18n";
 
+/**
+ * i18n.test.ts
+ *
+ * Test suite for: "i18n".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 beforeEach(() => {
   setLocale("en");
 });

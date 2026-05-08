@@ -1,6 +1,14 @@
 import { useEffect, useRef } from "react";
 import { useSimStore } from "../state/store";
 
+/**
+ * ConfirmDialog.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: ConfirmDialog.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function ConfirmDialog() {
   const request = useSimStore((s) => s.confirmDialog);
   const resolve = useSimStore((s) => s.resolveConfirm);

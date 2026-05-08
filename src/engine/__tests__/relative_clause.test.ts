@@ -3,6 +3,14 @@ import { driftGrammar } from "../grammar/evolve";
 import type { Language, GrammarFeatures } from "../types";
 import { makeRng } from "../rng";
 
+/**
+ * relative_clause.test.ts
+ *
+ * Test suite for: "Phase 67 T4 — relative-clause typological constraints".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function fakeLang(g: Partial<GrammarFeatures>): Language {
   return {
     grammar: {

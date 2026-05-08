@@ -1,5 +1,13 @@
 import type { Rng } from "../rng";
 
+/**
+ * sampling.ts
+ *
+ * Generic helpers (cloning, sampling). Key exports: weightedSample.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function weightedSample<T>(
   items: readonly T[],
   getWeight: (item: T) => number,

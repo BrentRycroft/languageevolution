@@ -6,6 +6,14 @@ import { posOf, isClosedClass } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
 
+/**
+ * evolve.ts
+ *
+ * Morphological paradigms, suppletion, gender, analogical levelling, ablaut, runtime productive derivation. Key exports: MorphShift, applyPhonologyToAffixes, maybeGrammaticalize.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface MorphShift {
   kind: "affix_erode" | "category_merge" | "grammaticalization";
   description: string;

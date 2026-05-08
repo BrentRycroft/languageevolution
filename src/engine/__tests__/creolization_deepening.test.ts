@@ -9,6 +9,14 @@ import type {
   SimulationState,
 } from "../types";
 
+/**
+ * creolization_deepening.test.ts
+ *
+ * Test suite for: "creolization deepening".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(id: string, overrides: Partial<Language> = {}): Language {
   return {
     id,

@@ -9,6 +9,29 @@ import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
 import { stepInventoryManagement } from "./steps/inventoryManagement";
 import { activeModulesOf } from "./modules/registry";
 import { timeStep } from "./modules/profile";
+/**
+ * simulation.ts — top-level orchestrator for one generation tick.
+ *
+ * `createSimulation(config)` builds an initial state from the config
+ * and returns a handle exposing `step()`, `getState()`, `restoreState()`
+ * etc. The `step()` function dispatches the canonical per-generation
+ * pipeline: for each leaf in the tree, run phonology → genesis →
+ * grammar → semantics → contact → tree-split → death, then post-loop
+ * areal waves and creolization.
+ *
+ * The substep order is deliberate (see the long header comment
+ * inside step()): coinages happen AFTER phonology so words coined
+ * this gen aren't eroded the same gen they're born.
+ *
+ * Phase 69a T5 added per-substep wall-time instrumentation: when
+ * `process.env.PROFILE_STEP` is truthy, every step's wall time is
+ * accumulated into `getCumulativeTimings()`. Used by
+ * `scripts/probes/phase69_perf_baseline.ts` to find hot paths.
+ *
+ * See ARCHITECTURE.md → "Per-step pipeline" for the canonical order
+ * + CLAUDE.md → "Phases 60–69 shipped" for what each substep does.
+ */
+
 // Phase 41+: side-effect import to register all modules at boot
 // (the barrel in modules/index.ts auto-runs registerXModules()).
 import "./modules";
@@ -48,6 +71,16 @@ export interface Simulation {
   step: () => void;
   reset: () => void;
   restoreState: (snapshot: SimulationState) => void;
+  /**
+   * Phase 69a T5: per-substep wall-time ms from the most recent
+   * step(). Populated only when `process.env.PROFILE_STEP` was
+   * truthy during the call; empty otherwise. Read by perf probes.
+   */
+  getStepTimings: () => Record<string, number>;
+  /** Cumulative ms across every step() since this Simulation was
+   * created or `resetStepTimings` was last called. */
+  getCumulativeTimings: () => Record<string, number>;
+  resetStepTimings: () => void;
 }
 
 export interface SimulationOptions {}
@@ -123,6 +156,23 @@ export function createSimulation(
    *   - generationsOverCap update   — feeds next gen's death pressure.
    */
   const step = (): void => {
+    // Phase 69a T5: per-step instrumentation. When PROFILE_STEP env
+    // flag is truthy, accumulate per-substep wall time and log a
+    // breakdown at the end of step(). Zero overhead when off (the
+    // closure is a no-op pass-through).
+    const profileOn =
+      typeof globalThis !== "undefined" &&
+      !!(globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PROFILE_STEP;
+    const timings: Record<string, number> = {};
+    const timed = profileOn
+      ? <T>(label: string, fn: () => T): T => {
+          const t0 = performance.now();
+          const r = fn();
+          timings[label] = (timings[label] ?? 0) + (performance.now() - t0);
+          return r;
+        }
+      : <T>(_: string, fn: () => T): T => fn();
+
     const rng = makeRng(state.rngState);
     const nextGen = state.generation + 1;
     // Phase 29 Tranche 6f: hoist the worldMap fetch out of the per-leaf
@@ -245,25 +295,25 @@ export function createSimulation(
       // Phase 25: tick the per-language volatility regime so its
       // multiplier is fresh before phonology / grammar steps consume it.
       // Phase 29 Tranche 3b: gated on `modes.volatility`; default true.
-      if (config.modes.volatility) stepVolatility(lang, nextGen, rng);
-      if (config.modes.phonology) stepPhonology(lang, config, rng, nextGen, state);
-      if (config.modes.phonology && config.modes.learner) stepLearner(lang, config, rng, nextGen);
-      if (config.modes.phonology) stepInventoryManagement(lang, rng, nextGen);
-      if (config.modes.obsolescence) stepObsolescence(lang, config, rng, nextGen);
-      if (config.modes.copula) {
+      if (config.modes.volatility) timed("volatility", () => stepVolatility(lang, nextGen, rng));
+      if (config.modes.phonology) timed("phonology", () => stepPhonology(lang, config, rng, nextGen, state));
+      if (config.modes.phonology && config.modes.learner) timed("learner", () => stepLearner(lang, config, rng, nextGen));
+      if (config.modes.phonology) timed("inventoryMgmt", () => stepInventoryManagement(lang, rng, nextGen));
+      if (config.modes.obsolescence) timed("obsolescence", () => stepObsolescence(lang, config, rng, nextGen));
+      if (config.modes.copula) timed("copula", () => {
         stepCopulaErosion(lang, config, rng, nextGen);
         stepCopulaGenesis(lang, config, rng, nextGen);
-      }
-      if (config.modes.taboo) stepTaboo(lang, config, rng, nextGen);
-      if (config.modes.genesis) {
+      });
+      if (config.modes.taboo) timed("taboo", () => stepTaboo(lang, config, rng, nextGen));
+      if (config.modes.genesis) timed("genesis", () => {
         stepGenesis(lang, config, state, rng, nextGen);
         bootstrapNeologismNeighbors(lang);
-      }
-      if (config.modes.grammar) {
+      });
+      if (config.modes.grammar) timed("grammar", () => {
         stepGrammar(lang, config, rng, nextGen);
         stepMorphology(lang, config, rng, nextGen);
-      }
-      if (config.modes.semantics) stepSemantics(lang, config, rng, nextGen);
+      });
+      if (config.modes.semantics) timed("semantics", () => stepSemantics(lang, config, rng, nextGen));
       // Phase 41d: module step hooks. Modules in lang.activeModules
       // run in topological order (requires-first); modules outside
       // the active set are skipped entirely (the perf win).
@@ -281,15 +331,15 @@ export function createSimulation(
           timeStep(m.id, () => m.step!(lang, s, ctx));
         }
       }
-      if (config.modes.contact) stepContact(state, lang, config, rng, nextGen);
-      if (config.modes.areal) stepArealTypology(state, lang, rng, nextGen);
-      if (config.modes.tree) stepTreeSplit(state, leafId, lang, config, rng);
+      if (config.modes.contact) timed("contact", () => stepContact(state, lang, config, rng, nextGen));
+      if (config.modes.areal) timed("arealTypology", () => stepArealTypology(state, lang, rng, nextGen));
+      if (config.modes.tree) timed("treeSplit", () => stepTreeSplit(state, leafId, lang, config, rng));
       const stillLeaf = (state.tree[leafId]?.childrenIds.length ?? 0) === 0;
-      if (config.modes.death && stillLeaf) stepDeath(state, lang, config, rng, closenessCache);
+      if (config.modes.death && stillLeaf) timed("death", () => stepDeath(state, lang, config, rng, closenessCache));
     }
-    if (config.modes.areal) stepArealWaves(state, nextGen, rng);
+    if (config.modes.areal) timed("arealWaves", () => stepArealWaves(state, nextGen, rng));
     if (config.modes.tree && config.modes.creolization) {
-      stepCreolization(state, config, rng, nextGen);
+      timed("creolization", () => stepCreolization(state, config, rng, nextGen));
     }
     // Phase 29 Tranche 4l: redistribute extinct languages' lingering
     // territory to bordering living neighbours so dead patches don't
@@ -306,7 +356,22 @@ export function createSimulation(
       rngState: rng.state(),
       generationsOverCap: nextOverCap,
     };
+
+    if (profileOn) {
+      // Phase 69a T5: aggregate the per-substep timings on the
+      // simulation handle so the perf-probe can read them after each
+      // step. Also persist the cumulative breakdown across steps so
+      // the probe can sum.
+      const acc = (cumulativeTimings ??= {});
+      for (const [k, v] of Object.entries(timings)) {
+        acc[k] = (acc[k] ?? 0) + v;
+      }
+      lastStepTimings = timings;
+    }
   };
+
+  let cumulativeTimings: Record<string, number> | undefined;
+  let lastStepTimings: Record<string, number> = {};
 
   return {
     getState: () => state,
@@ -315,6 +380,16 @@ export function createSimulation(
       config = next;
     },
     step,
+    // Phase 69a T5: perf instrumentation hooks. `getStepTimings` /
+    // `getCumulativeTimings` return wall-time ms per substep label
+    // when PROFILE_STEP env flag was active during step(). Empty
+    // objects when off — zero overhead.
+    getStepTimings: () => ({ ...lastStepTimings }),
+    getCumulativeTimings: () => ({ ...(cumulativeTimings ?? {}) }),
+    resetStepTimings: () => {
+      cumulativeTimings = undefined;
+      lastStepTimings = {};
+    },
     reset: () => {
       state = buildInitialState(config);
     },

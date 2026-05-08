@@ -4,6 +4,14 @@ import { posOf, type POS } from "./pos";
 import { frequencyFor } from "./frequency";
 import { EXPANDED_CONCEPTS } from "./expanded_concepts";
 
+/**
+ * concepts.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: Tier, TIER_LABELS, FrequencyClass.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type Tier = 0 | 1 | 2 | 3;
 
 export const TIER_LABELS: Record<Tier, string> = {

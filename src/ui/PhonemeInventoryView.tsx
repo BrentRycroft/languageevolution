@@ -8,6 +8,14 @@ import type { Phoneme } from "../engine/types";
 import { EmptyState } from "./components/EmptyState";
 import { ExportButtons } from "./components/ExportButtons";
 
+/**
+ * PhonemeInventoryView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: PhonemeInventoryView.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function PhonemeInventoryView() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);

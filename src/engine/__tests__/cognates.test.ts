@@ -4,6 +4,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 
+/**
+ * cognates.test.ts
+ *
+ * Test suite for: "cognates + etymology".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("cognates + etymology", () => {
   it("findCognates returns an entry for every node, alive or extinct", () => {
     const sim = createSimulation(defaultConfig());

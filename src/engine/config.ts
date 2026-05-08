@@ -6,6 +6,14 @@ import { DEFAULT_FREQUENCY_HINTS } from "./lexicon/frequency";
 import { DEFAULT_MORPHOLOGY } from "./morphology/defaults";
 import { YEARS_PER_GENERATION } from "./constants";
 
+/**
+ * config.ts
+ *
+ * default SimulationConfig — rate calibration knobs (Phase 60+). Key exports: defaultConfig.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function defaultConfig(): SimulationConfig {
   const enabled = CATALOG.filter((c) => c.enabledByDefault).map((c) => c.id);
   const weights: Record<string, number> = {};

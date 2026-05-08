@@ -1,5 +1,13 @@
 import type { FeatureQuery } from "./features";
 
+/**
+ * generated-types.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: RuleFamily, RuleContext, GeneratedRule.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type RuleFamily =
   | "lenition"
   | "fortition"

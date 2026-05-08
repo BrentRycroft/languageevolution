@@ -3,6 +3,14 @@ import { buildGrammarBrief } from "../export";
 import { createSimulation } from "../../engine/simulation";
 import { defaultConfig } from "../../engine/config";
 
+/**
+ * grammarBrief.test.ts
+ *
+ * Test suite for: "buildGrammarBrief".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("buildGrammarBrief", () => {
   it("produces a Markdown document with required sections", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "brief" });

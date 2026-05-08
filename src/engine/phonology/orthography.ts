@@ -2,6 +2,14 @@ import type { Language, Phoneme, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { stripTone } from "./tone";
 
+/**
+ * orthography.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: DEFAULT_ORTHOGRAPHY, romanize, seedTierTwoOrthography.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "θ": "th",
   "ð": "th",

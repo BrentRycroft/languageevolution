@@ -1,3 +1,13 @@
+/**
+ * bench-sim.ts — quick CLI benchmark for full-sim throughput.
+ *
+ * Run:
+ *   npx tsx scripts/bench-sim.ts [gens=200] [seed=bench]
+ *
+ * Reports total wall-time + per-step average. For per-substep
+ * breakdowns prefer `scripts/probes/phase69_perf_baseline.ts` with
+ * `PROFILE_STEP=1`.
+ */
 import { createSimulation } from "../src/engine/simulation";
 import { defaultConfig } from "../src/engine/config";
 

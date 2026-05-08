@@ -10,6 +10,14 @@ import { ScriptPicker } from "./ScriptPicker";
 import { ExportButtons } from "./components/ExportButtons";
 import { EmptyState } from "./components/EmptyState";
 
+/**
+ * GrammarView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: GrammarView.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function GrammarView() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);

@@ -5,6 +5,14 @@ import { createSimulation } from "../simulation";
 import { findSaturatedPhoneme } from "../phonology/propose";
 import { leafIds } from "../tree/split";
 
+/**
+ * inventory_pressure_proposal.test.ts
+ *
+ * Test suite for: "Phase 59 T1+T2 — pressure-driven rule proposal".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 59 T1+T2 — pressure-driven rule proposal", () => {
   it("findSaturatedPhoneme returns null on a fresh balanced language", () => {
     const sim = createSimulation(presetEnglish());

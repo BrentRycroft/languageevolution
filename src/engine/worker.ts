@@ -3,6 +3,14 @@
 import { createSimulation, type Simulation } from "./simulation";
 import type { SimulationConfig, SimulationState } from "./types";
 
+/**
+ * worker.ts
+ *
+ * Web Worker entry point (the worker side of stepNAsync).
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 type Request =
   | { kind: "init"; config: SimulationConfig }
   | { kind: "stepN"; n: number; reqId: number }

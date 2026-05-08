@@ -7,6 +7,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 
+/**
+ * PR_F_engine_polish.test.ts
+ *
+ * Test suite for: "ideophones / expressive phonology".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("ideophones / expressive phonology", () => {
   it("seeded iconic meanings (sharp / loud / tiny / bright / crow / buzz / hum / growl / flash / snap / burst) are all flagged", () => {
     for (const m of [

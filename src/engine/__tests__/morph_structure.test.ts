@@ -3,6 +3,14 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { translateSentence } from "../translator/sentence";
 
+/**
+ * morph_structure.test.ts
+ *
+ * Test suite for: "Phase 53 T4 — Word.morphStructure populated by genesis + translator".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 53 T4 — Word.morphStructure populated by genesis + translator", () => {
   it("seeded forms in fresh simulations don't have morphStructure (set by genesis only)", () => {
     const sim = createSimulation(presetEnglish());

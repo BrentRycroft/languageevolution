@@ -3,6 +3,14 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { EventsLog } from "../EventsLog";
 import { useSimStore } from "../../state/store";
 
+/**
+ * EventsLog.test.tsx
+ *
+ * Test suite for: "EventsLog".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("EventsLog", () => {
   beforeEach(() => {
     cleanup();

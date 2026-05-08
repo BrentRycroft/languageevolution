@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { narrativeToMarkdown } from "../CompareView";
 import type { Language } from "../../engine/types";
 
+/**
+ * narrativeToMarkdown.test.ts
+ *
+ * Test suite for: "narrativeToMarkdown".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(): Language {
   return {
     id: "L",

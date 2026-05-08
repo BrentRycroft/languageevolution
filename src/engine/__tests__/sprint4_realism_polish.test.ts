@@ -7,6 +7,14 @@ import { TEMPLATES } from "../phonology/templates";
 import { PATHWAYS, SEMANTIC_TAG } from "../semantics/grammaticalization";
 import type { Language, SimulationState } from "../types";
 
+/**
+ * sprint4_realism_polish.test.ts
+ *
+ * Test suite for: "§H.6 — substrate simplification phase".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function bareLang(id: string, overrides: Partial<Language> = {}): Language {
   return {
     id,

@@ -12,6 +12,14 @@ import { derivationFor, DERIVATION_TARGETS } from "../lexicon/derivation_targets
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * targeted_derivation.test.ts
+ *
+ * Test suite for: "derivation buckets".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",

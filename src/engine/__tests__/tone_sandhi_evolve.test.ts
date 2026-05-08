@@ -6,6 +6,14 @@ import {
 import type { Language, Phoneme } from "../types";
 import { makeRng } from "../rng";
 
+/**
+ * tone_sandhi_evolve.test.ts
+ *
+ * Test suite for: "Phase 67 T2 — tone sandhi rule emergence/decay".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function tonalLang(initialRules: Array<"meeussen" | "dissimilate" | "spread" | "downstep"> = []): Language {
   return {
     phonemeInventory: {

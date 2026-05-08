@@ -1,5 +1,13 @@
 import type { Meaning } from "../types";
 
+/**
+ * complexity.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: COMPLEXITY, DEFAULT_COMPLEXITY, complexityFor.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const COMPLEXITY: Record<Meaning, number> = {
   hand: 1, foot: 1, heart: 1, head: 1, eye: 1, ear: 1, mouth: 1,
   tooth: 1, bone: 1, blood: 1, hair: 1, skin: 1, finger: 1, knee: 1,

@@ -6,6 +6,14 @@ import { stripTone } from "../phonology/tone";
 import { stressIndex } from "../phonology/stress";
 import { narrowTranscribe } from "../phonology/narrow";
 
+/**
+ * pie_lexical_stress.test.ts
+ *
+ * Test suite for: "PIE lexical-accent map".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function vowelCount(form: readonly string[]): number {
   let n = 0;
   for (const p of form) {

@@ -3,6 +3,14 @@ import { assignGenderHeuristic, assignAllGenders, genderOf } from "../morphology
 import { inflect } from "../morphology/evolve";
 import type { Language } from "../types";
 
+/**
+ * gender.test.ts
+ *
+ * Test suite for: "gender heuristic".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(opts: Partial<Language> = {}): Language {
   return {
     id: "L-g",

@@ -11,6 +11,14 @@ import { lexicalNeed } from "../genesis/need";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 
+/**
+ * sprint5_dictionary_expansion.test.ts
+ *
+ * Test suite for: "§H.1 — concept dictionary expansion".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("§H.1 — concept dictionary expansion", () => {
   it("registers all expanded concepts in CONCEPTS", () => {
     for (const exp of EXPANDED_CONCEPTS) {

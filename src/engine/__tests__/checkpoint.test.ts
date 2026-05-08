@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 
+/**
+ * checkpoint.test.ts
+ *
+ * Test suite for: "checkpoint save/restore".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function stableKey(state: ReturnType<ReturnType<typeof createSimulation>["getState"]>) {
   const tree = state.tree;
   return Object.keys(tree)

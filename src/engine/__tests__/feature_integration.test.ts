@@ -9,6 +9,14 @@ import { makeRng } from "../rng";
 import type { Language, SimulationState } from "../types";
 import type { Paradigm } from "../morphology/types";
 
+/**
+ * feature_integration.test.ts
+ *
+ * Test suite for: "cross-feature integration".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function testLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L-int",

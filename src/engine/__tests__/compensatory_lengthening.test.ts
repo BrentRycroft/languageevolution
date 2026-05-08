@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 
+/**
+ * compensatory_lengthening.test.ts
+ *
+ * Test suite for: "Phase 24 — compensatory lengthening rules".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 24 — compensatory lengthening rules", () => {
   it("compensatory.final_coda_lengthening turns VC# into Vː#", () => {
     const rule = CATALOG_BY_ID["compensatory.final_coda_lengthening"];

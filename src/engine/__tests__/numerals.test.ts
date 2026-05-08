@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { describeNumeral } from "../translator/numerals";
 import type { Language } from "../types";
 
+/**
+ * numerals.test.ts
+ *
+ * Test suite for: "Phase 39k — numeral formatting".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(grammar: Partial<Language["grammar"]> = {}): Language {
   return {
     id: "L",

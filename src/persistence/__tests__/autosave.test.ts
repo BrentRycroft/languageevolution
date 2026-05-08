@@ -4,6 +4,14 @@ import { createSimulation } from "../../engine/simulation";
 import { defaultConfig } from "../../engine/config";
 import { idbSet, _resetIdbHandle } from "../idb";
 
+/**
+ * autosave.test.ts
+ *
+ * Test suite for: "autosave".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("autosave", () => {
   beforeEach(async () => {
     try {

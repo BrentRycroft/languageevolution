@@ -3,6 +3,14 @@ import { render, cleanup, fireEvent, act } from "@testing-library/react";
 import { GlobalSearch } from "../GlobalSearch";
 import { useSimStore } from "../../state/store";
 
+/**
+ * GlobalSearch.test.tsx
+ *
+ * Test suite for: "GlobalSearch".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("GlobalSearch", () => {
   beforeEach(() => {
     cleanup();

@@ -6,6 +6,14 @@ import {
   borrowAffixIntoRecipient,
 } from "../contact/affix_borrow";
 
+/**
+ * affix_borrow.test.ts
+ *
+ * Test suite for: "Phase 57 — cross-language affix borrowing".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 57 — cross-language affix borrowing", () => {
   it("findBorrowableAffix returns null when no neighbour has a productive affix in the category", () => {
     const sim = createSimulation(presetEnglish());

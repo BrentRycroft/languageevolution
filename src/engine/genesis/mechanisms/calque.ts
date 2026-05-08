@@ -1,6 +1,14 @@
 import type { CoinageMechanism } from "./types";
 import type { Meaning, WordForm } from "../../types";
 
+/**
+ * calque.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: MECHANISM_CALQUE.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const MECHANISM_CALQUE: CoinageMechanism = {
   id: "mechanism.calque",
   label: "calque from sister",

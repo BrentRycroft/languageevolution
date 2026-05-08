@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 
+/**
+ * sound_change_jitter.test.ts
+ *
+ * Test suite for: "Phase 58.7 — sound-change probabilities jittered per seed".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 58.7 — sound-change probabilities jittered per seed", () => {
   it("two simulations with the same seed produce identical changeWeights", () => {
     const cfg = { ...presetEnglish(), seed: "jitter-determinism" };

@@ -8,6 +8,14 @@ import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import type { Language } from "../engine/types";
 
+/**
+ * DictionaryView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: DictionaryView.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function DictionaryView() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);

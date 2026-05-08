@@ -5,6 +5,14 @@ import { neighborsOf } from "../semantics/neighbors";
 import { complexityFor } from "../lexicon/complexity";
 import { DEFAULT_LEXICON, DEFAULT_PHONOLOGY } from "../lexicon/defaults";
 
+/**
+ * basic240.test.ts
+ *
+ * Test suite for: "Basic-240 lexicon".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Basic-240 lexicon", () => {
   it("has at least 200 unique meanings", () => {
     expect(BASIC_240.length).toBeGreaterThanOrEqual(200);

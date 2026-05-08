@@ -2,6 +2,14 @@ import { useEffect } from "react";
 import { useSimStore } from "../state/store";
 import { ACHIEVEMENTS, ACHIEVEMENTS_BY_ID } from "../engine/achievements/catalog";
 
+/**
+ * Achievements.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: AchievementsStrip, AchievementToast.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function AchievementsStrip() {
   const unlocked = useSimStore((s) => s.unlockedAchievements);
   const set = new Set(unlocked);

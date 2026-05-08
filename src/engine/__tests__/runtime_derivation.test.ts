@@ -7,6 +7,14 @@ import type { Language, Phoneme } from "../types";
 import type { DerivationalSuffix } from "../lexicon/derivation";
 import { makeRng } from "../rng";
 
+/**
+ * runtime_derivation.test.ts
+ *
+ * Test suite for: "Phase 66 T2 — productive derivation at narrative runtime".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function fakeLang(): Language {
   return {
     lexicon: {

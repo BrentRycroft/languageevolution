@@ -1,5 +1,13 @@
 import type { SVGProps } from "react";
 
+/**
+ * index.tsx
+ *
+ * Inline SVG icon components. Key exports: MenuIcon, PlayIcon, PauseIcon.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
 function base({ size = 16, ...rest }: IconProps) {

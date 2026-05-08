@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { encodeShare, decodeShare, type SharePayload } from "../url";
 import { defaultConfig } from "../../engine/config";
 
+/**
+ * url.test.ts
+ *
+ * Test suite for: "share/url".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("share/url", () => {
   it("encode then decode round-trips a payload", () => {
     const payload: SharePayload = {

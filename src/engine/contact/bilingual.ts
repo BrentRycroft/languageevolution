@@ -4,6 +4,14 @@ import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 
+/**
+ * bilingual.ts
+ *
+ * Inter-language contact: borrowing, areal phonology, bilingualism. Key exports: computeBilingualLinks, bilingualLinkBetween.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const TERRITORY_TO_BILINGUAL_SCALE = 0.6;
 const DISTANCE_HALF_LIFE = 180;
 const POPULATION_BALANCE_FLOOR = 0.1;

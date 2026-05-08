@@ -1,6 +1,14 @@
 import type { Phoneme, WordForm } from "../types";
 import { featuresOf } from "../phonology/features";
 
+/**
+ * harmony.ts
+ *
+ * Morphological paradigms, suppletion, gender, analogical levelling, ablaut, runtime productive derivation. Key exports: HarmonyKind, harmonizeAffix.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type HarmonyKind = "none" | "front-back" | "rounding" | "atr";
 
 const FRONT_BACK_PAIRS: Record<string, string> = {

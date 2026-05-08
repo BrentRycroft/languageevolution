@@ -1,5 +1,13 @@
 import type { GrammarFeatures } from "../types";
 
+/**
+ * defaults.ts
+ *
+ * Word-order / case / alignment / classifier drift; typological-universal repair. Key exports: DEFAULT_GRAMMAR.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const DEFAULT_GRAMMAR: GrammarFeatures = {
   wordOrder: "SOV",
   affixPosition: "suffix",

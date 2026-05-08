@@ -1,5 +1,13 @@
 import type { Meaning } from "../types";
 
+/**
+ * coreness.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: coreness, corenessResistance.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const SWADESH_100: ReadonlySet<Meaning> = new Set([
   "i", "you", "we", "they", "this", "that",
   "who", "what", "not",

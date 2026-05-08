@@ -1,5 +1,13 @@
 import type { Meaning } from "../types";
 
+/**
+ * pos.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: POS, posOf, isClosedClass.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type POS =
   | "noun"
   | "verb"

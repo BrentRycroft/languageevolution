@@ -8,6 +8,14 @@ import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
 
+/**
+ * taboo_clusters.test.ts
+ *
+ * Test suite for: "semantic clusters".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("semantic clusters", () => {
   it("core body meanings cluster together", () => {
     expect(clusterOf("hand")).toBe("body");

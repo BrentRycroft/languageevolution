@@ -4,6 +4,14 @@ import { defaultConfig } from "../../engine/config";
 import { createSimulation } from "../../engine/simulation";
 import { leafIds } from "../../engine/tree/split";
 
+/**
+ * roundtrip.test.ts
+ *
+ * Test suite for: "persistence round-trip".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function stringifyLexicons(state: ReturnType<ReturnType<typeof createSimulation>["getState"]>) {
   return Object.keys(state.tree)
     .filter((id) => state.tree[id]!.childrenIds.length === 0)

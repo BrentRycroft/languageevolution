@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { applyParadigm } from "../apply";
 import type { Paradigm } from "../types";
 
+/**
+ * apply_kinds.test.ts
+ *
+ * Test suite for: "Phase 52 T2 — applyParadigm dispatcher".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function p(kind: Paradigm["kind"], extras: Partial<Paradigm> = {}): Paradigm {
   return {
     affix: [],

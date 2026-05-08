@@ -4,6 +4,14 @@ import type { GeneratedRule } from "../engine/phonology/generated";
 import { topRegularCorrespondences } from "../engine/phonology/soundLaws";
 import { ListSearch } from "./ListSearch";
 
+/**
+ * SoundLawsView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: SoundLawsView.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function shortId(id: string): string {
   const parts = id.split(".");
   if (parts.length <= 2) return id;

@@ -1,6 +1,14 @@
 import type { GrammarFeatures } from "../types";
 import type { Rng } from "../rng";
 
+/**
+ * evolve.ts
+ *
+ * Word-order / case / alignment / classifier drift; typological-universal repair. Key exports: GrammarShift, driftGrammar, maybeDriftWordOrder.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const ORDERS: GrammarFeatures["wordOrder"][] = ["SOV", "SVO", "VSO", "VOS", "OVS", "OSV"];
 
 const ADJACENT: Record<GrammarFeatures["wordOrder"], GrammarFeatures["wordOrder"][]> = {

@@ -6,6 +6,14 @@ import { EXPANSION_NEED_BASELINE } from "../constants";
 import { leafIds } from "../tree/split";
 import { isClosedClass, posOf } from "../lexicon/pos";
 
+/**
+ * need.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: LexicalNeedOptions, lexicalNeed, sampleNeededMeaning.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface LexicalNeedOptions {
   /**
    * Phase 24: per-meaning seed length. When provided, lexicalNeed adds

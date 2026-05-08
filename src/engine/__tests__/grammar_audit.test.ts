@@ -5,6 +5,14 @@ import { defaultConfig } from "../config";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
 
+/**
+ * grammar_audit.test.ts
+ *
+ * Test suite for: "§gap-1 — genitive case on possessor NPs".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshLang(seed: string): Language {
   const sim = createSimulation({ ...defaultConfig(), seed });
   sim.step();

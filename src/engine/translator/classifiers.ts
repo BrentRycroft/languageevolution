@@ -1,5 +1,13 @@
 import type { Meaning } from "../types";
 
+/**
+ * classifiers.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: DEFAULT_CLASSIFIER_TABLE, classifierKeyFor, classifierMeaningFor.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const DEFAULT_CLASSIFIER_TABLE: Record<string, string> = {
   human: "person",
   animal: "creature",

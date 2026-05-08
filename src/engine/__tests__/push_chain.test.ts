@@ -3,6 +3,14 @@ import { proposePushChain } from "../phonology/propose";
 import type { GeneratedRule } from "../phonology/generated";
 import type { Language } from "../types";
 
+/**
+ * push_chain.test.ts
+ *
+ * Test suite for: "proposePushChain".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(segmental: string[]): Language {
   return {
     id: "L",

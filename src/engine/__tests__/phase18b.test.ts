@@ -12,6 +12,14 @@ import { makeRng } from "../rng";
 import type { GrammarFeatures, Language, Lexicon } from "../types";
 import type { TranslatedToken } from "../translator/sentence";
 
+/**
+ * phase18b.test.ts
+ *
+ * Test suite for: "Phase 18b — deeper engine work".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
   return {
     id: "L-b",

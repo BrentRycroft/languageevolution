@@ -4,6 +4,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 
+/**
+ * sprint3_compare_lexicon.test.ts
+ *
+ * Test suite for: "§D — narrative skeleton expansion".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("§D — narrative skeleton expansion", () => {
   // Phase 68b T7: removed 3 skipped planSkeleton tests. Phase 53 T6
   // deprecated `planSkeleton` (the language-agnostic wrapper now

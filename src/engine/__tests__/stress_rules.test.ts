@@ -3,6 +3,14 @@ import type { WordForm } from "../types";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 
+/**
+ * stress_rules.test.ts
+ *
+ * Test suite for: "stress-aware catalog rules".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const RULES = [
   "stress.pretonic_weakening",
   "stress.stressed_diphthongization",

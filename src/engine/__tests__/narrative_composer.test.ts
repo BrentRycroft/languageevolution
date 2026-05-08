@@ -6,6 +6,14 @@ import { makeDiscourse, mention } from "../narrative/discourse";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
 import type { Language } from "../types";
 
+/**
+ * narrative_composer.test.ts
+ *
+ * Test suite for: "Narrative composer — target-side composition".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function englishLang(): Language {
   const sim = createSimulation(presetEnglish());
   return sim.getState().tree["L-0"]!.language;

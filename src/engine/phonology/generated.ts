@@ -6,6 +6,14 @@ import { isVowel } from "./ipa";
 import type { Rng } from "../rng";
 import type { RuleFamily, RuleContext, GeneratedRule } from "./generated-types";
 
+/**
+ * generated.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: contextMatches, matchSites, hasMatch.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type { RuleFamily, RuleContext, GeneratedRule };
 
 function neighbourMatches(

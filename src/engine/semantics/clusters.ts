@@ -3,6 +3,14 @@ import { neighborsOf } from "./neighbors";
 import { CLUSTERS as BASIC_CLUSTERS } from "../lexicon/basic240";
 import { CONCEPTS, CONCEPT_IDS } from "../lexicon/concepts";
 
+/**
+ * clusters.ts
+ *
+ * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: SEMANTIC_CLUSTERS, clusterOf, relatedMeanings.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function buildClusters(): Readonly<Record<string, readonly Meaning[]>> {
   const out: Record<string, Meaning[]> = {};
   const seen: Record<string, Set<Meaning>> = {};

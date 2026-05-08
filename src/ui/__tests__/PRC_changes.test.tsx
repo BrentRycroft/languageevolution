@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { defaultConfig } from "../../engine/config";
 import { useSimStore } from "../../state/store";
 
+/**
+ * PRC_changes.test.tsx
+ *
+ * Test suite for: "PR C — sidebar + dictionary refactor".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("PR C — sidebar + dictionary refactor", () => {
   it("default config: unlimitedLeaves is false (soft cap engages)", () => {
     const cfg = defaultConfig();

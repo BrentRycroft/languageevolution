@@ -3,6 +3,14 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { lookupIdiom, lookupForm } from "../lexicon/lookup";
 
+/**
+ * idiom_lookup.test.ts
+ *
+ * Test suite for: "Phase 55 T2 — idiom + multi-word lookup".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 55 T2 — idiom + multi-word lookup", () => {
   it("returns null when the language has no idioms", () => {
     const sim = createSimulation(presetEnglish());

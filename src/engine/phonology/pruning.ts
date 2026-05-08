@@ -149,10 +149,32 @@ export interface PhonemeMerger {
   affectedWords: number;
 }
 
+/**
+ * Phase 69a T2 + T4: pruning context is reused across multiple
+ * prunePhonemes calls within a single runHomeostasis loop iteration.
+ * Pre-fix the function rebuilt `formKeyToMeanings` (full lexicon
+ * scan) AND called `functionalLoadMap` (another full scan) on EVERY
+ * call; with up to 5 attempts per gen on high-pressure gens, that's
+ * ~10× redundant scans.
+ *
+ * The caller (runHomeostasis) builds this once and reuses across
+ * the prune loop. Both fields are optional for back-compat with any
+ * external caller; when omitted, prunePhonemes computes them
+ * locally as before.
+ */
+export interface PrunePhonemesContext {
+  /** Map from `lang.lexicon[m].join("|")` → list of meanings sharing
+   *  that surface form. Read by the Phase 62 homonym pre-flight. */
+  formKeyToMeanings?: Map<string, string[]>;
+  /** Per-phoneme functional-load score from `functionalLoadMap`. */
+  loads?: Record<Phoneme, number>;
+}
+
 export function prunePhonemes(
   lang: Language,
   rng: Rng,
   generation: number = 0,
+  ctx: PrunePhonemesContext = {},
 ): PhonemeMerger | null {
   const inventory = lang.phonemeInventory.segmental;
   if (inventory.length < MIN_INVENTORY_TO_PRUNE) return null;
@@ -167,7 +189,7 @@ export function prunePhonemes(
   // free-variation positions (no homophones created on merger) is
   // a much better candidate than one used in 2 words that distinguish
   // critical contrasts.
-  const loads = functionalLoadMap(lang, generation);
+  const loads = ctx.loads ?? functionalLoadMap(lang, generation);
   for (const p of inventory) {
     if (rareCandidates.includes(p)) continue;
     const load = loads[p] ?? 0;
@@ -241,12 +263,19 @@ export function prunePhonemes(
   // failure mode that drove the user's complaint. This guards
   // against it without blocking legitimate small-scale mergers.
   {
-    const formKeyToMeanings: Map<string, string[]> = new Map();
-    for (const m of Object.keys(lang.lexicon)) {
-      const f = lang.lexicon[m]!;
-      const key = f.join("|");
-      if (!formKeyToMeanings.has(key)) formKeyToMeanings.set(key, []);
-      formKeyToMeanings.get(key)!.push(m);
+    // Phase 69a T2: reuse the form-key map across multiple
+    // prunePhonemes attempts in the same runHomeostasis pass. The
+    // caller may pass `ctx.formKeyToMeanings` to skip the O(W)
+    // rebuild on each call.
+    let formKeyToMeanings = ctx.formKeyToMeanings;
+    if (!formKeyToMeanings) {
+      formKeyToMeanings = new Map();
+      for (const m of Object.keys(lang.lexicon)) {
+        const f = lang.lexicon[m]!;
+        const key = f.join("|");
+        if (!formKeyToMeanings.has(key)) formKeyToMeanings.set(key, []);
+        formKeyToMeanings.get(key)!.push(m);
+      }
     }
     let projectedCollisions = 0;
     const collisionCap = Math.max(

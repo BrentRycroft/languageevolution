@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { generateEarthMap } from "../geo/map";
 
+/**
+ * map_earth.test.ts
+ *
+ * Test suite for: "Earth preset map — recognisable continent shapes".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Earth preset map — recognisable continent shapes", () => {
   const map = generateEarthMap();
   const land = map.cells.filter((c) => c.biome !== "ocean");

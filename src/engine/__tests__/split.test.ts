@@ -5,6 +5,14 @@ import { makeRng } from "../rng";
 import { DEFAULT_LEXICON } from "../lexicon/defaults";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 
+/**
+ * split.test.ts
+ *
+ * Test suite for: "tree split".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeTree(): LanguageTree {
   const lang: Language = {
     id: "L-0",

@@ -4,6 +4,14 @@ import { applyChangesToWord } from "../phonology/apply";
 import { makeRng } from "../rng";
 import type { WordForm } from "../types";
 
+/**
+ * apply.test.ts
+ *
+ * Test suite for: "sound changes".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("sound changes", () => {
   it("p → f applies to words containing p", () => {
     const change = CATALOG_BY_ID["lenition.p_to_f"]!;

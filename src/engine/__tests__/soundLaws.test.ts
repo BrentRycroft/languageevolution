@@ -5,6 +5,14 @@ import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import type { Language } from "../types";
 
+/**
+ * soundLaws.test.ts
+ *
+ * Test suite for: "Phase 29 Tranche 5d — sound correspondence laws".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshEnglish(): Language {
   const sim = createSimulation(presetEnglish());
   return sim.getState().tree[sim.getState().rootId]!.language;

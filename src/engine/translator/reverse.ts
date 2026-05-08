@@ -3,6 +3,14 @@ import type { MorphCategory } from "../morphology/types";
 import { closedClassTable } from "./closedClass";
 import { disambiguateSense } from "../lexicon/word";
 
+/**
+ * reverse.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: ReverseToken, ReverseTranslation, invalidateReverseLexCache.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface ReverseToken {
   target: string;
   lemma: string | null;

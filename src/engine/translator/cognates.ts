@@ -2,6 +2,14 @@ import type { LanguageTree, Meaning } from "../types";
 import { leafIds } from "../tree/split";
 import { formatForm, type DisplayScript } from "../phonology/display";
 
+/**
+ * cognates.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: CognateEntry, findCognates, EtymologyStep.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface CognateEntry {
   languageId: string;
   languageName: string;

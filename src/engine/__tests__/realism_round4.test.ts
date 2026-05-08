@@ -13,6 +13,14 @@ import { makeRng } from "../rng";
 import type { GrammarFeatures, Language, LanguageTree } from "../types";
 import type { Paradigm } from "../morphology/types";
 
+/**
+ * realism_round4.test.ts
+ *
+ * Test suite for: "realism round 4 — population-feedback mechanics".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function testLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L-r",

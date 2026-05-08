@@ -1,6 +1,14 @@
 import { Delaunay, Voronoi } from "d3-delaunay";
 import { fnv1a, makeRng, type Rng } from "../rng";
 
+/**
+ * map.ts
+ *
+ * World map, territory, areal-share affinity. Key exports: MapCell, WorldMap, generateRandomContinent.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface MapCell {
   id: number;
   centroid: { x: number; y: number };

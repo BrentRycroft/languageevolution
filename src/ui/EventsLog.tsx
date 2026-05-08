@@ -7,6 +7,14 @@ import { CopyButton } from "./CopyButton";
 import { downloadAs, toCsv, slugForFile } from "./exportUtils";
 import { ListSearch } from "./ListSearch";
 
+/**
+ * EventsLog.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: EventsLog.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   sound_change: "var(--accent)",
   coinage: "var(--accent-2)",

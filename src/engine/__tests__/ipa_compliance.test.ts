@@ -4,6 +4,14 @@ import { CATALOG } from "../phonology/catalog";
 import { PRESETS } from "../presets";
 import { makeRng } from "../rng";
 
+/**
+ * ipa_compliance.test.ts
+ *
+ * Test suite for: "IPA compliance".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const TONE_MARKS = ["˥˩", "˧˥", "˥", "˧", "˩"];
 // Phase 30 Tranche 30a: secondary-articulation diacritics that may
 // follow a base segment. Stripped before the canonical check so a

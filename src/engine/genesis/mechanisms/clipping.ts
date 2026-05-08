@@ -1,5 +1,13 @@
 import type { CoinageMechanism } from "./types";
 
+/**
+ * clipping.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: MECHANISM_CLIPPING.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const MECHANISM_CLIPPING: CoinageMechanism = {
   id: "mechanism.clipping",
   label: "long → short",

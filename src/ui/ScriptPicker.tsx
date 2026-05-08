@@ -1,5 +1,13 @@
 import { useSimStore } from "../state/store";
 
+/**
+ * ScriptPicker.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: ScriptPicker.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function ScriptPicker({
   compact = true,
 }: {

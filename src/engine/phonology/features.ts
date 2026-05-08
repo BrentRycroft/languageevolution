@@ -1,6 +1,14 @@
 import type { Phoneme } from "../primitives";
 import { isVowel } from "./ipa";
 
+/**
+ * features.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: Place, Manner, Height.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type Place =
   | "labial"
   | "labiodental"

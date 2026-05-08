@@ -1,6 +1,14 @@
 import { describe, expect, test } from "vitest";
 import { reduplicate } from "../morphology/reduplication";
 
+/**
+ * reduplication.test.ts
+ *
+ * Test suite for: "reduplicate".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("reduplicate", () => {
   test("full reduplication doubles the form", () => {
     expect(reduplicate(["k", "a", "n"], "full")).toEqual(["k", "a", "n", "k", "a", "n"]);

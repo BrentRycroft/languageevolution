@@ -1,6 +1,14 @@
 import type { SimulationState } from "../types";
 import { leafIds } from "../tree/split";
 
+/**
+ * catalog.ts
+ *
+ * Achievement catalog + per-event detection. Key exports: Achievement, ACHIEVEMENTS, ACHIEVEMENTS_BY_ID.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface Achievement {
   id: string;
   label: string;

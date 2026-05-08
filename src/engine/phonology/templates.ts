@@ -10,6 +10,14 @@ import {
 import type { GeneratedRule, RuleFamily } from "./generated";
 import { phonemesMatching } from "./generated";
 
+/**
+ * templates.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: RuleTemplate, chainFillConsonant, TEMPLATES.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface TemplateProposal {
   family: RuleFamily;
   templateId: string;

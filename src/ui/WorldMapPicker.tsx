@@ -8,6 +8,14 @@ import {
 } from "../engine/geo/map";
 import { makeRng } from "../engine/rng";
 
+/**
+ * WorldMapPicker.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: WorldMapPicker.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function WorldMapPicker() {
   const config = useSimStore((s) => s.config);
   const updateConfig = useSimStore((s) => s.updateConfig);

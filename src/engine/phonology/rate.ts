@@ -1,5 +1,13 @@
 import { fnv1a } from "../rng";
 
+/**
+ * rate.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: realismMultiplier, rateMultiplier, speakerFactor.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const PI = Math.PI;
 const TWO_PI = 2 * PI;
 const PI_SQ = PI * PI;

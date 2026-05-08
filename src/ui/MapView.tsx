@@ -7,6 +7,14 @@ import { formatForm } from "../engine/phonology/display";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 import type { Language, LanguageNode, LanguageTree } from "../engine/types";
 
+/**
+ * MapView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: MapView.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function MapView() {
   const tree = useSimStore((s) => s.state.tree);
   const generation = useSimStore((s) => s.state.generation);

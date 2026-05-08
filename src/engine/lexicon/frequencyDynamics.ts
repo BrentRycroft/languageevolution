@@ -1,5 +1,13 @@
 import type { Language, Meaning } from "../types";
 
+/**
+ * frequencyDynamics.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: bumpFrequency, decayFrequencies.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const MIN = 0.05;
 const MAX = 0.95;
 const DEFAULT = 0.5;

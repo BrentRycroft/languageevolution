@@ -6,6 +6,14 @@ import {
 } from "../time";
 import { defaultConfig } from "../config";
 
+/**
+ * time.test.ts
+ *
+ * Test suite for: "§3 — generation → real-time anchor".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("§3 — generation → real-time anchor", () => {
   it("default config exposes yearsPerGeneration = 25", () => {
     expect(defaultConfig().yearsPerGeneration).toBe(25);

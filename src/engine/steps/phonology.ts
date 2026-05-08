@@ -1,5 +1,5 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
-import { applyChangesToLexicon } from "../phonology/apply";
+import { applyChangesToLexicon, sortByPriority } from "../phonology/apply";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
 import { rateMultiplier, speakerFactor, isolationFactor, realismMultiplier } from "../phonology/rate";
@@ -25,6 +25,14 @@ import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
+
+/**
+ * phonology.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepPhonology, stepArealWaves.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
 
 const AREAL_BASE_PROBABILITY = 0.35;
 const AREAL_WAVE_SPEED = 60;
@@ -57,6 +65,14 @@ export function stepPhonology(
   const literaryBrake = 1 - 0.6 * literary;
   const before = lang.lexicon;
   const changes = changesForLang(lang);
+  // Phase 69a T1: hoist the sortByPriority computation. Pre-fix
+  // applyChangesToLexicon ran sortByPriority(changes) once per call
+  // (i.e. once per leaf). The sort is purely a function of the rule
+  // set and their priorities — both stable across all leaves in a
+  // gen — so we compute it once here and pass it via the
+  // `_orderedChanges` ApplyOptions field. For 12 leaves × R=20-50
+  // rules, this saves ~12 × O(R log R) sorts per gen.
+  const orderedChanges = sortByPriority(changes);
   const mult =
     rateMultiplier(generation, lang.id) *
     lang.conservatism *
@@ -67,11 +83,10 @@ export function stepPhonology(
     // dampens it during stable centuries.
     vm *
     literaryBrake;
+  // Phase 69a T1: combine the per-lexicon iteration that builds
+  // `ages` and `neighbourMomentum` into a single pass below
+  // (saves one Object.keys allocation + walk per leaf).
   const ages: Record<string, number> = {};
-  for (const m of Object.keys(before)) {
-    const last = lang.lastChangeGeneration[m];
-    ages[m] = last === undefined ? 99 : generation - last;
-  }
   // Phase 24: build a per-meaning seed-length map for the soft erosion
   // resistance curve in apply.ts. Replaces Phase 23b's hard cap with a
   // smooth probability scaling that fades to zero as currentLen
@@ -94,13 +109,18 @@ export function stepPhonology(
   const NEIGHBOUR_WINDOW = 20;
   const NEIGHBOUR_MOMENTUM_MAX = 0.5;
   const neighbourMomentum: Record<string, number> = {};
+  // Phase 69a T1: single combined pass over `before` builds both the
+  // per-meaning age and neighbour-momentum maps. Pre-fix this was
+  // two separate Object.keys(before) walks (line 79 + line 105).
   for (const m of Object.keys(before)) {
+    const last = lang.lastChangeGeneration[m];
+    ages[m] = last === undefined ? 99 : generation - last;
     const nbrs = lang.localNeighbors[m];
     if (!nbrs || nbrs.length === 0) continue;
     let recentlyChanged = 0;
     for (const n of nbrs) {
-      const last = lang.lastChangeGeneration[n];
-      if (last !== undefined && generation - last <= NEIGHBOUR_WINDOW) {
+      const lastN = lang.lastChangeGeneration[n];
+      if (lastN !== undefined && generation - lastN <= NEIGHBOUR_WINDOW) {
         recentlyChanged++;
       }
     }
@@ -192,6 +212,9 @@ export function stepPhonology(
     // collisions with unrelated words. Default ON; per-language
     // tunable via `lang.homonymInhibition`.
     langForHomonym: lang,
+    // Phase 69a T1: pre-sorted rule list — applyChangesToLexicon
+    // skips its internal sort when this is present.
+    _orderedChanges: orderedChanges,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   // Phase 63: theme-stripping happens at inflect time off

@@ -3,6 +3,14 @@ import { stripTone, toneOf, HIGH, LOW } from "../phonology/tone";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 
+/**
+ * tone.test.ts
+ *
+ * Test suite for: "tone helpers".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("tone helpers", () => {
   it("stripTone removes a trailing tone mark", () => {
     expect(stripTone(`a${HIGH}`)).toBe("a");

@@ -1,6 +1,14 @@
 import type { Phoneme, WordForm } from "../types";
 import { isSyllabic, isVowel } from "./ipa";
 
+/**
+ * syllable.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: Syllable, StressRule, syllabify.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface Syllable {
   onset: number[];
   nucleus: number;

@@ -12,6 +12,14 @@ import { runRealiseStage } from "./pipeline";
 import { classifierMeaningFor, classifierFormFor } from "./classifiers";
 import { isFeatureActive } from "../modules/legacyGate";
 
+/**
+ * realise.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: RealisedToken, LemmaResolution, RealiseDeps.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface RealisedToken {
   surface: string;
   form: WordForm;

@@ -11,6 +11,14 @@ import {
 } from "../phonology/inventory";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 
+/**
+ * featural_alphabet.test.ts
+ *
+ * Test suite for: "featural alphabet wiring".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("featural alphabet wiring", () => {
   it("voiced consonant set includes PIE aspirates and labiovelars", () => {
     for (const p of ["bʰ", "dʰ", "gʰ", "gʷ", "gʷʰ", "gʲ", "gʲʰ", "ɣ"]) {

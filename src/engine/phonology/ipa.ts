@@ -1,5 +1,13 @@
 import type { Phoneme } from "../primitives";
 
+/**
+ * ipa.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: VOWELS, CONSONANTS, isVowel.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const VOWELS: ReadonlySet<Phoneme> = new Set([
   "a", "e", "i", "o", "u",
   "ɛ", "ɔ", "ə", "ɨ", "ɯ", "ø", "y", "œ", "ʌ",

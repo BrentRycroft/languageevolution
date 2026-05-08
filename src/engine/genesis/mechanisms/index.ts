@@ -1,3 +1,11 @@
+/**
+ * index.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: MECHANISMS.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type { CoinageMechanism } from "./types";
 
 import type { CoinageMechanism } from "./types";

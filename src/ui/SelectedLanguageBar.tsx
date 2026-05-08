@@ -4,6 +4,14 @@ import { leafIds } from "../engine/tree/split";
 import { Z } from "./zIndex";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 
+/**
+ * SelectedLanguageBar.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: SelectedLanguageBar.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function SelectedLanguageBar() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);

@@ -1,6 +1,14 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { Z } from "./zIndex";
 
+/**
+ * UpdateBanner.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: UpdateBanner.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function UpdateBanner() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],

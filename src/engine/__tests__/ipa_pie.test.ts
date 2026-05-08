@@ -5,6 +5,14 @@ import { romanize } from "../phonology/orthography";
 import { createSimulation } from "../simulation";
 import { presetPIE } from "../presets/pie";
 
+/**
+ * ipa_pie.test.ts
+ *
+ * Test suite for: "PIE character + syllabicity handling".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("PIE character + syllabicity handling", () => {
   it("isVowel recognises IPA-diacritic vowels used in PIE", () => {
     for (const v of ["a", "e", "i", "o", "u", "aː", "eː", "iː", "oː", "uː"]) {

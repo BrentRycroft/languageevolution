@@ -9,6 +9,14 @@ import {
 } from "../lexicon/concepts";
 import { fnv1a } from "../rng";
 
+/**
+ * embeddings.ts
+ *
+ * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: EMBEDDING_DIMS, embed, cosine.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const EMBEDDING_DIMS = 12;
 
 const CLUSTER_CENTROIDS: Record<string, number[]> = {

@@ -19,6 +19,14 @@ import { ScriptPicker } from "./ScriptPicker";
 import { useDebounced } from "./hooks/useDebounced";
 import { EmptyState } from "./components/EmptyState";
 
+/**
+ * Translator.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: Translator.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 // Phase 50 T4: per-token resolution chip (lifted from EventsLog's KIND
 // palette). Each rung gets a colour, label, and tooltip explaining how
 // the form was found — `direct` means it was in the lexicon already,

@@ -6,6 +6,14 @@ import {
 } from "../phonology/phonotactics";
 import type { Language, Phoneme, WordForm } from "../types";
 
+/**
+ * phonotactic_gate.test.ts
+ *
+ * Test suite for: "Phase 67 T3 — phonotactic constraints as coinage gates".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 67 T3 — phonotactic constraints as coinage gates", () => {
   it("repairToProfile breaks up onset clusters violating maxOnset", () => {
     const profile = { maxOnset: 1, maxCoda: 0, maxCluster: 1, strictness: 1 };

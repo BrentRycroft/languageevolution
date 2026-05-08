@@ -3,6 +3,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 
+/**
+ * proto_preservation.test.ts
+ *
+ * Test suite for: "proto preservation".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("proto preservation", () => {
   it("first step auto-splits the proto so the root is preserved as a non-leaf", () => {
     const sim = createSimulation(defaultConfig());

@@ -3,6 +3,14 @@ import { render, cleanup } from "@testing-library/react";
 import { LexiconView } from "../LexiconView";
 import { useSimStore } from "../../state/store";
 
+/**
+ * LexiconView.test.tsx
+ *
+ * Test suite for: "LexiconView".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("LexiconView", () => {
   beforeEach(() => {
     cleanup();
