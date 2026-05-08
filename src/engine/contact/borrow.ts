@@ -7,6 +7,11 @@ import { addAlt } from "../lexicon/altForms";
 import { addSynonym } from "../lexicon/mutate";
 import { tryCommitCoinage } from "../lexicon/word";
 import { stripTone } from "../phonology/tone";
+import { posOf } from "../lexicon/pos";
+import {
+  assignInflectionClass,
+  assignNounDeclensionClass,
+} from "../morphology/inflectionClass";
 import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
@@ -162,6 +167,26 @@ export function tryBorrow(
     );
     if (!commit.committed) return null;
     recipient.lexicon[meaning] = adapted;
+  }
+  // Phase 68b T5: borrowed meanings need explicit Phase 64+ metadata
+  // (noun-declension class, etc.) so the recipient's pickAffixVariant
+  // doesn't silently fall through to the class-1 default. We assign
+  // recipient-class membership (not donor's), modeling that real
+  // borrowings are nativized into the receiving language's pattern
+  // (Spanish "fútbol" enters as 2nd-declension noun, not English).
+  if (!alreadyHas) {
+    const pos = posOf(meaning);
+    if (pos === "verb") {
+      if (!recipient.inflectionClass) recipient.inflectionClass = {};
+      if (!recipient.inflectionClass[meaning]) {
+        recipient.inflectionClass[meaning] = assignInflectionClass(adapted, rng);
+      }
+    } else if (pos === "noun" || pos === "other") {
+      if (!recipient.nounDeclensionClass) recipient.nounDeclensionClass = {};
+      if (!recipient.nounDeclensionClass[meaning]) {
+        recipient.nounDeclensionClass[meaning] = assignNounDeclensionClass(adapted, rng);
+      }
+    }
   }
   if (!recipient.registerOf) recipient.registerOf = {};
   if (!alreadyHas) recipient.registerOf[meaning] = prestige;

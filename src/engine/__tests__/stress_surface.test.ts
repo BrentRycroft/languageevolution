@@ -28,10 +28,13 @@ describe("Phase 67 T1 — stress-pattern surface effects", () => {
     const reduction2 = (lang2.events ?? []).filter(
       (e) => /vowel|reduction|deletion/i.test(e.description ?? ""),
     ).length;
-    // Soft test: fixed-stress should have at least as many events.
-    // (Probabilistic; not guaranteed strict inequality.)
-    expect(reduction1).toBeGreaterThanOrEqual(0);
-    expect(reduction2).toBeGreaterThanOrEqual(0);
+    // Phase 68b T7: directional hypothesis — fixed-stress
+    // languages develop weakening at unstressed positions, so they
+    // should accumulate AT LEAST as many vowel/deletion events as
+    // a lexical-stress language (Phase 67 T1's 1.2× boost). Soft
+    // inequality (>=) tolerates RNG variance; the strict claim is
+    // that the boost doesn't fire backwards.
+    expect(reduction1).toBeGreaterThanOrEqual(reduction2);
   });
 
   it("stressPattern is preserved on the seeded language", () => {

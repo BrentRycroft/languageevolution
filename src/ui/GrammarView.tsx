@@ -484,6 +484,15 @@ function GrammarFeatureList({
     ["possessor pos", grammar.possessorPosition ?? "—"],
     ["synthesis idx", grammar.synthesisIndex !== undefined ? grammar.synthesisIndex.toFixed(1) : "—"],
     ["stress", stressLabel],
+    // Phase 68b T6: surface Phase 63/64/65 grammar fields that the
+    // engine tracks but the UI hasn't been showing.
+    ["verb themes", grammar.verbThemes && grammar.verbThemes.length > 0
+      ? grammar.verbThemes.slice(0, 4).map((t) => "-" + t.join("")).join(" / ")
+      : "—"],
+    ["classifier system", grammar.classifierSystem
+      ? `yes (${grammar.classifierTable ? Object.keys(grammar.classifierTable).length + " classes" : "no table"})`
+      : "no"],
+    ["reference tracking", grammar.referenceTracking ?? "none"],
   ];
   return (
     <table

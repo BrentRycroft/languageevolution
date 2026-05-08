@@ -9,6 +9,7 @@ import { formatForm, type DisplayScript } from "../phonology/display";
 import { glossToEnglish } from "../translator/glossToEnglish";
 import { pickSynonymForGenre } from "./genre_bias";
 import { closedClassForm } from "../translator/closedClass";
+import { tryDerivedFormFromMeaning } from "../morphology/derivation";
 
 export type TemplateShape =
   | "transitive"
@@ -405,7 +406,16 @@ function nounRoleToken(
   script: DisplayScript,
   composeOptions: ComposeOptions = {},
 ): RoleToken | null {
-  const base = pickFormWithAlts(lang, meaning, composeOptions);
+  let base = pickFormWithAlts(lang, meaning, composeOptions);
+  // Phase 68b T3: when the slot meaning is a runtime-derived shape
+  // (`${root}-${tag}`) NOT in the lexicon, build the form on the fly
+  // via the productive suffix. Pre-Phase-68b this returned null and
+  // the slot was dropped; runtime-derived narratives now actually
+  // emit forms like "see-agt" → /siːəɹ/.
+  if (!base && meaning.includes("-")) {
+    const derived = tryDerivedFormFromMeaning(lang, meaning);
+    if (derived) base = derived;
+  }
   if (!base) return null;
   const { form, glossNote } = inflectNoun(lang, meaning, base, opts, composeOptions);
   return {
