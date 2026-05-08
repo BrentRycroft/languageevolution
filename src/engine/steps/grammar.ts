@@ -5,6 +5,10 @@ import { enforceTypologicalUniversals } from "../grammar/universals";
 import { pickNextStressForDrift } from "../grammar/stressTransitions";
 import { proposeAblautEmergence, decayAblautClasses } from "../morphology/ablaut";
 import {
+  proposeSandhiRuleEmergence,
+  decaySandhiRule,
+} from "../phonology/sandhi";
+import {
   maybeGrammaticalize,
   maybeMergeParadigms,
   maybeCliticize,
@@ -146,6 +150,24 @@ export function stepMorphology(
   // whose source vowel is no longer in the inventory.
   proposeAblautEmergence(lang, rng, generation);
   decayAblautClasses(lang, generation);
+
+  // Phase 67 T2: tone-sandhi rule emergence + decay for tonal langs.
+  const sandhiEmerged = proposeSandhiRuleEmergence(lang, rng);
+  if (sandhiEmerged) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `tone sandhi rule emerged: family=${sandhiEmerged}`,
+    });
+  }
+  const sandhiLost = decaySandhiRule(lang, rng);
+  if (sandhiLost) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `tone sandhi rule decayed: family=${sandhiLost}`,
+    });
+  }
 
   // Phase 66 T1: progress already-grammaticalising meanings along
   // the word→clitic→affix→fusion→loss chain. Operates AFTER the

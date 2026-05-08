@@ -146,6 +146,94 @@ export function langPhonotacticScore(
 }
 
 /**
+ * Phase 67 T3: phonotactic repair. Walks the form and breaks up
+ * onset / coda / medial clusters that exceed the profile's limits,
+ * inserting an epenthetic vowel between the offending consonants.
+ * The vowel is the first vowel from the language's inventory (or
+ * /ə/ as a fallback).
+ *
+ * Used at coinage commit + borrow time to nativize forms instead of
+ * rejecting them outright. Real loanword adaptation works this way:
+ * Spanish/Italian breaking up "estress" / "stresse" from English
+ * "stress" — the prohibited /st/ cluster is repaired by epenthesis.
+ */
+export function repairToProfile(
+  form: WordForm,
+  profile: PhonotacticProfile,
+  epentheticVowel: string,
+): WordForm {
+  if (form.length === 0) return form;
+  if (profile.strictness <= 0) return form;
+  let out = form.slice();
+
+  // Safety guards: cap each loop to avoid runaway insertion if the
+  // epenthetic "vowel" is actually being treated as a cluster
+  // consonant by isClusterC (rare, but defensive).
+  let guard = 0;
+  while (onsetClusterLen(out) > profile.maxOnset && guard < 12) {
+    out = [
+      ...out.slice(0, profile.maxOnset),
+      epentheticVowel,
+      ...out.slice(profile.maxOnset),
+    ];
+    guard++;
+  }
+
+  guard = 0;
+  while (codaClusterLen(out) > profile.maxCoda && guard < 12) {
+    const codaStart = out.length - codaClusterLen(out);
+    const insertAt = codaStart + profile.maxCoda;
+    out = [
+      ...out.slice(0, insertAt),
+      epentheticVowel,
+      ...out.slice(insertAt),
+    ];
+    guard++;
+  }
+
+  // Medial repair: walk and insert vowel between consonants whenever
+  // a run exceeds maxCluster.
+  let i = onsetClusterLen(out);
+  guard = 0;
+  while (i < out.length && guard < 64) {
+    if (isClusterC(out[i]!)) {
+      const start = i;
+      while (i < out.length && isClusterC(out[i]!)) i++;
+      // Skip if this is the coda (i === out.length).
+      if (i < out.length) {
+        const len = i - start;
+        if (len > profile.maxCluster) {
+          out = [
+            ...out.slice(0, start + profile.maxCluster),
+            epentheticVowel,
+            ...out.slice(start + profile.maxCluster),
+          ];
+          i = start + profile.maxCluster + 1;
+        }
+      }
+    } else {
+      i++;
+    }
+    guard++;
+  }
+
+  return out;
+}
+
+/**
+ * Phase 67 T3: pick a sensible epenthetic vowel for a language —
+ * cross-linguistically /ə/, /ɨ/, /i/, or /u/ are common; we use the
+ * inventory's first vowel as a heuristic.
+ */
+export function pickEpentheticVowel(lang: Language): string {
+  for (const p of lang.phonemeInventory.segmental) {
+    const base = stripTone(p);
+    if (isVowel(base)) return p;
+  }
+  return "ə";
+}
+
+/**
  * UI-friendly badge string summarising the profile shape.
  *   maxOnset 1 + maxCoda 0 → "CV"
  *   maxOnset 1 + maxCoda 1 → "CVC"

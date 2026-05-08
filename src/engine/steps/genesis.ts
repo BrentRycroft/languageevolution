@@ -19,6 +19,11 @@ import { CONCEPTS } from "../lexicon/concepts";
 import { assignInflectionClass, assignNounDeclensionClass } from "../morphology/inflectionClass";
 import { posOf } from "../lexicon/pos";
 import {
+  langPhonotacticScore,
+  repairToProfile,
+  pickEpentheticVowel,
+} from "../phonology/phonotactics";
+import {
   attemptTargetedDerivation,
   attemptProductiveDerivation,
   recordDerivationChain,
@@ -232,6 +237,22 @@ export function stepGenesis(
     // Phase 53 T4: build the structural-etymology record for the new
     // word from the mechanism's reported sources, so the UI etymology
     // view + sound-change boundary detection can read it later.
+    // Phase 67 T3: phonotactic repair — when the proposed form
+    // violates the language's phonotactic profile (e.g. Hawaiian-style
+    // CV preset producing CCC clusters), insert epenthetic vowels to
+    // nativize the form rather than rejecting outright. Loanword
+    // adaptation in real languages works this way: Spanish "estress"
+    // for English "stress".
+    if (lang.phonotacticProfile && lang.phonotacticProfile.strictness > 0) {
+      const score = langPhonotacticScore(lang, outcome.form);
+      if (score < 0.5) {
+        outcome.form = repairToProfile(
+          outcome.form,
+          lang.phonotacticProfile,
+          pickEpentheticVowel(lang),
+        );
+      }
+    }
     const morphStructure = buildMorphStructure(outcome);
     const commit = tryCommitCoinage(
       lang,

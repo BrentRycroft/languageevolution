@@ -372,8 +372,26 @@ export function applyChangesToWord(
         continue;
       }
     }
-    const base = change.probabilityFor(current);
+    let base = change.probabilityFor(current);
     if (base <= 0) continue;
+
+    // Phase 67 T1: stress-pattern surface effects. Languages with
+    // FIXED stress (initial/penult/final/antepenult) develop
+    // vowel-reduction patterns that target unstressed positions —
+    // English schwa, Catalan reduction, Russian akanye. Boost
+    // deletion + vowel_reduction-category rules by 1.2× when the
+    // language has a fixed stress pattern, since those rules realize
+    // "weakening at unstressed positions" cross-linguistically.
+    // Lexical-stress and unset languages stay at base rate.
+    const stressBias = (() => {
+      const sp = opts.stressPattern;
+      if (!sp || sp === "lexical") return 1.0;
+      if (change.category === "deletion" || change.category === "vowel") {
+        return 1.2;
+      }
+      return 1.0;
+    })();
+    base = base * stressBias;
 
     const adjusted = Math.pow(base, 1 / Math.max(0.01, freqExponent));
     const lenFactor = Math.min(1, Math.max(0.25, (current.length - 1) / 4));

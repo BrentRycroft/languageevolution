@@ -69,6 +69,55 @@ const RULE_FAMILY: Record<string, "meeussen" | "dissimilate" | "spread" | "downs
   "sandhi.falling_rising_to_falling_high": "downstep",
 };
 
+const ALL_FAMILIES: ReadonlyArray<"meeussen" | "dissimilate" | "spread" | "downstep"> =
+  ["meeussen", "dissimilate", "spread", "downstep"];
+
+/**
+ * Phase 67 T2: tone-sandhi rule emergence. Each generation gives a
+ * tonal language a small chance to ADD a sandhi family it doesn't
+ * already have. Real tonal languages introduce new sandhi rules
+ * over time (Mandarin third-tone sandhi is innovation; pre-modern
+ * Chinese didn't have it). Pre-Phase-67 the field was set at preset
+ * time and never changed.
+ *
+ * Returns true when a family was added (caller can log an event).
+ */
+export function proposeSandhiRuleEmergence(
+  lang: Language,
+  rng: Rng,
+): "meeussen" | "dissimilate" | "spread" | "downstep" | null {
+  if (!lang.phonemeInventory.usesTones) return null;
+  if (!rng.chance(0.008)) return null; // ~0.8%/gen
+  const current = new Set(lang.toneSandhiRules ?? []);
+  const candidates = ALL_FAMILIES.filter((f) => !current.has(f));
+  if (candidates.length === 0) return null;
+  const picked = candidates[rng.int(candidates.length)]!;
+  lang.toneSandhiRules = [...current, picked];
+  return picked;
+}
+
+/**
+ * Phase 67 T2: tone-sandhi rule decay. Each generation gives a
+ * tonal language with multiple rules a tiny chance to LOSE one
+ * (paradigm-renewal, reanalysis, dialect contact). Won't drop below
+ * 1 rule active.
+ *
+ * Returns the lost family, or null when nothing decayed.
+ */
+export function decaySandhiRule(
+  lang: Language,
+  rng: Rng,
+): "meeussen" | "dissimilate" | "spread" | "downstep" | null {
+  if (!lang.phonemeInventory.usesTones) return null;
+  const current = lang.toneSandhiRules ?? [];
+  if (current.length <= 1) return null; // keep at least one
+  if (!rng.chance(0.004)) return null; // ~0.4%/gen
+  const idx = rng.int(current.length);
+  const lost = current[idx]!;
+  lang.toneSandhiRules = current.filter((_, i) => i !== idx);
+  return lost;
+}
+
 interface SandhiSite {
   meaning: string;
   posA: number; // index of the first tone-bearing segment

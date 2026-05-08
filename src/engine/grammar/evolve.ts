@@ -112,12 +112,39 @@ const DRIFT_RULES: readonly DriftRule[] = [
     feature: "relativeClauseStrategy",
     probability: 0.04,
     shift: (g, rng) => {
-      const STRATEGIES: NonNullable<GrammarFeatures["relativeClauseStrategy"]>[] = [
+      const ALL: NonNullable<GrammarFeatures["relativeClauseStrategy"]>[] = [
         "gap", "resumptive", "relativizer", "internal-headed",
       ];
       const current = g.relativeClauseStrategy ?? "relativizer";
-      const others = STRATEGIES.filter((s) => s !== current);
-      const next = others[rng.int(others.length)]!;
+
+      // Phase 67 T4: typological constraints. Real cross-linguistic
+      // correlations (Comrie 1989; Keenan & Comrie 1977 accessibility
+      // hierarchy):
+      //   - OV languages strongly prefer gap and internal-headed
+      //     strategies; relativizer is rare in head-final langs.
+      //   - VO languages prefer resumptive or relativizer; internal-
+      //     headed is exceedingly rare.
+      //   - Case-rich languages permit resumptive (the case marks the
+      //     relativised role); case-poor languages disprefer it.
+      // The drift candidate set is filtered by these constraints
+      // rather than being uniform across all 4 strategies.
+      const isOV = g.wordOrder === "SOV" || g.wordOrder === "OSV" || g.wordOrder === "OVS";
+      const isVO = g.wordOrder === "SVO" || g.wordOrder === "VSO" || g.wordOrder === "VOS";
+      const hasCase = g.hasCase;
+
+      const allowed = ALL.filter((s) => {
+        if (s === current) return false;
+        if (isVO && s === "internal-headed") return false; // very rare in VO
+        if (isOV && s === "relativizer") return false; // rare in OV
+        if (!hasCase && s === "resumptive") return false; // case marker needed
+        return true;
+      });
+      // Defensive fallback: if constraints removed all options, keep
+      // the current strategy (no drift this gen).
+      if (allowed.length === 0) {
+        return { feature: "relativeClauseStrategy", from: current, to: current };
+      }
+      const next = allowed[rng.int(allowed.length)]!;
       g.relativeClauseStrategy = next;
       return { feature: "relativeClauseStrategy", from: current, to: next };
     },
