@@ -105,6 +105,7 @@ export function ControlsPanel() {
   const updateSemantics = useSimStore((s) => s.updateSemantics);
   const updateObsolescence = useSimStore((s) => s.updateObsolescence);
   const updateMorphologyRates = useSimStore((s) => s.updateMorphologyRates);
+  const patchConfigKey = useSimStore((s) => s.patchConfigKey);
   const setGenesisEnabled = useSimStore((s) => s.setGenesisEnabled);
   const setSeed = useSimStore((s) => s.setSeed);
   const randomiseSeed = useSimStore((s) => s.randomiseSeed);
@@ -437,6 +438,54 @@ export function ControlsPanel() {
           max={0.1}
           step={0.005}
           onChange={(v) => updateMorphologyRates({ paradigmMergeProbability: v })}
+        />
+        <Slider
+          label="Analogy / paradigm levelling"
+          value={config.morphology.analogyProbability ?? 0.01}
+          min={0}
+          max={0.1}
+          step={0.005}
+          onChange={(v) => updateMorphologyRates({ analogyProbability: v })}
+        />
+        <Slider
+          label="Borrow prob. / pair / gen"
+          value={config.contact.borrowProbabilityPerGeneration}
+          min={0}
+          max={0.05}
+          step={0.001}
+          onChange={(v) => patchConfigKey("contact", { borrowProbabilityPerGeneration: v })}
+        />
+        <Slider
+          label="Taboo replacement / gen"
+          value={config.taboo.replacementProbability}
+          min={0}
+          max={0.05}
+          step={0.001}
+          onChange={(v) => patchConfigKey("taboo", { replacementProbability: v })}
+        />
+        <Slider
+          label="Lawful regular change / gen"
+          value={config.phonology_lawful.regularChangeProbability}
+          min={0}
+          max={0.05}
+          step={0.001}
+          onChange={(v) => patchConfigKey("phonology_lawful", { regularChangeProbability: v })}
+        />
+        <Slider
+          label="Copula loss / gen"
+          value={config.obsolescence.copulaLossProbability ?? 0.005}
+          min={0}
+          max={0.05}
+          step={0.001}
+          onChange={(v) => updateObsolescence({ copulaLossProbability: v })}
+        />
+        <Slider
+          label="Copula genesis / gen"
+          value={config.obsolescence.copulaGenesisProbability ?? 0.005}
+          min={0}
+          max={0.05}
+          step={0.001}
+          onChange={(v) => updateObsolescence({ copulaGenesisProbability: v })}
         />
       </Section>
 
