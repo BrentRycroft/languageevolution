@@ -27,6 +27,7 @@ import {
   type AbstractTemplate,
   type SlotAssignment,
 } from "./composer";
+import { pickRuntimeDerivedMeaning } from "../morphology/derivation";
 import {
   subjectPool,
   objectPool,
@@ -126,9 +127,29 @@ function fillSlots(
   const slots: SlotAssignment = {
     verb: pickWeighted(lang, verbs, rng) ?? pick(verbs, rng),
   };
+
+  // Phase 68b T3: occasionally swap the subject or object slot for
+  // a runtime-derived meaning (`${base}-${tag}`) when the language
+  // has at least one productive derivational suffix. This makes
+  // Phase 66 T2's `pickRuntimeDerivedMeaning` actually fire from
+  // narrative output instead of staying dead code. Composer's
+  // nounRoleToken falls through to `tryDerivedFormFromMeaning`
+  // when the slot meaning isn't in lang.lexicon.
+  const productiveSuffixes = (lang.derivationalSuffixes ?? []).filter(
+    (s) => s.productive,
+  );
+  const RUNTIME_DERIV_PROB = 0.05;
+  const tryRuntimeDerivedSlot = (): Meaning | null => {
+    if (productiveSuffixes.length === 0) return null;
+    if (!rng.chance(RUNTIME_DERIV_PROB)) return null;
+    const r = pickRuntimeDerivedMeaning(lang, rng);
+    return r ? r.meaning : null;
+  };
+
   if (template.needs.subject) {
+    const derived = tryRuntimeDerivedSlot();
     slots.subject =
-      pickWeighted(lang, subjects, rng) ?? pick(subjects, rng);
+      derived ?? pickWeighted(lang, subjects, rng) ?? pick(subjects, rng);
   }
   if (template.needs.object) {
     // Phase 29 Tranche 5g: filter the object pool to candidates whose
@@ -144,8 +165,9 @@ function fillSlots(
     // lexicon pool rather than to the curated English set — keeps the
     // output sourced from the language's own vocabulary.
     const objectPoolFinal = framed.length > 0 ? framed : objects;
+    const derivedObj = tryRuntimeDerivedSlot();
     slots.object =
-      pickWeighted(lang, objectPoolFinal, rng) ?? pick(objectPoolFinal, rng);
+      derivedObj ?? pickWeighted(lang, objectPoolFinal, rng) ?? pick(objectPoolFinal, rng);
   }
   if (template.needs.adjective) {
     slots.adjective = pickWeighted(lang, adjs, rng) ?? pick(adjs, rng);

@@ -1,31 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { planSkeleton, randomNarrativeSeed, generateNarrative } from "../narrative/generate";
+import { randomNarrativeSeed, generateNarrative } from "../narrative/generate";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 
 describe("§D — narrative skeleton expansion", () => {
-  // Phase 53 T6: planSkeleton was deprecated in favour of
-  // planSkeletonForLanguage which consults the language directly
-  // instead of selecting from English-flavoured pools. The
-  // language-agnostic deprecated wrapper returns []; tests that
-  // exercised the pool-driven planner moved into
-  // generateNarrative integration coverage below.
-  it.skip("planSkeleton returns the requested number of skeletons", () => {
-    const ten = planSkeleton("seed-x", 10);
-    expect(ten).toHaveLength(10);
-  });
-
-  it.skip("planSkeleton is deterministic for the same seed", () => {
-    const a = planSkeleton("repro", 5);
-    const b = planSkeleton("repro", 5);
-    expect(a).toEqual(b);
-  });
-
-  it.skip("planSkeleton uses different patterns across the run", () => {
-    const seven = planSkeleton("variety", 8);
-    expect(seven.length).toBeGreaterThan(0);
-  });
+  // Phase 68b T7: removed 3 skipped planSkeleton tests. Phase 53 T6
+  // deprecated `planSkeleton` (the language-agnostic wrapper now
+  // returns []); the dead skip stubs were just placeholder
+  // documentation. The pool-driven planner's behaviour is covered
+  // by generateNarrative integration coverage below.
 
   it("randomNarrativeSeed produces 6-char alphanumeric strings", () => {
     for (let i = 0; i < 10; i++) {
@@ -52,9 +36,11 @@ describe("§D — narrative skeleton expansion", () => {
     // narratives produced any output at all (skeleton-sharing is the
     // intent; the strict "same gloss line N" assertion is too tight
     // under the new dynamics).
-    const overlap = linesA.filter((a, i) => linesB[i]?.gloss === a.gloss).length;
+    // Phase 68b T7: the `>= 0` was always-true; tighten to confirm
+    // the intent — both narratives produce structurally-comparable
+    // line counts (skeleton sharing).
     if (linesA.length > 0 && linesB.length > 0) {
-      expect(overlap).toBeGreaterThanOrEqual(0);
+      expect(Math.abs(linesA.length - linesB.length)).toBeLessThanOrEqual(2);
     }
   });
 });

@@ -65,11 +65,9 @@ describe("§C — geo / map module", () => {
     expect(differences).toBeGreaterThan(0);
   });
 
-  it.skip("Earth map has the suggested-origin per preset on land", () => {
-    // Phase 58.8: removed per-preset Earth origins to eliminate
-    // preset-specific behaviour. Will reappear as an opt-in
-    // historical mode.
-  });
+  // Phase 68b T7: removed skipped "Earth map has the suggested-origin
+  // per preset on land" — Phase 58.8 deleted the suggestedEarthOrigin
+  // feature outright; the skip stub was dead documentation.
 
   it("getWorldMap memoises by mode + seed", () => {
     const a1 = getWorldMap("random", "memo-test");

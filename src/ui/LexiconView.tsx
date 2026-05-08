@@ -380,6 +380,81 @@ export function LexiconView() {
                         </span>
                       );
                     })()}
+                    {(() => {
+                      // Phase 68b T6: noun-declension class badge
+                      // (Phase 64 T1). 5-way Latin-style declension
+                      // assignment per noun.
+                      const proto = state.tree[state.rootId]?.language;
+                      const cls = proto?.nounDeclensionClass?.[meaning];
+                      if (!cls) return null;
+                      return (
+                        <span
+                          className="origin-glyph"
+                          style={{
+                            marginLeft: 4,
+                            fontSize: 9,
+                            color: "var(--muted)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 3,
+                            padding: "0 3px",
+                          }}
+                          title={`Noun declension class ${cls} (Phase 64 T1)`}
+                          data-testid={`decl-badge-${meaning}`}
+                        >
+                          D{cls}
+                        </span>
+                      );
+                    })()}
+                    {(() => {
+                      // Phase 68b T6: ablaut class glyph (Phase 64 T2).
+                      // Marks strong verbs with vowel-mutation paradigm.
+                      const proto = state.tree[state.rootId]?.language;
+                      const ab = proto?.ablautClassAssignment?.[meaning];
+                      if (!ab) return null;
+                      return (
+                        <span
+                          className="origin-glyph"
+                          style={{
+                            marginLeft: 4,
+                            fontSize: 9,
+                            color: "var(--accent, #b58)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 3,
+                            padding: "0 3px",
+                          }}
+                          title={`Strong-verb ablaut class ${ab} (Phase 64 T2)`}
+                          data-testid={`ablaut-badge-${meaning}`}
+                        >
+                          ~{ab}
+                        </span>
+                      );
+                    })()}
+                    {(() => {
+                      // Phase 68b T6: grammaticalisation stage glyph
+                      // (Phase 66 T1). Tracks word→clitic→affix→fused→lost
+                      // chain progression.
+                      const proto = state.tree[state.rootId]?.language;
+                      const st = proto?.grammaticalizationStage?.[meaning];
+                      if (!st) return null;
+                      const STAGE_LABEL = ["", "clitic", "affix", "fused", "lost"];
+                      return (
+                        <span
+                          className="origin-glyph"
+                          style={{
+                            marginLeft: 4,
+                            fontSize: 9,
+                            color: "var(--muted)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 3,
+                            padding: "0 3px",
+                          }}
+                          title={`Grammaticalisation stage ${st.stage} (${STAGE_LABEL[st.stage]}) — target ${st.targetCategory ?? "?"} (Phase 66 T1)`}
+                          data-testid={`gramm-badge-${meaning}`}
+                        >
+                          →{st.stage}
+                        </span>
+                      );
+                    })()}
                   </td>
                   {visibleLeaves.map((lid) => {
                     const key = `${lid}|${meaning}`;

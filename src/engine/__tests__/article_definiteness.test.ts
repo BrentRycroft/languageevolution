@@ -25,9 +25,13 @@ describe("Phase 65 T1 — article discourse-context gating", () => {
       script: "ipa",
     });
 
-    // Across the narrative there should be at least 1 indefinite "a"
-    // emission (first introduction of an entity) and at least 1
-    // definite "the" emission (subsequent mention).
+    // Phase 68b T7 strengthen: across an 8-line narrative we
+    // expect BOTH indefinite ("a") and definite ("the") emissions
+    // (the first mention of an entity is always indefinite, later
+    // mentions get definite). Pre-Phase-65 the engine emitted
+    // "the" for everything; the strengthened assertion is that
+    // BOTH article forms appear AND the indefinite count exceeds
+    // some minimum (entity introductions don't all collapse).
     let aCount = 0;
     let theCount = 0;
     for (const line of lines) {
@@ -37,8 +41,11 @@ describe("Phase 65 T1 — article discourse-context gating", () => {
         if (tok === "the") theCount++;
       }
     }
-    expect(aCount).toBeGreaterThanOrEqual(1);
+    expect(aCount).toBeGreaterThanOrEqual(2);
     expect(theCount).toBeGreaterThanOrEqual(1);
+    // Both article kinds present (Phase 65 T1's contract).
+    expect(aCount).toBeGreaterThan(0);
+    expect(theCount).toBeGreaterThan(0);
   });
 
   it("Romance preset (no articlePresence: free at start) emits no DETs initially", async () => {

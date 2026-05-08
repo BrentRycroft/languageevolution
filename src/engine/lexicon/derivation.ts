@@ -235,7 +235,16 @@ export function seedDerivationalSuffixes(
         affix,
         tag,
         category,
-        usageCount: 0,
+        // Phase 68b T4: bootstrap seed at usageCount = 1 (one prior
+        // attestation implied at language birth; this is the suffix's
+        // own seed entry). Without this the productivity gate is
+        // chicken-and-egg: tryProductiveDerivation only fires when
+        // a suffix is productive, but the suffix only becomes
+        // productive after PRODUCTIVITY_THRESHOLD (3) attestations.
+        // Default presets observed at gen 50 still showed
+        // "0/3 attestations" in UI. Now the third attestation
+        // promotes to productive.
+        usageCount: 1,
         productive: false,
       });
     }
