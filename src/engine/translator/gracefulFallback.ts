@@ -7,9 +7,6 @@ import type {
 } from "../types";
 import { fnv1a, makeRng } from "../rng";
 import { MECHANISM_COMPOUND } from "../genesis/mechanisms/compound";
-import { MECHANISM_DERIVATION } from "../genesis/mechanisms/derivation";
-import { MECHANISM_CLIPPING } from "../genesis/mechanisms/clipping";
-import { MECHANISM_BLENDING } from "../genesis/mechanisms/blending";
 import type { CoinageMechanism } from "../genesis/mechanisms/types";
 import { phonotacticFit } from "../genesis/phonotactics";
 import { otFit } from "../phonology/ot";
@@ -18,39 +15,36 @@ import { setLexiconForm } from "../lexicon/mutate";
 import { findWordByForm } from "../lexicon/word";
 
 /**
- * Phase 50 T3 + Phase 53 T1: graceful translator fallback.
+ * Phase 50 T3 + Phase 53 T1 + Phase 58.5: graceful translator
+ * fallback — compound-only.
  *
- * Coins a fresh form ONLY when it grounds in the language's existing
- * lexicon. Mechanisms enabled here all compose from existing lexemes:
+ * Pre-Phase-58.5 the fallback considered four mechanisms (compound,
+ * derivation, blending, clipping). The user reported that coining
+ * via DERIVATION produced "entirely different" surface forms when
+ * the affix-decomposition stem wasn't lexicalised — e.g. `undone`
+ * grounding to a random base + suffix because `done` (the stem
+ * parseEnglishAffix yielded) wasn't in the lang's lexicon.
  *
- *   - COMPOUND: takes two existing lemmas, concatenates their forms.
- *   - DERIVATION: takes an existing lemma, attaches one of the
- *     language's own derivational suffixes / morphemes.
- *   - BLENDING: takes two existing lemmas, splices overlapping segs.
- *   - CLIPPING: takes one existing long form, truncates it.
+ * Phase 58.5 narrows the policy: coining ONLY fires for compound-
+ * decomposable lemmas (two existing lexemes concatenated). The
+ * coined form is conservatively recorded as an "attestation" — a
+ * lexicon entry whose form is the literal concatenation of its
+ * parts; no productive-affix machinery is involved.
  *
- * Phase 53 T1 dropped IDEOPHONE — it generated from raw phoneme
- * inventory without any lexicon basis, which produced nonsense
- * coinages on every untranslatable input. The cost: when none of the
- * four lexicon-grounded mechanisms succeeds (e.g. empty lexicon,
- * lemma's stem isn't in the language), this returns null and the
- * caller emits the literal-quote fallback. Small lexicons therefore
- * see more `?` placeholders, by design.
+ * Words that don't compose-from-existing-lexemes get the literal-
+ * quote fallback. The synth-affix rungs (Phase 49) still fire
+ * BEFORE this rung when the lemma decomposes via prefix/suffix and
+ * the stem IS lexicalised — they don't write to lexicon, they just
+ * render. So `undone` against modern English (with `do` lexicalised)
+ * resolves via synth-neg-affix to un-do, not via fallback coinage.
  *
- * Determinism: the per-call RNG is seeded by `fnv1a(\`fallback|<id>|<lemma>\`)`,
- * so the same (language, lemma) pair always produces the same form.
- *
- * The mechanism is also expected to expose grounding evidence on its
- * `sources.partMeanings` field. We require at least one of those parts
- * to be in `lang.lexicon` — otherwise we treat the coinage as
- * ungrounded and reject it.
+ * Determinism: the per-call RNG is seeded by
+ * `fnv1a(\`fallback|<id>|<lemma>\`)`, so the same (language, lemma)
+ * pair always produces the same form.
  */
 
 const FALLBACK_MECHANISMS: ReadonlyArray<CoinageMechanism> = [
   MECHANISM_COMPOUND,
-  MECHANISM_DERIVATION,
-  MECHANISM_BLENDING,
-  MECHANISM_CLIPPING,
 ];
 
 export interface GracefulFallbackResult {

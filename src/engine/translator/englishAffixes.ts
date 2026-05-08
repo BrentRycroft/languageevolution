@@ -119,6 +119,68 @@ const DOUBLED_CONSONANT_TRIGGERS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Phase 53.5+: a stem like `done` (the past participle of `do`)
+ * isn't lexicalised on its own — the language stores `do`. When
+ * the affix-decomposition stem ends in a recognisable past-tense /
+ * past-participle / present-participle marker, we add the bare-root
+ * variant as an additional candidate so the synth path can find it.
+ *
+ * This is heuristic and small (covers the most common irregular
+ * patterns). It's NOT an exhaustive English morphology engine; it
+ * only widens the candidate set so synthesis can hit the language's
+ * actual lexicalised root for high-frequency irregulars (be, do,
+ * have, go, see, take, give, etc.).
+ */
+const IRREGULAR_PAST_PARTICIPLE_TO_ROOT: ReadonlyArray<[string, string]> = [
+  ["done", "do"],
+  ["been", "be"],
+  ["gone", "go"],
+  ["seen", "see"],
+  ["taken", "take"],
+  ["given", "give"],
+  ["known", "know"],
+  ["thrown", "throw"],
+  ["broken", "break"],
+  ["spoken", "speak"],
+  ["written", "write"],
+  ["chosen", "choose"],
+  ["fallen", "fall"],
+  ["risen", "rise"],
+  ["driven", "drive"],
+  ["eaten", "eat"],
+  ["stolen", "steal"],
+  ["forgotten", "forget"],
+  ["frozen", "freeze"],
+];
+
+function appendInflectionStrippedCandidates(stem: string, into: string[]): void {
+  // Irregular past-participle table.
+  for (const [participle, root] of IRREGULAR_PAST_PARTICIPLE_TO_ROOT) {
+    if (stem === participle && !into.includes(root)) into.push(root);
+  }
+  // Regular past tense / past participle: -ed.
+  if (stem.endsWith("ed") && stem.length > 3) {
+    const dropEd = stem.slice(0, -2);
+    if (!into.includes(dropEd)) into.push(dropEd);
+    // -ed often follows e.g. "bake" → "baked" (drop -d only).
+    const dropD = stem.slice(0, -1);
+    if (!into.includes(dropD)) into.push(dropD);
+  }
+  // -ing.
+  if (stem.endsWith("ing") && stem.length > 4) {
+    const dropIng = stem.slice(0, -3);
+    if (!into.includes(dropIng)) into.push(dropIng);
+    // verbs that drop final -e before -ing: bake → baking.
+    if (!into.includes(dropIng + "e")) into.push(dropIng + "e");
+  }
+  // -s plural / 3sg.
+  if (stem.endsWith("s") && stem.length > 2) {
+    const dropS = stem.slice(0, -1);
+    if (!into.includes(dropS)) into.push(dropS);
+  }
+}
+
+/**
  * Walk the suffix table greedy-longest-first; for each match where the
  * leftover stem is at least 2 chars, return immediately. The caller
  * tries each candidate stem in order against its lexicon — so we don't
@@ -127,6 +189,10 @@ const DOUBLED_CONSONANT_TRIGGERS: ReadonlySet<string> = new Set([
  * For doubled-consonant suffixes (-er, -ed, -est, -ing, -y) we also
  * emit the un-doubled stem candidate (`runner` → `runn`, `run`). The
  * caller resolves whichever candidate hits the lexicon.
+ *
+ * Phase 58+: also emit inflection-stripped candidates so prefix-affix
+ * forms like `undone` (un- + done) find the bare root `do` when
+ * `done` itself isn't lexicalised.
  */
 export function parseEnglishAffix(lemma: string): ParsedEnglishAffix | null {
   const lower = lemma.toLowerCase();
@@ -142,6 +208,7 @@ export function parseEnglishAffix(lemma: string): ParsedEnglishAffix | null {
     ) {
       candidateStems.push(stem.slice(0, -1));
     }
+    appendInflectionStrippedCandidates(stem, candidateStems);
     return {
       stem,
       candidateStems,
@@ -155,9 +222,11 @@ export function parseEnglishAffix(lemma: string): ParsedEnglishAffix | null {
     if (!lower.startsWith(entry.surface)) continue;
     const stem = lower.slice(entry.surface.length);
     if (stem.length < 2) continue;
+    const candidateStems = [stem];
+    appendInflectionStrippedCandidates(stem, candidateStems);
     return {
       stem,
-      candidateStems: [stem],
+      candidateStems,
       category: entry.category,
       position: entry.position,
       affixTag: entry.tag,
