@@ -5,10 +5,30 @@ import { stripTone, capToneStacking } from "./tone";
 import { isFormLegal } from "./wordShape";
 import { functionalLoadMap, phonemeFunctionalLoad } from "./functionalLoad";
 import { SWADESH_LIST } from "../semantics/lexicostat";
+import { areMeaningsRelated } from "../lexicon/word";
 
 const MAX_RARE_OCCURRENCES = 2;
 const MIN_INVENTORY_TO_PRUNE = 12;
 const LOW_LOAD_THRESHOLD = 0.05; // ≤5% homophone-creation rate is "low load"
+
+/**
+ * Phase 62: cap on how many NEW unrelated-meaning homonym pairs a
+ * single merger may create. The functional-load gate above
+ * (FL_INHIBIT_THRESHOLD) protects against generally high-load
+ * candidates, but a particular candidate→neighbour pairing can still
+ * collapse hundreds of contrasts even when the global load is low.
+ *
+ * User observation (gen-100 Romance probe): /b/→/d/ at gen 21 affected
+ * 967 words; subsequent /d/→/b/ at gen 84 affected 1185 words; words
+ * like "babeː" ended up as 4-way homonyms ("dog | bread | ship | if").
+ * Real diachronic mergers are blocked or chain-shifted when too many
+ * minimal pairs would collapse. This cap models that selection pressure.
+ *
+ * Tuning: max(8 absolute, 0.5% of lexicon) — for a 500-word lexicon,
+ * that's 8 new homonyms; for a 5000-word lexicon, 25.
+ */
+const HOMONYM_COLLISION_ABS_CAP = 8;
+const HOMONYM_COLLISION_REL_CAP = 0.005;
 
 /** Phase 48 D4-A: pairwise functional-load merger-inhibition gate.
  *  Loads above this threshold are subject to probabilistic rejection.
@@ -204,6 +224,64 @@ export function prunePhonemes(
     const inhibitP = Math.min(0.85, (pairwiseLoad - FL_INHIBIT_THRESHOLD) * FL_INHIBIT_GAIN);
     if (rng.chance(inhibitP)) {
       lang.functionalLoadInhibitions = (lang.functionalLoadInhibitions ?? 0) + 1;
+      return null;
+    }
+  }
+
+  // Phase 62: pre-flight homonym-collision count. Simulate the
+  // substitution against every candidate-bearing word and count how
+  // many would land on an existing form whose meaning is unrelated
+  // to the substituted word's meaning. Reject the merger when this
+  // exceeds HOMONYM_COLLISION_ABS_CAP or HOMONYM_COLLISION_REL_CAP,
+  // whichever is higher.
+  //
+  // Sound-change-induced homonymy is real and OK in moderation
+  // (English "to / too / two", "bear / bare"), but a single merger
+  // that creates hundreds of new homonyms is the runaway-merger
+  // failure mode that drove the user's complaint. This guards
+  // against it without blocking legitimate small-scale mergers.
+  {
+    const formKeyToMeanings: Map<string, string[]> = new Map();
+    for (const m of Object.keys(lang.lexicon)) {
+      const f = lang.lexicon[m]!;
+      const key = f.join("|");
+      if (!formKeyToMeanings.has(key)) formKeyToMeanings.set(key, []);
+      formKeyToMeanings.get(key)!.push(m);
+    }
+    let projectedCollisions = 0;
+    const collisionCap = Math.max(
+      HOMONYM_COLLISION_ABS_CAP,
+      Math.ceil(Object.keys(lang.lexicon).length * HOMONYM_COLLISION_REL_CAP),
+    );
+    for (const m of Object.keys(lang.lexicon)) {
+      const form = lang.lexicon[m]!;
+      let hasCand = false;
+      for (const raw of form) if (stripTone(raw) === candidate) { hasCand = true; break; }
+      if (!hasCand) continue;
+      const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+      if (freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) continue;
+      const projected: WordForm = form.map((raw) => {
+        const tone = raw.length > stripTone(raw).length ? raw.slice(stripTone(raw).length) : "";
+        const base = stripTone(raw);
+        return base === candidate ? capToneStacking(neighbour + tone) : raw;
+      });
+      const newKey = projected.join("|");
+      const existing = formKeyToMeanings.get(newKey);
+      if (!existing) continue;
+      // Walk the existing meanings on this surface: collision if any
+      // is a different lemma with an unrelated meaning.
+      for (const otherM of existing) {
+        if (otherM === m) continue;
+        if (!areMeaningsRelated(lang, m, otherM)) {
+          projectedCollisions++;
+          break;
+        }
+      }
+      if (projectedCollisions > collisionCap) break;
+    }
+    if (projectedCollisions > collisionCap) {
+      lang.functionalLoadInhibitions =
+        (lang.functionalLoadInhibitions ?? 0) + 1;
       return null;
     }
   }
