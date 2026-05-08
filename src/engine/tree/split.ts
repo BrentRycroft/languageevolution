@@ -199,6 +199,17 @@ export function splitLeaf(
       ablautClassAssignment: parentLang.ablautClassAssignment
         ? { ...parentLang.ablautClassAssignment }
         : undefined,
+      // Phase 66 T1: grammaticalization stage tracking inherited.
+      // Daughters continue the chain from the parent's state — Latin
+      // habere stage-2 in proto can fuse → stage 3 → loss in some
+      // daughters while staying stage 2 in others.
+      grammaticalizationStage: parentLang.grammaticalizationStage
+        ? Object.fromEntries(
+            Object.entries(parentLang.grammaticalizationStage).map(
+              ([k, v]) => [k, v ? { ...v } : v],
+            ),
+          )
+        : undefined,
       // Phase 34 Tranche 34a: daughters inherit the compound metadata.
       // After the split each daughter's compounds drift independently
       // (transparent ones recompose from the daughter's parts; fossilised

@@ -50,13 +50,19 @@ describe("morphology evolution", () => {
     expect(affix[0]).toBe("f");
   });
 
-  it("grammaticalization replaces a high-frequency short word with an affix", () => {
+  it("grammaticalization promotes a high-frequency short word to an affix at stage 2", () => {
     const lang = makeLang();
     const rng = makeRng("gram");
     const shift = maybeGrammaticalize(lang, rng, 1);
     expect(shift).not.toBeNull();
-    const remaining = Object.keys(lang.lexicon).length;
-    expect(remaining).toBeLessThan(2);
+    // Phase 66 T1: meaning stays in lexicon at reduced frequency;
+    // stage 2 marks it as bound. Subsequent gens advance to stage 3
+    // (fusion) and stage 4 (loss). The legacy assertion that the
+    // meaning was removed on first fire is no longer correct.
+    if (shift?.source) {
+      const m = shift.source.meaning;
+      expect(lang.grammaticalizationStage?.[m]?.stage).toBe(2);
+    }
     const categories = Object.keys(lang.morphology.paradigms);
     expect(categories.length).toBeGreaterThan(1);
   });

@@ -109,17 +109,97 @@ export function maybeGrammaticalize(
   };
   lang.morphology.paradigms[chosen.target] = pdm;
   const candidate = chosen.meaning;
-  // Phase 29 Tranche 1a: route through the lexicon mutation chokepoint
-  // so lang.words stays in sync (grammaticalisation removes the source
-  // meaning entirely; pre-1a the manual teardown left a stale word).
-  deleteMeaning(lang, candidate);
+
+  // Phase 66 T1: stage tracking. Pre-Phase-66 the meaning was
+  // deleted from the lexicon the moment its first grammaticalisation
+  // fired (line 115 `deleteMeaning(lang, candidate)`). That made
+  // chained pathways (Latin habere → aux → synthetic perfect →
+  // zero) impossible — the source vanished after step 1. Now we
+  // mark the meaning at stage 2 (bound affix, paradigm registered)
+  // but keep it in the lexicon at reduced frequency so subsequent
+  // calls to `progressGrammaticalizationChain` can advance it
+  // through stages 3 (fusion) and 4 (loss).
+  if (!lang.grammaticalizationStage) lang.grammaticalizationStage = {};
+  lang.grammaticalizationStage[candidate] = {
+    stage: 2,
+    targetCategory: chosen.target,
+    lastTransitionGen: 0, // caller patches via progressGrammaticalizationChain
+  };
+  // Reduce the surface form's frequency so its lexical use fades
+  // gradually (real grammaticalised verbs see steep frequency drop).
+  if (lang.wordFrequencyHints[candidate] !== undefined) {
+    lang.wordFrequencyHints[candidate] = Math.max(
+      0.1,
+      lang.wordFrequencyHints[candidate]! * 0.5,
+    );
+  }
   return {
     kind: "grammaticalization",
-    description: `"${candidate}" (${chosen.tag}) → ${chosen.target} ${pdm.position} /${chosen.form.join("")}/`,
+    description: `"${candidate}" (${chosen.tag}) → ${chosen.target} ${pdm.position} /${chosen.form.join("")}/ [stage 2]`,
     source: {
       meaning: candidate,
       pathway: chosen.tag,
       category: chosen.target,
+    },
+  };
+}
+
+/**
+ * Phase 66 T1: advance a meaning's grammaticalisation stage. Called
+ * once per gen per language; with low probability picks a stage-2
+ * meaning and advances it to stage 3 (fusion: form is reduced
+ * further, paradigm boundary blurs), or a stage-3 meaning to stage 4
+ * (the lexical entry is deleted). Models the canonical word→clitic→
+ * affix→fusion→loss chain across multiple gens.
+ */
+export function progressGrammaticalizationChain(
+  lang: Language,
+  rng: Rng,
+  generation: number,
+): MorphShift | null {
+  if (!lang.grammaticalizationStage) return null;
+  if (!rng.chance(0.04)) return null; // ~4% per gen ≈ 1 transition every 25 gens
+  const candidates: string[] = [];
+  for (const [m, st] of Object.entries(lang.grammaticalizationStage)) {
+    if (!st) continue;
+    if (st.stage < 2 || st.stage >= 4) continue;
+    if (generation - st.lastTransitionGen < 5) continue; // cooldown
+    candidates.push(m);
+  }
+  if (candidates.length === 0) return null;
+  const chosen = candidates[rng.int(candidates.length)]!;
+  const st = lang.grammaticalizationStage[chosen]!;
+  const newStage = (st.stage + 1) as 3 | 4;
+  st.stage = newStage;
+  st.lastTransitionGen = generation;
+
+  if (newStage === 3) {
+    // Fusion: the form's surface drops a phoneme (final-segment
+    // erosion). Lexicon form shrinks; the paradigm version is
+    // already affixed and stays.
+    const form = lang.lexicon[chosen];
+    if (form && form.length > 1) {
+      lang.lexicon[chosen] = form.slice(0, -1);
+    }
+    return {
+      kind: "grammaticalization",
+      description: `"${chosen}" → fused [stage 3] (form shortened to /${(lang.lexicon[chosen] ?? []).join("")}/)`,
+      source: {
+        meaning: chosen,
+        pathway: "chain-fusion",
+        category: st.targetCategory ?? "verb.tense.past",
+      },
+    };
+  }
+  // newStage === 4: total loss. Remove from lexicon entirely.
+  deleteMeaning(lang, chosen);
+  return {
+    kind: "grammaticalization",
+    description: `"${chosen}" → lost [stage 4] (lexical entry removed; paradigm continues)`,
+    source: {
+      meaning: chosen,
+      pathway: "chain-loss",
+      category: st.targetCategory ?? "verb.tense.past",
     },
   };
 }

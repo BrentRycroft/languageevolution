@@ -380,6 +380,29 @@ export interface Language {
    */
   ablautClassAssignment?: Record<Meaning, number>;
   /**
+   * Phase 66 T1: per-meaning grammaticalization stage tracking.
+   * Real chains (Latin habere → Romance aux → synthetic perfect →
+   * zero) progress across many gens. Pre-Phase-66 the engine deleted
+   * the source meaning the moment the first stage fired, so chains
+   * couldn't continue.
+   *
+   * Stages:
+   *   0 = independent open-class word
+   *   1 = clitic (phonologically reduced; tagged origin "clitic:...")
+   *   2 = bound affix (registered in lang.morphology.paradigms)
+   *   3 = fused with stem (paradigm boundary lost)
+   *   4 = fully absorbed / lost (form removed from lexicon)
+   *
+   * `targetCategory` records the morphological slot this meaning is
+   * grammaticalising INTO so progressive stages can target the same
+   * destination. `lastTransitionGen` is when the meaning last moved.
+   */
+  grammaticalizationStage?: Record<Meaning, {
+    stage: 0 | 1 | 2 | 3 | 4;
+    targetCategory?: import("./morphology/types").MorphCategory;
+    lastTransitionGen: number;
+  }>;
+  /**
    * Per-noun gender assignment when grammar.genderCount > 0.
    * Values are 0..(genderCount-1). Set lazily; missing entries get
    * heuristically assigned the first time they are needed.

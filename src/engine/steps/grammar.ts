@@ -9,6 +9,7 @@ import {
   maybeMergeParadigms,
   maybeCliticize,
   maybeAffixReplacement,
+  progressGrammaticalizationChain,
   maybeBackformation,
   maybeMoodEmergence,
   maybeSuppletion,
@@ -146,11 +147,30 @@ export function stepMorphology(
   proposeAblautEmergence(lang, rng, generation);
   decayAblautClasses(lang, generation);
 
+  // Phase 66 T1: progress already-grammaticalising meanings along
+  // the word→clitic→affix→fusion→loss chain. Operates AFTER the
+  // chain-starter `maybeGrammaticalize` so newly-promoted stage-2
+  // meanings have to wait until next gen to fuse / die.
+  const chainShift = progressGrammaticalizationChain(lang, rng, generation);
+  if (chainShift) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammaticalize",
+      description: chainShift.description,
+    });
+  }
+
   const gShift = maybeGrammaticalize(
     lang,
     rng,
     config.morphology.grammaticalizationProbability * lang.conservatism * gramMult,
   );
+  // Phase 66 T1: stamp the lastTransitionGen on the freshly-promoted
+  // stage-2 meaning so the cooldown in progressGrammaticalizationChain
+  // works correctly.
+  if (gShift?.source && lang.grammaticalizationStage?.[gShift.source.meaning]) {
+    lang.grammaticalizationStage[gShift.source.meaning]!.lastTransitionGen = generation;
+  }
   if (gShift) {
     pushEvent(lang, {
       generation,
