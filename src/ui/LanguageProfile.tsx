@@ -3,6 +3,7 @@ import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import { formatForm } from "../engine/phonology/display";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
+import { affixCoverageReport, affixCoverageScore } from "../engine/diagnostics/affixCoverage";
 import { topRegularCorrespondences } from "../engine/phonology/soundLaws";
 import { closedClassForm } from "../engine/translator/closedClass";
 import { selectSynonyms } from "../engine/lexicon/word";
@@ -243,6 +244,11 @@ export function LanguageProfile() {
       {lang.activeModules instanceof Set && lang.activeModules.size > 0 && (
         <Section title="Active modules">
           <ActiveModulesPanel lang={lang} />
+        </Section>
+      )}
+      {(lang.derivationalSuffixes ?? []).length > 0 && (
+        <Section title="Affix coverage">
+          <AffixCoveragePanel lang={lang} />
         </Section>
       )}
 
@@ -661,6 +667,61 @@ function ActiveModulesPanel({ lang }: { lang: import("../engine/types").Language
           </span>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Phase 59 / surfacing Phase 56 T3 affix-coverage diagnostic. Shows
+ * which DerivationCategory the language productively realises and
+ * which ones are absent — useful for spotting typological gaps and
+ * for understanding why a translator query might fall back to
+ * literal-quote (no productive affix in the requested category).
+ */
+function AffixCoveragePanel({ lang }: { lang: import("../engine/types").Language }) {
+  const report = affixCoverageReport(lang);
+  const score = affixCoverageScore(lang);
+  const categories = Object.values(report).sort((a, b) => {
+    if (a.productive !== b.productive) return a.productive ? -1 : 1;
+    if (a.present !== b.present) return a.present ? -1 : 1;
+    return a.category.localeCompare(b.category);
+  });
+  return (
+    <div>
+      <div className="t-muted" style={{ fontSize: "var(--fs-1)", marginBottom: 6 }}>
+        Productive coverage: {Math.round(score * 100)}% of {categories.length} categories
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+        {categories.map((c) => {
+          const status: "productive" | "present" | "absent" = c.productive
+            ? "productive"
+            : c.present
+              ? "present"
+              : "absent";
+          const colour =
+            status === "productive" ? "hsl(140 60% 45%)" :
+            status === "present" ? "hsl(40 60% 50%)" :
+            "var(--muted)";
+          return (
+            <span
+              key={c.category}
+              title={`${c.category}: ${status}${c.affixTags.length > 0 ? ` (${c.affixTags.join(", ")})` : ""}`}
+              style={{
+                fontSize: 10,
+                padding: "2px 6px",
+                borderRadius: 999,
+                border: `1px solid ${colour}`,
+                color: colour,
+                background: status === "productive" ? `${colour.replace(")", " / 0.18)")}` : "transparent",
+                textDecoration: status === "absent" ? "line-through" : "none",
+                opacity: status === "absent" ? 0.5 : 1,
+              }}
+            >
+              {c.category}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -195,6 +195,46 @@ export function ControlsPanel() {
           value={config.modes.semantics}
           onChange={(v) => updateModes({ semantics: v })}
         />
+        <Toggle
+          label="Contact + borrowing"
+          value={config.modes.contact}
+          onChange={(v) => updateModes({ contact: v })}
+        />
+        <Toggle
+          label="Variant volatility"
+          value={config.modes.volatility}
+          onChange={(v) => updateModes({ volatility: v })}
+        />
+        <Toggle
+          label="Areal sound-change diffusion"
+          value={config.modes.areal}
+          onChange={(v) => updateModes({ areal: v })}
+        />
+        <Toggle
+          label="Creolization"
+          value={config.modes.creolization}
+          onChange={(v) => updateModes({ creolization: v })}
+        />
+        <Toggle
+          label="Child-learner re-analysis"
+          value={config.modes.learner}
+          onChange={(v) => updateModes({ learner: v })}
+        />
+        <Toggle
+          label="Lexical obsolescence"
+          value={config.modes.obsolescence}
+          onChange={(v) => updateModes({ obsolescence: v })}
+        />
+        <Toggle
+          label="Taboo replacement"
+          value={config.modes.taboo}
+          onChange={(v) => updateModes({ taboo: v })}
+        />
+        <Toggle
+          label="Copula evolution"
+          value={config.modes.copula}
+          onChange={(v) => updateModes({ copula: v })}
+        />
       </Section>
 
       <details style={{ marginTop: 8 }}>
