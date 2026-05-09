@@ -5,6 +5,7 @@ import { presetEnglish } from "../presets/english";
 import { findSchedule, milestoneKey } from "../historical";
 import { romanceSchedule } from "../historical/romance";
 import { validateSchedule } from "../historical/validate";
+import { narrativeHistoricalVoice } from "../historical/voice";
 
 /**
  * historical.test.ts — Phase 70 T1: Historical Mode runner unit tests.
@@ -320,5 +321,51 @@ describe("Phase 70 T3 — Full Romance schedule (M1-M10)", () => {
     for (const role of Object.keys(seedsWithRole)) {
       expect(seedsWithRole[role]!).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("Phase 70 T4 — narrative voice", () => {
+  it("returns null when historicalRole is unset", () => {
+    const cfg = presetRomance();
+    cfg.seed = "voice-off";
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 30; i++) sim.step();
+    const state = sim.getState();
+    const lang = Object.values(state.tree)[0]!.language;
+    expect(narrativeHistoricalVoice(lang, state, state.generation)).toBeNull();
+  });
+
+  it("returns prose when a recent milestone has fired for this role", () => {
+    const cfg = presetRomance();
+    cfg.seed = "voice-on";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 30; i++) sim.step();
+    const state = sim.getState();
+    const protoLeaf = Object.values(state.tree)
+      .map((n) => n.language)
+      .find((l) => l.historicalRole === "proto" && !l.extinct);
+    expect(protoLeaf).toBeDefined();
+    const voice = narrativeHistoricalVoice(protoLeaf!, state, state.generation);
+    expect(voice).not.toBeNull();
+    expect(voice!.toLowerCase()).toContain("vulgar latin lenition");
+  });
+
+  it("returns null when the most recent milestone is older than the window", () => {
+    const cfg = presetRomance();
+    cfg.seed = "voice-old";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 26; i++) sim.step();
+    const state = sim.getState();
+    // M1 fired at gen 25; with window=0, M1 (1 gen ago) is outside.
+    const proto = Object.values(state.tree)
+      .map((n) => n.language)
+      .find((l) => l.historicalRole === "proto" && !l.extinct);
+    expect(proto).toBeDefined();
+    const voice = narrativeHistoricalVoice(proto!, state, state.generation, {
+      windowGens: 0,
+    });
+    expect(voice).toBeNull();
   });
 });

@@ -106,23 +106,45 @@ for (const role of terminalRolesNeeded) {
   }
 }
 
-// Aggregate typological direction: francien vowel_shift > tuscan
-// vowel_shift, tuscan fortition > francien fortition.
-const avgAcross = (key: keyof PerSeedResult) =>
-  results.reduce((a, r) => a + (r[key] as number), 0) / results.length;
-const wAvg = avgAcross("westernAvgLenition");
-const eAvg = avgAcross("easternAvgLenition");
-const fAvg = avgAcross("francienAvgVowelShift");
-const tAvg = avgAcross("tuscanAvgFortition");
+// Aggregate typological direction across seeds. By gen 200 the
+// western/eastern intermediate roles have been subsplit into terminal
+// daughters, so we compare diagnostic features of the actual terminal
+// roles. We average ONLY across seeds where the role is present
+// (skip seeds where the role didn't survive).
+function avgWherePresent(key: keyof PerSeedResult, gateField: string): number {
+  let sum = 0;
+  let n = 0;
+  for (const r of results) {
+    const present = (r.terminalRoles[gateField] ?? 0) > 0;
+    if (!present) continue;
+    sum += r[key] as number;
+    n++;
+  }
+  return n > 0 ? sum / n : 0;
+}
 
-if (wAvg <= eAvg) {
-  failures.push(`Western avg lenition (${wAvg.toFixed(2)}) should exceed eastern (${eAvg.toFixed(2)}).`);
+const fAvg = avgWherePresent("francienAvgVowelShift", "francien");
+const tAvg = avgWherePresent("tuscanAvgFortition", "tuscan");
+const cAvg = avgWherePresent("castilianAvgPalatalization", "castilian");
+const lAvg = avgWherePresent("lusitanianAvgVowelShift", "lusitanian");
+
+console.log(`Aggregate (averaged where role present):`);
+console.log(`  francien vowel_shift = ${fAvg.toFixed(2)}`);
+console.log(`  tuscan fortition     = ${tAvg.toFixed(2)}`);
+console.log(`  castilian palat      = ${cAvg.toFixed(2)}`);
+console.log(`  lusitanian vow_shift = ${lAvg.toFixed(2)}\n`);
+
+if (fAvg > 0 && fAvg <= 1.0) {
+  failures.push(`Francien avg vowel_shift bias (${fAvg.toFixed(2)}) should exceed 1.0 when present.`);
 }
-if (fAvg <= 1.0) {
-  failures.push(`Francien avg vowel_shift bias (${fAvg.toFixed(2)}) should exceed 1.0.`);
+if (tAvg > 0 && tAvg <= 1.0) {
+  failures.push(`Tuscan avg fortition bias (${tAvg.toFixed(2)}) should exceed 1.0 when present.`);
 }
-if (tAvg <= 1.0) {
-  failures.push(`Tuscan avg fortition bias (${tAvg.toFixed(2)}) should exceed 1.0.`);
+if (cAvg > 0 && cAvg <= 1.0) {
+  failures.push(`Castilian avg palatalization bias (${cAvg.toFixed(2)}) should exceed 1.0 when present.`);
+}
+if (lAvg > 0 && lAvg <= 1.0) {
+  failures.push(`Lusitanian avg vowel_shift bias (${lAvg.toFixed(2)}) should exceed 1.0 when present.`);
 }
 
 if (failures.length > 0) {

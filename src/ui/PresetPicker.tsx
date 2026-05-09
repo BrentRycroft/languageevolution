@@ -122,6 +122,27 @@ export function PresetPicker() {
     });
   };
 
+  // Phase 70 T4: intensity slider — STRUCTURAL (resets sim) because
+  // we keep the whole `historical` object in STRUCTURAL_FIELDS to
+  // avoid mid-run intensity changes that would partially apply nudges.
+  const onChangeIntensity = async (intensity: number) => {
+    if (intensity === (config.historical?.intensity ?? 1.0)) return;
+    const ok = await showConfirm({
+      title: `Set Historical Mode intensity to ${intensity.toFixed(1)}?`,
+      message:
+        "Intensity scales every milestone nudge. Changes reset the simulation to generation 0.",
+      confirmLabel: "Apply",
+      danger: true,
+    });
+    if (!ok) return;
+    updateConfig({
+      historical: {
+        scheduleId: currentScheduleId,
+        intensity,
+      },
+    });
+  };
+
   const onSave = () => {
     const label = savingLabel.trim();
     if (!label) return;
@@ -248,6 +269,31 @@ export function PresetPicker() {
                   ?.description
               }
             </div>
+          )}
+          {historicalOn && (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+              }}
+              title="Multiplier applied to every milestone nudge. 0=mode neutralised, 1=as-declared, 2=double effect."
+            >
+              <span style={{ minWidth: 60 }}>Intensity</span>
+              <input
+                type="range"
+                min={0}
+                max={2}
+                step={0.1}
+                value={config.historical?.intensity ?? 1.0}
+                onChange={(e) => onChangeIntensity(Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+              <span style={{ minWidth: 24, textAlign: "right" }}>
+                {(config.historical?.intensity ?? 1.0).toFixed(1)}×
+              </span>
+            </label>
           )}
         </div>
       )}
