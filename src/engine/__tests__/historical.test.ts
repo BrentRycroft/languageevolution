@@ -164,3 +164,92 @@ describe("Phase 70 T1 — Historical Mode (Latin → Romance)", () => {
     expect(true).toBe(true);
   });
 });
+
+describe("Phase 70 T2 — Italo-Western / Eastern Romance split (M2)", () => {
+  it("M2 split fires at gen 65 with western+eastern daughters", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-fire";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 70; i++) sim.step();
+    const state = sim.getState();
+    const evt = state.historicalEvents?.find(
+      (e) => e.label === "Italo-Western vs Eastern Romance",
+    );
+    expect(evt).toBeDefined();
+    expect(evt!.generation).toBe(65);
+    expect(evt!.kind).toBe("fired");
+  });
+
+  it("M2 produces matched western+eastern leaves; no proto-tagged leaves remain", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-pair";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 70; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    const westernLeaves = leaves.filter((l) => l.historicalRole === "western");
+    const easternLeaves = leaves.filter((l) => l.historicalRole === "eastern");
+    const protoLeaves = leaves.filter((l) => l.historicalRole === "proto");
+    expect(westernLeaves.length).toBeGreaterThan(0);
+    expect(easternLeaves.length).toBeGreaterThan(0);
+    expect(westernLeaves.length).toBe(easternLeaves.length);
+    expect(protoLeaves.length).toBe(0);
+  });
+
+  it("daughter nameHints applied: western='Proto-Western-Romance'", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-name";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 70; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    const westernLeaves = leaves.filter((l) => l.historicalRole === "western");
+    expect(westernLeaves.length).toBeGreaterThan(0);
+    for (const lang of westernLeaves) {
+      expect(lang.name).toBe("Proto-Western-Romance");
+    }
+  });
+
+  it("western daughters have higher lenition bias than eastern (initialBias applied)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-bias";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 66; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    const wAvg =
+      leaves
+        .filter((l) => l.historicalRole === "western")
+        .reduce((a, l) => a + (l.ruleBias?.lenition ?? 1), 0) /
+      Math.max(1, leaves.filter((l) => l.historicalRole === "western").length);
+    const eAvg =
+      leaves
+        .filter((l) => l.historicalRole === "eastern")
+        .reduce((a, l) => a + (l.ruleBias?.lenition ?? 1), 0) /
+      Math.max(1, leaves.filter((l) => l.historicalRole === "eastern").length);
+    expect(wAvg).toBeGreaterThan(eAvg);
+  });
+
+  it("M2 fires exactly once across many gens (idempotency)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-idem";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 90; i++) sim.step();
+    const events = sim.getState().historicalEvents ?? [];
+    const m2events = events.filter(
+      (e) => e.label === "Italo-Western vs Eastern Romance" && e.kind === "fired",
+    );
+    expect(m2events.length).toBe(1);
+  });
+});
