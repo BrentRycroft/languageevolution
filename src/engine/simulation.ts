@@ -47,6 +47,7 @@ import { stepTreeSplit, stepDeath, precomputeClosenessVector } from "./steps/tre
 import { stepTaboo } from "./steps/taboo";
 import { stepLearner } from "./steps/learner";
 import { stepArealTypology } from "./steps/arealTypology";
+import { stepHistorical } from "./steps/historical";
 import {
   computeTierCandidate,
   lexicalCapacity,
@@ -187,6 +188,12 @@ export function createSimulation(
         worldMap,
       });
     }
+
+    // Phase 70 T1: Historical Mode runner. Fires before stepVolatility
+    // so volatility upheavals seeded by milestones are picked up the
+    // same gen. No-op when config.historical?.scheduleId is unset —
+    // zero RNG draws preserves existing-run determinism.
+    timed("historical", () => stepHistorical(state, config, rng, nextGen));
 
     const leaves = leafIds(state.tree);
     const aliveAtStart = leaves.filter((id) => !state.tree[id]!.language.extinct);

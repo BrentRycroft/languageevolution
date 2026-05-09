@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSimStore } from "../state/store";
 import { PRESETS } from "../engine/presets";
+import { schedulesForPreset } from "../engine/historical";
 import {
   loadUserPresets,
   saveUserPreset,
@@ -20,11 +21,21 @@ import {
 export function PresetPicker() {
   const config = useSimStore((s) => s.config);
   const loadConfig = useSimStore((s) => s.loadConfig);
+  const updateConfig = useSimStore((s) => s.updateConfig);
   const showConfirm = useSimStore((s) => s.showConfirm);
 
   const [userPresets, setUserPresets] = useState<UserPreset[]>(() => loadUserPresets());
   const [savingLabel, setSavingLabel] = useState<string>("");
   const [showSave, setShowSave] = useState(false);
+
+  // Phase 70 T1: Historical Mode pathway availability for the
+  // currently-loaded preset. Empty list = no UI shown.
+  const availableSchedules = useMemo(
+    () => schedulesForPreset(config.preset),
+    [config.preset],
+  );
+  const historicalOn = !!config.historical?.scheduleId;
+  const currentScheduleId = config.historical?.scheduleId;
 
   // Refresh user presets on focus (cheap; localStorage is fast).
   useEffect(() => {
@@ -66,6 +77,49 @@ export function PresetPicker() {
       if (!ok) return;
       loadConfig(user.config);
     }
+  };
+
+  // Phase 70 T1: Historical Mode handlers. Toggling is structural —
+  // updateConfig flushes to STRUCTURAL_FIELDS and resets the tree.
+  const onToggleHistorical = async (next: boolean) => {
+    if (next && availableSchedules.length === 0) return;
+    if (next === historicalOn) return;
+    const ok = await showConfirm({
+      title: next ? "Enable Historical Mode?" : "Disable Historical Mode?",
+      message: next
+        ? "Resets the simulation and softly biases the run along a known historical pathway. The procedural engine still drives every change; the pathway only nudges weights."
+        : "Resets the simulation and removes all historical biasing.",
+      confirmLabel: next ? "Enable" : "Disable",
+      danger: true,
+    });
+    if (!ok) return;
+    if (next) {
+      updateConfig({
+        historical: {
+          scheduleId: availableSchedules[0]!.id,
+          intensity: 1.0,
+        },
+      });
+    } else {
+      updateConfig({ historical: undefined });
+    }
+  };
+
+  const onChangeSchedule = async (scheduleId: string) => {
+    if (scheduleId === currentScheduleId) return;
+    const ok = await showConfirm({
+      title: "Switch historical pathway?",
+      message: "Resets the simulation to generation 0.",
+      confirmLabel: "Switch",
+      danger: true,
+    });
+    if (!ok) return;
+    updateConfig({
+      historical: {
+        scheduleId,
+        intensity: config.historical?.intensity ?? 1.0,
+      },
+    });
   };
 
   const onSave = () => {
@@ -138,6 +192,65 @@ export function PresetPicker() {
         )}
       </select>
       <div style={{ fontSize: 11, color: "var(--muted)" }}>{currentDescription}</div>
+      {availableSchedules.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            padding: "6px 8px",
+            background: "var(--panel-2)",
+            border: "1px solid var(--border)",
+            borderRadius: 4,
+          }}
+        >
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
+              cursor: "pointer",
+            }}
+            title="Softly bias the run along a known historical pathway. Engine still picks stochastically."
+          >
+            <input
+              type="checkbox"
+              checked={historicalOn}
+              onChange={(e) => onToggleHistorical(e.target.checked)}
+            />
+            <span>Historical Mode</span>
+          </label>
+          {historicalOn && availableSchedules.length > 1 && (
+            <select
+              value={currentScheduleId ?? availableSchedules[0]!.id}
+              onChange={(e) => onChangeSchedule(e.target.value)}
+              style={{
+                fontSize: 11,
+                background: "var(--panel)",
+                color: "var(--text)",
+                border: "1px solid var(--border)",
+                borderRadius: 3,
+                padding: "3px 6px",
+              }}
+            >
+              {availableSchedules.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {historicalOn && (
+            <div style={{ fontSize: 10, color: "var(--muted)" }}>
+              {
+                availableSchedules.find((s) => s.id === currentScheduleId)
+                  ?.description
+              }
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {!showSave ? (
           <button

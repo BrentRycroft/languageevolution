@@ -207,6 +207,14 @@ export function splitLeaf(
       ablautClassAssignment: parentLang.ablautClassAssignment
         ? { ...parentLang.ablautClassAssignment }
         : undefined,
+      // Phase 70 T1: Historical Mode role inherited from parent.
+      // SplitMilestones (T2+) overwrite the role on each declared
+      // daughter; random splits keep the parent's role so the next
+      // bias milestone targeting that role still finds the lineage.
+      historicalRole: parentLang.historicalRole,
+      historicalRoleAssignedGen: parentLang.historicalRole
+        ? parentLang.historicalRoleAssignedGen
+        : undefined,
       // Phase 66 T1: grammaticalization stage tracking inherited.
       // Daughters continue the chain from the parent's state — Latin
       // habere stage-2 in proto can fuse → stage 3 → loss in some

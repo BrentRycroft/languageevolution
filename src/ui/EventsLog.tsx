@@ -38,6 +38,7 @@ const KIND_COLOR: Record<LanguageEvent["kind"], string> = {
   grammar_cascade: "#ffe580",
   phonologisation: "#a3c8ff",
   "paradigm-renewal": "#e0c3fc",
+  historical_milestone: "#ffd07a",
 };
 
 const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
@@ -62,6 +63,7 @@ const KIND_LABEL: Record<LanguageEvent["kind"], string> = {
   grammar_cascade: "cascade",
   phonologisation: "phonemicisation",
   "paradigm-renewal": "renewal",
+  historical_milestone: "history",
 };
 
 export function EventsLog() {
