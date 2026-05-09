@@ -253,3 +253,72 @@ describe("Phase 70 T2 — Italo-Western / Eastern Romance split (M2)", () => {
     expect(m2events.length).toBe(1);
   });
 });
+
+describe("Phase 70 T3 — Full Romance schedule (M1-M10)", () => {
+  it("Schedule passes validateSchedule with no issues", () => {
+    const issues = validateSchedule(romanceSchedule);
+    expect(issues).toEqual([]);
+  });
+
+  it("Schedule contains M1 through M10 in atGen order", () => {
+    const ms = romanceSchedule.milestones;
+    expect(ms.length).toBeGreaterThanOrEqual(10);
+    let lastAtGen = -Infinity;
+    for (const m of ms) {
+      expect(m.atGen).toBeGreaterThanOrEqual(lastAtGen);
+      lastAtGen = m.atGen;
+    }
+  });
+
+  it("Has milestones for every terminal Romance daughter role", () => {
+    const ms = romanceSchedule.milestones;
+    const terminalRoles = ["castilian", "lusitanian", "francien", "tuscan"];
+    for (const role of terminalRoles) {
+      const reachable = ms.some(
+        (m) =>
+          (m.kind === "split" && m.daughters.some((d) => d.role === role)) ||
+          (m.kind === "bias" && m.role === role),
+      );
+      expect(reachable, `terminal role "${role}" should be reachable`).toBe(true);
+    }
+  });
+
+  it("M3 (Western subsplit) fires at gen 100", () => {
+    const cfg = presetRomance();
+    cfg.seed = "t3-m3";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 105; i++) sim.step();
+    const evt = sim.getState().historicalEvents?.find(
+      (e) => e.label === "Western Romance subsplit" && e.kind === "fired",
+    );
+    expect(evt).toBeDefined();
+    expect(evt!.generation).toBe(100);
+  });
+
+  it("After 200 gens, all four expected terminal daughters appear (across seeds)", () => {
+    const seedsWithRole: Record<string, number> = {
+      castilian: 0,
+      lusitanian: 0,
+      francien: 0,
+      tuscan: 0,
+    };
+    for (const seed of ["t3a", "t3b"]) {
+      const cfg = presetRomance();
+      cfg.seed = seed;
+      cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+      const sim = createSimulation(cfg);
+      for (let i = 0; i < 200; i++) sim.step();
+      const leaves = Object.values(sim.getState().tree)
+        .filter((n) => n.childrenIds.length === 0)
+        .map((n) => n.language)
+        .filter((l) => !l.extinct);
+      for (const role of Object.keys(seedsWithRole)) {
+        if (leaves.some((l) => l.historicalRole === role)) seedsWithRole[role]!++;
+      }
+    }
+    for (const role of Object.keys(seedsWithRole)) {
+      expect(seedsWithRole[role]!).toBeGreaterThan(0);
+    }
+  });
+});
