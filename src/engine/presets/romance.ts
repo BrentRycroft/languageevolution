@@ -484,6 +484,11 @@ export function presetRomance(): SimulationConfig {
       // daughters' articles centuries later. Drift pathway can
       // re-introduce articles via grammaticalize step.
       wordOrder: "SVO",
+      // Phase 71a T2 (G4): Romance is uniformly nominative-accusative.
+      // Pre-71a this was unset and grammar drift could land daughters
+      // on erg-abs / split-S / tripartite (Lusitanian shipped erg-abs,
+      // Francien split-S in the Phase 70 diagnostic).
+      alignment: "nom-acc",
       articlePresence: "none",
       caseStrategy: "case",
       adjectivePosition: "pre",

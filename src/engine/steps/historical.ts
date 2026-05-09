@@ -53,6 +53,22 @@ function recordHistoricalEvent(
 }
 
 /**
+ * Phase 71a T1 (G1): clamp bounds for ruleBias / ruleWeight after a
+ * milestone multiplies onto the existing value. Pre-71a, M1+M2+M3+M7
+ * lenition factors compounded into Castilian `ruleBias.lenition = 11.73`,
+ * which produced unreadable phonological outputs. The clamps mirror
+ * the natural range that organic engine drift produces.
+ */
+const RULE_BIAS_MIN = 0.2;
+const RULE_BIAS_MAX = 4.0;
+const RULE_WEIGHT_MIN = 0.05;
+const RULE_WEIGHT_MAX = 12.0;
+
+function clamp(x: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, x));
+}
+
+/**
  * Apply a `BiasMilestone` to one already-tagged language. Multiplies
  * existing values; existing biases stack.
  */
@@ -73,7 +89,7 @@ function applyBiasMilestone(
     for (const [fam, factor] of Object.entries(m.ruleBias)) {
       const key = fam as RuleFamily;
       const current = lang.ruleBias[key] ?? 1;
-      lang.ruleBias[key] = current * scale(factor!);
+      lang.ruleBias[key] = clamp(current * scale(factor!), RULE_BIAS_MIN, RULE_BIAS_MAX);
     }
   }
   if (m.ruleWeight) {
@@ -81,7 +97,11 @@ function applyBiasMilestone(
     for (const [id, factor] of Object.entries(m.ruleWeight)) {
       const current = lang.changeWeights[id];
       if (current === undefined) continue;
-      lang.changeWeights[id] = current * scale(factor);
+      lang.changeWeights[id] = clamp(
+        current * scale(factor),
+        RULE_WEIGHT_MIN,
+        RULE_WEIGHT_MAX,
+      );
     }
   }
   if (m.categoryMomentum) {

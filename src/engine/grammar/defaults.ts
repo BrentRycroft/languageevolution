@@ -14,6 +14,13 @@ export const DEFAULT_GRAMMAR: GrammarFeatures = {
   pluralMarking: "affix",
   tenseMarking: "past",
   hasCase: true,
+  // Phase 71a T2 (G4): default alignment was previously unset, leaving
+  // GrammarFeatures.alignment undefined on every language. The drift
+  // step (grammar/evolve.ts:65-85) treated undefined as nom-acc for
+  // logic but never wrote it back, so probes saw `alignment:
+  // undefined` everywhere and any drift hop landed on a wrong value.
+  // Declaring the default explicitly anchors it.
+  alignment: "nom-acc",
   genderCount: 2,
   synthesisIndex: 2.0,
   fusionIndex: 0.5,
