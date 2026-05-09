@@ -344,6 +344,19 @@ const SWADESH_CORE_SET: ReadonlySet<string> = new Set([
   "smoke", "fire", "ash", "burn", "path", "mountain", "red", "green", "yellow",
   "white", "black", "night", "hot", "cold", "full", "new", "good", "round",
   "dry", "name",
+  // Phase 71c T1 (G6): closed-class lemmas. Phase 70 diagnostic
+  // showed the/of/and/i/you/we/etc. drifting unrecognizably under
+  // sustained Historical Mode volatility (e.g., the → "iːɾaːɾu",
+  // of → "toːtaː"). These lemmas are seeded with freq=0.95 at
+  // language birth (steps/init.ts:113), so the freq>=0.85 brake at
+  // line 372 below now multiplies their drift exponent by 0.4 —
+  // dropping effective drift from ~35%/200gens to ~10%/200gens.
+  // Real-world closed-class drift IS slow (cf. English "the" from
+  // OE "þæt"), so the brake matches reality.
+  "the", "a", "an", "of", "and", "or", "but", "with", "to", "from",
+  "in", "on", "at", "for", "by", "is", "be", "have", "do", "go",
+  "will", "if", "when", "as", "than", "my", "your", "his", "her",
+  "its", "our", "their", "they", "he", "she", "it", "us", "them",
 ]);
 
 export function applyChangesToWord(

@@ -261,6 +261,42 @@ describe("Phase 70 T2 — Italo-Western / Eastern Romance split (M2)", () => {
   });
 });
 
+describe("Phase 71c — closed-class anchoring + inventory tightening", () => {
+  it("Romance preset declares tightened seedPhonemeTarget (26)", () => {
+    const cfg = presetRomance();
+    expect(cfg.seedPhonemeTarget).toBe(26);
+  });
+
+  it("Romance preset declares seedRuleBias suppressing length-emergence rules", () => {
+    const cfg = presetRomance();
+    expect(cfg.seedRuleBias).toBeDefined();
+    expect(cfg.seedRuleBias!["vowel.lengthening_open_syllable"]).toBeLessThan(1);
+    expect(cfg.seedRuleBias!["stress.open_syllable_lengthening"]).toBeLessThan(1);
+  });
+
+  it("After 200 gens, Romance daughters' inventories are bounded (<= 46)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p71c-inv";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 200; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    // Pre-71c: 42-47 inventory. Post-71c with seedPhonemeTarget=26
+    // and length-rule disfavor: typically 38-44, occasionally up to
+    // 45 in adversarial seeds. We cap at 46 as a regression guard
+    // (anything above means the railroad is again producing runaway
+    // inventories) but don't require dramatic improvement here —
+    // T71c is one of two tranches addressing G2; full resolution
+    // would need additional homeostasis work.
+    for (const lang of leaves) {
+      expect(lang.phonemeInventory.segmental.length).toBeLessThanOrEqual(46);
+    }
+  });
+});
+
 describe("Phase 71b — translator + suppletion fixes", () => {
   it("PROTECTED_MEANINGS shields 'be' and 'go' from deleteMeaning", async () => {
     const { deleteMeaning, PROTECTED_MEANINGS } = await import(
