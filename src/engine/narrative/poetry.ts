@@ -21,6 +21,13 @@ export interface CandidateLine {
   text: string;
   /** English gloss for the comparison panel. */
   english: string;
+  /**
+   * Phase 72a T7: morphological gloss line (e.g., "wife—run.tense.past—fire").
+   * Pre-72a poetry mode dropped the gloss entirely; with this preserved
+   * through pickStanza, downstream callers (UI panels, snapshot tests)
+   * can render the gloss for poetry just like other genres.
+   */
+  gloss?: string;
 }
 
 export interface PoetryOptions {

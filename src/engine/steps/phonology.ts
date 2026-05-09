@@ -1,5 +1,6 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
 import { applyChangesToLexicon, sortByPriority } from "../phonology/apply";
+import { invalidateClosedClassCache } from "../translator/closedClass";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
 import { rateMultiplier, speakerFactor, isolationFactor, realismMultiplier } from "../phonology/rate";
@@ -151,6 +152,19 @@ export function stepPhonology(
     const next = Math.max(0.7, Math.min(1.3, cur + step));
     lang.naturalBiasOverride[cat] = next;
   }
+  // Phase 72a T3 (Contract C7 fix): purge expired categoryMomentum
+  // entries before any new boosts are seeded. Pre-72a, expired entries
+  // were skipped at read-time (apply.ts:485 checks `until` vs gen) but
+  // never deleted, so the map grew monotonically and bloated saves on
+  // long runs. Now we delete-on-expiry once per gen.
+  if (lang.categoryMomentum) {
+    for (const cat of Object.keys(lang.categoryMomentum)) {
+      const m = lang.categoryMomentum[cat]!;
+      if (generation >= m.until) {
+        delete lang.categoryMomentum[cat];
+      }
+    }
+  }
   const lexiconKeys = Object.keys(before);
   for (const change of changes) {
     if (lang.diffusionState[change.id] !== undefined) continue;
@@ -217,6 +231,11 @@ export function stepPhonology(
     _orderedChanges: orderedChanges,
   };
   lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
+  // Phase 72a T2 (Invariant 1 fix): closed-class forms are cached
+  // per-language; the cache silently goes stale when phonology rewrites
+  // lang.lexicon entries for the/of/and/i/etc. Invalidate here so the
+  // next translator/narrative call rebuilds from fresh lexicon state.
+  invalidateClosedClassCache(lang);
   // Phase 63: theme-stripping happens at inflect time off
   // `lang.grammar.verbThemes`. Themes are intentionally NOT pushed
   // through the global sound-change pipeline — Swadesh-protected

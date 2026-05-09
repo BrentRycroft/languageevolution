@@ -103,6 +103,19 @@ function synthesise(lang: Language, lemma: string): WordForm {
 
 const cache = new WeakMap<Language, Record<string, WordForm>>();
 
+/**
+ * Phase 72a T2 (Invariant 1 fix): invalidate the closed-class cache.
+ * The cache binds (lang, lemma) → form, but `lang.lexicon[lemma]`
+ * drifts every generation via `applyChangesToLexicon`. Pre-72a the
+ * cache was never invalidated, so the/of/and/i/etc. were rendered
+ * using stale forms after every sound change. Call this from
+ * `stepPhonology` (post-`applyChangesToLexicon`) and on lexicon
+ * mutation chokepoints (`setLexiconForm`, `deleteMeaning`).
+ */
+export function invalidateClosedClassCache(lang: Language): void {
+  cache.delete(lang);
+}
+
 export function closedClassTable(lang: Language): Record<string, WordForm> {
   const cached = cache.get(lang);
   if (cached) return cached;

@@ -411,6 +411,9 @@ function generatePoetryStanza(
       forms: composed.tokens.map((t) => t.targetForm).filter((f) => f.length > 0),
       text: composed.surface,
       english: composed.english,
+      // Phase 72a T7: compute gloss at candidate creation so it
+      // survives pickStanza meter/rhyme filtering.
+      gloss: morphologicalGloss(composed.tokens),
     });
     endTurn(ctx);
   }
@@ -422,7 +425,10 @@ function generatePoetryStanza(
   return stanza.map((s) => ({
     english: s.english,
     text: s.text,
-    gloss: "", // poetry mode doesn't render the morphological gloss line
+    // Phase 72a T7 (S5 fix): poetry mode now preserves the gloss.
+    // Pre-72a this was always "" — making poetry output useless for
+    // linguistic analysis (audit S5 critical finding).
+    gloss: s.gloss ?? "",
   }));
 }
 

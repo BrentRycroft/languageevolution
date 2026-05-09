@@ -38,6 +38,15 @@ import type {
 } from "../types";
 import type { RuleFamily } from "../phonology/generated-types";
 
+/**
+ * Phase 72a T4 (Contract C8 fix): bound on state.historicalEvents.
+ * Pre-72a the array was append-only — long runs (1000+ gens with
+ * frequent milestone re-evaluation) bloated saves. The TimelineChart
+ * UI only ever needs recent events (most recent ~100 milestones); a
+ * cap of 200 is comfortably above that.
+ */
+const HISTORICAL_EVENTS_CAP = 200;
+
 function recordHistoricalEvent(
   state: SimulationState,
   generation: number,
@@ -50,6 +59,10 @@ function recordHistoricalEvent(
   state.historicalEvents.push(
     reason ? { generation, label, role, kind, reason } : { generation, label, role, kind },
   );
+  // Drop oldest entries if cap exceeded (FIFO).
+  if (state.historicalEvents.length > HISTORICAL_EVENTS_CAP) {
+    state.historicalEvents.splice(0, state.historicalEvents.length - HISTORICAL_EVENTS_CAP);
+  }
 }
 
 /**

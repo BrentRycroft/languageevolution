@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSense, removeSynonymSense } from "./word";
 import { invalidateReverseLexCache } from "../translator/reverse";
+import { invalidateClosedClassCache } from "../translator/closedClass";
 
 /**
  * Phase 28a: single chokepoint for writing a form to the meaning-keyed
@@ -59,6 +60,10 @@ export function setLexiconForm(
   // only addSynonym / removeSynonymSense invalidated; primary-form
   // additions slipped past the cache.
   invalidateReverseLexCache(lang);
+  // Phase 72a T2 (Invariant 1 fix): also invalidate the closed-class
+  // cache. Mutating lexicon[lemma] for a closed-class lemma (the/of/and)
+  // would otherwise leave stale forms in the WeakMap.
+  invalidateClosedClassCache(lang);
 }
 
 /**
@@ -135,6 +140,10 @@ export function removeSynonym(
 ): void {
   removeSynonymSense(lang, meaning, form);
   invalidateReverseLexCache(lang);
+  // Phase 72a T2 (Invariant 1 fix): also invalidate the closed-class
+  // cache. Mutating lexicon[lemma] for a closed-class lemma (the/of/and)
+  // would otherwise leave stale forms in the WeakMap.
+  invalidateClosedClassCache(lang);
 }
 
 /**
@@ -190,4 +199,8 @@ export function deleteMeaning(lang: Language, meaning: Meaning): void {
   // future suppletive verb that isn't on the protected list.
   if (lang.suppletion) delete lang.suppletion[meaning];
   removeSense(lang, meaning);
+  // Phase 72a T2 (Invariant 1 fix): invalidate closed-class cache —
+  // deleting a closed-class lemma (rare via PROTECTED_MEANINGS but
+  // possible for non-protected entries) must clear cached forms.
+  invalidateClosedClassCache(lang);
 }

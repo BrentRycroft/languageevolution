@@ -985,7 +985,15 @@ function translateFragment(
     english,
     englishTokens,
     targetTokens,
-    arranged: targetTokens.map((t) => t.targetSurface).filter((s) => s.length > 0),
+    // Phase 72a T6 (S5 fix): drop "❝lemma❞" placeholder surfaces from
+    // the arranged output. Pre-72a, unresolved tokens emitted with
+    // smart quotes (line 954) leaked into the arranged form, looking
+    // like the language had ASCII words "abc" "xyz". The targetTokens
+    // array still carries the placeholder for the missing list to
+    // reference, but the joined output stays clean.
+    arranged: targetTokens
+      .map((t) => t.targetSurface)
+      .filter((s) => s.length > 0 && !(s.startsWith("“") && s.endsWith("”"))),
     missing,
     notes,
   };
