@@ -7,6 +7,8 @@ import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { lookupFormWithResolution } from "../lexicon/lookup";
+import { inflectCascade } from "../morphology/evolve";
+import type { MorphCategory } from "../morphology/types";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -965,12 +967,32 @@ function translateFragment(
           pendingArticle = null;
           pendingAffix = null;
         }
+        // Phase 72b T1 (S5 fix): apply tense morphology to V tokens in
+        // fragment mode. The tokenizer propagates AUX tense onto the
+        // following V token's `features.tense` (line 448), but pre-72b
+        // the fragment translator emitted bare verb forms — so
+        // "he didn't go" came out present-tense despite the past AUX.
+        // Now we run inflectCascade for the verb's tense category.
+        let glossSuffix = "";
+        if (tok.tag === "V" && tok.features?.tense) {
+          const tense = tok.features.tense;
+          const tenseCat: MorphCategory | null =
+            tense === "past" ? "verb.tense.past" :
+            tense === "future" ? "verb.tense.fut" : null;
+          if (tenseCat && lang.morphology.paradigms[tenseCat]) {
+            const cascade = inflectCascade(inflected, [tenseCat], lang, tok.lemma);
+            if (cascade.applied.length > 0) {
+              inflected = cascade.form;
+              glossSuffix = "." + tenseCat.replace("verb.", "");
+            }
+          }
+        }
         targetTokens.push({
           englishLemma: tok.lemma,
           englishTag: tok.tag,
           targetForm: inflected,
           targetSurface: inflected.join(""),
-          glossNote,
+          glossNote: glossNote + glossSuffix,
           resolution,
         });
       }

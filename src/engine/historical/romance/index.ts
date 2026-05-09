@@ -166,10 +166,16 @@ export const romanceSchedule: HistoricalSchedule = {
       ],
     },
     // ── M4: Iberian subsplit ───────────────────────────────────
-    // Phase 71d (G3+G5): re-pin hasCase=false / SVO / nom-acc on the
-    // terminal daughters. Between M3 (gen 100) and M4 (gen 130) the
-    // intermediate iberian leaf can drift these features back via
-    // procedural drift, so we anchor them explicitly at each tier.
+    // Phase 72b T4 (Theme F audit): trimmed grammarPatch. Pre-72b every
+    // terminal-role daughter re-patched hasCase/wordOrder/alignment,
+    // turning the schedule into a hard railroad. The audit recommended
+    // keeping patches only at the M2 (proto) and M3 (Western) splits,
+    // and trusting inheritance + lockWordOrderUntilGen for downstream
+    // tiers. Daughters now inherit from their M3 parent. If lifecycle
+    // drift between M3 (gen 100) and M4 (gen 130) flips features back,
+    // that's a known engine gap (per-feature lockUntilGen would fix it,
+    // deferred). We keep `lockWordOrderUntilGen` because it's cheap
+    // reinforcement (no Object.assign, just a timestamp).
     {
       kind: "split",
       atGen: 130,
@@ -181,12 +187,6 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old Castilian",
           initialBias: {
             ruleBias: { lenition: 1.3, palatalization: 1.4 },
-            grammarPatch: {
-              wordOrder: "SVO",
-              hasCase: false,
-              caseStrategy: "preposition",
-              alignment: "nom-acc",
-            },
             lockWordOrderUntilGen: 250,
           },
         },
@@ -195,12 +195,6 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old Portuguese",
           initialBias: {
             ruleBias: { vowel_shift: 1.4, deletion: 1.2 },
-            grammarPatch: {
-              wordOrder: "SVO",
-              hasCase: false,
-              caseStrategy: "preposition",
-              alignment: "nom-acc",
-            },
             lockWordOrderUntilGen: 250,
           },
         },
@@ -218,12 +212,6 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old French",
           initialBias: {
             ruleBias: { vowel_shift: 1.7, deletion: 1.5, vowel_reduction: 1.5 },
-            grammarPatch: {
-              wordOrder: "SVO",
-              hasCase: false,
-              caseStrategy: "preposition",
-              alignment: "nom-acc",
-            },
             lockWordOrderUntilGen: 250,
           },
         },
@@ -232,12 +220,6 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old Occitan",
           initialBias: {
             ruleBias: { vowel_shift: 1.2 },
-            grammarPatch: {
-              wordOrder: "SVO",
-              hasCase: false,
-              caseStrategy: "preposition",
-              alignment: "nom-acc",
-            },
             lockWordOrderUntilGen: 250,
           },
         },
@@ -259,12 +241,7 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old Tuscan",
           initialBias: {
             ruleBias: { fortition: 1.3, lenition: 0.7 },
-            grammarPatch: {
-              wordOrder: "SVO",
-              hasCase: false,
-              caseStrategy: "preposition",
-              alignment: "nom-acc",
-            },
+            // Phase 72b T4: grammarPatch trimmed (see M4 comment).
             lockWordOrderUntilGen: 250,
           },
         },

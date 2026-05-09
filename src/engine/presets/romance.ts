@@ -546,6 +546,21 @@ export function presetRomance(): SimulationConfig {
       "compensatory.medial_coda_lengthening": 0.4,
       "stress.open_syllable_lengthening": 0.4,
     },
+    // Phase 72b T2: Romance closed-class inventory (function words).
+    // Includes article candidates (the/a — derived from ille/illa later
+    // in the grammaticalisation cycle), conjunctions (and = et, or =
+    // aut, with = cum), prepositions (of = de, in/on = in), pronouns
+    // (i/you/we/they = ego/tu/nos/illī), copular forms. Latin/Romance
+    // had a specific inventory; matching the typological reality keeps
+    // the brake faithful instead of applying a universal English-shaped
+    // default. Drift on members is dampened ×0.3 (vs ×0.4 for content
+    // Swadesh) per apply.ts:387.
+    seedClosedClassInventory: new Set([
+      "the", "a", "an", "of", "and", "or", "but", "with", "to", "from",
+      "in", "on", "at", "for", "by", "is", "be", "have", "do", "go",
+      "if", "when", "as", "than", "my", "your", "his", "her", "its",
+      "our", "their", "they", "he", "she", "it", "us", "them",
+    ]),
     // Phase 46a-migration: Latin/Common Romance — SVO, case morphology,
     // subjunctive mood, T-V politeness. Articles emerge later via
     // grammaticalisation pathway (excluded at seed; Phase 33i/46d
