@@ -4,6 +4,14 @@ import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 import type { LanguageEvent } from "../types";
 
+/**
+ * rate_calibration.test.ts
+ *
+ * Test suite for: "rate calibration — 25 years per generation".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function countByKind(events: LanguageEvent[]): Record<string, number> {
   const out: Record<string, number> = {};
   for (const e of events) {

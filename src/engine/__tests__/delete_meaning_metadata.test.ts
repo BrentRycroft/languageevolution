@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { deleteMeaning } from "../lexicon/mutate";
 import type { Language, Phoneme } from "../types";
 
+/**
+ * delete_meaning_metadata.test.ts
+ *
+ * Test suite for: "Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function fakeLang(): Language {
   const m = "king";
   return {

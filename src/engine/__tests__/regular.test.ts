@@ -5,6 +5,14 @@ import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
 
+/**
+ * regular.test.ts
+ *
+ * Test suite for: "regular (Neogrammarian) sound change".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(): Language {
   return {
     id: "L-0",

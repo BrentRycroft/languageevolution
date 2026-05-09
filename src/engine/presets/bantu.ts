@@ -2,6 +2,14 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
+/**
+ * bantu.ts
+ *
+ * Built-in language seeds (PIE, Germanic, Romance, Bantu, Toki Pona, English). Key exports: presetBantu.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const LEXICON: Lexicon = {
   water: ["m", "a", "ɲ", "i"],
   fire: ["m", "u", "l", "i", "l", "o"],

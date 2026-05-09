@@ -8,6 +8,14 @@ import {
   isIntervocalic,
 } from "../phonology/features";
 
+/**
+ * features.test.ts
+ *
+ * Test suite for: "phonology/features".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("phonology/features", () => {
   it("classifies core stops, fricatives, nasals, and vowels", () => {
     expect(PHONE_FEATURES.p).toMatchObject({ type: "consonant", manner: "stop", voice: false });

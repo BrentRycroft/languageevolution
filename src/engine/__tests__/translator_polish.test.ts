@@ -3,6 +3,14 @@ import { translateSentence } from "../translator/sentence";
 import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
 
+/**
+ * translator_polish.test.ts
+ *
+ * Test suite for: "translator polish — predicate adjectives".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function pieLang() {
   const sim = createSimulation(presetPIE());
   sim.step();

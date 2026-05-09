@@ -31,6 +31,14 @@ import { activateModule, deactivateModule } from "../modules/registry";
 import { wordOrderModuleId, WORD_ORDER_MODULE_IDS } from "../modules/syntactical";
 import { isFeatureActive } from "../modules/legacyGate";
 
+/**
+ * grammar.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepGrammar, stepMorphology.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function stepGrammar(
   lang: Language,
   config: SimulationConfig,

@@ -1,5 +1,13 @@
 import { useSimStore } from "../state/store";
 
+/**
+ * ActivityHeatmap.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: ActivityHeatmap.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function ActivityHeatmap() {
   const history = useSimStore((s) => s.activityHistory);
   if (history.length === 0) return null;

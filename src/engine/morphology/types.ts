@@ -1,5 +1,13 @@
 import type { Phoneme } from "../primitives";
 
+/**
+ * types.ts
+ *
+ * Morphological paradigms, suppletion, gender, analogical levelling, ablaut, runtime productive derivation. Key exports: MorphCategory, StemShape, InflectionClass.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type MorphCategory =
   | "noun.case.nom"
   | "noun.case.acc"

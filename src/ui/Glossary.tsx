@@ -1,4 +1,12 @@
 
+/**
+ * Glossary.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: Glossary.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface Entry {
   name: string;
   description: string;

@@ -18,6 +18,14 @@ import type { DiscourseGenre } from "../engine/narrative/discourse";
 import { traceEtymology } from "../engine/translator/cognates";
 import { EmptyState } from "./components/EmptyState";
 
+/**
+ * CompareView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: CompareView, narrativeToMarkdown.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 type CompareMode = "lexicon" | "narrative" | "cognate";
 
 function lexicalSimilarity(

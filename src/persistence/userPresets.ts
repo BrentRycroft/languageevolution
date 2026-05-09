@@ -1,5 +1,13 @@
 import type { SimulationConfig } from "../engine/types";
 
+/**
+ * userPresets.ts
+ *
+ * Save format, autosave, schema migrations, user presets, export. Key exports: UserPreset, loadUserPresets, saveUserPreset.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const KEY = "lev-user-presets-v1";
 
 function safeGet(): string | null {

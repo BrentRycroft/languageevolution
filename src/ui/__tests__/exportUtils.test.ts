@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { csvEscape, toCsv, slugForFile } from "../exportUtils";
 
+/**
+ * exportUtils.test.ts
+ *
+ * Test suite for: "csvEscape".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("csvEscape", () => {
   it("returns plain values unchanged when they have no special chars", () => {
     expect(csvEscape("hello")).toBe("hello");

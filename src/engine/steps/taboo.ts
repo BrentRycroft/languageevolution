@@ -4,6 +4,14 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { isFeatureActive } from "../modules/legacyGate";
 
+/**
+ * taboo.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepTaboo.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function stepTaboo(
   lang: Language,
   config: SimulationConfig,

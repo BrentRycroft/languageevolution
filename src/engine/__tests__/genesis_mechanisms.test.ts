@@ -5,6 +5,14 @@ import { MECHANISMS } from "../genesis/mechanisms";
 import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
 
+/**
+ * genesis_mechanisms.test.ts
+ *
+ * Test suite for: "genesis mechanisms".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("genesis mechanisms", () => {
   it("catalog registers all expected mechanism ids", () => {
     const ids = new Set(MECHANISMS.map((m) => m.id));

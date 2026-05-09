@@ -3,6 +3,14 @@ import type { Rng } from "../rng";
 import { isVowel, isConsonant } from "./ipa";
 import { stripTone } from "./tone";
 
+/**
+ * ot.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: OtConstraint, OT_CONSTRAINTS, OT_CONSTRAINTS_BY_ID.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface OtConstraint {
   id: string;
   label: string;

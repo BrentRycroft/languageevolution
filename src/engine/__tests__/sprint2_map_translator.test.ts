@@ -18,6 +18,14 @@ import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import type { Language, LanguageTree } from "../types";
 
+/**
+ * sprint2_map_translator.test.ts
+ *
+ * Test suite for: "§C — geo / map module".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function bareLang(id: string, overrides: Partial<Language> = {}): Language {
   return {
     id,

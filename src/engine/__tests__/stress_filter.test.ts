@@ -3,6 +3,14 @@ import type { SoundChange, WordForm } from "../types";
 import { applyChangesToWord } from "../phonology/apply";
 import { makeRng } from "../rng";
 
+/**
+ * stress_filter.test.ts
+ *
+ * Test suite for: "stress-filter short-circuit in apply.ts".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeProbeRule(
   id: string,
   filter: SoundChange["stressFilter"],

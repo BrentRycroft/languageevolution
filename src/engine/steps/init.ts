@@ -224,6 +224,13 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   seedNativeProvenance(rootLang);
+  // Phase 70 T1: tag the proto-language so Historical Mode milestones
+  // targeting role "proto" find a leaf to nudge. Skipped when
+  // Historical Mode is off — leaves the field undefined.
+  if (config.historical?.scheduleId) {
+    rootLang.historicalRole = "proto";
+    rootLang.historicalRoleAssignedGen = 0;
+  }
   // Phase 29 Tranche 5k: pour synthesised closed-class lemmas into
   // the lexicon at language birth so they participate in phonology
   // like any other word. Pre-fix the closedClassForm() machinery

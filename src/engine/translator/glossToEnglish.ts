@@ -1,5 +1,13 @@
 import type { TranslatedToken } from "./sentence";
 
+/**
+ * glossToEnglish.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: ReverseOptions, glossToEnglish.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const IRREGULAR_PAST: Record<string, string> = {
   be: "was",
   have: "had",

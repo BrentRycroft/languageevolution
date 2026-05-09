@@ -5,6 +5,14 @@ import { isFormLegal } from "../phonology/wordShape";
 import { isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm } from "../lexicon/mutate";
 
+/**
+ * analogy.ts
+ *
+ * Morphological paradigms, suppletion, gender, analogical levelling, ablaut, runtime productive derivation. Key exports: AnalogyEvent, maybeAnalogicalLevel.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface AnalogyEvent {
   meaning: string;
   from: string;

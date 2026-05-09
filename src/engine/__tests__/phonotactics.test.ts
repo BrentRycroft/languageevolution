@@ -16,6 +16,14 @@ import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";
 import type { Language } from "../types";
 
+/**
+ * phonotactics.test.ts
+ *
+ * Test suite for: "Phase 27a — phonotactic primitives".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const STRICT_CV: PhonotacticProfile = {
   maxOnset: 1,
   maxCoda: 0,

@@ -7,6 +7,14 @@ import { Z } from "./zIndex";
 import { speakForm, ttsAvailable } from "./audio";
 import { ScriptPicker } from "./ScriptPicker";
 
+/**
+ * ReproduceForm.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: ReproduceForm.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface Props {
   langId: string;
   meaning: string;

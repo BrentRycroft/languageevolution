@@ -6,6 +6,14 @@ import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * sandhi.test.ts
+ *
+ * Test suite for: "Phase 29 Tranche 5g — tone sandhi".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshTonalLang(): Language {
   const sim = createSimulation(presetEnglish());
   const lang = sim.getState().tree[sim.getState().rootId]!.language;

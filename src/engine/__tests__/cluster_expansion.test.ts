@@ -11,6 +11,14 @@ import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
 
+/**
+ * cluster_expansion.test.ts
+ *
+ * Test suite for: "§H.1 — cluster lookups span the expanded registry".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("§H.1 — cluster lookups span the expanded registry", () => {
   it("clusterOf resolves BASIC_240 meanings via the curated table", () => {
     expect(clusterOf("water")).toBeDefined();

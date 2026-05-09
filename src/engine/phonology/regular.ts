@@ -2,6 +2,14 @@ import type { Language, Lexicon, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isFormLegal } from "./wordShape";
 
+/**
+ * regular.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: applyOneRegularChange.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function applyOneRegularChange(
   lang: Language,
   changes: SoundChange[],

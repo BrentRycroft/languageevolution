@@ -8,6 +8,14 @@ import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
 import type { Language, Lexicon } from "../types";
 
+/**
+ * sociolinguistic.test.ts
+ *
+ * Test suite for: "agent-based actuation via social contagion".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
   return {
     id: "L-s",

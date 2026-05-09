@@ -12,6 +12,14 @@ import { featuresOf, shiftHeight } from "./features";
 import { markednessOf } from "./markedness";
 import { repairOutputMapByFeatures } from "./featureGeometry";
 
+/**
+ * propose.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: DEFAULT_RULE_BIAS, ProposeOptions, proposeOneRule.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const INITIAL_STRENGTH = 0.3;
 const DEATH_STRENGTH = 0.04;
 const MAX_DORMANT_GENERATIONS = 60;

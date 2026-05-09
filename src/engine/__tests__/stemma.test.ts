@@ -5,6 +5,14 @@ import type { GeneratedRule } from "../phonology/generated";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 
+/**
+ * stemma.test.ts
+ *
+ * Test suite for: "analysis/stemma".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function mockRule(tpl: string): GeneratedRule {
   return {
     id: `mock.${tpl}`,

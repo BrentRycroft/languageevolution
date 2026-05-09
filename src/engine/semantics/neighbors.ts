@@ -1,3 +1,11 @@
+/**
+ * neighbors.ts
+ *
+ * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: SEMANTIC_NEIGHBORS, neighborsOf.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   hand: ["arm", "finger", "palm"],
   foot: ["leg", "toe", "step"],

@@ -7,6 +7,14 @@ import {
 } from "../phonology/generated";
 import { makeRng } from "../rng";
 
+/**
+ * generated.test.ts
+ *
+ * Test suite for: "phonology/generated".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function rule(overrides: Partial<GeneratedRule> = {}): GeneratedRule {
   return {
     id: "L-0.g0.lenition.stops_to_fricatives_intervocalic",

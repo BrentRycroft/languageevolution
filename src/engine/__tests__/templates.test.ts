@@ -6,6 +6,14 @@ import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 
+/**
+ * templates.test.ts
+ *
+ * Test suite for: "phonology/templates".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function lang(inv: string[]): Language {
   return {
     id: "L-0",

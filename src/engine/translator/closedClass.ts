@@ -2,6 +2,14 @@ import type { Language, WordForm } from "../types";
 import { fnv1a } from "../rng";
 import { isFeatureActive } from "../modules/legacyGate";
 
+/**
+ * closedClass.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: ClosedClassLemma, CLOSED_CLASS_LEMMAS, closedClassTable.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type ClosedClassLemma =
   | "the" | "a"
   | "in" | "on" | "at" | "to" | "from" | "by" | "with" | "for" | "of"

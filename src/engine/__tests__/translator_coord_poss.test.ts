@@ -3,6 +3,14 @@ import { translateSentence } from "../translator/sentence";
 import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
 
+/**
+ * translator_coord_poss.test.ts
+ *
+ * Test suite for: "translator polish — possessive ".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function pieLang() {
   const sim = createSimulation(presetPIE());
   sim.step();

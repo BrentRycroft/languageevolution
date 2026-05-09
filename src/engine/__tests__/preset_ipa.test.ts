@@ -5,6 +5,14 @@ import {
   summarizePresetIssues,
 } from "../presets/validatePreset";
 
+/**
+ * preset_ipa.test.ts
+ *
+ * Test suite for: "preset IPA conformance".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("preset IPA conformance", () => {
   for (const preset of PRESETS) {
     it(`${preset.id}: every phoneme is in PHONE_FEATURES`, () => {

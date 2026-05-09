@@ -1,3 +1,11 @@
+/**
+ * audio.ts
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: speakForm, ttsAvailable.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function speakForm(form: string, opts: { rate?: number; pitch?: number } = {}): void {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   const text = form.trim();

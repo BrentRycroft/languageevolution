@@ -4,6 +4,14 @@ import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 import { rateMultiplier } from "../phonology/rate";
 
+/**
+ * stagnation.test.ts
+ *
+ * Test suite for: "stagnation resistance".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("stagnation resistance", () => {
   it("across 400 generations, leaves log many phonological events (no flat-lining)", () => {
     const cfg = defaultConfig();

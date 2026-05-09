@@ -19,6 +19,31 @@ import { markednessDelta } from "./markedness";
 import type { Language } from "../types";
 
 /**
+ * apply.ts — sound-change application engine. THIS IS THE HOT PATH.
+ *
+ * `applyChangesToLexicon(lexicon, changes, rng, opts)` is called once
+ * per leaf per generation by `stepPhonology`. It walks every meaning
+ * in the lexicon, then for each meaning walks every active rule (in
+ * priority order), rolling probability via Wang-style sigmoid +
+ * frequency tilt + erosion resistance + OT fit + markedness gate +
+ * homonym-collision check + stress-class filter. This is W × R × A
+ * work — typically W=750-1500, R=20-50, A=1-3 substitutions; about
+ * 65-80% of total step time.
+ *
+ * Phase 69a T1 hoisted `sortByPriority(changes)` out to the caller
+ * (stepPhonology) so it runs once per gen instead of once per leaf.
+ * Pass the result via `opts._orderedChanges`.
+ *
+ * The Phase 67 T1 stress-effect boost (1.2× for deletion/vowel rules
+ * when stressPattern is fixed) is applied per-rule per-word at
+ * line ~390.
+ *
+ * Phase 24+ erosion resistance: rules in `EROSIVE_CATEGORIES` are
+ * dampened as words approach a floor length so we don't reduce
+ * everything to monosyllables.
+ */
+
+/**
  * Phase 24: rule categories that net-shrink or weaken a word. Soft
  * erosion resistance dampens the firing rate of rules in this set as
  * the word approaches its floor length. Non-erosive categories (vowel

@@ -3,6 +3,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 
+/**
+ * soft_cap.test.ts
+ *
+ * Test suite for: "soft-cap death pressure".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("soft-cap death pressure", () => {
   it("aliveLeaves stay near maxLeaves over a long run (does not balloon)", () => {
     const cfg = defaultConfig();

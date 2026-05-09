@@ -1,5 +1,13 @@
 import type { Language } from "../types";
 
+/**
+ * wordOrder.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: sliceOrder.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function sliceOrder(
   wo: Language["grammar"]["wordOrder"],
 ): Array<"S" | "V" | "O"> {

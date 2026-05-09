@@ -1,5 +1,13 @@
 import type { SimulationConfig } from "../types";
 
+/**
+ * speed.ts
+ *
+ * Built-in language seeds (PIE, Germanic, Romance, Bantu, Toki Pona, English). Key exports: EvolutionSpeedProfile, EVOLUTION_SPEEDS, findEvolutionSpeed.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface EvolutionSpeedProfile {
   id: string;
   label: string;

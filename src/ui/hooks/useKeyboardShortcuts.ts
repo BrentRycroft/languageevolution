@@ -2,6 +2,14 @@ import { useEffect } from "react";
 import { useSimStore } from "../../state/store";
 import { TABS, type TabId } from "../tabs";
 
+/**
+ * useKeyboardShortcuts.ts
+ *
+ * Reusable React hooks. Key exports: useKeyboardShortcuts.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface Options {
   playing: boolean;
   togglePlay: () => void;

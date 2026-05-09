@@ -8,6 +8,14 @@ import type {
 } from "../types";
 import type { Morphology } from "../morphology/types";
 
+/**
+ * clone.ts
+ *
+ * Generic helpers (cloning, sampling). Key exports: cloneLexicon, cloneGrammar, cloneMorphology.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function cloneLexicon(lex: Lexicon): Lexicon {
   const out: Lexicon = {};
   for (const m of Object.keys(lex)) out[m] = lex[m]!.slice();

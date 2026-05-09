@@ -16,6 +16,14 @@ import { formatForm } from "../engine/phonology/display";
 import { leafIds } from "../engine/tree/split";
 import { RulesTimeline } from "./RulesTimeline";
 
+/**
+ * TimelineChart.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: TimelineChart.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const COLORS = ["#7cc4ff", "#ffcc66", "#c88dff", "#7be07b", "#ff8a9a", "#5fd6c5", "#ff9f5a", "#b8a4ff"];
 
 export function TimelineChart() {

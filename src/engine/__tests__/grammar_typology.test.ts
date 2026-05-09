@@ -6,6 +6,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import type { Language } from "../types";
 
+/**
+ * grammar_typology.test.ts
+ *
+ * Test suite for: "§1.2 — expanded POS taxonomy".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("§1.2 — expanded POS taxonomy", () => {
   it("tags articles, determiners, prepositions, conjunctions distinctly", () => {
     expect(posOf("the")).toBe("article");

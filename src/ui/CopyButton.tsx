@@ -1,5 +1,13 @@
 import { useState, useCallback } from "react";
 
+/**
+ * CopyButton.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: CopyButton.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface CopyButtonProps {
   /**
    * The text to copy. Can be a string or a thunk that produces the string

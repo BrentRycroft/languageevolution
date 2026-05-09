@@ -9,6 +9,14 @@ import type {
   Number_,
 } from "./syntax";
 
+/**
+ * parse.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: parseSyntax, parseSyntaxAll.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   let leadingConj: { lemma: string } | undefined;
   if (tokens.length > 0 && tokens[0]!.tag === "CONJ") {

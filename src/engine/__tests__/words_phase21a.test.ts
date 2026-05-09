@@ -16,6 +16,14 @@ import { migrateSavedRun, LATEST_SAVE_VERSION } from "../../persistence/migrate"
 import { defaultConfig } from "../config";
 import type { Language, SavedRun, SimulationState } from "../types";
 
+/**
+ * words_phase21a.test.ts
+ *
+ * Test suite for: "Phase 21a — Word/WordSense data model".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",

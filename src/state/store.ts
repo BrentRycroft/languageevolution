@@ -23,6 +23,14 @@ import {
   clearAutosave,
 } from "../persistence/autosave";
 
+/**
+ * store.ts
+ *
+ * Zustand store + history / activity recording. Key exports: PersistenceNotice, ConfirmRequest, useSimStore.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface PersistenceNotice {
   kind: "quota" | "future-version" | "corrupt" | "migration-failed" | "save-error";
   message: string;
@@ -543,6 +551,11 @@ export const useSimStore = create<SimStore>((set, get) => ({
       "mapMode",
       "originCellId",
       "yearsPerGeneration",
+      // Phase 70 T1: Historical Mode toggling rewrites the proto's
+      // historicalRole tag and resets firedHistoricalMilestones.
+      // Mid-run pathway changes would invalidate already-fired
+      // milestones, so treat the whole `historical` field as structural.
+      "historical",
     ];
     const isStructural = (Object.keys(patch) as Array<keyof SimulationConfig>).some(
       (k) => STRUCTURAL_FIELDS.includes(k),

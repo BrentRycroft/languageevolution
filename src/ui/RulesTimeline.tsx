@@ -2,6 +2,14 @@ import { useMemo } from "react";
 import { useSimStore } from "../state/store";
 import type { GeneratedRule } from "../engine/phonology/generated";
 
+/**
+ * RulesTimeline.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: RulesTimeline.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const FAMILY_COLORS: Record<string, string> = {
   lenition: "#7cc4ff",
   fortition: "#ffcc66",

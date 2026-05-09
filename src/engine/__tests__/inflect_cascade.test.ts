@@ -3,6 +3,14 @@ import { inflectCascade } from "../morphology/evolve";
 import type { Language } from "../types";
 import type { MorphCategory } from "../morphology/types";
 
+/**
+ * inflect_cascade.test.ts
+ *
+ * Test suite for: "inflectCascade".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(opts: Partial<Language> = {}): Language {
   return {
     id: "L-c",

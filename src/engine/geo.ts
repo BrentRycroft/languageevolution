@@ -1,6 +1,14 @@
 import type { LanguageTree, SimulationState } from "./types";
 import { fnv1a } from "./rng";
 
+/**
+ * geo.ts
+ *
+ * geographic distance + nearest-neighbour helpers (the world map itself lives in geo/). Key exports: GeoPosition, computeGeoLayout, geoDistance.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface GeoPosition {
   x: number;
   y: number;

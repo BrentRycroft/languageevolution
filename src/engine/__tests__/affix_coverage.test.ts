@@ -3,6 +3,14 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { affixCoverageReport, affixCoverageScore } from "../diagnostics/affixCoverage";
 
+/**
+ * affix_coverage.test.ts
+ *
+ * Test suite for: "Phase 56 T3 — affix coverage diagnostic".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 56 T3 — affix coverage diagnostic", () => {
   it("returns an entry for every DerivationCategory", () => {
     const sim = createSimulation(presetEnglish());

@@ -4,6 +4,14 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 
+/**
+ * templatic_genesis.test.ts
+ *
+ * Test suite for: "Phase 55 T1 — templatic (root + pattern) genesis mechanism".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 55 T1 — templatic (root + pattern) genesis mechanism", () => {
   it("returns null when the language has no rootInventory", () => {
     const sim = createSimulation(presetEnglish());

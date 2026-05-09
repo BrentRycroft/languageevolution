@@ -1,5 +1,13 @@
 import type { WordForm } from "../types";
 
+/**
+ * syntax.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: Person, Number_, Case.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type Person = "1" | "2" | "3";
 export type Number_ = "sg" | "pl";
 export type Case = "nom" | "acc" | "dat" | "gen" | "obl" | "inst";

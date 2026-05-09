@@ -4,6 +4,14 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { attemptAbstractPivot } from "../translator/abstraction";
 
+/**
+ * abstract_pivot.test.ts
+ *
+ * Test suite for: "Phase 51 T2 — abstract pivot".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 51 T2 — abstract pivot", () => {
   it("returns null for lemmas not in CONCEPTS", () => {
     const sim = createSimulation(presetEnglish());

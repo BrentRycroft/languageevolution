@@ -33,6 +33,14 @@ import { RulesTimeline } from "../RulesTimeline";
 import { LanguageTreeView } from "../LanguageTreeView";
 import { TimelineChart } from "../TimelineChart";
 
+/**
+ * render_every_tab.test.tsx
+ *
+ * Test suite for: "UI render harness — every tab and every standalone component".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function step(n: number) {
   const { sim } = useSimStore.getState();
   for (let i = 0; i < n; i++) sim.step();

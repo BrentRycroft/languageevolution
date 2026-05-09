@@ -2,6 +2,14 @@ import { useEffect } from "react";
 import { CloseIcon } from "./icons";
 import { Z } from "./zIndex";
 
+/**
+ * AboutModal.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: AboutModal.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface Props {
   onClose: () => void;
 }

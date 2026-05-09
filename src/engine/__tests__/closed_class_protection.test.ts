@@ -9,6 +9,14 @@ import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import { isClosedClass, posOf } from "../lexicon/pos";
 
+/**
+ * closed_class_protection.test.ts
+ *
+ * Test suite for: "Phase 26c — closed-class protection".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshLang() {
   const sim = createSimulation(presetEnglish());
   return sim.getState();

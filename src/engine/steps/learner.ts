@@ -7,6 +7,14 @@ import { setLexiconForm } from "../lexicon/mutate";
 import { isVowel, isConsonant } from "../phonology/ipa";
 import { featuresOf } from "../phonology/features";
 
+/**
+ * learner.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepLearner.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const LEARNER_CADENCE = 4;
 
 const MARKED_PHONEMES = new Set([

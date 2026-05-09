@@ -4,6 +4,14 @@ import { defaultConfig } from "../config";
 import { ACHIEVEMENTS, ACHIEVEMENTS_BY_ID } from "../achievements/catalog";
 import { detectNewAchievements } from "../achievements/detect";
 
+/**
+ * achievements.test.ts
+ *
+ * Test suite for: "achievements".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("achievements", () => {
   it("no achievements unlock at gen 0 on a fresh run", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "fresh" });

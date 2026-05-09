@@ -6,6 +6,14 @@ import {
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 
+/**
+ * translator_reverse.test.ts
+ *
+ * Test suite for: "translator reverse direction".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function englishLang() {
   const sim = createSimulation(presetEnglish());
   return sim.getState().tree[sim.getState().rootId]!.language;

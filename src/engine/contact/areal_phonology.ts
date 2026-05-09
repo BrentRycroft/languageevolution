@@ -8,6 +8,14 @@ import { arealShareAffinity } from "../geo/territory";
 import { inventorySizePressure } from "../steps/inventoryManagement";
 import { setLexiconForm } from "../lexicon/mutate";
 
+/**
+ * areal_phonology.ts
+ *
+ * Inter-language contact: borrowing, areal phonology, bilingualism. Key exports: ArealPhonemeEvent, maybeArealPhonemeShare.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const AREAL_HALF_LIFE = 200;
 // Phase 27.1: gate at ANY positive pressure (i.e. any inventory
 // overshoot). Previously 0.5, which let neighbors keep adding phonemes

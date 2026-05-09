@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 
+/**
+ * compensatory.test.ts
+ *
+ * Test suite for: "compensatory lengthening rule".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("compensatory lengthening rule", () => {
   const rule = CATALOG_BY_ID["compensatory.final_coda_lengthening"]!;
 

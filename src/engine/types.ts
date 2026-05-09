@@ -1,5 +1,26 @@
 import type { Rng } from "./rng";
 
+/**
+ * types.ts — engine-wide shared types.
+ *
+ * The central type vocabulary the simulator speaks. Defines the
+ * SimulationState / Language / Word / Paradigm / Grammar shapes
+ * passed between every layer (config → engine → UI). The Language
+ * interface in particular is the canonical state shape; per-meaning
+ * maps (lexicon, wordFrequencyHints, inflectionClass,
+ * nounDeclensionClass, ablautClassAssignment, grammaticalizationStage,
+ * etc.) all live here.
+ *
+ * When adding a per-meaning field, also update:
+ *   - tree/split.ts (inherit on daughter split)
+ *   - lexicon/mutate.ts:deleteMeaning (purge on delete)
+ *   - contact/borrow.ts (decide if borrowed entries get assigned)
+ *   - persistence/migrate.ts (schema migration if persisted)
+ *
+ * See CLAUDE.md for the full per-phase feature catalogue and
+ * ARCHITECTURE.md for the design walkthrough.
+ */
+
 export type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
 import type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
 
@@ -97,7 +118,10 @@ export interface LanguageEvent {
     // reduced two paradigms to homophony, signalling that the
     // language is ripe for renewal (recruiting a new affix or
     // shedding the merged distinction).
-    | "paradigm-renewal";
+    | "paradigm-renewal"
+    // Phase 70 T1: Historical Mode milestone fired (HOI4-style
+    // soft-railroad). Surfaces in EventsLog with milestoneId / role.
+    | "historical_milestone";
   description: string;
   meta?: {
     donorId?: string;
@@ -646,6 +670,16 @@ export interface Language {
     /** Optional human-readable trigger ("tier-2 transition", "heavy contact", etc.) for the timeline. */
     trigger?: string;
   };
+  /**
+   * Phase 70 T1: Historical Mode role tag (HOI4-style soft railroad).
+   * Set by `stepHistorical` after a `SplitMilestone` fires; daughters
+   * inherit on subsequent random splits. The proto-language is tagged
+   * "proto" at init when `config.historical?.scheduleId` is set.
+   * `BiasMilestone`s look up leaves carrying the matching role.
+   */
+  historicalRole?: import("./historical/types").HistoricalRoleId;
+  /** Generation at which `historicalRole` was assigned. */
+  historicalRoleAssignedGen?: number;
   lexicalCapacity?: number;
   colexifiedAs?: Record<Meaning, Meaning[]>;
   /**
@@ -1140,6 +1174,19 @@ export interface SimulationConfig {
   evolutionSpeed?: string;
   mapMode?: "random" | "earth";
   originCellId?: number;
+  /**
+   * Phase 70 T1: Historical Mode (HOI4-style soft-railroad). When
+   * `scheduleId` is set and matches a registered `HistoricalSchedule`
+   * whose `presetId` matches `preset`, the engine consults the schedule
+   * each generation and applies scheduled rate / bias / split nudges.
+   * Undefined = mode off; the historical step is skipped entirely
+   * (zero RNG draws, preserves existing-run determinism).
+   */
+  historical?: {
+    scheduleId?: string;
+    /** Multiplier applied to every nudge. Default 1.0; 0 fully disables. */
+    intensity?: number;
+  };
 }
 
 export interface PendingArealRule {
@@ -1156,6 +1203,32 @@ export interface SimulationState {
   rngState: number;
   pendingArealRules?: PendingArealRule[];
   generationsOverCap?: number;
+  /**
+   * Phase 70 T1: Historical Mode idempotency tracker. Each milestone
+   * key (`${atGen}:${kind}:${role}:${label}`) is appended once when it
+   * fires; the runner skips already-keyed milestones on re-evaluation.
+   * Undefined when Historical Mode is off — no allocation overhead.
+   */
+  firedHistoricalMilestones?: string[];
+  /**
+   * Phase 70 T1: counter for milestones that targeted an extinct or
+   * missing role-bearer and were skipped silently. Surfaced in probes
+   * to detect schedules that consistently miss their targets.
+   */
+  historicalMilestonesSkipped?: number;
+  /**
+   * Phase 70 T1: state-level historical milestone log. Survives the
+   * per-language `MAX_EVENTS_PER_LANGUAGE = 80` cap. The UI (T3+)
+   * reads from here to draw TimelineChart markers and EventsLog
+   * filter chips that don't drop after long runs. Append-only.
+   */
+  historicalEvents?: Array<{
+    generation: number;
+    label: string;
+    role: string;
+    kind: "fired" | "skipped";
+    reason?: string;
+  }>;
 }
 
 export interface SavedRun {

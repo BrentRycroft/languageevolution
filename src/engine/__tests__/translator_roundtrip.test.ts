@@ -4,6 +4,14 @@ import { reverseTranslate } from "../translator/reverse";
 import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
 
+/**
+ * translator_roundtrip.test.ts
+ *
+ * Test suite for: "translator round-trip (forward → reverse)".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const sim = createSimulation(presetPIE());
 sim.step();
 const lang = sim.getState().tree["L-0"]!.language;

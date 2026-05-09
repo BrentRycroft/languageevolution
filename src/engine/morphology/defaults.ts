@@ -1,5 +1,13 @@
 import type { Morphology, Paradigm } from "./types";
 
+/**
+ * defaults.ts
+ *
+ * Morphological paradigms, suppletion, gender, analogical levelling, ablaut, runtime productive derivation. Key exports: DEFAULT_MORPHOLOGY.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function p(
   category: Paradigm["category"],
   affix: string[],

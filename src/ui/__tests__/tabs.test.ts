@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { TABS } from "../tabs";
 
+/**
+ * tabs.test.ts
+ *
+ * Test suite for: "TABS — single source of truth for tab bar + keyboard shortcuts".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("TABS — single source of truth for tab bar + keyboard shortcuts", () => {
   it("contains 15 tabs", () => {
     expect(TABS).toHaveLength(15);

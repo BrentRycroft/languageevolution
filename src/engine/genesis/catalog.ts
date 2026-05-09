@@ -8,6 +8,14 @@ import { phonotacticFit } from "./phonotactics";
 import { otFit } from "../phonology/ot";
 import { complexityFor } from "../lexicon/complexity";
 
+/**
+ * catalog.ts
+ *
+ * Word-coinage mechanisms (compound, derivation, conversion, clipping, ideophone, calque, blending, reduplication). Key exports: GENESIS_CATALOG, GENESIS_BY_ID.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function combinedFit(form: WordForm, lang: Language): number {
   return 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
 }

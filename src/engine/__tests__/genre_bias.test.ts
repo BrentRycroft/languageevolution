@@ -5,6 +5,14 @@ import { pickSynonymForGenre } from "../narrative/genre_bias";
 import { addWord } from "../lexicon/word";
 import { makeRng } from "../rng";
 
+/**
+ * genre_bias.test.ts
+ *
+ * Test suite for: "Phase 58 T1 — discourse-genre style biases".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 58 T1 — discourse-genre style biases", () => {
   it("returns null for a meaning with no lexicalised forms", () => {
     const sim = createSimulation(presetEnglish());

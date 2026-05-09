@@ -10,6 +10,14 @@ import { bumpFrequency } from "../lexicon/frequencyDynamics";
 import { computeBilingualLinks } from "../contact/bilingual";
 import { isFeatureActive } from "../modules/legacyGate";
 
+/**
+ * contact.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepContact.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const AREAL_PHONEME_PROBABILITY = 0.005;
 
 const LOAN_HISTORY_WINDOW = 50;

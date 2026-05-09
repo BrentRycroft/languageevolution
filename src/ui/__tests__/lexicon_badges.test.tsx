@@ -3,6 +3,14 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { LexiconView } from "../LexiconView";
 import { useSimStore } from "../../state/store";
 
+/**
+ * lexicon_badges.test.tsx
+ *
+ * Test suite for: "Phase 68b T6 — LexiconView badges for Phase 64/66 fields".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function pickKnownMeaning(): string {
   const store = useSimStore.getState();
   const state = store.state;

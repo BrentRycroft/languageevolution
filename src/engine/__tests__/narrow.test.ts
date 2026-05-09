@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { narrowTranscribe } from "../phonology/narrow";
 
+/**
+ * narrow.test.ts
+ *
+ * Test suite for: "narrowTranscribe".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("narrowTranscribe", () => {
   it("renders /korpus/ as [ˈkɔr.pʊs]", () => {
     expect(narrowTranscribe(["k", "o", "r", "p", "u", "s"])).toBe("ˈkɔr.pʊs");

@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { parseBias } from "../translator/ruleBias";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 
+/**
+ * rule_bias.test.ts
+ *
+ * Test suite for: "parseBias".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("parseBias", () => {
   it("accepts a fully-populated object", () => {
     const raw = `{"lenition":1.5,"fortition":0.8,"place_assim":1,"palatalization":1,"vowel_shift":1.2,"vowel_reduction":1,"harmony":1,"deletion":1,"metathesis":1,"tone":0.5}`;

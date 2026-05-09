@@ -9,6 +9,14 @@ import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import { reconstructProtoLexicon, type ReconstructedForm } from "../engine/tree/reconstruction";
 
+/**
+ * LanguageTreeView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: LanguageTreeView.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 type TreeMode = "phylogeny" | "stemma";
 
 interface TooltipData {

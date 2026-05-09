@@ -1,4 +1,12 @@
 
+/**
+ * constants.ts
+ *
+ * tunable engine-wide constants (years/gen, etc.). Key exports: YEARS_PER_GENERATION, MAX_EVENTS_PER_LANGUAGE, CONSERVATISM_MIN.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const YEARS_PER_GENERATION = 25;
 
 export const MAX_EVENTS_PER_LANGUAGE = 80;

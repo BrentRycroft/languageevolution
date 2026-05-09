@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { Z } from "../zIndex";
 
+/**
+ * zIndex.test.ts
+ *
+ * Test suite for: "Z — z-index scale".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Z — z-index scale", () => {
   it("ascends overlay → banner → dropdown → modal → modalElevated → toast", () => {
     expect(Z.overlay).toBeLessThan(Z.banner);

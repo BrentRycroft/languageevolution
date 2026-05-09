@@ -2,6 +2,14 @@ import type { SimulationConfig, Lexicon, Meaning } from "../types";
 import type { Morphology } from "../morphology/types";
 import { defaultConfig } from "../config";
 
+/**
+ * romance.ts
+ *
+ * Built-in language seeds (PIE, Germanic, Romance, Bantu, Toki Pona, English). Key exports: presetRomance.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 // Phase 48 T15: Romance preset notation notes.
 //
 // This preset represents Vulgar Latin / Proto-Romance — NOT

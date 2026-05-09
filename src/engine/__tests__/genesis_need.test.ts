@@ -5,6 +5,14 @@ import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { clusterOf } from "../semantics/clusters";
 
+/**
+ * genesis_need.test.ts
+ *
+ * Test suite for: "genesis/need".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("genesis/need", () => {
   it("meanings already in the lexicon have zero need", () => {
     const sim = createSimulation(defaultConfig());

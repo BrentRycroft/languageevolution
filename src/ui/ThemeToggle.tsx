@@ -2,6 +2,14 @@ import { useEffect } from "react";
 import { useSimStore } from "../state/store";
 import { SunIcon, MoonIcon, AutoThemeIcon } from "./icons";
 
+/**
+ * ThemeToggle.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: ThemeEffect, ThemeToggle.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 type Theme = "dark" | "light" | "system";
 
 function systemPrefersLight(): boolean {

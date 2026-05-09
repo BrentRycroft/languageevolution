@@ -17,6 +17,14 @@ import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 import { clusterOf } from "../semantics/clusters";
 
+/**
+ * borrow.ts
+ *
+ * Inter-language contact: borrowing, areal phonology, bilingualism. Key exports: LoanEvent, tryBorrow.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const MAX_CONSONANT_RUN = 2;
 const PREFERRED_EPENTHETIC = ["a", "i", "u", "e", "o", "ə"];
 

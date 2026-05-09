@@ -4,6 +4,14 @@ import { createSimulation } from "../simulation";
 import { decayAffixProductivity } from "../morphology/decay";
 import { PRODUCTIVITY_THRESHOLD } from "../lexicon/derivation";
 
+/**
+ * affix_decay.test.ts
+ *
+ * Test suite for: "Phase 56 T1 — per-affix productivity decay".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 56 T1 — per-affix productivity decay", () => {
   it("doesn't decay when generation is 0 or off the interval", () => {
     const sim = createSimulation(presetEnglish());

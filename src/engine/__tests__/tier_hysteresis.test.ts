@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { applyTierHysteresis, TIER_HYSTERESIS_TICKS } from "../lexicon/tier";
 
+/**
+ * tier_hysteresis.test.ts
+ *
+ * Test suite for: "applyTierHysteresis".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("applyTierHysteresis", () => {
   it("does not promote on the first tick of eligibility", () => {
     const r = applyTierHysteresis(0, 1, 0);

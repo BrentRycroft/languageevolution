@@ -4,6 +4,14 @@ import { neighborsOf } from "../semantics/neighbors";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 
+/**
+ * translate.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: TranslationResult, translate, translateBetween.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface TranslationResult {
   form: string;
   phonemes: WordForm;

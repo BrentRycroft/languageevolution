@@ -13,6 +13,14 @@ import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * words_phase21d.test.ts
+ *
+ * Test suite for: "Phase 21d — sound-change merger detection".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",

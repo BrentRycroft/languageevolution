@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { migrateSavedRun, LATEST_SAVE_VERSION } from "../migrate";
 import { defaultConfig } from "../../engine/config";
 
+/**
+ * migrate.test.ts
+ *
+ * Test suite for: "migrateSavedRun".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("migrateSavedRun", () => {
   it("upgrades a v1 run (no genesis/grammar/etc) to latest", () => {
     const v1 = {

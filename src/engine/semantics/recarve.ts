@@ -5,6 +5,14 @@ import { isFormLegal } from "../phonology/wordShape";
 import { recordOneSidedColexification } from "./colexification";
 import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
 
+/**
+ * recarve.ts
+ *
+ * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: RecarveEventKind, RecarveEvent, maybeRecarve.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type RecarveEventKind = "merge" | "split";
 
 export interface RecarveEvent {

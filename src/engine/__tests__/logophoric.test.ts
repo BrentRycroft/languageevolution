@@ -10,6 +10,14 @@ import { closedClassForm } from "../translator/closedClass";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 
+/**
+ * logophoric.test.ts
+ *
+ * Test suite for: "Phase 65 T2 — logophoric pronouns surface realization".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 65 T2 — logophoric pronouns surface realization", () => {
   it("pushQuotedFrame and popQuotedFrame manage the logophoric center", () => {
     const ctx = makeDiscourse("legend");

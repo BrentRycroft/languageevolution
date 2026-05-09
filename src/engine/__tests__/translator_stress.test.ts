@@ -4,6 +4,14 @@ import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
 import type { Language } from "../types";
 
+/**
+ * translator_stress.test.ts
+ *
+ * Test suite for: "translator stress test".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function clone(lang: Language): Language {
   return JSON.parse(JSON.stringify(lang)) as Language;
 }

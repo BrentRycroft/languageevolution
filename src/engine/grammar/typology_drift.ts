@@ -1,5 +1,13 @@
 import type { GrammarFeatures, Language } from "../types";
 
+/**
+ * typology_drift.ts
+ *
+ * Word-order / case / alignment / classifier drift; typological-universal repair. Key exports: recomputeMorphologicalType, stepTypologyDrift.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const TYPOLOGY_CADENCE = 10;
 
 export function recomputeMorphologicalType(g: GrammarFeatures): GrammarFeatures["morphologicalType"] {

@@ -1,6 +1,14 @@
 import type { Lexicon, Meaning, Phoneme, WordForm } from "../types";
 import { fnv1a } from "../rng";
 
+/**
+ * basic240.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: CLUSTERS, BASIC_240, clusterOfBasic240.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export const CLUSTERS = {
   body: [
     "hand", "foot", "heart", "head", "eye", "ear", "mouth", "tooth",

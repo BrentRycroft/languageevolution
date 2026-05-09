@@ -1,5 +1,13 @@
 import type { LanguageTree, Meaning, WordForm } from "../types";
 
+/**
+ * reconstruction.ts
+ *
+ * Phylogenetic split mechanics, leafIds, founder selection, MSA-based proto reconstruction. Key exports: ReconstructedForm, reconstructProtoForm, reconstructProtoLexicon.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function descendantLeafIds(tree: LanguageTree, root: string): string[] {
   const out: string[] = [];
   const stack: string[] = [root];

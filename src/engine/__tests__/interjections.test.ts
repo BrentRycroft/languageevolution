@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { translateSentence, tokeniseEnglish } from "../translator/sentence";
 import type { Language, Lexicon } from "../types";
 
+/**
+ * interjections.test.ts
+ *
+ * Test suite for: "interjection handling".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
   return {
     id: "L-i",

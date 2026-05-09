@@ -6,6 +6,14 @@ import { prunePhonemes } from "../phonology/pruning";
 import { makeRng } from "../rng";
 import type { Language, Lexicon } from "../types";
 
+/**
+ * phase18a.test.ts
+ *
+ * Test suite for: "Phase 18a — quick fixes".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 18a — quick fixes", () => {
   describe("A4/A5: English preset tier 3 + suppletion seed", () => {
     it("presetEnglish carries seedCulturalTier=3", () => {

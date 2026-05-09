@@ -11,6 +11,14 @@ import { pickSynonymForGenre } from "./genre_bias";
 import { closedClassForm } from "../translator/closedClass";
 import { tryDerivedFormFromMeaning } from "../morphology/derivation";
 
+/**
+ * composer.ts
+ *
+ * Discourse-genre narrative composer (target-side composer.ts), legacy skeleton mode (generate.ts), discourse model (mention / logophoric). Key exports: TemplateShape, AbstractTemplate, SlotAssignment.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type TemplateShape =
   | "transitive"
   | "intransitive"

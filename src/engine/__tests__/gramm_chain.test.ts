@@ -9,6 +9,14 @@ import { presetRomance } from "../presets/romance";
 import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
 
+/**
+ * gramm_chain.test.ts
+ *
+ * Test suite for: "Phase 66 T1 — grammaticalization multi-step chains".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 66 T1 — grammaticalization multi-step chains", () => {
   it("first grammaticalisation does NOT delete the source meaning; sets stage 2", () => {
     const sim = createSimulation({ ...presetEnglish(), seed: "gc-stage2" });

@@ -5,6 +5,14 @@ import {
 } from "../semantics/colexification";
 import type { Language } from "../types";
 
+/**
+ * colexification.test.ts
+ *
+ * Test suite for: "colexification helpers".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L-co",

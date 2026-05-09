@@ -7,6 +7,14 @@ import {
 } from "../history";
 import type { SimulationState } from "../../engine/types";
 
+/**
+ * history.test.ts
+ *
+ * Test suite for: "history helpers".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function stateOf(langId: string, lex: Record<string, string[]>, generation: number): SimulationState {
   return {
     generation,

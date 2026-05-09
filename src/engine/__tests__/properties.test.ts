@@ -9,6 +9,14 @@ import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
 import type { Language, WordForm } from "../types";
 
+/**
+ * properties.test.ts
+ *
+ * Test suite for: "engine property tests".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeTestLang(forms: Record<string, WordForm>): Language {
   return {
     id: "L-prop",

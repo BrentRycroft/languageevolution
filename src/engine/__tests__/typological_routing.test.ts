@@ -3,6 +3,14 @@ import { translateSentence } from "../translator/sentence";
 import { generateNarrative } from "../narrative/generate";
 import type { Language, Lexicon } from "../types";
 
+/**
+ * typological_routing.test.ts
+ *
+ * Test suite for: "Phase 13 — relative clauses, serial verbs, narrative routing".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
   return {
     id: "L-r",

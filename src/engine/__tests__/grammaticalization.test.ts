@@ -5,6 +5,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { SEMANTIC_TAG, PATHWAYS } from "../semantics/grammaticalization";
 
+/**
+ * grammaticalization.test.ts
+ *
+ * Test suite for: "grammaticalization pathways".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("grammaticalization pathways", () => {
   it("every pathway target is a legal MorphCategory", () => {
     for (const [tag, targets] of Object.entries(PATHWAYS)) {

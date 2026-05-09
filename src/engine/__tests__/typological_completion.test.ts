@@ -6,6 +6,14 @@ import { makeRng } from "../rng";
 import type { GrammarFeatures, Language, Lexicon } from "../types";
 import type { Paradigm } from "../morphology/types";
 
+/**
+ * typological_completion.test.ts
+ *
+ * Test suite for: "Phase 14 — completing Phase 12/13".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function defaultGrammar(): GrammarFeatures {
   return {
     wordOrder: "SVO",

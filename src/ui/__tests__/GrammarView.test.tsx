@@ -3,6 +3,14 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { GrammarView } from "../GrammarView";
 import { useSimStore } from "../../state/store";
 
+/**
+ * GrammarView.test.tsx
+ *
+ * Test suite for: "GrammarView".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("GrammarView", () => {
   beforeEach(() => {
     cleanup();

@@ -43,6 +43,14 @@ import {
   ResetIcon,
 } from "./icons";
 
+/**
+ * App.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: App.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const LanguageTreeView = lazy(() =>
   import("./LanguageTreeView").then((m) => ({ default: m.LanguageTreeView })),
 );

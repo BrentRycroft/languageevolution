@@ -5,6 +5,14 @@ import { applyChangesToLexicon } from "../phonology/apply";
 import type { SoundChange } from "../types";
 import { makeRng } from "../rng";
 
+/**
+ * min_word_length.test.ts
+ *
+ * Test suite for: "minimum-word-length constraint".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("minimum-word-length constraint", () => {
   it("never reduces a word to zero phonemes", () => {
     const rule: GeneratedRule = {

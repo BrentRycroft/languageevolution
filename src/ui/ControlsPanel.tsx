@@ -19,6 +19,14 @@ import {
 import { useRef } from "react";
 import { DiceIcon } from "./icons";
 
+/**
+ * ControlsPanel.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: ControlsPanel.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function Slider({
   label,
   value,

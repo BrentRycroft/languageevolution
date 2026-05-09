@@ -8,6 +8,14 @@ import { ScriptPicker } from "./ScriptPicker";
 import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 
+/**
+ * LexiconView.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: LexiconView.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function LexiconView() {
   const state = useSimStore((s) => s.state);
   const selectedLangId = useSimStore((s) => s.selectedLangId);

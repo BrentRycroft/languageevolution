@@ -3,6 +3,14 @@ import { CloseIcon } from "./icons";
 import { useSimStore } from "../state/store";
 import { Z } from "./zIndex";
 
+/**
+ * Onboarding.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: WelcomeBanner.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const DISMISSED_KEY = "lev.onboarding.dismissed.v3";
 
 interface Step {

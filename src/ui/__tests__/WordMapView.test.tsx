@@ -4,6 +4,14 @@ import { useSimStore } from "../../state/store";
 import { WordMapView } from "../WordMapView";
 import { addWord } from "../../engine/lexicon/word";
 
+/**
+ * WordMapView.test.tsx
+ *
+ * Test suite for: "Phase 21e — WordMapView".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 21e — WordMapView", () => {
   beforeEach(() => {
     useSimStore.getState().reset();

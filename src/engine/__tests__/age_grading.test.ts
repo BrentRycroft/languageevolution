@@ -3,6 +3,14 @@ import { applyChangesToWord } from "../phonology/apply";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 
+/**
+ * age_grading.test.ts
+ *
+ * Test suite for: "age-grading via agesSinceChange".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("age-grading via agesSinceChange", () => {
   it("freshly-changed words mutate more often than stable ones", () => {
     const rule = CATALOG_BY_ID["lenition.p_to_f"]!;

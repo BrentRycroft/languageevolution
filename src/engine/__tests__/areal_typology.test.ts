@@ -3,6 +3,14 @@ import { stepArealTypology } from "../steps/arealTypology";
 import { makeRng } from "../rng";
 import type { Language, SimulationState } from "../types";
 
+/**
+ * areal_typology.test.ts
+ *
+ * Test suite for: "areal typological diffusion (Sprachbund)".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(id: string, overrides: Partial<Language> = {}): Language {
   return {
     id,

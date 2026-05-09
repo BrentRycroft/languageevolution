@@ -4,6 +4,14 @@ import { proposeOneRule } from "../phonology/propose";
 import { pickNextStressForSplit } from "../grammar/stressTransitions";
 import { setGrammarFeature } from "../grammar/mutate";
 
+/**
+ * founder.ts
+ *
+ * Phylogenetic split mechanics, leafIds, founder selection, MSA-based proto reconstruction. Key exports: FounderInnovation, applyFounderInnovation.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 type GrammarFlip = {
   feature: keyof GrammarFeatures;
   from: GrammarFeatures[keyof GrammarFeatures];

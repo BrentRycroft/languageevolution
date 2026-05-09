@@ -39,6 +39,14 @@ import {
 } from "./pools";
 import { pickStanza } from "./poetry";
 
+/**
+ * discourse_generate.ts
+ *
+ * Discourse-genre narrative composer (target-side composer.ts), legacy skeleton mode (generate.ts), discourse model (mention / logophoric). Key exports: DiscourseLine, generateDiscourseNarrative, generateQuotedSpeech.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface DiscourseLine {
   english: string;
   text: string;

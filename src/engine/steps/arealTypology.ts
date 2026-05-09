@@ -3,6 +3,14 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { setGrammarFeature } from "../grammar/mutate";
 
+/**
+ * arealTypology.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepArealTypology.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const TYPOLOGY_CADENCE = 6;
 const BASE_ADOPTION = 0.12;
 const STRONG_BILINGUAL_THRESHOLD = 0.25;

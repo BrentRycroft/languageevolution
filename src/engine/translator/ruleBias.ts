@@ -1,6 +1,14 @@
 import type { RuleFamily } from "../phonology/generated";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 
+/**
+ * ruleBias.ts
+ *
+ * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: BiasVector, parseBias.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type BiasVector = Record<RuleFamily, number>;
 
 const FAMILIES: RuleFamily[] = [

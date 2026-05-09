@@ -5,6 +5,14 @@ import { toneOf, stripTone } from "../engine/phonology/tone";
 import type { Lexicon, WordForm } from "../engine/types";
 import { Z } from "./zIndex";
 
+/**
+ * SeedLexiconEditor.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: SeedLexiconEditor.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function phonemeIsKnown(p: string): boolean {
   const stripped = stripTone(p);
   if (isVowel(stripped) || isConsonant(stripped)) return true;

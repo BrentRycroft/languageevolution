@@ -6,6 +6,14 @@ import {
 } from "../tree/correspondences";
 import type { Language, LanguageNode, LanguageTree } from "../types";
 
+/**
+ * correspondences.test.ts
+ *
+ * Test suite for: "sound-correspondence matrix".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function leaf(id: string, lex: Record<string, string[]>): LanguageNode {
   const lang: Language = {
     id,

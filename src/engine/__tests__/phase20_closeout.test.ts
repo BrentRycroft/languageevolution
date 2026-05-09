@@ -7,6 +7,14 @@ import { stepSemantics } from "../steps/semantics";
 import { composeTargetSentence } from "../narrative/composer";
 import { makeDiscourse } from "../narrative/discourse";
 
+/**
+ * phase20_closeout.test.ts
+ *
+ * Test suite for: "Phase 20 close-out: pruneAlts wired into stepSemantics".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function englishSim() {
   return createSimulation(presetEnglish());
 }

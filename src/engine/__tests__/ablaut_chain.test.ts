@@ -11,6 +11,14 @@ import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 import { makeRng } from "../rng";
 
+/**
+ * ablaut_chain.test.ts
+ *
+ * Test suite for: "Phase 64 T2 — ablaut chain emergence + sound-change tracking".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 64 T2 — ablaut chain emergence + sound-change tracking", () => {
   it("applyPhonologyToAffixes mutates ablautMap keys and values", () => {
     const morph: Morphology = {

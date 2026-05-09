@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { isValidEnglishLemma } from "../translator/englishWordlist";
 
+/**
+ * english_validation.test.ts
+ *
+ * Test suite for: "Phase 51 T1 + 53.5 — English lemma validation".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 51 T1 + 53.5 — English lemma validation", () => {
   it("accepts CONCEPTS-registered words", () => {
     expect(isValidEnglishLemma("water")).toBe(true);

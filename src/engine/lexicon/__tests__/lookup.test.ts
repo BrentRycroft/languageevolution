@@ -3,6 +3,14 @@ import { lookupForm, lookupFormWithResolution } from "../lookup";
 import { presetEnglish } from "../../presets/english";
 import { createSimulation } from "../../simulation";
 
+/**
+ * lookup.test.ts
+ *
+ * Test suite for: "Phase 52 T1 — lookup abstraction".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 52 T1 — lookup abstraction", () => {
   it("direct lookup returns the lexicon form unchanged", () => {
     const sim = createSimulation(presetEnglish());

@@ -1,6 +1,14 @@
 import type { Language } from "../types";
 import type { GeneratedRule } from "../phonology/generated";
 
+/**
+ * ruleDiff.ts
+ *
+ * Cross-language comparative views (rule diffs, stemma reconstruction). Key exports: RuleDiff, diffActiveRules, OtDiffRow.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface RuleDiff {
   onlyInA: GeneratedRule[];
   onlyInB: GeneratedRule[];

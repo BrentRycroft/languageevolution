@@ -190,10 +190,17 @@ function runHomeostasis(
   // Within ±0.5 of target (3 phonemes), behaves like the old
   // BASE_PRUNE_PROB maintenance rate. Beyond +1 (over by 6+), aggressive.
   const pruneIntensity = sigmoid(pressure);
+  // Phase 69a T2 + T4: build the per-gen pruning context once and
+  // pass it into every prunePhonemes attempt. The functionalLoadMap
+  // and form-key lookup map are both O(W) full lexicon scans;
+  // caching them across the up-to-5 attempts in a single gen saves
+  // ~10× redundant scans on high-pressure gens. Invalidated on
+  // every successful merger because the lexicon mutated.
+  let pruneCtx: import("../phonology/pruning").PrunePhonemesContext = {};
   if (pressure <= 0) {
     // Under-or-at target: low maintenance rate.
     if (!rng.chance(BASE_PRUNE_PROB * pruneIntensity * 2)) return false;
-    const merger = prunePhonemes(lang, rng, generation);
+    const merger = prunePhonemes(lang, rng, generation, pruneCtx);
     if (merger) {
       anyMerger = true;
       pushEvent(lang, {
@@ -214,11 +221,14 @@ function runHomeostasis(
   const mergers: Array<{ from: string; to: string; affected: number }> = [];
   for (let i = 0; i < maxAttempts; i++) {
     if (!rng.chance(pruneIntensity)) break;
-    const merger = prunePhonemes(lang, rng, generation);
+    const merger = prunePhonemes(lang, rng, generation, pruneCtx);
     if (!merger) break;
     anyMerger = true;
     mergers.push({ from: merger.from, to: merger.to, affected: merger.affectedWords });
     pressure = inventorySizePressure(lang);
+    // Phase 69a T2 + T4: lexicon mutated; invalidate the cache so
+    // the next attempt rebuilds with up-to-date forms.
+    pruneCtx = {};
     if (pressure <= 0) break;
   }
   if (mergers.length === 1) {

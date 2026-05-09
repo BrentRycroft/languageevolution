@@ -12,6 +12,14 @@ import {
   mirrorDiacritics,
 } from "./inventory";
 
+/**
+ * catalog.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: CATALOG, CATALOG_BY_ID.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const CLICKS = ["ǀ", "ǃ", "ǂ", "ǁ"] as const;
 const VOICELESS = ALL_VOICELESS_CONSONANTS;
 

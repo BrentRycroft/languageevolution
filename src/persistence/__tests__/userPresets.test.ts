@@ -8,6 +8,14 @@ import {
 } from "../userPresets";
 import { defaultConfig } from "../../engine/config";
 
+/**
+ * userPresets.test.ts
+ *
+ * Test suite for: "userPresets".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 beforeEach(() => {
   if (typeof localStorage !== "undefined") localStorage.clear();
 });

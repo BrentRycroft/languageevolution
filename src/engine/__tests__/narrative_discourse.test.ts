@@ -10,6 +10,14 @@ import { templatesFor } from "../narrative/genres";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 
+/**
+ * narrative_discourse.test.ts
+ *
+ * Test suite for: "§2.2 — discourse context tracks mentions and topic".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshLang(seed: string) {
   const sim = createSimulation({ ...defaultConfig(), seed });
   sim.step();

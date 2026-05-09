@@ -3,6 +3,14 @@ import { translateSentence } from "../translator/sentence";
 import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
 
+/**
+ * copula.test.ts
+ *
+ * Test suite for: "copula handling — language-agnostic".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function preset(p: typeof presetPIE) {
   const sim = createSimulation(p());
   sim.step();

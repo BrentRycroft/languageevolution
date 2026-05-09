@@ -8,6 +8,14 @@ import { bumpFrequency } from "../lexicon/frequencyDynamics";
 import { stepSemanticBleaching } from "../semantics/bleaching";
 import { pruneAlts } from "../lexicon/altForms";
 
+/**
+ * semantics.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: stepSemantics.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function stepSemantics(
   lang: Language,
   config: SimulationConfig,

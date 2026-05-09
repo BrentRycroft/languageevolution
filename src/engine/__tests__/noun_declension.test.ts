@@ -10,6 +10,14 @@ import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { makeRng } from "../rng";
 
+/**
+ * noun_declension.test.ts
+ *
+ * Test suite for: "Phase 64 T1 — noun declension classes".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 64 T1 — noun declension classes", () => {
   it("assignNounDeclensionClass returns a class in 1..5", () => {
     const rng = makeRng("test-1");

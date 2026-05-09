@@ -1,6 +1,14 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { setLexiconForm } from "./mutate";
 
+/**
+ * variants.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: recordVariant, reinforceCanonical, ActuationResult.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const MAX_VARIANTS = 3;
 const DEFAULT_DECAY = 0.85;
 const PRUNE_THRESHOLD = 0.08;

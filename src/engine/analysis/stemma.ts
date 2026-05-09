@@ -1,6 +1,14 @@
 import type { Language, LanguageTree } from "../types";
 import { leafIds } from "../tree/split";
 
+/**
+ * stemma.ts
+ *
+ * Cross-language comparative views (rule diffs, stemma reconstruction). Key exports: ruleDistance, StemmaEdge, stemmaMatrix.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function ruleDistance(a: Language, b: Language): number {
   const aTemplates = new Set((a.activeRules ?? []).map((r) => r.templateId));
   const bTemplates = new Set((b.activeRules ?? []).map((r) => r.templateId));

@@ -2,6 +2,14 @@ import type { Phoneme } from "../primitives";
 import { featuresOf, PHONE_FEATURES } from "./features";
 import type { FeatureBundle, ConsonantFeatures, VowelFeatures, Manner, Place } from "./features";
 
+/**
+ * inventory.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: ALL_VOICED_CONSONANTS, ALL_VOICELESS_CONSONANTS, STOPS.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const ALL: Phoneme[] = Object.keys(PHONE_FEATURES);
 
 function buildSet(pred: (f: FeatureBundle, p: Phoneme) => boolean): ReadonlySet<Phoneme> {

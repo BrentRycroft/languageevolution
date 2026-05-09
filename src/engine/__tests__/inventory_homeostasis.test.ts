@@ -13,6 +13,14 @@ import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * inventory_homeostasis.test.ts
+ *
+ * Test suite for: "Phase 27b — functional load".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshEnglish(): Language {
   const sim = createSimulation(presetEnglish());
   return sim.getState().tree[sim.getState().rootId]!.language;

@@ -1,6 +1,14 @@
 import type { Language, WordForm } from "../types";
 import { syllabify as sonoritySyllabify } from "./syllable";
 
+/**
+ * narrow.ts
+ *
+ * Phonological feature geometry, sound-change rules, syllable shape, stress, tone, sandhi, and inventory homeostasis. Key exports: narrowTranscribe.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const LAXING: Record<string, string> = {
   o: "ɔ",
   u: "ʊ",

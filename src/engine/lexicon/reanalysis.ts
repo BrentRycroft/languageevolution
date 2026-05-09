@@ -2,6 +2,14 @@ import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { posOf } from "./pos";
 
+/**
+ * reanalysis.ts
+ *
+ * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: ReanalysisEvent, maybeReanalyse.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export interface ReanalysisEvent {
   source: Meaning;
   promotedTag: string;

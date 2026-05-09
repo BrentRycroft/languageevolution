@@ -14,6 +14,14 @@ import { GENESIS_BY_ID } from "../genesis/catalog";
 import type { GenesisRule } from "../genesis/types";
 import type { SimulationConfig } from "../types";
 
+/**
+ * helpers.ts
+ *
+ * Per-generation step orchestrators called from simulation.ts (one file per major substep). Key exports: pushEvent, inventoryFromLexicon, getPhonemeSet.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export { MAX_EVENTS_PER_LANGUAGE } from "../constants";
 import { MAX_EVENTS_PER_LANGUAGE } from "../constants";
 

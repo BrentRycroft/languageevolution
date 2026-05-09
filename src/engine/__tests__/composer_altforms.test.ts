@@ -6,6 +6,14 @@ import { createSimulation } from "../simulation";
 import { addAlt } from "../lexicon/altForms";
 import { makeRng } from "../rng";
 
+/**
+ * composer_altforms.test.ts
+ *
+ * Test suite for: "composer altForms integration".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function englishLang() {
   const sim = createSimulation(presetEnglish());
   return sim.getState().tree[sim.getState().rootId]!.language;

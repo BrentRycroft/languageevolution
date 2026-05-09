@@ -1,5 +1,13 @@
 import type { MorphCategory } from "../morphology/types";
 
+/**
+ * grammaticalization.ts
+ *
+ * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: SemanticTag, SEMANTIC_TAG, PATHWAYS.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export type SemanticTag =
   | "motion"
   | "posture"

@@ -2,6 +2,14 @@ import type { Language } from "./types";
 import type { Rng } from "./rng";
 import { formToString, isVowel } from "./phonology/ipa";
 
+/**
+ * naming.ts
+ *
+ * language name generation (procedural names per leaf at split time). Key exports: generateName.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const ENDINGS = [
   "ic", "an", "ish", "ese", "ar", "on", "en", "ae", "i", "a",
   "ia", "is", "us", "or", "el", "yn", "as", "um", "il", "ur",

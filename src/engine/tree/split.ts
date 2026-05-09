@@ -14,6 +14,14 @@ import { leafIds } from "./leafIds";
 import { CONSERVATISM_MIN, CONSERVATISM_MAX } from "../constants";
 import { applyFounderInnovation } from "./founder";
 
+/**
+ * split.ts
+ *
+ * Phylogenetic split mechanics, leafIds, founder selection, MSA-based proto reconstruction. Key exports: pickFirstSplitChildCount, SplitOptions, splitLeaf.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export { leafIds };
 
 const INCOMPATIBLE_RULE_PAIRS: ReadonlyArray<readonly [string, string]> = [
@@ -198,6 +206,14 @@ export function splitLeaf(
       // can extend or decay independently from this baseline.
       ablautClassAssignment: parentLang.ablautClassAssignment
         ? { ...parentLang.ablautClassAssignment }
+        : undefined,
+      // Phase 70 T1: Historical Mode role inherited from parent.
+      // SplitMilestones (T2+) overwrite the role on each declared
+      // daughter; random splits keep the parent's role so the next
+      // bias milestone targeting that role still finds the lineage.
+      historicalRole: parentLang.historicalRole,
+      historicalRoleAssignedGen: parentLang.historicalRole
+        ? parentLang.historicalRoleAssignedGen
         : undefined,
       // Phase 66 T1: grammaticalization stage tracking inherited.
       // Daughters continue the chain from the parent's state — Latin

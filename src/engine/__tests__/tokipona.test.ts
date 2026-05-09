@@ -3,6 +3,14 @@ import { presetTokipona } from "../presets/tokipona";
 import { createSimulation } from "../simulation";
 import { PRESETS } from "../presets";
 
+/**
+ * tokipona.test.ts
+ *
+ * Test suite for: "toki pona preset".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 const TOKIPONA_CONSONANTS = new Set(["p", "t", "k", "s", "m", "n", "l", "j", "w"]);
 const TOKIPONA_VOWELS = new Set(["a", "e", "i", "o", "u"]);
 

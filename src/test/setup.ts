@@ -4,6 +4,14 @@
 // mature runs). Tests get a fresh in-memory IDB per file.
 import "fake-indexeddb/auto";
 
+/**
+ * setup.ts
+ *
+ * Vitest + jsdom test setup.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 class MockResizeObserver {
   observe() {}
   unobserve() {}

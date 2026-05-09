@@ -10,6 +10,14 @@ import {
 import { downloadAs, slugForFile } from "./exportUtils";
 import type { SavedRun } from "../engine/types";
 
+/**
+ * SavedRunsList.tsx
+ *
+ * React app: tabs, controls, lexicon table, narrative panes, grammar view, etc. Key exports: SavedRunsList.
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 export function SavedRunsList() {
   const config = useSimStore((s) => s.config);
   const state = useSimStore((s) => s.state);

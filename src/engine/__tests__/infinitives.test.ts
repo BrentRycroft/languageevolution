@@ -5,6 +5,14 @@ import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";
 import type { Language } from "../types";
 
+/**
+ * infinitives.test.ts
+ *
+ * Test suite for: "Phase 26b — infinitive morphology".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function langFromPreset(preset: ReturnType<typeof presetEnglish>): Language {
   const sim = createSimulation(preset);
   return sim.getState().tree[sim.getState().rootId]!.language;

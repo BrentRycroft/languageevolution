@@ -4,6 +4,14 @@ import { PRESETS } from "../presets";
 import { leafIds } from "../tree/split";
 import { defaultConfig } from "../config";
 
+/**
+ * concept_smoke.test.ts
+ *
+ * Test suite for: "concept-dictionary integration smoke test".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 interface LeafReport {
   id: string;
   name: string;

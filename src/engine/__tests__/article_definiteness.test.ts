@@ -4,6 +4,14 @@ import { mention, makeDiscourse } from "../narrative/discourse";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 
+/**
+ * article_definiteness.test.ts
+ *
+ * Test suite for: "Phase 65 T1 — article discourse-context gating".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 65 T1 — article discourse-context gating", () => {
   it("mention() increments mentionCount; first call is 1, second is 2", () => {
     const ctx = makeDiscourse("daily");

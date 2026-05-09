@@ -3,6 +3,14 @@ import { enforceTypologicalUniversals } from "../grammar/universals";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * typological_universals.test.ts
+ *
+ * Test suite for: "enforceTypologicalUniversals".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language["grammar"]> = {}): Language {
   return {
     id: "L",

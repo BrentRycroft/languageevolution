@@ -8,6 +8,14 @@ import {
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 
+/**
+ * orthography_tier_gate.test.ts
+ *
+ * Test suite for: "tierOrthographyMultiplier".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",

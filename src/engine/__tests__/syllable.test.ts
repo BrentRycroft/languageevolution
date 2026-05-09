@@ -6,6 +6,14 @@ import {
   formatStressedIpa,
 } from "../phonology/syllable";
 
+/**
+ * syllable.test.ts
+ *
+ * Test suite for: "syllabify".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("syllabify", () => {
   it("returns no syllables when there is no nucleus", () => {
     expect(syllabify(["t", "k"])).toEqual([]);

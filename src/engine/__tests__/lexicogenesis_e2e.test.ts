@@ -3,6 +3,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 
+/**
+ * lexicogenesis_e2e.test.ts
+ *
+ * Test suite for: "lexicogenesis e2e".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("lexicogenesis e2e", () => {
   it("coinages are fully tagged and trackable", () => {
     const sim = createSimulation({

@@ -7,6 +7,14 @@ import {
 } from "../lexicon/affixSelector";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 
+/**
+ * affix_synonymy.test.ts
+ *
+ * Test suite for: "Phase 53 T5 — affix synonymy via abstract concept system".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 53 T5 — affix synonymy via abstract concept system", () => {
   it("selectAffixesForCategory returns empty when no productive affix exists", () => {
     const sim = createSimulation(presetEnglish());

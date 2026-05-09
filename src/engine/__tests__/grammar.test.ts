@@ -3,6 +3,14 @@ import { driftGrammar, cloneGrammar } from "../grammar/evolve";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { makeRng } from "../rng";
 
+/**
+ * grammar.test.ts
+ *
+ * Test suite for: "grammar evolution".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("grammar evolution", () => {
   it("produces some shifts over many calls", () => {
     const g = cloneGrammar(DEFAULT_GRAMMAR);

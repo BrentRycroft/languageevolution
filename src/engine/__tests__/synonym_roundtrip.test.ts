@@ -5,6 +5,14 @@ import { lookupFormWithResolution } from "../lexicon/lookup";
 import { reverseTranslate } from "../translator/reverse";
 import { formToString } from "../phonology/ipa";
 
+/**
+ * synonym_roundtrip.test.ts
+ *
+ * Test suite for: "Phase 54 — synonym round-trip via reverse-lookup abstraction".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("Phase 54 — synonym round-trip via reverse-lookup abstraction", () => {
   it("affix synonyms register via lang.words and reverse-translate to the same meaning", () => {
     const sim = createSimulation(presetEnglish());

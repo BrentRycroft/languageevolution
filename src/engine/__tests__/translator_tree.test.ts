@@ -4,6 +4,14 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import type { Language } from "../types";
 
+/**
+ * translator_tree.test.ts
+ *
+ * Test suite for: "§2.1 — tree-driven realisation: word order".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function freshLang(seed: string): Language {
   const sim = createSimulation({ ...defaultConfig(), seed });
   sim.step();

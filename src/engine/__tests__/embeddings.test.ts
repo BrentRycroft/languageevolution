@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { embed, cosine, nearestMeanings, EMBEDDING_DIMS } from "../semantics/embeddings";
 
+/**
+ * embeddings.test.ts
+ *
+ * Test suite for: "semantic embeddings".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("semantic embeddings", () => {
   it("every seed meaning embeds into a vector of the declared size", () => {
     const v = embed("water");

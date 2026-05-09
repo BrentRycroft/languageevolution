@@ -5,6 +5,14 @@ import { PRESETS } from "../presets";
 import { leafIds } from "../tree/split";
 import { buildGrammarBrief } from "../../persistence/export";
 
+/**
+ * integration_e2e.test.ts
+ *
+ * Test suite for: "end-to-end integration".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("end-to-end integration", () => {
   // Phase 29 Tranche 7g: trimmed gen-counts so the full integration
   // suite stays under the 5-minute CI budget. The structural checks

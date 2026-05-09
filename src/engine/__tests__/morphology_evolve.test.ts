@@ -5,6 +5,14 @@ import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
 
+/**
+ * morphology_evolve.test.ts
+ *
+ * Test suite for: "morphology evolution".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 function makeLang(): Language {
   return {
     id: "L-0",

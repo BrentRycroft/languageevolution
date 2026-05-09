@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { validateConfig, summarizeValidation } from "../configValidation";
 import { defaultConfig } from "../config";
 
+/**
+ * config_validation.test.ts
+ *
+ * Test suite for: "validateConfig".
+ *
+ * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ */
+
 describe("validateConfig", () => {
   it("default config has no issues", () => {
     const issues = validateConfig(defaultConfig());
