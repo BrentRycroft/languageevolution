@@ -2,6 +2,7 @@ import type { Language, Meaning, WordForm } from "../types";
 import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSense, removeSynonymSense } from "./word";
 import { invalidateReverseLexCache } from "../translator/reverse";
 import { invalidateClosedClassCache } from "../translator/closedClass";
+import { purgeMeaningFromRegistry } from "../perMeaningFields";
 
 /**
  * Phase 28a: single chokepoint for writing a form to the meaning-keyed
@@ -165,7 +166,26 @@ export const PROTECTED_MEANINGS: ReadonlySet<Meaning> = new Set<Meaning>([
   "know", "want", "find", "think", "eat", "drink",
 ]);
 
-export function deleteMeaning(lang: Language, meaning: Meaning): void {
+/**
+ * Phase 72d T2: optional metadata for `deleteMeaning`. When a meaning
+ * is removed via recarving / bleaching / merger, callers can record
+ * the pathway so reverse translation and reconstruction can recover
+ * the conceptual identity later.
+ */
+export interface DeleteMeaningOptions {
+  /** The meaning that absorbed this one (if a merger). */
+  mergedInto?: Meaning;
+  /** Generation at which the deletion occurred. */
+  generation?: number;
+  /** Human-readable reason ("homonym", "bleach", "taboo-replacement", ...). */
+  reason?: string;
+}
+
+export function deleteMeaning(
+  lang: Language,
+  meaning: Meaning,
+  opts?: DeleteMeaningOptions,
+): void {
   // Phase 71b T2 (G8): protected meanings refuse deletion. Their
   // lexicon entry stays alive even when semantic drift / bleaching
   // / obsolescence calls for removal. This is intentional — these
@@ -175,29 +195,29 @@ export function deleteMeaning(lang: Language, meaning: Meaning): void {
   // moved on.
   if (PROTECTED_MEANINGS.has(meaning)) return;
 
+  // Phase 72d T2: record the pathway BEFORE deleting per-meaning
+  // metadata (so the entry is preserved even though everything else is
+  // purged). This is the minimal "concept identity trace" mechanism;
+  // a full UUID-keyed lexicon refactor is deferred (audit Theme D).
+  if (opts && (opts.mergedInto || opts.reason)) {
+    if (!lang.meaningHistory) lang.meaningHistory = {};
+    lang.meaningHistory[meaning] = {
+      mergedInto: opts.mergedInto,
+      generation: opts.generation ?? 0,
+      reason: opts.reason,
+    };
+  }
+
+  // Lexicon (primary form) is bespoke — deleted explicitly.
   delete lang.lexicon[meaning];
-  delete lang.wordFrequencyHints[meaning];
-  delete lang.lastChangeGeneration[meaning];
-  delete lang.wordOrigin[meaning];
-  delete lang.localNeighbors[meaning];
-  if (lang.registerOf) delete lang.registerOf[meaning];
-  if (lang.variants) delete lang.variants[meaning];
-  if (lang.wordOriginChain) delete lang.wordOriginChain[meaning];
-  if (lang.colexifiedAs) delete lang.colexifiedAs[meaning];
-  // Phase 68a T1: purge Phase 64/66 per-meaning metadata so stale
-  // entries don't survive bleaching / recarving / obsolescence.
-  // Without this, `progressGrammaticalizationChain` could try to
-  // advance a deleted meaning and `decayAblautClasses` would read
-  // garbage. Symmetric with the legacy delete list above.
-  if (lang.inflectionClass) delete lang.inflectionClass[meaning];
-  if (lang.nounDeclensionClass) delete lang.nounDeclensionClass[meaning];
-  if (lang.ablautClassAssignment) delete lang.ablautClassAssignment[meaning];
-  if (lang.grammaticalizationStage) delete lang.grammaticalizationStage[meaning];
-  // Phase 71b T2 (G8): purge suppletion entries too — was missed by
-  // the Phase 68a sweep. Even though PROTECTED_MEANINGS shields most
-  // suppletion-bearing items, this is a belt-and-braces fix for any
-  // future suppletive verb that isn't on the protected list.
-  if (lang.suppletion) delete lang.suppletion[meaning];
+  // Phase 72d T1: every other per-meaning field is now purged via the
+  // registry in `perMeaningFields.ts`. Pre-72d this was a manual list
+  // (Phase 68a fix added 4 fields; Phase 71b T2 added suppletion;
+  // each addition was a one-phase delay during which the field leaked
+  // on delete). The registry centralizes the contract: adding a new
+  // per-meaning field requires registering it, which makes the
+  // delete handler automatic.
+  purgeMeaningFromRegistry(lang, meaning);
   removeSense(lang, meaning);
   // Phase 72a T2 (Invariant 1 fix): invalidate closed-class cache —
   // deleting a closed-class lemma (rare via PROTECTED_MEANINGS but
