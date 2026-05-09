@@ -122,6 +122,21 @@ function applyBiasMilestone(
       m.volatility.trigger ?? m.label,
     );
   }
+  // Phase 71d (G3+G5): direct grammatical-feature override. Applied
+  // when intensity > 0; intensity scaling doesn't apply (these are
+  // boolean / categorical fields, not multiplicative factors). The
+  // patch overwrites lang.grammar.* per declared key.
+  if (m.grammarPatch && intensity > 0) {
+    Object.assign(lang.grammar, m.grammarPatch);
+  }
+  // Phase 71d (G3): suppress word-order drift until the declared gen.
+  // grammar/evolve.ts:maybeDriftWordOrder respects
+  // wordOrderLastFlipGen + WORD_ORDER_FLIP_COOLDOWN as a "no-flip
+  // before this gen" gate, so writing a far-future value pins the
+  // word order until then.
+  if (m.lockWordOrderUntilGen !== undefined && intensity > 0) {
+    lang.wordOrderLastFlipGen = m.lockWordOrderUntilGen;
+  }
 
   pushEvent(lang, {
     generation,

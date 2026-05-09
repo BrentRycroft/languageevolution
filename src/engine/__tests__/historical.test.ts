@@ -261,6 +261,64 @@ describe("Phase 70 T2 — Italo-Western / Eastern Romance split (M2)", () => {
   });
 });
 
+describe("Phase 71d — grammarPatch + lockWordOrder", () => {
+  it("Western daughters (iberian/gallo/italo) inherit hasCase=false at split", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p71d-case";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 105; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    const westernRoles = leaves.filter((l) =>
+      ["iberian", "gallo", "italo"].includes(l.historicalRole ?? ""),
+    );
+    expect(westernRoles.length).toBeGreaterThan(0);
+    for (const lang of westernRoles) {
+      expect(lang.grammar.hasCase).toBe(false);
+      expect(lang.grammar.caseStrategy).toBe("preposition");
+    }
+  });
+
+  it("Eastern daughter retains hasCase=true via grammarPatch (Romanian case retention)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p71d-east";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 70; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    const easternLeaves = leaves.filter((l) => l.historicalRole === "eastern");
+    expect(easternLeaves.length).toBeGreaterThan(0);
+    for (const lang of easternLeaves) {
+      // Eastern's grammarPatch explicitly sets hasCase=true to model
+      // Romanian's retention of the Latin case system (it's the only
+      // Romance language that did).
+      expect(lang.grammar.hasCase).toBe(true);
+    }
+  });
+
+  it("All Romance daughters keep wordOrder=SVO at gen 200 (lockWordOrderUntilGen)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p71d-svo";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 200; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    expect(leaves.length).toBeGreaterThan(0);
+    for (const lang of leaves) {
+      expect(lang.grammar.wordOrder).toBe("SVO");
+    }
+  });
+});
+
 describe("Phase 71c — closed-class anchoring + inventory tightening", () => {
   it("Romance preset declares tightened seedPhonemeTarget (26)", () => {
     const cfg = presetRomance();
