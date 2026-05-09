@@ -484,6 +484,11 @@ export function presetRomance(): SimulationConfig {
       // daughters' articles centuries later. Drift pathway can
       // re-introduce articles via grammaticalize step.
       wordOrder: "SVO",
+      // Phase 71a T2 (G4): Romance is uniformly nominative-accusative.
+      // Pre-71a this was unset and grammar drift could land daughters
+      // on erg-abs / split-S / tripartite (Lusitanian shipped erg-abs,
+      // Francien split-S in the Phase 70 diagnostic).
+      alignment: "nom-acc",
       articlePresence: "none",
       caseStrategy: "case",
       adjectivePosition: "pre",
@@ -521,7 +526,26 @@ export function presetRomance(): SimulationConfig {
     // Phase 31 Tranche 31d: Latin non-tonal.
     seedToneRegime: "non-tonal",
     seedBoundMorphemes: ROMANCE_BOUND_MORPHEMES,
-    seedPhonemeTarget: 30,
+    // Phase 71c T2 (G2): tighter target. Real-world Romance daughters
+    // sit at 24-30 phonemes; the Phase 70 diagnostic at gen 200 was
+    // seeing 42-47 because the target was too loose vs. ongoing
+    // emergence of length / nasal allotones. Pulling the target to
+    // 26 lets `runHomeostasis` keep the inventory honest.
+    seedPhonemeTarget: 26,
+    // Phase 71c T3 (G2): suppress phonemic vowel length emergence.
+    // Spanish/Italian/French/Portuguese/Romanian have at most
+    // marginal length (Italian distinguishes geminate consonants but
+    // not phonemic long vowels). Pre-71c the Romance railroad ended
+    // up with `aː`/`eː`/`oː` as separate inventory phonemes simply
+    // because lengthening rules fire freely. seedRuleBias is a soft
+    // prior that multiplies the catalog default at language birth
+    // (Phase 40d, types.ts:1151) and inherits with jitter on splits.
+    seedRuleBias: {
+      "vowel.lengthening_open_syllable": 0.4,
+      "compensatory.final_coda_lengthening": 0.4,
+      "compensatory.medial_coda_lengthening": 0.4,
+      "stress.open_syllable_lengthening": 0.4,
+    },
     // Phase 46a-migration: Latin/Common Romance — SVO, case morphology,
     // subjunctive mood, T-V politeness. Articles emerge later via
     // grammaticalisation pathway (excluded at seed; Phase 33i/46d

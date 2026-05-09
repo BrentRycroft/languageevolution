@@ -11,6 +11,7 @@
  */
 
 import type { RuleFamily } from "../phonology/generated-types";
+import type { GrammarFeatures } from "../types";
 
 /**
  * Tag applied to leaves to identify which milestone targets affect them.
@@ -57,6 +58,22 @@ export interface BiasMilestone {
   categoryMomentum?: Record<string, { boost: number; forGens: number }>;
   /** Trigger a `volatilityPhase` upheaval. Reuses `triggerVolatilityUpheaval`. */
   volatility?: { multiplier?: number; forGens?: number; trigger?: string };
+  /**
+   * Phase 71d (G3+G5): direct write to `lang.grammar.*`. Lets the
+   * schedule force grammatical typology that organic drift won't
+   * deliver reliably (e.g., Western Romance dropping `hasCase: true
+   * → false`). Object.assign'd onto lang.grammar in
+   * applyBiasMilestone — overrides existing values per key.
+   */
+  grammarPatch?: Partial<GrammarFeatures>;
+  /**
+   * Phase 71d (G3): writes `lang.wordOrderLastFlipGen` to suppress
+   * word-order drift. Setting this to a far-future generation
+   * effectively pins the word order for the rest of the run.
+   * Pre-71d, Castilian / Lusitanian / Occitano routinely drifted
+   * to SOV / VSO over 200 gens despite the Romance railroad.
+   */
+  lockWordOrderUntilGen?: number;
 }
 
 /**
@@ -75,6 +92,7 @@ export interface SplitMilestone {
     initialBias?: Pick<
       BiasMilestone,
       "ruleBias" | "ruleWeight" | "categoryMomentum"
+      | "grammarPatch" | "lockWordOrderUntilGen"
     >;
   }>;
 }

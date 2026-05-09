@@ -78,6 +78,13 @@ export const romanceSchedule: HistoricalSchedule = {
             categoryMomentum: {
               lenition: { boost: 1.3, forGens: 25 },
             },
+            // Phase 71d (G3): all Romance daughters are SVO. Force
+            // SVO at split (the proto may already have drifted off
+            // SVO by gen 65), then lock word order to suppress
+            // future drift. Lock cascades to grand-daughters via
+            // the parent-inherits-cooldown patch in tree/split.ts.
+            grammarPatch: { wordOrder: "SVO" },
+            lockWordOrderUntilGen: 250,
           },
         },
         {
@@ -86,6 +93,12 @@ export const romanceSchedule: HistoricalSchedule = {
           initialBias: {
             // Eastern branch resists erosion → Romanian's case retention.
             ruleBias: { fortition: 1.2, deletion: 0.6 },
+            // Phase 71d (G3+G5): Romanian retains case (only Romance
+            // language to do so) and is SVO. Explicitly patch both —
+            // the proto may have lost case to natural drift before
+            // M2 fires, so we force the eastern lineage to keep it.
+            grammarPatch: { wordOrder: "SVO", hasCase: true },
+            lockWordOrderUntilGen: 250,
           },
         },
       ],
@@ -105,6 +118,21 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Proto-Iberian-Romance",
           initialBias: {
             ruleBias: { lenition: 1.5, palatalization: 1.2 },
+            // Phase 71d (G5): Western Romance lost the Latin case
+            // system. Pre-71d the procedural drift didn't reliably
+            // flip hasCase on western daughters; the Phase 70 diag
+            // saw Castilian/Lusitanian/Francien still showing
+            // hasCase=true at gen 200. Force it here. Daughters
+            // (Castilian, Lusitanian) inherit the change via
+            // tree/split.ts grammar clone. Also re-pin wordOrder
+            // since the cooldown lock from M2 was reset by the
+            // intermediate gen-100 split-and-restart of the timer.
+            grammarPatch: {
+              hasCase: false,
+              caseStrategy: "preposition",
+              wordOrder: "SVO",
+            },
+            lockWordOrderUntilGen: 250,
           },
         },
         {
@@ -112,6 +140,12 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Proto-Gallo-Romance",
           initialBias: {
             ruleBias: { vowel_shift: 1.6, deletion: 1.4, vowel_reduction: 1.5 },
+            grammarPatch: {
+              hasCase: false,
+              caseStrategy: "preposition",
+              wordOrder: "SVO",
+            },
+            lockWordOrderUntilGen: 250,
           },
         },
         {
@@ -121,11 +155,21 @@ export const romanceSchedule: HistoricalSchedule = {
             // Italian preserves more: lower lenition, stronger fortition
             // for the geminate retention found in modern Italian.
             ruleBias: { lenition: 0.8, fortition: 1.3 },
+            grammarPatch: {
+              hasCase: false,
+              caseStrategy: "preposition",
+              wordOrder: "SVO",
+            },
+            lockWordOrderUntilGen: 250,
           },
         },
       ],
     },
     // ── M4: Iberian subsplit ───────────────────────────────────
+    // Phase 71d (G3+G5): re-pin hasCase=false / SVO / nom-acc on the
+    // terminal daughters. Between M3 (gen 100) and M4 (gen 130) the
+    // intermediate iberian leaf can drift these features back via
+    // procedural drift, so we anchor them explicitly at each tier.
     {
       kind: "split",
       atGen: 130,
@@ -137,6 +181,13 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old Castilian",
           initialBias: {
             ruleBias: { lenition: 1.3, palatalization: 1.4 },
+            grammarPatch: {
+              wordOrder: "SVO",
+              hasCase: false,
+              caseStrategy: "preposition",
+              alignment: "nom-acc",
+            },
+            lockWordOrderUntilGen: 250,
           },
         },
         {
@@ -144,6 +195,13 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old Portuguese",
           initialBias: {
             ruleBias: { vowel_shift: 1.4, deletion: 1.2 },
+            grammarPatch: {
+              wordOrder: "SVO",
+              hasCase: false,
+              caseStrategy: "preposition",
+              alignment: "nom-acc",
+            },
+            lockWordOrderUntilGen: 250,
           },
         },
       ],
@@ -160,6 +218,13 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old French",
           initialBias: {
             ruleBias: { vowel_shift: 1.7, deletion: 1.5, vowel_reduction: 1.5 },
+            grammarPatch: {
+              wordOrder: "SVO",
+              hasCase: false,
+              caseStrategy: "preposition",
+              alignment: "nom-acc",
+            },
+            lockWordOrderUntilGen: 250,
           },
         },
         {
@@ -167,6 +232,13 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old Occitan",
           initialBias: {
             ruleBias: { vowel_shift: 1.2 },
+            grammarPatch: {
+              wordOrder: "SVO",
+              hasCase: false,
+              caseStrategy: "preposition",
+              alignment: "nom-acc",
+            },
+            lockWordOrderUntilGen: 250,
           },
         },
       ],
@@ -187,6 +259,13 @@ export const romanceSchedule: HistoricalSchedule = {
           nameHint: "Old Tuscan",
           initialBias: {
             ruleBias: { fortition: 1.3, lenition: 0.7 },
+            grammarPatch: {
+              wordOrder: "SVO",
+              hasCase: false,
+              caseStrategy: "preposition",
+              alignment: "nom-acc",
+            },
+            lockWordOrderUntilGen: 250,
           },
         },
       ],

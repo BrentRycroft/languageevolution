@@ -187,6 +187,13 @@ export function splitLeaf(
       orthography: { ...parentLang.orthography },
       otRanking: parentLang.otRanking.slice(),
       lastChangeGeneration: { ...parentLang.lastChangeGeneration },
+      // Phase 71d (G3): inherit the word-order cooldown timer from
+      // the parent. Pre-71d every split reset wordOrderLastFlipGen
+      // to undefined, so a daughter could flip word order in its
+      // first generation regardless of the parent's recent stability.
+      // Inheriting respects the cooldown and lets Historical Mode's
+      // `lockWordOrderUntilGen` cascade to subsplit grand-daughters.
+      wordOrderLastFlipGen: parentLang.wordOrderLastFlipGen,
       stressPattern: parentLang.stressPattern,
       lexicalStress: parentLang.lexicalStress
         ? { ...parentLang.lexicalStress }

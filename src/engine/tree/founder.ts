@@ -18,7 +18,25 @@ type GrammarFlip = {
   to: GrammarFeatures[keyof GrammarFeatures];
 };
 
-function flipGrammar(g: GrammarFeatures, rng: Rng): GrammarFlip | null {
+// Phase 71d (G3): mirror of `WORD_ORDER_FLIP_COOLDOWN` from
+// grammar/evolve.ts. Founder innovation honours the same cooldown the
+// drift step does — without this gate, a natural split's
+// applyFounderInnovation could flip word order even on a lineage
+// that Historical Mode has locked via lockWordOrderUntilGen.
+const WORD_ORDER_LOCK_BUFFER = 50;
+
+function isWordOrderLocked(lang: Language, generation: number): boolean {
+  const lastFlip = lang.wordOrderLastFlipGen;
+  if (lastFlip === undefined) return false;
+  return generation - lastFlip < WORD_ORDER_LOCK_BUFFER;
+}
+
+function flipGrammar(
+  child: Language,
+  rng: Rng,
+  generation: number,
+): GrammarFlip | null {
+  const g = child.grammar;
   const options: GrammarFlip[] = [];
   if (g.pluralMarking !== "affix") options.push({ feature: "pluralMarking", from: g.pluralMarking, to: "affix" });
   if (g.pluralMarking !== "reduplication") options.push({ feature: "pluralMarking", from: g.pluralMarking, to: "reduplication" });
@@ -28,9 +46,14 @@ function flipGrammar(g: GrammarFeatures, rng: Rng): GrammarFlip | null {
   else options.push({ feature: "hasCase", from: true, to: false });
   if (g.affixPosition === "suffix") options.push({ feature: "affixPosition", from: "suffix", to: "prefix" });
   else options.push({ feature: "affixPosition", from: "prefix", to: "suffix" });
-  if (g.wordOrder === "SVO") options.push({ feature: "wordOrder", from: "SVO", to: "SOV" });
-  else if (g.wordOrder === "SOV") options.push({ feature: "wordOrder", from: "SOV", to: "VSO" });
-  else if (g.wordOrder === "VSO") options.push({ feature: "wordOrder", from: "VSO", to: "SVO" });
+  // Phase 71d: only propose word-order flips when the lineage's
+  // cooldown isn't active. Honours both organic post-flip cooldowns
+  // and Historical Mode's `lockWordOrderUntilGen` future-dated locks.
+  if (!isWordOrderLocked(child, generation)) {
+    if (g.wordOrder === "SVO") options.push({ feature: "wordOrder", from: "SVO", to: "SOV" });
+    else if (g.wordOrder === "SOV") options.push({ feature: "wordOrder", from: "SOV", to: "VSO" });
+    else if (g.wordOrder === "VSO") options.push({ feature: "wordOrder", from: "VSO", to: "SVO" });
+  }
   if (options.length === 0) return null;
   return options[rng.int(options.length)]!;
 }
@@ -93,7 +116,7 @@ export function applyFounderInnovation(
       // Phase 39l: multiple grammar flips per founder event.
       const seenFeatures = new Set<string>();
       for (let i = 0; i < maxGrammarFlips; i++) {
-        const flip = flipGrammar(child.grammar, rng);
+        const flip = flipGrammar(child, rng, generation);
         if (!flip || seenFeatures.has(flip.feature)) continue;
         seenFeatures.add(flip.feature);
         setGrammarFeature(child.grammar, flip.feature, flip.to as GrammarFeatures[typeof flip.feature]);
