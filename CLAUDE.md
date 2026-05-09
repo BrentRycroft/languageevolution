@@ -83,6 +83,10 @@ standalone commit (or 2–4 for larger phases). Probe scripts under
 | 70 diag | `702315a` | Gap-finder probe | `phase70_diagnostic_compare.ts` — read-only run that surfaces engine gaps |
 | 70.1 | `64782d3` | Drop gen-1 immediate split | Proto stays single until natural splits or M2; rename via `generateName` |
 | 70.1 fix | `a0b5a3a` | Test follow-up | Idempotency test now reads state-level `firedHistoricalMilestones` |
+| 71a | `ba22a3b` | G1+G4 quick fixes | Clamp `ruleBias` to [0.2, 4.0] in milestone runner; declare `alignment: "nom-acc"` default |
+| 71b | `db9624e` | G7+G8 translator/suppletion | Gate noun-case paradigm on `grammar.hasCase`; `PROTECTED_MEANINGS` set shields be/go/etc. from `deleteMeaning`; purge `lang.suppletion` on delete |
+| 71c | `a10c340` | G2+G6 closed-class + inventory | Extend `SWADESH_CORE_SET` with closed-class lemmas; tighten Romance `seedPhonemeTarget=26`; disfavor lengthening rules via `seedRuleBias` |
+| 71d | `51457c8` | G3+G5 schedule grammar control | New `grammarPatch?: Partial<GrammarFeatures>` + `lockWordOrderUntilGen?: number` fields on BiasMilestone/initialBias; founder innovation respects word-order cooldown; Romance schedule applies SVO + nom-acc + hasCase patches per tier |
 
 ### Per-phase feature pointers
 
@@ -249,23 +253,48 @@ TimelineChart markers stay visible across long runs.
   `state.firedHistoricalMilestones` rather than per-language events
   (which the 80-event cap evicts on long-lived single proto leaves).
 
-### Known engine gaps surfaced by Historical Mode (Phase 70 diag)
+### Engine gaps surfaced by Historical Mode (Phase 70 diag)
 
-The diagnostic probe revealed gaps that are NOT Historical-Mode bugs
-but engine concerns the railroad makes obvious. Documented for follow-up:
-- **G1 ruleBias multiplicative stacking** — Castilian `lenition` reaches
-  10–12 across nested milestone multiplications. Needs clamp.
-- **G2 phoneme inventory** stays at 42–47 segments (target ~28).
-- **G3 word order drifts to SOV/VSO** on lineages that should anchor SVO.
-- **G4 alignment** undefined / erg-abs / split-S; Romance preset doesn't
-  declare `seedGrammar.alignment`.
-- **G5 western Romance daughters retain case** (real-world lost).
-- **G6 closed-class words** (the/and/of/i) drift unrecognizably; the
-  high-frequency dampener isn't strong enough vs M-volatility.
-- **G7 translator emits case suffixes** even when `grammar.hasCase=false`.
-- **G8 `go`/`be` suppletion**: lookup chain doesn't survive 200 gens.
-- **G11 eastern lineage** sometimes goes extinct under default biases
-  (1 of 3 seeds in early test); 70.1 helped but not always.
+Status after Phase 71 (a-d):
+
+- **G1 ruleBias multiplicative stacking** — ✅ FIXED in 71a. Clamp
+  `ruleBias` to [0.2, 4.0] and `changeWeights` to [0.05, 12.0] in
+  `applyBiasMilestone`.
+- **G2 phoneme inventory** — 🟡 PARTIAL in 71c. Romance
+  `seedPhonemeTarget` 30→26 + `seedRuleBias` 0.4× on length-emergence
+  rules. Inventories dropped from 42–47 to ~38–44. Full target
+  (~28) would need additional homeostasis work.
+- **G3 word order drifts to SOV/VSO** — ✅ FIXED in 71d. New
+  `lockWordOrderUntilGen` field; founder innovation respects the
+  cooldown; tree/split.ts inherits the cooldown timer.
+- **G4 alignment undefined / erg-abs / split-S** — ✅ FIXED in 71a.
+  `DEFAULT_GRAMMAR.alignment="nom-acc"` + Romance preset declares it.
+- **G5 western Romance daughters retain case** — 🟡 MOSTLY FIXED
+  in 71d. New `grammarPatch` field at every Western tier; Eastern
+  retains case (Romanian-correct). Lifecycle drift between gen
+  130–200 can re-flip on some seeds; would need a per-feature
+  `lockUntilGen` generalisation.
+- **G6 closed-class words** — ✅ FIXED in 71c. Extended
+  `SWADESH_CORE_SET` with the/of/and/i/etc. Pre: `the→iːɾaːɾu`;
+  post: `the→iːll/iːllu/ɔll` (recognizable from Latin *ille*).
+- **G7 translator emits case suffixes when hasCase=false** — ✅ FIXED
+  in 71b. `inflect()` skips `noun.case.*` paradigms when
+  `!lang.grammar.hasCase`.
+- **G8 go/be suppletion lost after 200 gens** — ✅ FIXED in 71b.
+  New `PROTECTED_MEANINGS` set shields cross-linguistically suppletive
+  verbs from `deleteMeaning`; orphan suppletion entries also purged.
+- **G11 eastern lineage extinction** — 🟡 PARTIAL. 70.1 helped via
+  removed-gen-1-split; the eastern grammarPatch in 71d also keeps
+  eastern recognizable when alive, but extinction itself isn't
+  addressed by 71.
+
+Remaining concerns (post-71):
+- Phoneme inventory still ~40 (target ~28). Needs a Romance-specific
+  homeostasis pass that strips phonemic length / nasal allotones
+  after sound changes settle. Not addressed.
+- Lifecycle drift on grammatical features (hasCase, articlePresence)
+  can flip during life-cycle gaps even when the schedule sets them
+  at split. A per-feature `lockUntilGen` mechanism would solve it.
 
 Plan: `/root/.claude/plans/i-want-to-make-modular-quill.md`
 
