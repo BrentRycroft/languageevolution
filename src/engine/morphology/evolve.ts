@@ -513,6 +513,29 @@ const VOWEL_PERTURBATIONS: Record<string, string[]> = {
   ɔ: ["o", "u"],
 };
 
+/**
+ * Phase 72c T1 (Contract C4 fix): a paradigm whose primary affix and
+ * every variant affix is an empty array (length 0) is functionally a
+ * no-op. Phonology can erode affixes down to [] (e.g., Latin -m → ∅
+ * in coda position); pre-72c the cascade still applied empty paradigms
+ * and produced identical surface forms across all cases, hiding the
+ * inflectional collapse. We bail to bare stem when this happens; the
+ * grammar/morphology drift step (separate concern) is responsible for
+ * detecting and removing the collapsed paradigm or for renewing
+ * morphology via grammaticalisation.
+ */
+function paradigmHasOnlyEmptyAffixes(paradigm: Paradigm): boolean {
+  if (paradigm.affix && paradigm.affix.length > 0) return false;
+  if (!paradigm.variants || paradigm.variants.length === 0) {
+    // No variants and primary affix is empty.
+    return true;
+  }
+  for (const v of paradigm.variants) {
+    if (v.affix && v.affix.length > 0) return false;
+  }
+  return true;
+}
+
 function perturbAffix(affix: WordForm, rng: { int: (n: number) => number }): WordForm {
   for (let i = 0; i < affix.length; i++) {
     const p = affix[i]!;
@@ -549,6 +572,16 @@ export function inflect(
     !lang.grammar.hasCase &&
     paradigm.category.startsWith("noun.case.")
   ) {
+    return base;
+  }
+  // Phase 72c T1 (Contract C4 fix): empty-affix paradigm guard.
+  // Phonology can erode paradigm.affix and its variants down to []
+  // (e.g., Latin -m → ∅ in coda position). Pre-72c, inflect() still
+  // ran applyParadigm with an empty affix, producing identical
+  // surface for all cases — silent paradigm collapse. Now we check
+  // the affix (and all variants) for non-emptiness and bail back to
+  // the bare stem if every variant has length 0.
+  if (paradigmHasOnlyEmptyAffixes(paradigm)) {
     return base;
   }
   // Phase 46a-migration: paradigm dispatch gated on the paradigms

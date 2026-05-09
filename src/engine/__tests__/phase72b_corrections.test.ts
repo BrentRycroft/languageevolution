@@ -72,7 +72,7 @@ describe("Phase 72b-4 — terminal-tier grammarPatch trimmed", () => {
     const { romanceSchedule } = await import("../historical/romance");
     const splitMilestones = romanceSchedule.milestones.filter(
       (m) => m.kind === "split",
-    ) as Array<{ atGen: number; daughters: any[] }>;
+    ) as unknown as Array<{ atGen: number; daughters: any[] }>;
 
     // M2 (gen 65) and M3 (gen 100) should still patch.
     const m2 = splitMilestones.find((m) => m.atGen === 65)!;
