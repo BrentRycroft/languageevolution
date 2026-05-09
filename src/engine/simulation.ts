@@ -1,5 +1,6 @@
 import type { SimulationConfig, SimulationState } from "./types";
-import { leafIds, pickFirstSplitChildCount, splitLeaf } from "./tree/split";
+import { leafIds } from "./tree/split";
+import { generateName } from "./naming";
 import { makeRng, type Rng } from "./rng";
 import { buildInitialState } from "./steps/init";
 import { stepPhonology, stepArealWaves } from "./steps/phonology";
@@ -103,8 +104,14 @@ export function createSimulation(
    * runs at that point — the order is load-bearing.
    *
    * Pre-loop:
-   *   - (gen 0, tree mode) splitLeaf the proto into N daughters via
-   *     pickFirstSplitChildCount. Sets up the initial language family.
+   *   - (gen 0) Phase 70.1: rename the proto from "Proto" to a
+   *     procedurally-generated name. The proto remains a SINGLE leaf
+   *     until natural tree splits trigger via stepTreeSplit. Pre-70.1
+   *     this slot forced an immediate 2-9-way split, which was
+   *     unrealistic — early splits don't happen on day one.
+   *   - (every gen, when active) stepHistorical applies any due
+   *     Historical Mode milestones. Runs before stepVolatility so
+   *     scheduled upheavals are picked up the same gen.
    *
    * Per leaf, in order:
    *   1. speaker drift              — Malthusian population update.
@@ -181,12 +188,17 @@ export function createSimulation(
     // hash work; we only need it once per generation regardless.
     const worldMap = getWorldMap(config.mapMode ?? "random", config.seed);
 
-    if (state.generation === 0 && config.modes.tree) {
-      const childCount = pickFirstSplitChildCount(rng);
-      splitLeaf(state.tree, state.rootId, nextGen, rng, {
-        childCount,
-        worldMap,
-      });
+    // Phase 70.1: at gen 0→1, the proto-language used to be split
+    // into 2-9 daughters immediately. That's unrealistic — early
+    // splits don't happen on day one. Instead, just give the proto
+    // a procedurally-generated name on its first tick (it was named
+    // "Proto" at init). Natural tree splits still fire later via
+    // stepTreeSplit when split probability triggers.
+    if (state.generation === 0) {
+      const root = state.tree[state.rootId]?.language;
+      if (root && root.name === "Proto") {
+        root.name = generateName(root, rng);
+      }
     }
 
     // Phase 70 T1+T2: Historical Mode runner. Fires before stepVolatility
