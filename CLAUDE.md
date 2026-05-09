@@ -79,7 +79,10 @@ standalone commit (or 2–4 for larger phases). Probe scripts under
 | 70 T1 | `551237d` | Historical Mode scaffold | M1 (Vulgar Latin lenition burst); types + UI toggle; soft railroad |
 | 70 T2 | `f6ef90e` | Italo-Western/Eastern split | M2 (gen 65); SplitMilestone runner; daughter role + initialBias |
 | 70 T3 | `31a9a6a` | Full Romance schedule | M3-M10; Iberian/Gallo/Italo subsplits; TimelineChart milestone markers |
-| 70 T4 | _pending_ | Polish | Intensity slider; narrative voice helper |
+| 70 T4 | `5e3c833` | Polish | Intensity slider; narrative voice helper; CLAUDE.md update |
+| 70 diag | `702315a` | Gap-finder probe | `phase70_diagnostic_compare.ts` — read-only run that surfaces engine gaps |
+| 70.1 | `64782d3` | Drop gen-1 immediate split | Proto stays single until natural splits or M2; rename via `generateName` |
+| 70.1 fix | `a0b5a3a` | Test follow-up | Idempotency test now reads state-level `firedHistoricalMilestones` |
 
 ### Per-phase feature pointers
 
@@ -228,9 +231,41 @@ TimelineChart markers stay visible across long runs.
   TimelineChart vertical marker pulled from `state.historicalEvents`.
   Convergence probe: 3 seeds × 200 gens; all four expected terminal
   daughters appear across seeds.
-- T4 — pending — intensity slider in PresetPicker (0–2× nudge
+- T4 — `5e3c833` — intensity slider in PresetPicker (0–2× nudge
   scale), `historical/voice.ts:narrativeHistoricalVoice` helper for
   per-language history flavor lines.
+- diagnostic — `702315a` — `scripts/probes/phase70_diagnostic_compare.ts`
+  runs Romance + Historical Mode 200 gens and prints per-terminal-role
+  lexicon, phonology, grammar, translator output, and narrative.
+  Designed for human inspection; surfaces the engine gaps the
+  Historical Mode railroad illuminates.
+- 70.1 — `64782d3` — drops the gen-1 immediate split. Pre-70.1 the
+  proto auto-split into 2-9 daughters at gen 1 (unrealistic). Now
+  it stays a single leaf, gets a procedurally-generated name on
+  gen 1, and either splits naturally via stepTreeSplit or is
+  forced by a SplitMilestone (M2). Allows the eastern/Romanian
+  lineage to survive consistently across seeds.
+- 70.1 fix — `a0b5a3a` — idempotency test now reads
+  `state.firedHistoricalMilestones` rather than per-language events
+  (which the 80-event cap evicts on long-lived single proto leaves).
+
+### Known engine gaps surfaced by Historical Mode (Phase 70 diag)
+
+The diagnostic probe revealed gaps that are NOT Historical-Mode bugs
+but engine concerns the railroad makes obvious. Documented for follow-up:
+- **G1 ruleBias multiplicative stacking** — Castilian `lenition` reaches
+  10–12 across nested milestone multiplications. Needs clamp.
+- **G2 phoneme inventory** stays at 42–47 segments (target ~28).
+- **G3 word order drifts to SOV/VSO** on lineages that should anchor SVO.
+- **G4 alignment** undefined / erg-abs / split-S; Romance preset doesn't
+  declare `seedGrammar.alignment`.
+- **G5 western Romance daughters retain case** (real-world lost).
+- **G6 closed-class words** (the/and/of/i) drift unrecognizably; the
+  high-frequency dampener isn't strong enough vs M-volatility.
+- **G7 translator emits case suffixes** even when `grammar.hasCase=false`.
+- **G8 `go`/`be` suppletion**: lookup chain doesn't survive 200 gens.
+- **G11 eastern lineage** sometimes goes extinct under default biases
+  (1 of 3 seeds in early test); 70.1 helped but not always.
 
 Plan: `/root/.claude/plans/i-want-to-make-modular-quill.md`
 

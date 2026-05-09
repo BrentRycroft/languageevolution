@@ -71,15 +71,21 @@ describe("Phase 70 T1 — Historical Mode (Latin → Romance)", () => {
     cfg.historical = { scheduleId: "romance", intensity: 1.0 };
     const sim = createSimulation(cfg);
     for (let i = 0; i < 60; i++) sim.step();
-    const allLangs = Object.values(sim.getState().tree).map((n) => n.language);
-    const m1events = allLangs.flatMap((l) =>
-      l.events.filter(
-        (e) =>
-          e.kind === "historical_milestone" &&
-          e.description.includes("Vulgar Latin lenition"),
-      ),
+    const state = sim.getState();
+    // Canonical idempotency record: firedHistoricalMilestones is the
+    // append-once-per-key tracker the runner consults to short-circuit.
+    // (Per-language events get evicted by MAX_EVENTS_PER_LANGUAGE = 80
+    // for long-lived single proto-leaves, which is a separate concern.)
+    const m1Keys = (state.firedHistoricalMilestones ?? []).filter((k) =>
+      k.includes("Vulgar Latin lenition"),
     );
-    expect(m1events.length).toBe(1);
+    expect(m1Keys.length).toBe(1);
+    // Cross-check: state.historicalEvents (the durable UI log) also
+    // records exactly one fired entry.
+    const m1Fired = (state.historicalEvents ?? []).filter(
+      (e) => e.label === "Vulgar Latin lenition" && e.kind === "fired",
+    );
+    expect(m1Fired.length).toBe(1);
   });
 
   it("M1 multiplies lang.ruleBias.lenition on every proto-tagged leaf (intensity=1.0)", () => {
