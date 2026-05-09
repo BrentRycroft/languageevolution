@@ -189,11 +189,13 @@ export function createSimulation(
       });
     }
 
-    // Phase 70 T1: Historical Mode runner. Fires before stepVolatility
+    // Phase 70 T1+T2: Historical Mode runner. Fires before stepVolatility
     // so volatility upheavals seeded by milestones are picked up the
-    // same gen. No-op when config.historical?.scheduleId is unset —
-    // zero RNG draws preserves existing-run determinism.
-    timed("historical", () => stepHistorical(state, config, rng, nextGen));
+    // same gen. T2's SplitMilestone runner needs the cached worldMap
+    // for splitLeaf territory wiring. No-op when config.historical?
+    // .scheduleId is unset — zero RNG draws preserves existing-run
+    // determinism.
+    timed("historical", () => stepHistorical(state, config, rng, nextGen, worldMap));
 
     const leaves = leafIds(state.tree);
     const aliveAtStart = leaves.filter((id) => !state.tree[id]!.language.extinct);

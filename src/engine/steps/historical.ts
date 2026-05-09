@@ -1,5 +1,5 @@
 /**
- * steps/historical.ts — Phase 70 T1: Historical Mode runner.
+ * steps/historical.ts — Phase 70 T1+T2: Historical Mode runner.
  *
  * Per-generation hook that consults the active `HistoricalSchedule`
  * (looked up from `config.historical?.scheduleId`) and fires any
@@ -7,9 +7,10 @@
  * milestone's key is appended to `state.firedHistoricalMilestones`
  * and skipped on re-evaluation.
  *
- * T1 handles only `BiasMilestone` (rate / weight nudges + volatility
- * upheaval). `SplitMilestone` is detected but no-op'd — implementation
- * ships in T2.
+ * T1 shipped `BiasMilestone` handling (rate / weight nudges +
+ * volatility upheaval). T2 adds `SplitMilestone`: forces a tree split
+ * on every leaf carrying `parentRole`, tags daughters with declared
+ * roles, optionally applies an `initialBias` to each daughter.
  *
  * Pipeline order: runs once per generation, OUTSIDE the per-leaf loop,
  * BEFORE `stepVolatility` and `stepTreeSplit`. When `scheduleId` is
@@ -22,11 +23,14 @@ import type {
   BiasMilestone,
   HistoricalMilestone,
   HistoricalRoleId,
+  SplitMilestone,
 } from "../historical/types";
 import { milestoneKey } from "../historical/types";
 import type { Rng } from "../rng";
 import { triggerVolatilityUpheaval } from "./volatility";
 import { pushEvent } from "./helpers";
+import { splitLeaf } from "../tree/split";
+import type { WorldMap } from "../geo/map";
 import type {
   Language,
   SimulationConfig,
@@ -113,15 +117,74 @@ function applyBiasMilestone(
  * Find every leaf currently carrying `role`. Called once per milestone.
  * Includes extinct leaves so we can log a degraded skip-event on them.
  */
-function leavesByRole(state: SimulationState, role: HistoricalRoleId): Language[] {
-  const out: Language[] = [];
+function leavesByRole(
+  state: SimulationState,
+  role: HistoricalRoleId,
+): Array<{ id: string; lang: Language }> {
+  const out: Array<{ id: string; lang: Language }> = [];
   for (const id of Object.keys(state.tree)) {
     const node = state.tree[id]!;
     if (node.childrenIds.length > 0) continue;
     const lang = node.language;
-    if (lang.historicalRole === role) out.push(lang);
+    if (lang.historicalRole === role) out.push({ id, lang });
   }
   return out;
+}
+
+/**
+ * T2: apply a `SplitMilestone`. For every leaf carrying `parentRole`,
+ * call `splitLeaf` with childCount = daughters.length. Then tag each
+ * resulting daughter with its declared role + nameHint, and apply any
+ * `initialBias`. Existing tree machinery (split.ts) handles all the
+ * usual daughter wiring (lexicon clone, inventory copy, jitter, etc.);
+ * we just override the role tag and seed an initial bias on top.
+ */
+function applySplitMilestone(
+  state: SimulationState,
+  m: SplitMilestone,
+  generation: number,
+  rng: Rng,
+  intensity: number,
+  worldMap: WorldMap,
+): { firedCount: number; daughterCount: number } {
+  const parents = leavesByRole(state, m.parentRole).filter((p) => !p.lang.extinct);
+  let daughterCount = 0;
+  for (const { id, lang: parentLang } of parents) {
+    const childIds = splitLeaf(state.tree, id, generation, rng, {
+      childCount: m.daughters.length,
+      worldMap,
+    });
+    for (let i = 0; i < childIds.length && i < m.daughters.length; i++) {
+      const daughter = state.tree[childIds[i]!]!.language;
+      const spec = m.daughters[i]!;
+      daughter.historicalRole = spec.role;
+      daughter.historicalRoleAssignedGen = generation;
+      if (spec.nameHint) daughter.name = spec.nameHint;
+      if (spec.initialBias) {
+        applyBiasMilestone(
+          daughter,
+          {
+            kind: "bias",
+            atGen: generation,
+            role: spec.role,
+            label: `${m.label} → ${spec.role}`,
+            ...spec.initialBias,
+          },
+          generation,
+          rng,
+          intensity,
+        );
+      }
+      pushEvent(daughter, {
+        generation,
+        kind: "historical_milestone",
+        description: `[historical:split] ${m.label} → ${spec.role} (from ${parentLang.id})`,
+        meta: { pathway: "historical-split" },
+      });
+      daughterCount++;
+    }
+  }
+  return { firedCount: parents.length, daughterCount };
 }
 
 /**
@@ -159,6 +222,7 @@ export function stepHistorical(
   config: SimulationConfig,
   rng: Rng,
   generation: number,
+  worldMap: WorldMap,
 ): void {
   const scheduleId = config.historical?.scheduleId;
   if (!scheduleId) return;
@@ -176,19 +240,27 @@ export function stepHistorical(
     if (fired.has(key)) continue;
 
     if (m.kind === "bias") {
-      const targets = leavesByRole(state, m.role).filter((l) => !l.extinct);
+      const targets = leavesByRole(state, m.role).filter(({ lang }) => !lang.extinct);
       if (targets.length === 0) {
         logSkippedMilestone(state, m, generation, `no living leaf with role "${m.role}"`);
       } else {
-        for (const lang of targets) {
+        for (const { lang } of targets) {
           applyBiasMilestone(lang, m, generation, rng, intensity);
         }
         recordHistoricalEvent(state, generation, m.label, m.role, "fired");
       }
     } else if (m.kind === "split") {
-      // T2 implements the split runner. T1 logs and marks fired so
-      // we don't repeatedly evaluate it.
-      logSkippedMilestone(state, m, generation, "split milestones not yet implemented (T2)");
+      const result = applySplitMilestone(state, m, generation, rng, intensity, worldMap);
+      if (result.firedCount === 0) {
+        logSkippedMilestone(
+          state,
+          m,
+          generation,
+          `no living leaf with role "${m.parentRole}"`,
+        );
+      } else {
+        recordHistoricalEvent(state, generation, m.label, m.parentRole, "fired");
+      }
     }
 
     fired.add(key);

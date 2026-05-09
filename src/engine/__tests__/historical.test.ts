@@ -5,6 +5,7 @@ import { presetEnglish } from "../presets/english";
 import { findSchedule, milestoneKey } from "../historical";
 import { romanceSchedule } from "../historical/romance";
 import { validateSchedule } from "../historical/validate";
+import { narrativeHistoricalVoice } from "../historical/voice";
 
 /**
  * historical.test.ts — Phase 70 T1: Historical Mode runner unit tests.
@@ -162,5 +163,209 @@ describe("Phase 70 T1 — Historical Mode (Latin → Romance)", () => {
     // toggling Historical Mode resets the simulation. Actual STRUCTURAL_FIELDS
     // membership is verified by the structural-reset behavior in store.ts.
     expect(true).toBe(true);
+  });
+});
+
+describe("Phase 70 T2 — Italo-Western / Eastern Romance split (M2)", () => {
+  it("M2 split fires at gen 65 with western+eastern daughters", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-fire";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 70; i++) sim.step();
+    const state = sim.getState();
+    const evt = state.historicalEvents?.find(
+      (e) => e.label === "Italo-Western vs Eastern Romance",
+    );
+    expect(evt).toBeDefined();
+    expect(evt!.generation).toBe(65);
+    expect(evt!.kind).toBe("fired");
+  });
+
+  it("M2 produces matched western+eastern leaves; no proto-tagged leaves remain", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-pair";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 70; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    const westernLeaves = leaves.filter((l) => l.historicalRole === "western");
+    const easternLeaves = leaves.filter((l) => l.historicalRole === "eastern");
+    const protoLeaves = leaves.filter((l) => l.historicalRole === "proto");
+    expect(westernLeaves.length).toBeGreaterThan(0);
+    expect(easternLeaves.length).toBeGreaterThan(0);
+    expect(westernLeaves.length).toBe(easternLeaves.length);
+    expect(protoLeaves.length).toBe(0);
+  });
+
+  it("daughter nameHints applied: western='Proto-Western-Romance'", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-name";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 70; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    const westernLeaves = leaves.filter((l) => l.historicalRole === "western");
+    expect(westernLeaves.length).toBeGreaterThan(0);
+    for (const lang of westernLeaves) {
+      expect(lang.name).toBe("Proto-Western-Romance");
+    }
+  });
+
+  it("western daughters have higher lenition bias than eastern (initialBias applied)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-bias";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 66; i++) sim.step();
+    const leaves = Object.values(sim.getState().tree)
+      .filter((n) => n.childrenIds.length === 0)
+      .map((n) => n.language)
+      .filter((l) => !l.extinct);
+    const wAvg =
+      leaves
+        .filter((l) => l.historicalRole === "western")
+        .reduce((a, l) => a + (l.ruleBias?.lenition ?? 1), 0) /
+      Math.max(1, leaves.filter((l) => l.historicalRole === "western").length);
+    const eAvg =
+      leaves
+        .filter((l) => l.historicalRole === "eastern")
+        .reduce((a, l) => a + (l.ruleBias?.lenition ?? 1), 0) /
+      Math.max(1, leaves.filter((l) => l.historicalRole === "eastern").length);
+    expect(wAvg).toBeGreaterThan(eAvg);
+  });
+
+  it("M2 fires exactly once across many gens (idempotency)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "split-idem";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 90; i++) sim.step();
+    const events = sim.getState().historicalEvents ?? [];
+    const m2events = events.filter(
+      (e) => e.label === "Italo-Western vs Eastern Romance" && e.kind === "fired",
+    );
+    expect(m2events.length).toBe(1);
+  });
+});
+
+describe("Phase 70 T3 — Full Romance schedule (M1-M10)", () => {
+  it("Schedule passes validateSchedule with no issues", () => {
+    const issues = validateSchedule(romanceSchedule);
+    expect(issues).toEqual([]);
+  });
+
+  it("Schedule contains M1 through M10 in atGen order", () => {
+    const ms = romanceSchedule.milestones;
+    expect(ms.length).toBeGreaterThanOrEqual(10);
+    let lastAtGen = -Infinity;
+    for (const m of ms) {
+      expect(m.atGen).toBeGreaterThanOrEqual(lastAtGen);
+      lastAtGen = m.atGen;
+    }
+  });
+
+  it("Has milestones for every terminal Romance daughter role", () => {
+    const ms = romanceSchedule.milestones;
+    const terminalRoles = ["castilian", "lusitanian", "francien", "tuscan"];
+    for (const role of terminalRoles) {
+      const reachable = ms.some(
+        (m) =>
+          (m.kind === "split" && m.daughters.some((d) => d.role === role)) ||
+          (m.kind === "bias" && m.role === role),
+      );
+      expect(reachable, `terminal role "${role}" should be reachable`).toBe(true);
+    }
+  });
+
+  it("M3 (Western subsplit) fires at gen 100", () => {
+    const cfg = presetRomance();
+    cfg.seed = "t3-m3";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 105; i++) sim.step();
+    const evt = sim.getState().historicalEvents?.find(
+      (e) => e.label === "Western Romance subsplit" && e.kind === "fired",
+    );
+    expect(evt).toBeDefined();
+    expect(evt!.generation).toBe(100);
+  });
+
+  it("After 200 gens, all four expected terminal daughters appear (across seeds)", () => {
+    const seedsWithRole: Record<string, number> = {
+      castilian: 0,
+      lusitanian: 0,
+      francien: 0,
+      tuscan: 0,
+    };
+    for (const seed of ["t3a", "t3b"]) {
+      const cfg = presetRomance();
+      cfg.seed = seed;
+      cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+      const sim = createSimulation(cfg);
+      for (let i = 0; i < 200; i++) sim.step();
+      const leaves = Object.values(sim.getState().tree)
+        .filter((n) => n.childrenIds.length === 0)
+        .map((n) => n.language)
+        .filter((l) => !l.extinct);
+      for (const role of Object.keys(seedsWithRole)) {
+        if (leaves.some((l) => l.historicalRole === role)) seedsWithRole[role]!++;
+      }
+    }
+    for (const role of Object.keys(seedsWithRole)) {
+      expect(seedsWithRole[role]!).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("Phase 70 T4 — narrative voice", () => {
+  it("returns null when historicalRole is unset", () => {
+    const cfg = presetRomance();
+    cfg.seed = "voice-off";
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 30; i++) sim.step();
+    const state = sim.getState();
+    const lang = Object.values(state.tree)[0]!.language;
+    expect(narrativeHistoricalVoice(lang, state, state.generation)).toBeNull();
+  });
+
+  it("returns prose when a recent milestone has fired for this role", () => {
+    const cfg = presetRomance();
+    cfg.seed = "voice-on";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 30; i++) sim.step();
+    const state = sim.getState();
+    const protoLeaf = Object.values(state.tree)
+      .map((n) => n.language)
+      .find((l) => l.historicalRole === "proto" && !l.extinct);
+    expect(protoLeaf).toBeDefined();
+    const voice = narrativeHistoricalVoice(protoLeaf!, state, state.generation);
+    expect(voice).not.toBeNull();
+    expect(voice!.toLowerCase()).toContain("vulgar latin lenition");
+  });
+
+  it("returns null when the most recent milestone is older than the window", () => {
+    const cfg = presetRomance();
+    cfg.seed = "voice-old";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    for (let i = 0; i < 26; i++) sim.step();
+    const state = sim.getState();
+    // M1 fired at gen 25; with window=0, M1 (1 gen ago) is outside.
+    const proto = Object.values(state.tree)
+      .map((n) => n.language)
+      .find((l) => l.historicalRole === "proto" && !l.extinct);
+    expect(proto).toBeDefined();
+    const voice = narrativeHistoricalVoice(proto!, state, state.generation, {
+      windowGens: 0,
+    });
+    expect(voice).toBeNull();
   });
 });

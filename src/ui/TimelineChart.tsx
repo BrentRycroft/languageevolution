@@ -169,8 +169,21 @@ export function TimelineChart() {
     if (mode === "cognates") {
       for (const s of series) visit(s.key);
     }
+    // Phase 70 T3: Historical Mode milestone markers. Pulled from the
+    // durable state-level log (state.historicalEvents) so they survive
+    // the per-language event cap. Always shown regardless of mode.
+    for (const e of state.historicalEvents ?? []) {
+      if (e.generation > cap) continue;
+      if (e.kind === "fired") {
+        gens.push({
+          generation: e.generation,
+          kind: "milestone",
+          description: `[historical] ${e.label}`,
+        });
+      }
+    }
     return gens.slice(-40);
-  }, [chartData.length, mode, selectedLangId, series, state.tree, scrubGen, generation]);
+  }, [chartData.length, mode, selectedLangId, series, state.tree, state.historicalEvents, scrubGen, generation]);
 
   const genLabel = scrubGen !== null ? `gen ${scrubGen} (of ${generation})` : `gen ${generation}`;
   const headerLabel =
@@ -346,10 +359,12 @@ export function TimelineChart() {
                       ? "var(--accent)"
                       : e.kind === "taboo"
                         ? "#ffcc66"
-                        : "var(--muted)"
+                        : e.kind === "milestone"
+                          ? "#ffd07a"
+                          : "var(--muted)"
                   }
-                  strokeDasharray="2 2"
-                  strokeOpacity={0.35}
+                  strokeDasharray={e.kind === "milestone" ? "4 3" : "2 2"}
+                  strokeOpacity={e.kind === "milestone" ? 0.65 : 0.35}
                 />
               ))}
               <Tooltip

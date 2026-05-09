@@ -43,27 +43,56 @@ export function validateSchedule(schedule: HistoricalSchedule): ScheduleValidati
       });
     }
     lastAtGen = m.atGen;
-    if (m.kind !== "bias") continue;
-    if (m.ruleBias) {
-      for (const fam of Object.keys(m.ruleBias)) {
-        if (!KNOWN_FAMILIES.has(fam as RuleFamily)) {
-          issues.push({
-            kind: "unknown-family",
-            message: `[${schedule.id}] milestone "${m.label}" references unknown RuleFamily "${fam}".`,
-          });
-        }
-      }
-    }
-    if (m.ruleWeight) {
-      for (const id of Object.keys(m.ruleWeight)) {
-        if (!CATALOG_BY_ID[id]) {
-          issues.push({
-            kind: "unknown-rule-id",
-            message: `[${schedule.id}] milestone "${m.label}" references unknown catalog rule id "${id}".`,
-          });
-        }
+    if (m.kind === "bias") {
+      checkBias(
+        schedule.id,
+        m.label,
+        m.ruleBias,
+        m.ruleWeight,
+        issues,
+      );
+    } else if (m.kind === "split") {
+      // T2: validate each daughter's initialBias structure too.
+      for (const d of m.daughters) {
+        if (!d.initialBias) continue;
+        checkBias(
+          schedule.id,
+          `${m.label} → ${d.role}`,
+          d.initialBias.ruleBias,
+          d.initialBias.ruleWeight,
+          issues,
+        );
       }
     }
   }
   return issues;
+}
+
+function checkBias(
+  scheduleId: string,
+  label: string,
+  ruleBias: Partial<Record<string, number>> | undefined,
+  ruleWeight: Record<string, number> | undefined,
+  issues: ScheduleValidationIssue[],
+): void {
+  if (ruleBias) {
+    for (const fam of Object.keys(ruleBias)) {
+      if (!KNOWN_FAMILIES.has(fam as RuleFamily)) {
+        issues.push({
+          kind: "unknown-family",
+          message: `[${scheduleId}] milestone "${label}" references unknown RuleFamily "${fam}".`,
+        });
+      }
+    }
+  }
+  if (ruleWeight) {
+    for (const id of Object.keys(ruleWeight)) {
+      if (!CATALOG_BY_ID[id]) {
+        issues.push({
+          kind: "unknown-rule-id",
+          message: `[${scheduleId}] milestone "${label}" references unknown catalog rule id "${id}".`,
+        });
+      }
+    }
+  }
 }

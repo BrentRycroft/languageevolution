@@ -23,6 +23,7 @@ export type {
   HistoricalRoleId,
 } from "./types";
 export { milestoneKey } from "./types";
+export { narrativeHistoricalVoice } from "./voice";
 
 export const HISTORICAL_SCHEDULES: readonly HistoricalSchedule[] = [
   romanceSchedule,

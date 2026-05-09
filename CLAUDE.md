@@ -58,10 +58,11 @@ editable in plan mode.
 
 ---
 
-## Phases 60–69 shipped
+## Phases 60–70 shipped
 
-All on `main`. Each was a standalone commit (or 2–3 for larger
-phases). Probe scripts under `scripts/probes/phase{N}_{T}_*.ts`.
+All on `claude/working` (Phase 70) / `main` (Phase 60–69). Each was a
+standalone commit (or 2–4 for larger phases). Probe scripts under
+`scripts/probes/phase{N}_{T}_*.ts`.
 
 | Phase | Commit | Title | Headline |
 |---|---|---|---|
@@ -75,6 +76,10 @@ phases). Probe scripts under `scripts/probes/phase{N}_{T}_*.ts`.
 | 67 | `556b8d3` | Phonology dynamism | T1 stress; T2 sandhi evolve; T3 phonotactic gate; T4 RC typological constraints |
 | 68a | `0342466` | P0 audit fixes | deleteMeaning metadata leak + 2 broken test files |
 | 68b | `6fa467e` | Audit cleanup + visibility | Wired runtime derivation; UI badges; productive seeding bootstrap |
+| 70 T1 | `551237d` | Historical Mode scaffold | M1 (Vulgar Latin lenition burst); types + UI toggle; soft railroad |
+| 70 T2 | `f6ef90e` | Italo-Western/Eastern split | M2 (gen 65); SplitMilestone runner; daughter role + initialBias |
+| 70 T3 | `31a9a6a` | Full Romance schedule | M3-M10; Iberian/Gallo/Italo subsplits; TimelineChart milestone markers |
+| 70 T4 | _pending_ | Polish | Intensity slider; narrative voice helper |
 
 ### Per-phase feature pointers
 
@@ -195,6 +200,39 @@ relativizer; VO blocks internal-headed; !hasCase blocks resumptive.
   referenceTracking.
 - T7: strengthened weak `>= 0` assertions; deleted dead `it.skip`
   stubs for removed features.
+
+**Phase 70 — Historical Mode (HOI4-style soft railroad).** New
+`src/engine/historical/` module + `src/engine/steps/historical.ts`
+runner. Toggled in `src/ui/PresetPicker.tsx` before run start; engine
+still picks stochastically. Schedule data is pure declarations of
+`BiasMilestone | SplitMilestone` lists; the runner mutates the same
+runtime knobs the organic engine already writes to (`ruleBias`,
+`changeWeights`, `categoryMomentum`, `volatilityPhase`). Roles
+inherited via `tree/split.ts:215-220` (added in T1). Idempotency
+tracked via `state.firedHistoricalMilestones`. State-level event
+log `state.historicalEvents` survives the per-language event cap so
+TimelineChart markers stay visible across long runs.
+
+- T1 — `551237d` — types + UI toggle + M1 (Vulgar Latin lenition,
+  gen 25): boost lenition/vowel_shift/deletion family biases on
+  proto, seed categoryMomentum window, trigger volatility upheaval.
+  10 unit tests + probe asserts mode-on lenition bias 2× mode-off.
+- T2 — `f6ef90e` — `SplitMilestone` runner + M2 (Italo-Western /
+  Eastern Romance split, gen 65). `applySplitMilestone` calls
+  `splitLeaf` directly with `childCount = daughters.length`,
+  post-processes daughters with role / nameHint / initialBias.
+- T3 — `31a9a6a` — full schedule (M3-M10). M3 Western subsplit,
+  M4 Iberian (Castilian/Lusitanian), M5 Gallo (Francien/Occitano),
+  M6 Italo→Tuscan, M7 Spanish characterisation, M8 Old French
+  upheaval, M9 Italian gemination, M10 Portuguese nasalisation.
+  TimelineChart vertical marker pulled from `state.historicalEvents`.
+  Convergence probe: 3 seeds × 200 gens; all four expected terminal
+  daughters appear across seeds.
+- T4 — pending — intensity slider in PresetPicker (0–2× nudge
+  scale), `historical/voice.ts:narrativeHistoricalVoice` helper for
+  per-language history flavor lines.
+
+Plan: `/root/.claude/plans/i-want-to-make-modular-quill.md`
 
 ---
 
