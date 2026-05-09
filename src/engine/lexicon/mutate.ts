@@ -137,7 +137,35 @@ export function removeSynonym(
   invalidateReverseLexCache(lang);
 }
 
+/**
+ * Phase 71b T2 (G8): meanings whose deletion would silently strand
+ * suppletion entries and break translator/narrative output. The Phase
+ * 70 diagnostic showed `go → (missing)` and `MISSING: be` across every
+ * Romance daughter at gen 200 — semantic recarving deleted these high-
+ * frequency verbs from the lexicon while their suppletion tables
+ * remained orphaned. Refusing to delete them keeps the lexicon entry
+ * alive (it can still drift phonologically); narrowly targeted at
+ * cross-linguistically-suppletive verbs.
+ */
+export const PROTECTED_MEANINGS: ReadonlySet<Meaning> = new Set<Meaning>([
+  // Suppletive copulas + auxiliaries (esse/sum, fui; habēre, etc.).
+  "be", "have", "do", "will",
+  // High-frequency suppletive motion / perception verbs.
+  "go", "come", "see", "give", "say", "make", "take", "get",
+  // Core cognition + state.
+  "know", "want", "find", "think", "eat", "drink",
+]);
+
 export function deleteMeaning(lang: Language, meaning: Meaning): void {
+  // Phase 71b T2 (G8): protected meanings refuse deletion. Their
+  // lexicon entry stays alive even when semantic drift / bleaching
+  // / obsolescence calls for removal. This is intentional — these
+  // meanings underpin suppletion tables, closed-class translator
+  // lookups, and narrative slot-fill; their absence is far worse
+  // than their continued presence in a language that has otherwise
+  // moved on.
+  if (PROTECTED_MEANINGS.has(meaning)) return;
+
   delete lang.lexicon[meaning];
   delete lang.wordFrequencyHints[meaning];
   delete lang.lastChangeGeneration[meaning];
@@ -156,5 +184,10 @@ export function deleteMeaning(lang: Language, meaning: Meaning): void {
   if (lang.nounDeclensionClass) delete lang.nounDeclensionClass[meaning];
   if (lang.ablautClassAssignment) delete lang.ablautClassAssignment[meaning];
   if (lang.grammaticalizationStage) delete lang.grammaticalizationStage[meaning];
+  // Phase 71b T2 (G8): purge suppletion entries too — was missed by
+  // the Phase 68a sweep. Even though PROTECTED_MEANINGS shields most
+  // suppletion-bearing items, this is a belt-and-braces fix for any
+  // future suppletive verb that isn't on the protected list.
+  if (lang.suppletion) delete lang.suppletion[meaning];
   removeSense(lang, meaning);
 }

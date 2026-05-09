@@ -538,6 +538,19 @@ export function inflect(
     if (override && override.length > 0) return override.slice();
   }
   if (!paradigm) return base;
+  // Phase 71b T1 (G7): when the language reports no case system
+  // (grammar.hasCase=false), suppress noun-case paradigm application
+  // entirely. Pre-71b, Tuscan with hasCase=false still emitted
+  // accusative -um suffixes via this paradigm, contradicting its
+  // declared typology. The suppletion override above still fires —
+  // intentional, since suppletion is a different mechanism.
+  if (
+    lang &&
+    !lang.grammar.hasCase &&
+    paradigm.category.startsWith("noun.case.")
+  ) {
+    return base;
+  }
   // Phase 46a-migration: paradigm dispatch gated on the paradigms
   // module. Module-aware isolating languages (no paradigms in their
   // module set) skip affix application — the analytic-language perf
