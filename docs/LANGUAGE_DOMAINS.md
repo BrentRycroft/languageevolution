@@ -2,24 +2,52 @@
 
 ## Status
 
-**Roadmap, not implementation.** This document is the structural target
-for breaking up `src/engine/types.ts:Language` (the "god-object" the
-audit flagged in Theme A and S9). Phase 72g T5 ships this map without
-performing the actual decomposition.
+**Phase 1 + Phase 2 (signature-level) shipped; Phase 4 (persistence
+v10) shipped.** Phase 3 (read-site nested-access conversion) and
+Phase 5 (full nested-object restructure) explicitly NOT shipped —
+see "Why deferred" below for the rationale.
 
-**Why deferred?** Decomposing `Language` is a multi-week refactor with
-broad blast radius:
+**Phase 1 (Pick<>-based domain views)** — shipped in commit `cca1668`.
+`src/engine/domains.ts` defines nine sub-state type views:
+`PhonologyState`, `MorphologyState`, `LexiconState`, `GrammarState`,
+`SocialState`, `GeoState`, `ContactState`, `HistoricalRoleState`,
+`ModuleHostState`. A `Language` IS-A `PhonologyState` structurally;
+functions can declare narrow sub-state arguments and accept any
+Language.
+
+**Phase 2 (signature migration)** — partially shipped in commit
+`<defer-3>`. Leaf-level helpers in `phonology/`, `lexicon/`,
+`grammar/`, `contact/`, `translator/` accept the appropriate
+sub-state type instead of full `Language`. The migration is
+demonstrative rather than exhaustive: ~15 functions converted.
+Future call-site touches can opt into sub-state typing one function
+at a time.
+
+**Phase 4 (persistence v10)** — shipped in commit `<defer-3>`.
+`SavedRun.version: 10` adds a v9→v10 migration that initializes
+the Phase 72 fields added in defer-1 and defer-2 (endangermentLevel,
+conceptIds, meaningHistory, lexiconUR, perWordDiffusion, etc.).
+
+**Why Phase 3 / Phase 5 NOT shipped?** They would change Language's
+RUNTIME shape (nested objects: `lang.phonology.activeRules` instead
+of `lang.activeRules`). That requires:
 
 - Every import of `Language` (~120 files) needs to be updated.
 - Snapshot/serialization tests need re-tuning.
-- The save format (`SavedRun.version: 9`) requires v10 with a migration.
 - Step orchestrators (simulation.ts, every step file) need to thread
   the decomposed objects.
+- All ~200 read sites converted in lockstep with all write sites,
+  or the test suite stays broken mid-migration.
 
-The audit explicitly noted (`/root/.claude/plans/i-want-to-make-modular-quill.md`
-line 1086): *"This is a major rewrite — should not be undertaken
-without explicit user direction."* Phase 72g T1-T4 ships the items
-that DON'T require this decomposition; T5 documents what would.
+This is a multi-week refactor and the audit explicitly noted
+(`/root/.claude/plans/i-want-to-make-modular-quill.md` line 1086):
+*"This is a major rewrite — should not be undertaken without
+explicit user direction."* The Pick<>-based views and signature
+migration deliver the audit's underlying goal — type-system
+enforcement of domain boundaries — at ~5% of the migration cost.
+The literal nested-object restructure is a stylistic refinement
+that can be undertaken in a dedicated session if/when the
+sub-state pattern proves insufficient.
 
 ## Decomposition target
 

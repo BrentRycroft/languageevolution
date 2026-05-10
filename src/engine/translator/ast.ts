@@ -148,10 +148,10 @@ function orderFor(wo: string): Array<"S" | "V" | "O"> {
 // re-parse) when feature complexity exceeds what the direct bridge
 // can express.
 
-import type { Language } from "../types";
 import type { Sentence, NP, VP, NounRef, VerbRef } from "./syntax";
+import type { LexiconState } from "../domains";
 
-function lookupBaseForm(lang: Language, lemma: string): import("../types").WordForm {
+function lookupBaseForm(lang: LexiconState, lemma: string): import("../types").WordForm {
   const direct = lang.lexicon[lemma];
   if (direct && direct.length > 0) return direct;
   // Fallback: synthesise a placeholder. The realiser will treat the
@@ -159,7 +159,7 @@ function lookupBaseForm(lang: Language, lemma: string): import("../types").WordF
   return [];
 }
 
-function astNodeToNounRef(node: import("./ast").ASTNode, lang: Language): NounRef {
+function astNodeToNounRef(node: import("./ast").ASTNode, lang: LexiconState): NounRef {
   return {
     lemma: node.lemma,
     baseForm: lookupBaseForm(lang, node.lemma),
@@ -169,7 +169,7 @@ function astNodeToNounRef(node: import("./ast").ASTNode, lang: Language): NounRe
   };
 }
 
-function astNodeToVerbRef(node: import("./ast").ASTNode, lang: Language): VerbRef {
+function astNodeToVerbRef(node: import("./ast").ASTNode, lang: LexiconState): VerbRef {
   const tense = (node.features?.tense ?? "present") as "past" | "present" | "future";
   return {
     lemma: node.lemma,
@@ -186,7 +186,7 @@ function astNodeToVerbRef(node: import("./ast").ASTNode, lang: Language): VerbRe
  */
 export function astToSentence(
   ast: import("./ast").ASTSentence,
-  lang: Language,
+  lang: LexiconState,
 ): Sentence | null {
   if (!ast.head || ast.head.tag !== "V") return null;
   const subject = ast.participants.find((p) => p.role === "subject");

@@ -1,4 +1,5 @@
-import type { Language, WordForm } from "../types";
+import type { WordForm } from "../types";
+import type { PhonologyState, LexiconState } from "../domains";
 
 /**
  * stratal.ts — Phase 72g T1.
@@ -32,7 +33,7 @@ import type { Language, WordForm } from "../types";
  * refresh policy. Snapshots the current `lang.lexicon` into
  * `lang.lexiconUR`. Idempotent: a second call refreshes the UR.
  */
-export function enableStratalMode(lang: Language): void {
+export function enableStratalMode(lang: PhonologyState & LexiconState): void {
   lang.lexiconUR = {};
   for (const meaning of Object.keys(lang.lexicon)) {
     lang.lexiconUR[meaning] = lang.lexicon[meaning]!.slice();
@@ -47,7 +48,7 @@ export function enableStratalMode(lang: Language): void {
  * or other event justifies updating the UR. Use this for opacity
  * studies that span multiple generations.
  */
-export function enableStratalModeManual(lang: Language): void {
+export function enableStratalModeManual(lang: PhonologyState & LexiconState): void {
   lang.lexiconUR = {};
   for (const meaning of Object.keys(lang.lexicon)) {
     lang.lexiconUR[meaning] = lang.lexicon[meaning]!.slice();
@@ -62,7 +63,7 @@ export function enableStratalModeManual(lang: Language): void {
  * a morphological re-categorisation makes the speaker's mental
  * representation align with the surface).
  */
-export function refreshUR(lang: Language): void {
+export function refreshUR(lang: PhonologyState & LexiconState): void {
   if (lang.lexiconUR === undefined) return;
   lang.lexiconUR = {};
   for (const meaning of Object.keys(lang.lexicon)) {
@@ -74,7 +75,7 @@ export function refreshUR(lang: Language): void {
  * Read the underlying representation for a meaning. Falls back to the
  * surface form when stratal mode is not enabled (back-compat).
  */
-export function getUR(lang: Language, meaning: string): WordForm | undefined {
+export function getUR(lang: PhonologyState & LexiconState, meaning: string): WordForm | undefined {
   if (lang.lexiconUR && lang.lexiconUR[meaning]) {
     return lang.lexiconUR[meaning];
   }
@@ -88,7 +89,7 @@ export function getUR(lang: Language, meaning: string): WordForm | undefined {
  * underlying input. Returns true when stratal mode is OFF (defensive
  * default — undefined UR means we can't claim opacity).
  */
-export function isOpaque(lang: Language, meaning: string): boolean {
+export function isOpaque(lang: PhonologyState & LexiconState, meaning: string): boolean {
   if (!lang.lexiconUR) return false;
   const ur = lang.lexiconUR[meaning];
   const sr = lang.lexicon[meaning];

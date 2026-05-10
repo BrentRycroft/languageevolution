@@ -1,4 +1,5 @@
-import type { Language, Meaning } from "../types";
+import type { Meaning } from "../types";
+import type { LexiconState } from "../domains";
 
 /**
  * conceptIdentity.ts — Phase 72d (full-delivery defer-2).
@@ -73,7 +74,7 @@ export function resetConceptIdCounter(): void {
  * sister leaves share the same UUID for the same proto-meaning. This
  * is the cross-tree anchor the audit's reconstruction probes need.
  */
-export function conceptIdFor(lang: Language, meaning: Meaning): ConceptId {
+export function conceptIdFor(lang: LexiconState, meaning: Meaning): ConceptId {
   if (!lang.conceptIds) lang.conceptIds = {};
   const existing = lang.conceptIds[meaning];
   if (existing) return existing as ConceptId;
@@ -89,7 +90,7 @@ export function conceptIdFor(lang: Language, meaning: Meaning): ConceptId {
  * back to a parent's lexicon by UUID.
  */
 export function meaningForConceptId(
-  lang: Language,
+  lang: LexiconState,
   conceptId: ConceptId,
 ): Meaning | undefined {
   if (!lang.conceptIds) return undefined;
@@ -105,7 +106,7 @@ export function meaningForConceptId(
  * proto language has a complete UUID map; daughters inherit from
  * there.
  */
-export function ensureConceptIdsForLexicon(lang: Language): number {
+export function ensureConceptIdsForLexicon(lang: LexiconState): number {
   let assigned = 0;
   if (!lang.conceptIds) lang.conceptIds = {};
   for (const m of Object.keys(lang.lexicon)) {

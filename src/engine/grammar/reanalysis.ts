@@ -1,6 +1,7 @@
-import type { Language, GrammarFeatures } from "../types";
+import type { GrammarFeatures } from "../types";
 import type { Rng } from "../rng";
 import type { GrammarShift } from "./evolve";
+import type { GrammarState, SocialState } from "../domains";
 
 /**
  * reanalysis.ts — Phase 72g T4.
@@ -41,7 +42,7 @@ interface AlignmentReanalysisInput {
  * conditions from existing fields — the simulator doesn't track passive
  * voice yet, so we use a gated proxy.
  */
-function reanalysisInput(lang: Language): AlignmentReanalysisInput {
+function reanalysisInput(lang: GrammarState & SocialState): AlignmentReanalysisInput {
   const tier = lang.culturalTier ?? 0;
   const hasCase = lang.grammar.hasCase === true;
   return {
@@ -63,7 +64,7 @@ function reanalysisInput(lang: Language): AlignmentReanalysisInput {
  * paths take precedence when their conditions are met.
  */
 export function tryReanalyseAlignment(
-  lang: Language,
+  lang: GrammarState & SocialState,
   rng: Rng,
 ): GrammarShift | null {
   const input = reanalysisInput(lang);
