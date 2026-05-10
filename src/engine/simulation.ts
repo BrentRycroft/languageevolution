@@ -224,6 +224,47 @@ export function createSimulation(
         const noise = (rng.next() - 0.5) * 0.04;
         const drift = Math.exp(malthusian + noise);
         lang.speakers = Math.max(50, Math.round(lang.speakers * drift));
+        // Phase 72f T6: language shift via heavy bilingualism + tier
+        // asymmetry. When a higher-tier or prestige neighbour has a
+        // strong bilingual link with `lang`, some speakers transfer.
+        // Rate: up to 0.5%/gen per high-prestige link. Models the
+        // Irish → English shift, Quechua → Spanish shift, etc.
+        // Receiver-side speaker bump matches the donor-side loss to
+        // conserve total speaker count across the contact pair.
+        if (lang.bilingualLinks) {
+          for (const partnerId of Object.keys(lang.bilingualLinks)) {
+            const link = lang.bilingualLinks[partnerId] ?? 0;
+            if (link < 0.5) continue;
+            const partnerNode = state.tree[partnerId];
+            if (!partnerNode) continue;
+            const partner = partnerNode.language;
+            if (partner.extinct) continue;
+            const tierGap = (partner.culturalTier ?? 0) - (lang.culturalTier ?? 0);
+            const prestigeAsym = (partner.prestigeVariety ? 1 : 0) - (lang.prestigeVariety ? 1 : 0);
+            const asymmetry = tierGap + prestigeAsym;
+            if (asymmetry <= 0) continue;
+            // Shift rate scales with link × asymmetry × 0.005.
+            const rate = link * asymmetry * 0.005;
+            if (!rng.chance(rate)) continue;
+            // Move 0.5–2% of speakers per shift event (proportional to
+            // asymmetry). Maintains conservation: partner gains what
+            // lang loses.
+            const shiftFraction = 0.005 * (1 + asymmetry);
+            const shifted = Math.max(50, Math.floor((lang.speakers ?? 0) * shiftFraction));
+            if (shifted >= lang.speakers) continue; // would extinguish; skip
+            lang.speakers -= shifted;
+            partner.speakers = (partner.speakers ?? 0) + shifted;
+            // Pre-72f only the binary extinction event surfaced.
+            // Continuous shift drives endangerment transitions: when
+            // population drops below thresholds, the leaf moves up
+            // the endangerment ladder (steps/tree.ts handles the
+            // discrete level transitions).
+            if (lang.speakers < 1000 && (lang.endangermentLevel ?? "vigorous") === "vigorous") {
+              lang.endangermentLevel = "endangered";
+              lang.endangermentLastTransitionGen = nextGen;
+            }
+          }
+        }
       }
       tickTerritory(lang, state.tree, worldMap, rng);
       if (nextGen % 20 === 0) {
@@ -245,6 +286,22 @@ export function createSimulation(
             kind: "tier_transition",
             description: `cultural tier: ${TIER_LABELS[priorTier]} → ${TIER_LABELS[nextTier]}`,
           });
+          // Phase 72f T3: tier-2 promotion ALSO seeds a prestige
+          // variety. Codification, scribal traditions, and the
+          // emergence of a "literary standard" parallel the
+          // vernacular. The flag is set on the same Language entry
+          // for now (single-Language model); the audit's full vision
+          // would spawn a separate PrestigeLanguage entity, deferred
+          // pending the Language god-object decomposition (Phase 72g).
+          if (priorTier < 2 && nextTier >= 2 && !lang.prestigeVariety) {
+            lang.prestigeVariety = true;
+            lang.prestigeVarietySinceGen = nextGen;
+            pushEvent(lang, {
+              generation: nextGen,
+              kind: "tier_transition",
+              description: "prestige variety established (literary standard)",
+            });
+          }
           // Phase 25: tier transitions historically trigger phonological
           // upheavals (urbanisation, literacy, statehood reorganise the
           // dialect landscape). Seed an upheaval period.

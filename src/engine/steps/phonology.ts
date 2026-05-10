@@ -4,6 +4,7 @@ import { invalidateClosedClassCache } from "../translator/closedClass";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
 import { rateMultiplier, speakerFactor, isolationFactor, realismMultiplier } from "../phonology/rate";
+import { vitalityRateMultiplier } from "../steps/tree";
 import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
 import { stepToneSandhi } from "../phonology/sandhi";
@@ -83,7 +84,15 @@ export function stepPhonology(
     // upheaval periods (Norman conquest / Great Vowel Shift bursts) and
     // dampens it during stable centuries.
     vm *
-    literaryBrake;
+    literaryBrake *
+    // Phase 72f T1: vitality factor. Endangered/moribund languages
+    // innovate slower (fewer young speakers carry change forward).
+    // vigorous: 1.0; endangered: 0.6; moribund: 0.2; extinct: 0.
+    vitalityRateMultiplier(lang) *
+    // Phase 72f T3: prestige varieties (standard registers, codified
+    // scribal traditions) resist change more strongly than the
+    // vernacular. Multiplier: 0.5× when prestigeVariety is set.
+    (lang.prestigeVariety ? 0.5 : 1.0);
   // Phase 69a T1: combine the per-lexicon iteration that builds
   // `ages` and `neighbourMomentum` into a single pass below
   // (saves one Object.keys allocation + walk per leaf).

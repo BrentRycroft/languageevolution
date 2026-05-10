@@ -139,14 +139,65 @@ export function stepDeath(
 
   const p =
     config.tree.deathProbabilityPerGeneration * pressure * diversityMult;
-  if (rng.chance(p)) {
-    lang.extinct = true;
-    lang.deathGeneration = state.generation + 1;
-    releaseTerritory(lang);
-    pushEvent(lang, {
-      generation: state.generation + 1,
-      kind: "sound_change",
-      description: "language went extinct",
-    });
+
+  // Phase 72f T1: graduated endangerment. The same `p` value drives a
+  // multi-stage decline rather than instantaneous death. At each
+  // generation a stressed leaf has probability `p` of advancing one
+  // step on the vigorous → endangered → moribund → extinct ladder
+  // (with a 5-gen cooldown to avoid rapid cycling). Stress factors
+  // include population overshoot, low diversity, and isolation.
+  // The legacy `extinct: boolean` is set when the chain reaches
+  // "extinct" — every read site already gates on this flag.
+  const stages: Array<NonNullable<Language["endangermentLevel"]>> = [
+    "vigorous",
+    "endangered",
+    "moribund",
+    "extinct",
+  ];
+  const current = lang.endangermentLevel ?? "vigorous";
+  const lastTransition = lang.endangermentLastTransitionGen ?? -100;
+  const cooldown = 5;
+  if (rng.chance(p) && state.generation - lastTransition >= cooldown) {
+    const idx = stages.indexOf(current);
+    const next = stages[Math.min(idx + 1, stages.length - 1)]!;
+    if (next !== current) {
+      lang.endangermentLevel = next;
+      lang.endangermentLastTransitionGen = state.generation;
+      if (next === "extinct") {
+        lang.extinct = true;
+        lang.deathGeneration = state.generation + 1;
+        releaseTerritory(lang);
+        pushEvent(lang, {
+          generation: state.generation + 1,
+          kind: "sound_change",
+          description: "language went extinct",
+        });
+      } else {
+        pushEvent(lang, {
+          generation: state.generation + 1,
+          kind: "sound_change",
+          description: `endangerment: ${current} → ${next}`,
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Phase 72f T1: helper read used by phonology / grammar / morphology
+ * drift to scale innovation rates by vitality. Endangered languages
+ * innovate slower (fewer young speakers); moribund languages barely
+ * innovate at all. Returns 1.0 for vigorous (the default), 0.6 for
+ * endangered, 0.2 for moribund, and 0 for extinct (caller should
+ * normally already be gated on `lang.extinct`).
+ */
+export function vitalityRateMultiplier(lang: Language): number {
+  switch (lang.endangermentLevel) {
+    case "endangered": return 0.6;
+    case "moribund": return 0.2;
+    case "extinct": return 0;
+    case "vigorous":
+    case undefined:
+    default: return 1.0;
   }
 }
