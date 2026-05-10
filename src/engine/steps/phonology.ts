@@ -242,17 +242,23 @@ export function stepPhonology(
   // Phase 72g T1 (full): stratal cascade. When lang.lexiconUR is
   // defined, run sound changes in two strata (lexical → post-lexical)
   // reading from the UR snapshot; otherwise the legacy single-pass
-  // path. After application, refresh the UR snapshot so next gen's
-  // input is this gen's surface (the canonical input chain).
+  // path. UR refresh policy controls cross-gen persistence:
+  //   - "each-gen" (default): UR is refreshed to match SR after every
+  //     gen — within-gen opacity only.
+  //   - "manual": UR persists across gens; opacity accumulates over
+  //     multiple rule fires. Caller must invoke enableStratalMode /
+  //     refreshUR to checkpoint.
   if (lang.lexiconUR !== undefined) {
     lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts);
-    // Refresh UR to mirror the new SR. Future passes that want to
-    // detect opacity should snapshot UR PRIOR to phonology (e.g.,
-    // probes call enableStratalMode() before the run).
-    lang.lexiconUR = {};
-    for (const m of Object.keys(lang.lexicon)) {
-      lang.lexiconUR[m] = lang.lexicon[m]!.slice();
+    const policy = lang.lexiconURRefreshPolicy ?? "each-gen";
+    if (policy === "each-gen") {
+      lang.lexiconUR = {};
+      for (const m of Object.keys(lang.lexicon)) {
+        lang.lexiconUR[m] = lang.lexicon[m]!.slice();
+      }
     }
+    // policy === "manual": leave UR untouched. Caller checkpoints when
+    // a morphological reanalysis or other event justifies updating UR.
   } else {
     lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
   }

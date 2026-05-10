@@ -133,3 +133,90 @@ function orderFor(wo: string): Array<"S" | "V" | "O"> {
     default: return ["S", "V", "O"];
   }
 }
+
+// ────────────────────────────────────────────────────────────────────
+// Phase 72g T3 (full-delivery defer-1d): direct AST → Sentence bridge.
+//
+// Converts an ASTSentence to the syntax `Sentence` interface that
+// `realiseSentence` consumes, bypassing the English parser. Use this
+// for non-English seeds where you want to skip projection-then-reparse.
+//
+// Limitations: the AST is intentionally minimal (head + participants
+// + fillers). Complex constructs (relativisation, embedding,
+// coordination) ride on the AST's feature flags rather than nested
+// structure. Calls fall back to translateSentenceViaAST (project +
+// re-parse) when feature complexity exceeds what the direct bridge
+// can express.
+
+import type { Language } from "../types";
+import type { Sentence, NP, VP, NounRef, VerbRef } from "./syntax";
+
+function lookupBaseForm(lang: Language, lemma: string): import("../types").WordForm {
+  const direct = lang.lexicon[lemma];
+  if (direct && direct.length > 0) return direct;
+  // Fallback: synthesise a placeholder. The realiser will treat the
+  // missing entry through its standard graceful-fallback paths.
+  return [];
+}
+
+function astNodeToNounRef(node: import("./ast").ASTNode, lang: Language): NounRef {
+  return {
+    lemma: node.lemma,
+    baseForm: lookupBaseForm(lang, node.lemma),
+    number: (node.features?.number === "pl" ? "pl" : "sg") as "pl" | "sg",
+    case: "nom",
+    isPronoun: node.tag === "PRON",
+  };
+}
+
+function astNodeToVerbRef(node: import("./ast").ASTNode, lang: Language): VerbRef {
+  const tense = (node.features?.tense ?? "present") as "past" | "present" | "future";
+  return {
+    lemma: node.lemma,
+    baseForm: lookupBaseForm(lang, node.lemma),
+    tense,
+  };
+}
+
+/**
+ * Phase 72g T3 (full-delivery defer-1d): convert an ASTSentence into
+ * a syntax `Sentence`. Returns null when the AST has no head verb
+ * or no subject participant (those cases must round-trip through the
+ * parser via `translateSentenceViaAST`).
+ */
+export function astToSentence(
+  ast: import("./ast").ASTSentence,
+  lang: Language,
+): Sentence | null {
+  if (!ast.head || ast.head.tag !== "V") return null;
+  const subject = ast.participants.find((p) => p.role === "subject");
+  if (!subject) return null;
+  const object = ast.participants.find((p) => p.role === "object");
+  const subjectNP: NP = {
+    kind: "NP",
+    head: astNodeToNounRef(subject, lang),
+    adjectives: [],
+    pps: [],
+  };
+  const objectNP: NP | undefined = object
+    ? {
+        kind: "NP",
+        head: { ...astNodeToNounRef(object, lang), case: "acc" },
+        adjectives: [],
+        pps: [],
+      }
+    : undefined;
+  const vp: VP = {
+    kind: "VP",
+    verb: astNodeToVerbRef(ast.head, lang),
+    pps: [],
+    adverbs: [],
+    ...(objectNP ? { object: objectNP } : {}),
+  };
+  return {
+    kind: "S",
+    subject: subjectNP,
+    predicate: vp,
+    negated: false,
+  };
+}

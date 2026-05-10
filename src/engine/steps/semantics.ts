@@ -24,7 +24,7 @@ export function stepSemantics(
 ): void {
   const p = Math.min(1, config.semantics.driftProbabilityPerGeneration * lang.conservatism * realismMultiplier(config));
   if (rng.chance(p)) {
-    const drift = driftOneMeaning(lang, rng, lang.localNeighbors);
+    const drift = driftOneMeaning(lang, rng, lang.localNeighbors, generation);
     if (drift) {
       let tag = drift.kind as string;
       if (drift.takeover) tag = `${drift.kind} (takeover)`;
@@ -55,7 +55,7 @@ export function stepSemantics(
   const recarveRate =
     (config.semantics.recarveProbabilityPerGeneration ?? 0) * lang.conservatism;
   if (recarveRate > 0) {
-    const ev = maybeRecarve(lang, rng, recarveRate);
+    const ev = maybeRecarve(lang, rng, recarveRate, generation);
     if (ev) {
       if (ev.kind === "merge") {
         pushEvent(lang, {

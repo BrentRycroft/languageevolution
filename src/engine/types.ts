@@ -232,14 +232,23 @@ export interface Language {
   perWordDiffusion?: Record<string, Record<string, number>>;
   /**
    * Phase 72g T1: stratal phonology underlying-representation layer.
-   * Pre-72g the simulator had a single surface-only lexicon. Post-72g,
-   * `lexiconUR` (when set) preserves the underlying representation
-   * across gens; `lexicon` is the surface. Sound changes still apply
-   * primarily to the surface layer; URs let future passes detect
-   * opacity (SR ≠ UR + applicable rules). Undefined → back-compat.
-   * Helpers live in src/engine/phonology/stratal.ts.
+   * When `lexiconUR` is defined, sound-change application uses the
+   * stratal cascade (lexical → post-lexical). UR refresh policy is
+   * controlled by `lexiconURRefreshPolicy`:
+   *   - "each-gen" (default): UR is refreshed to match SR after every
+   *     gen's phonology pass. Catches WITHIN-gen opacity only.
+   *   - "manual" (Phase 72g full-delivery defer-1c): UR persists
+   *     across gens; only the caller's explicit `enableStratalMode`
+   *     or `refreshUR` call updates it. Catches CROSS-GEN opacity
+   *     (counter-feeding / counter-bleeding rule interactions).
+   * Undefined `lexiconUR` → legacy single-pass surface phonology.
    */
   lexiconUR?: Record<string, WordForm>;
+  /**
+   * Phase 72g T1 (defer-1c): policy for when stepPhonology refreshes
+   * `lexiconUR`. See `lexiconUR` docstring above.
+   */
+  lexiconURRefreshPolicy?: "each-gen" | "manual";
   grammar: GrammarFeatures;
   events: LanguageEvent[];
   wordFrequencyHints: Record<Meaning, number>;

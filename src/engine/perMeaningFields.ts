@@ -159,6 +159,65 @@ export function purgePerWordDiffusionForMeaning(
 }
 
 /**
+ * Phase 72d-1 (full-delivery defer-1b): registry-driven inheritance
+ * helper. Replaces the manual clone-per-field pattern in
+ * `tree/split.ts:makeChild` for all PER-MEANING fields. Each spec's
+ * `inherit` strategy drives the clone:
+ *
+ *   - "shallow-clone": `{ ...parent[key] }` — copies the top-level
+ *     map but shares value references.
+ *   - "deep-clone-entries": `{ ...parent[key] }` for the outer map
+ *     and `[...inner]` / `{ ...inner }` for each value (one level
+ *     deeper). Used when the values are arrays/objects that the
+ *     daughter shouldn't mutate through the shared reference.
+ *   - "skip": the daughter starts with this field unset.
+ *
+ * Whole-language fields (grammar, phonemeInventory, conservatism, etc.)
+ * are still bespoke in `tree/split.ts:makeChild` — they're not
+ * per-meaning records and have different cloning semantics.
+ *
+ * Returns the count of fields cloned.
+ */
+export function inheritMeaningFields(
+  parentLang: Language,
+  childLang: Language,
+): number {
+  const parentAsRecord = parentLang as unknown as Record<string, unknown>;
+  const childAsRecord = childLang as unknown as Record<string, unknown>;
+  let count = 0;
+  for (const spec of PER_MEANING_FIELDS) {
+    // Safety-net semantics: only fill fields that the bespoke caller
+    // (e.g., tree/split.ts:makeChild) didn't populate. This means
+    // adding a new per-meaning field to PER_MEANING_FIELDS is enough
+    // to get inheritance — no tree/split.ts edit required — while
+    // existing manual clones (which often do field-specific deep
+    // copies the registry can't replicate) keep their semantics.
+    if (childAsRecord[spec.key] !== undefined) continue;
+    const parentVal = parentAsRecord[spec.key];
+    if (parentVal === undefined) continue;
+    if (spec.inherit === "skip") continue;
+    if (spec.inherit === "shallow-clone") {
+      childAsRecord[spec.key] = { ...(parentVal as Record<string, unknown>) };
+      count++;
+      continue;
+    }
+    if (spec.inherit === "deep-clone-entries") {
+      const out: Record<string, unknown> = {};
+      const src = parentVal as Record<string, unknown>;
+      for (const k of Object.keys(src)) {
+        const v = src[k];
+        if (Array.isArray(v)) out[k] = [...v];
+        else if (v && typeof v === "object") out[k] = { ...(v as object) };
+        else out[k] = v;
+      }
+      childAsRecord[spec.key] = out;
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
  * Helper: purge a meaning from every registered per-meaning field.
  * Call this from `deleteMeaning` (lexicon/mutate.ts) instead of the
  * hand-coded delete chain. Returns the count of fields that had the

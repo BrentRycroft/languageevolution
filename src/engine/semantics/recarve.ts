@@ -27,19 +27,20 @@ export function maybeRecarve(
   lang: Language,
   rng: Rng,
   probability: number,
+  generation: number = 0,
 ): RecarveEvent | null {
   if (!rng.chance(probability)) return null;
   if (rng.chance(0.55)) {
-    const merged = tryMerge(lang, rng);
+    const merged = tryMerge(lang, rng, generation);
     if (merged) return merged;
     return trySplit(lang, rng);
   }
   const split = trySplit(lang, rng);
   if (split) return split;
-  return tryMerge(lang, rng);
+  return tryMerge(lang, rng, generation);
 }
 
-function tryMerge(lang: Language, rng: Rng): RecarveEvent | null {
+function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | null {
   const lex = lang.lexicon;
   const meanings = Object.keys(lex).filter(isRegisteredConcept);
   const pairs: Array<readonly [Meaning, Meaning]> = [];
@@ -60,7 +61,14 @@ function tryMerge(lang: Language, rng: Rng): RecarveEvent | null {
   const winner = fa > fb ? a : fa < fb ? b : a < b ? a : b;
   const loser = winner === a ? b : a;
   // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
-  deleteMeaning(lang, loser);
+  // Phase 72d-2 (defer-1a): pass merger context so meaningHistory
+  // records the pathway loser → winner. Reverse translation /
+  // reconstruction can recover the loser via mergedInto.
+  deleteMeaning(lang, loser, {
+    mergedInto: winner,
+    generation,
+    reason: "semantic-merger",
+  });
   if (lang.suppletion) delete lang.suppletion[loser];
   recordOneSidedColexification(lang, winner, loser);
   return { kind: "merge", winner, loser };
@@ -70,6 +78,7 @@ export function applyKinshipSimplification(
   lang: Language,
   rng: Rng,
   maxEvents = 2,
+  generation: number = 0,
 ): RecarveEvent[] {
   const out: RecarveEvent[] = [];
   const KINSHIP_PAIRS: ReadonlyArray<readonly [Meaning, Meaning]> = [
@@ -88,8 +97,12 @@ export function applyKinshipSimplification(
     const fb = lang.wordFrequencyHints[b] ?? 0.4;
     const winner = fa >= fb ? a : b;
     const loser = winner === a ? b : a;
-    // Phase 29 Tranche 1a: route through chokepoint.
-    deleteMeaning(lang, loser);
+    // Phase 72d-2 (defer-1a): record kinship-simplification pathway.
+    deleteMeaning(lang, loser, {
+      mergedInto: winner,
+      generation,
+      reason: "kinship-simplification",
+    });
     if (lang.suppletion) delete lang.suppletion[loser];
     recordOneSidedColexification(lang, winner, loser);
     out.push({ kind: "merge", winner, loser });

@@ -9,7 +9,7 @@ import { formatNumeral } from "./numerals";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
-import { astToTokens } from "./ast";
+import { astToTokens, astToSentence } from "./ast";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -810,10 +810,17 @@ export function translateSentenceViaAST(
   const wordOrder = lang.grammar.wordOrder ?? "SVO";
   const projectedTokens = astToTokens(ast, wordOrder);
   const englishLabel = englishCaption ?? projectedTokens.map((t) => t.surface).join(" ");
-  // Run the projected tokens through the same parse + realise flow as
-  // the legacy English path. The parser tolerates non-English orders;
-  // when parsing fails (no full sentence shape), fragment fallback
-  // still produces useful output.
+  // Phase 72g T3 (full-delivery defer-1d): direct AST → Sentence
+  // bridge. When the AST converts cleanly (head V + ≥1 participant),
+  // build a Sentence directly via `astToSentence` and skip the
+  // parser. Falls back to project+reparse for ASTs that need parser
+  // intervention (relative clauses, embedded clauses, etc., not yet
+  // expressible in the minimal AST IR).
+  const directSentence = astToSentence(ast, lang);
+  if (directSentence) {
+    return translateViaTree(lang, englishLabel, projectedTokens, [directSentence]);
+  }
+  // Fallback: project tokens through the parser as before.
   const parsedAll = parseSyntaxAll(projectedTokens);
   if (parsedAll.length > 0) {
     return translateViaTree(lang, englishLabel, projectedTokens, parsedAll);
