@@ -87,6 +87,11 @@ standalone commit (or 2–4 for larger phases). Probe scripts under
 | 71b | `db9624e` | G7+G8 translator/suppletion | Gate noun-case paradigm on `grammar.hasCase`; `PROTECTED_MEANINGS` set shields be/go/etc. from `deleteMeaning`; purge `lang.suppletion` on delete |
 | 71c | `a10c340` | G2+G6 closed-class + inventory | Extend `SWADESH_CORE_SET` with closed-class lemmas; tighten Romance `seedPhonemeTarget=26`; disfavor lengthening rules via `seedRuleBias` |
 | 71d | `51457c8` | G3+G5 schedule grammar control | New `grammarPatch?: Partial<GrammarFeatures>` + `lockWordOrderUntilGen?: number` fields on BiasMilestone/initialBias; founder innovation respects word-order cooldown; Romance schedule applies SVO + nom-acc + hasCase patches per tier |
+| 72a | `eba00c3` | Audit quick wins (7 fixes) | Tier-3 orthography drift 3→0.2 (was inverted); closedClassTable cache invalidation; categoryMomentum cleanup; historicalEvents cap=200; founder records wordOrderLastFlipGen; translator filters quoted strings; poetry preserves gloss |
+| 72b | `93de678` | Closed-class typology + tense AUX | AUX tense injection in fragment translator; per-preset `closedClassInventory`; SWADESH split (content ×0.4 / closed-class ×0.3); reduced M4-M6 grammarPatch in Romance schedule |
+| 72c | `ab6ae48` | Morphology integrity (C4 + theme reanalysis) | Empty-affix paradigm bails to bare stem; verb-themes pruned when no verb in lexicon matches |
+| 72d | `52a8e46` | Per-meaning field registry + merger trace | Central `perMeaningFields.ts` registry; `lang.meaningHistory` records merger pathways for reverse inference; full UUID concept registry deferred |
+| 72e | _pending_ | Stress tests + observability + docs | 9 stress tests; `scripts/run-all-probes.ts`; `CHANGELOG.md`; `docs/SAVE_FORMAT.md` |
 
 ### Per-phase feature pointers
 

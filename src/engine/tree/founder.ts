@@ -120,6 +120,17 @@ export function applyFounderInnovation(
         if (!flip || seenFeatures.has(flip.feature)) continue;
         seenFeatures.add(flip.feature);
         setGrammarFeature(child.grammar, flip.feature, flip.to as GrammarFeatures[typeof flip.feature]);
+        // Phase 72a T5 (Contract C6 + Invariant 3 fix): record the
+        // flip timestamp so subsequent drift / Historical Mode locks
+        // see this as a "recent flip" and gate accordingly.
+        // Pre-72a, founder flipped wordOrder via setGrammarFeature
+        // without writing wordOrderLastFlipGen — the cooldown check
+        // in maybeDriftWordOrder treated it as never-flipped. The
+        // Phase 71d lock partially addressed this by reading the
+        // post-patch lock value, but the underlying bug remained.
+        if (flip.feature === "wordOrder") {
+          child.wordOrderLastFlipGen = generation;
+        }
         descriptions.push(`${flip.feature}: ${String(flip.from)} → ${String(flip.to)}`);
         primaryKind ??= kind;
       }

@@ -280,14 +280,18 @@ export interface OrthographyShift {
  * Tier-gated multiplier for orthographic drift probability. Tier 0/1 have
  * no writing tradition, so spelling can't lock in or drift independently
  * of sound. Tier 2 (iron-age) is the writing threshold — drift at the
- * baseline rate. Tier 3 (modern, with print + schools + dictionaries)
- * sees etymology preservation, dictionary rules, and prestige spellings,
- * driving spelling further from sound — drift accelerates 3x.
+ * baseline rate as scribes still adjust to the language. Tier 3 (modern,
+ * with print + schools + dictionaries) DAMPENS drift: institutional
+ * pressure (academies, dictionaries, schools) preserves established
+ * spellings against phonological pressure (cf. English "knight",
+ * French "oignon"). Phase 72a fix: pre-72a this returned 3 (3× faster
+ * drift at tier 3), which inverted the historical reality. Now 0.2
+ * (drift slows to 1/5 of tier-2 rate).
  */
 export function tierOrthographyMultiplier(tier: number | undefined): number {
   if (tier === undefined || tier < 2) return 0;
   if (tier === 2) return 1;
-  return 3; // tier 3+
+  return 0.2; // tier 3+: standardised, prescriptive, drift dampened
 }
 
 export function driftOrthography(

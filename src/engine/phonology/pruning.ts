@@ -387,6 +387,44 @@ export function prunePhonemes(
     lang.grammar.verbThemes = updated;
   }
 
+  // Phase 72c T2 (verb-theme reanalysis): drop verbThemes that no
+  // longer match ANY verb in the lexicon. Pre-72c, when a deletion
+  // rule eroded a theme suffix (e.g., /ɾ/ deleted intervocalically,
+  // breaking the /eɾe/ theme), the theme stayed in lang.grammar
+  // forever, never matching any verb at strip time — silent dead
+  // weight. We retain the original proto themes anyway (head-of-list
+  // protection in the loop above), but stale post-merger variants
+  // that fail every match across the lexicon get pruned.
+  if (lang.grammar.verbThemes && lang.grammar.verbThemes.length > 1) {
+    // Find verbs in the lexicon: meanings with a "verb." paradigm
+    // category match and lexicon entries.
+    const verbForms: WordForm[] = [];
+    for (const m of Object.keys(lang.lexicon)) {
+      // Heuristic: any meaning that's a verb in CONCEPTS or has POS=V.
+      // We check the lexicon directly here without a CONCEPTS import to
+      // avoid circular imports; assume any lexicon entry MAY be a verb.
+      const f = lang.lexicon[m];
+      if (f && f.length > 0) verbForms.push(f);
+    }
+    const matchedAtLeastOne = (theme: WordForm) => {
+      if (theme.length === 0) return false;
+      for (const f of verbForms) {
+        if (f.length < theme.length) continue;
+        let ok = true;
+        for (let i = 0; i < theme.length; i++) {
+          if (f[f.length - theme.length + i] !== theme[i]) { ok = false; break; }
+        }
+        if (ok) return true;
+      }
+      return false;
+    };
+    // Always preserve the FIRST theme (head-of-list = proto). Only
+    // prune secondary entries that fail to match anything.
+    const head = lang.grammar.verbThemes[0]!;
+    const tail = lang.grammar.verbThemes.slice(1).filter(matchedAtLeastOne);
+    lang.grammar.verbThemes = [head, ...tail];
+  }
+
   // Phase 40a: only shrink inventory when no Swadesh words still
   // hold the candidate. Otherwise the phoneme stays and the
   // protected words keep it, drifting independently via the gated

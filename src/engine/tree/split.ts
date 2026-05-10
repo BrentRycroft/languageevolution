@@ -184,6 +184,10 @@ export function splitLeaf(
       retiredRules: (parentLang.retiredRules ?? []).map((r) => ({ ...r })),
       ruleBias: jitterBias(parentLang.ruleBias ?? { ...DEFAULT_RULE_BIAS }, rng, 0.3),
       registerOf: { ...(parentLang.registerOf ?? {}) },
+      // Phase 72b T2: closed-class inventory inherited by reference
+      // (it's a ReadonlySet — daughters don't mutate it; preset declares
+      // it once at init and it propagates unchanged through the tree).
+      closedClassInventory: parentLang.closedClassInventory,
       orthography: { ...parentLang.orthography },
       otRanking: parentLang.otRanking.slice(),
       lastChangeGeneration: { ...parentLang.lastChangeGeneration },

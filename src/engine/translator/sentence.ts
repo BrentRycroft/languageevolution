@@ -7,6 +7,8 @@ import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { lookupFormWithResolution } from "../lexicon/lookup";
+import { inflectCascade } from "../morphology/evolve";
+import type { MorphCategory } from "../morphology/types";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -965,12 +967,32 @@ function translateFragment(
           pendingArticle = null;
           pendingAffix = null;
         }
+        // Phase 72b T1 (S5 fix): apply tense morphology to V tokens in
+        // fragment mode. The tokenizer propagates AUX tense onto the
+        // following V token's `features.tense` (line 448), but pre-72b
+        // the fragment translator emitted bare verb forms — so
+        // "he didn't go" came out present-tense despite the past AUX.
+        // Now we run inflectCascade for the verb's tense category.
+        let glossSuffix = "";
+        if (tok.tag === "V" && tok.features?.tense) {
+          const tense = tok.features.tense;
+          const tenseCat: MorphCategory | null =
+            tense === "past" ? "verb.tense.past" :
+            tense === "future" ? "verb.tense.fut" : null;
+          if (tenseCat && lang.morphology.paradigms[tenseCat]) {
+            const cascade = inflectCascade(inflected, [tenseCat], lang, tok.lemma);
+            if (cascade.applied.length > 0) {
+              inflected = cascade.form;
+              glossSuffix = "." + tenseCat.replace("verb.", "");
+            }
+          }
+        }
         targetTokens.push({
           englishLemma: tok.lemma,
           englishTag: tok.tag,
           targetForm: inflected,
           targetSurface: inflected.join(""),
-          glossNote,
+          glossNote: glossNote + glossSuffix,
           resolution,
         });
       }
@@ -985,7 +1007,15 @@ function translateFragment(
     english,
     englishTokens,
     targetTokens,
-    arranged: targetTokens.map((t) => t.targetSurface).filter((s) => s.length > 0),
+    // Phase 72a T6 (S5 fix): drop "❝lemma❞" placeholder surfaces from
+    // the arranged output. Pre-72a, unresolved tokens emitted with
+    // smart quotes (line 954) leaked into the arranged form, looking
+    // like the language had ASCII words "abc" "xyz". The targetTokens
+    // array still carries the placeholder for the missing list to
+    // reference, but the joined output stays clean.
+    arranged: targetTokens
+      .map((t) => t.targetSurface)
+      .filter((s) => s.length > 0 && !(s.startsWith("“") && s.endsWith("”"))),
     missing,
     notes,
   };

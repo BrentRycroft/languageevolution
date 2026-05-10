@@ -190,6 +190,10 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     retiredRules: [],
     ruleBias: { ...DEFAULT_RULE_BIAS },
     registerOf: seedRegister(seedLex, rng),
+    // Phase 72b T2: per-preset closed-class anchor list. Inherited at
+    // split (split.ts:cloneClosedClassInventory). Undefined falls back
+    // to the universal default in apply.ts.
+    closedClassInventory: config.seedClosedClassInventory,
     coords: { x: 0, y: 0 },
     orthography: {},
     otRanking: DEFAULT_OT_RANKING.slice(),

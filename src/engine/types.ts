@@ -263,6 +263,31 @@ export interface Language {
   vowelShiftPressure?: Record<string, number>;
   lexicalStress?: Record<string, number>;
   registerOf?: Record<string, "high" | "low">;
+  /**
+   * Phase 72d T2: meaning-merger pathway tracker. When a meaning is
+   * deleted via recarving (e.g., "water" merges into "liquid"),
+   * `lang.meaningHistory[deletedMeaning] = { mergedInto: targetMeaning,
+   * generation: gen }`. Reverse translation can consult this to recover
+   * orphaned proto-meanings that no longer exist as lexicon keys but
+   * are conceptually preserved in the merged sense.
+   *
+   * Pre-72d there was NO trace; once a meaning was deleted, its identity
+   * was lost. The audit (Theme D) flagged this as the core blocker for
+   * concept reconstruction across recarving. A full UUID-based concept
+   * registry is the right long-term fix; this is the minimal trace
+   * mechanism that unlocks reverse inference without restructuring
+   * the lexicon's key shape.
+   */
+  meaningHistory?: Record<string, { mergedInto?: string; generation: number; reason?: string }>;
+  /**
+   * Phase 72b T2: language-specific closed-class anchor list. Phase 71c
+   * added universal anchors for "the/of/and/i/..." but the audit found
+   * this is typologically wrong (Polynesian, Mandarin, Quechua all
+   * lack one or more of these). When a preset declares this set,
+   * the phonology brake (apply.ts:387) consults it instead of the
+   * default English-shaped list. Undefined → use the default.
+   */
+  closedClassInventory?: ReadonlySet<string>;
   coords?: { x: number; y: number };
   territory?: {
     cells: number[];
@@ -1169,6 +1194,15 @@ export interface SimulationConfig {
    * languages inherit unless overridden.
    */
   seedToneSandhiRules?: ReadonlyArray<"meeussen" | "dissimilate" | "spread" | "downstep">;
+  /**
+   * Phase 72b T2: language-specific closed-class anchor list. Populated
+   * into `lang.closedClassInventory` at init. The phonology brake
+   * (apply.ts) only dampens drift on lemmas in this set. Undefined →
+   * use the universal English-shaped default (CLOSED_CLASS_DEFAULT in
+   * apply.ts). Romance / Germanic / Bantu / etc. should each declare
+   * their own closed-class inventory matching the typology.
+   */
+  seedClosedClassInventory?: ReadonlySet<string>;
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;

@@ -327,11 +327,16 @@ function isContentWord(meaning: Meaning): boolean {
 }
 
 /**
- * Phase 38d: Swadesh-100 core anchor list. Used to apply a hard
- * brake on phonological drift for the most stable cross-linguistic
- * meanings. Inlined to avoid a circular import with semantics/lexicostat.
+ * Phase 38d: Swadesh-100 core anchor list (CONTENT words).
+ * Phase 72b T3: split out from the formerly-merged set.
+ *
+ * Content Swadesh meanings are typologically conservative across all
+ * languages — the "100-word universal core" in lexicostatistics. They
+ * get a hard brake (×0.4 exponent multiplier at line 387) when freq
+ * ≥ 0.85, bringing their effective drift to ~0.1-0.3%/gen which
+ * matches Swadesh retention of 85%/millennium.
  */
-const SWADESH_CORE_SET: ReadonlySet<string> = new Set([
+const SWADESH_CONTENT_CORE: ReadonlySet<string> = new Set([
   "i", "you", "we", "this", "that", "who", "what", "not", "all", "many",
   "one", "two", "big", "long", "small", "woman", "man", "person", "fish",
   "bird", "dog", "louse", "tree", "seed", "leaf", "root", "bark", "skin",
@@ -344,19 +349,44 @@ const SWADESH_CORE_SET: ReadonlySet<string> = new Set([
   "smoke", "fire", "ash", "burn", "path", "mountain", "red", "green", "yellow",
   "white", "black", "night", "hot", "cold", "full", "new", "good", "round",
   "dry", "name",
-  // Phase 71c T1 (G6): closed-class lemmas. Phase 70 diagnostic
-  // showed the/of/and/i/you/we/etc. drifting unrecognizably under
-  // sustained Historical Mode volatility (e.g., the → "iːɾaːɾu",
-  // of → "toːtaː"). These lemmas are seeded with freq=0.95 at
-  // language birth (steps/init.ts:113), so the freq>=0.85 brake at
-  // line 372 below now multiplies their drift exponent by 0.4 —
-  // dropping effective drift from ~35%/200gens to ~10%/200gens.
-  // Real-world closed-class drift IS slow (cf. English "the" from
-  // OE "þæt"), so the brake matches reality.
+]);
+
+/**
+ * Phase 72b T3: closed-class anchor list (FUNCTION words). Phase 71c
+ * lumped these into SWADESH_CORE_SET, but the audit found this is
+ * typologically wrong:
+ *
+ *   1. Not all languages have "the/of/and" (Polynesian, Mandarin).
+ *   2. Function words DO drift, just slowly (English "þæt" → "the"
+ *      took ~1000 years; the brake should reflect that real timescale).
+ *   3. Content + function should have DIFFERENT brake strengths —
+ *      function words drift slower because they're acquired earlier
+ *      and resist analogy more strongly.
+ *
+ * The brake is gated on `lang.closedClassInventory` membership when
+ * declared (preset-specific). When undefined the universal default
+ * applies (English-shaped). Members get a stronger ×0.3 brake.
+ */
+const CLOSED_CLASS_DEFAULT: ReadonlySet<string> = new Set([
   "the", "a", "an", "of", "and", "or", "but", "with", "to", "from",
   "in", "on", "at", "for", "by", "is", "be", "have", "do", "go",
   "will", "if", "when", "as", "than", "my", "your", "his", "her",
   "its", "our", "their", "they", "he", "she", "it", "us", "them",
+]);
+
+function isClosedClassAnchor(meaning: string, lang: Language | undefined): boolean {
+  // Preset-declared inventory takes precedence.
+  if (lang?.closedClassInventory) return lang.closedClassInventory.has(meaning);
+  return CLOSED_CLASS_DEFAULT.has(meaning);
+}
+
+/**
+ * Legacy export: callers that needed the merged set get both sets unioned.
+ * Used by lexicostatistic snapshots; not used in apply.ts anymore.
+ */
+export const SWADESH_CORE_SET: ReadonlySet<string> = new Set([
+  ...SWADESH_CONTENT_CORE,
+  ...CLOSED_CLASS_DEFAULT,
 ]);
 
 export function applyChangesToWord(
@@ -378,12 +408,21 @@ export function applyChangesToWord(
     ? Math.max(0.05, Math.min(1, 1 - freq + registerShift))
     : Math.max(0.05, Math.min(1, freq + registerShift));
   let freqExponent = 0.4 + freqInput * 1.2;
-  // Phase 38d: Swadesh-core hard brake. Meanings on the Swadesh-100
-  // list with freq ≥ 0.85 get an additional 0.4× exponent multiplier,
-  // bringing their effective drift rate to ~0.1-0.3%/gen — matching
-  // real Swadesh retention of 85%/millennium.
-  if (freq >= 0.85 && SWADESH_CORE_SET.has(meaning)) {
-    freqExponent *= 0.4;
+  // Phase 38d / Phase 72b T3: Swadesh-core + closed-class brake.
+  // Pre-72b a single SWADESH_CORE_SET held both groups with a single
+  // ×0.4 multiplier. The audit flagged that:
+  //   1. Closed-class membership is language-specific (not all langs
+  //      have "the/of"); preset-declared `closedClassInventory` takes
+  //      precedence over the default English-shaped list.
+  //   2. Function words drift slower than content words in real
+  //      languages (acquired earlier; rarely innovated). They get a
+  //      stronger brake (×0.3 vs content's ×0.4).
+  if (freq >= 0.85) {
+    if (SWADESH_CONTENT_CORE.has(meaning)) {
+      freqExponent *= 0.4;
+    } else if (isClosedClassAnchor(meaning, opts.langForHomonym)) {
+      freqExponent *= 0.3;
+    }
   }
   // Phase 38d: low-freq content boost. Real low-freq vocabulary
   // churns faster than the smooth curve predicts (rare technical
