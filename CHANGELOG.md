@@ -4,6 +4,48 @@ User-facing summary of shipped phases. Format: phase tag, commit, headline, key 
 
 ## Phase 72 — Audit Triage (May 2026)
 
+### Phase 72g — Architecture (foundations for the long-deferred items)
+- Stratal phonology UR/SR layer (`src/engine/phonology/stratal.ts`).
+  Adds `lang.lexiconUR?` for opacity detection. Does NOT yet wire
+  stratal rule ordering into stepPhonology — that's the deeper
+  refactor; deferred. Three helpers: `enableStratalMode`, `getUR`,
+  `isOpaque`.
+- Reticulate contact links (`src/engine/contact/reticulate.ts`).
+  New `state.contactLinks: ReticulateLink[]` global, refreshed each
+  gen via `refreshContactLinks`. Wired into the simulation pipeline.
+- Translator AST IR (`src/engine/translator/ast.ts`). Foundation for
+  the audit's "decouple translator from English" item. Ships
+  `englishTokensToAST` + `astToTokens` + `ASTNode` / `ASTSentence`
+  types. Realiser doesn't consume the AST yet (back-compat preserved);
+  full IR-driven realisation is a follow-up sweep.
+- Reanalysis mechanism (`src/engine/grammar/reanalysis.ts`).
+  `tryReanalyseAlignment` runs before `driftGrammar` and shifts nom-acc
+  → erg-abs when conditions match (Indo-Aryan pathway). Same-gen
+  alignment drift is suppressed when reanalysis fires (new
+  `skipFeatures` param on `driftGrammar`).
+- `docs/LANGUAGE_DOMAINS.md` — structural roadmap for the eventual
+  decomposition of `Language` into PhonologyState / MorphologyState /
+  LexiconState / GrammarState / SocialState / GeoState / ContactState.
+  Documented as a 5-6 week dedicated session; explicitly NOT
+  attempted in 72g.
+
+### Phase 72f — Sociolinguistic mechanisms (full delivery)
+- Commit: `4c75286`
+- Graduated endangerment: vigorous → endangered → moribund → extinct
+  ladder. New `vitalityRateMultiplier` gates phonology innovation.
+- Continuous `volatilityIntensity` scalar replacing the 2-state phase
+  machine. Phase machine preserved for back-compat.
+- `prestigeVariety` flag spawned at tier-2 promotion. ×0.5 phonology
+  brake. NOT inherited by daughters (institutional, not phylogenetic).
+- Thomason-gated structural borrowing (donor.tier > recipient OR
+  donorPrestige). Replaces uniform literacy-only brake.
+- Per-(rule, meaning) lexical diffusion timestamps. Wang S-curve
+  records per-word adoption gens to `lang.perWordDiffusion`.
+- Language-shift via heavy bilingualism (link ≥ 0.5 + tier or prestige
+  asymmetry). Conservation: speakers transfer between leaves.
+- Prestige-weighted areal typology + wave model. Adoption probability
+  rebuilt as Σ frac × (1 + 0.5 × tierGap) × (1.5 if prestigeVariety).
+
 ### Phase 72e — Stress tests + observability
 - 9 new stress tests covering empty lexicon, event-cap truncation, deep
   tree, extinct ancestors, translator edge inputs, sparse-lexicon

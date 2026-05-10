@@ -215,6 +215,16 @@ export interface Language {
    * Per audit S8 row 9.
    */
   perWordDiffusion?: Record<string, Record<string, number>>;
+  /**
+   * Phase 72g T1: stratal phonology underlying-representation layer.
+   * Pre-72g the simulator had a single surface-only lexicon. Post-72g,
+   * `lexiconUR` (when set) preserves the underlying representation
+   * across gens; `lexicon` is the surface. Sound changes still apply
+   * primarily to the surface layer; URs let future passes detect
+   * opacity (SR ≠ UR + applicable rules). Undefined → back-compat.
+   * Helpers live in src/engine/phonology/stratal.ts.
+   */
+  lexiconUR?: Record<string, WordForm>;
   grammar: GrammarFeatures;
   events: LanguageEvent[];
   wordFrequencyHints: Record<Meaning, number>;
@@ -1290,6 +1300,26 @@ export interface PendingArealRule {
   birthGeneration: number;
 }
 
+/**
+ * Phase 72g T2: reticulate (horizontal) link between two languages.
+ * Records sustained contact relationships beyond the strict cladistic
+ * parent / child / sibling structure of `state.tree`. Symmetric:
+ * contactLinks are undirected; (langA, langB) and (langB, langA) are
+ * the same link.
+ */
+export interface ReticulateLink {
+  langA: string;
+  langB: string;
+  /** Categorical contact kind for diagnostics + biased iteration. */
+  kind: "bilingual" | "areal" | "creolisation" | "substrate";
+  /** Strength on [0, 1]; mirrors bilingualLinks scoring. */
+  strength: number;
+  /** First gen when this link was observed. */
+  firstSeenGen: number;
+  /** Last gen when this link was observed (refreshed each gen it persists). */
+  lastSeenGen: number;
+}
+
 export interface SimulationState {
   generation: number;
   tree: LanguageTree;
@@ -1297,6 +1327,29 @@ export interface SimulationState {
   rngState: number;
   pendingArealRules?: PendingArealRule[];
   generationsOverCap?: number;
+  /**
+   * Phase 72g T2: reticulate (network) tree links. The simulator's
+   * primary topology is a strict cladistic tree (LanguageNode.parentId
+   * → single parent). Real linguistic history has horizontal
+   * connections — dialect continua, areal Sprachbund (Balkan, SE Asia,
+   * Mainland Africa), creolisation. Pre-72g these were modeled
+   * indirectly via `bilingualLinks` (per-language partner-strength map)
+   * with no global topology.
+   *
+   * Post-72g, `state.contactLinks` is a global, undirected list of
+   * (langA, langB, kind, strength) tuples. The existing bilingualLinks
+   * remain (per-language partner cache); reticulate links are higher-
+   * level, persistent contact relationships consumed by:
+   *   - reconstruction probes (skip horizontal links to follow only
+   *     phylogeny);
+   *   - structural / areal borrowing helpers (this list is the
+   *     authoritative network topology).
+   *
+   * Pre-72g any consumer that needed contact topology had to scan
+   * every leaf's bilingualLinks. This list is populated/refreshed by
+   * `src/engine/contact/reticulate.ts` once per gen.
+   */
+  contactLinks?: ReticulateLink[];
   /**
    * Phase 70 T1: Historical Mode idempotency tracker. Each milestone
    * key (`${atGen}:${kind}:${role}:${label}`) is appended once when it

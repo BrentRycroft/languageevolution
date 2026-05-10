@@ -301,9 +301,14 @@ export function driftGrammar(
   rng: Rng,
   simplification: number = 1,
   rateMultiplier: number = 1,
+  skipFeatures?: ReadonlySet<keyof GrammarFeatures>,
 ): GrammarShift[] {
   const shifts: GrammarShift[] = [];
   for (const rule of DRIFT_RULES) {
+    // Phase 72g T4: callers can suppress specific features in the
+    // current pass — used by stepGrammar to prevent a same-gen
+    // alignment drift from undoing a causally-motivated reanalysis.
+    if (skipFeatures && skipFeatures.has(rule.feature)) continue;
     if (rng.chance(rule.probability * rateMultiplier)) {
       const applied = rule.shift(grammar, rng, simplification);
       if (applied) shifts.push(applied);

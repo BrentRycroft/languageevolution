@@ -48,6 +48,7 @@ import { stepTreeSplit, stepDeath, precomputeClosenessVector } from "./steps/tre
 import { stepTaboo } from "./steps/taboo";
 import { stepLearner } from "./steps/learner";
 import { stepArealTypology } from "./steps/arealTypology";
+import { refreshContactLinks } from "./contact/reticulate";
 import { stepHistorical } from "./steps/historical";
 import {
   computeTierCandidate,
@@ -419,6 +420,9 @@ export function createSimulation(
     if (config.modes.tree && config.modes.creolization) {
       timed("creolization", () => stepCreolization(state, config, rng, nextGen));
     }
+    // Phase 72g T2: refresh the reticulate-link network topology from
+    // the bilingualLinks computed during this gen's stepContact pass.
+    timed("reticulate", () => refreshContactLinks(state, nextGen));
     // Phase 29 Tranche 4l: redistribute extinct languages' lingering
     // territory to bordering living neighbours so dead patches don't
     // stay orphaned forever.
