@@ -13,6 +13,7 @@ import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
+import { ensureConceptIdsForLexicon } from "../lexicon/conceptIdentity";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
 import { assignAllGenders } from "../morphology/gender";
@@ -402,6 +403,10 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     rootLang.territory = { cells: [originId] };
     rootLang.coords = territoryCentroid(worldMap, [originId]);
   }
+  // Phase 72d (full-delivery defer-2): assign stable ConceptIds to
+  // every meaning in the proto lexicon. Daughters inherit at split;
+  // identity persists across phonological / semantic drift.
+  ensureConceptIdsForLexicon(rootLang);
   const rootNode: LanguageNode = {
     language: rootLang,
     parentId: null,

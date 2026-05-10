@@ -3,6 +3,7 @@ import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSe
 import { invalidateReverseLexCache } from "../translator/reverse";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { purgeMeaningFromRegistry, purgePerWordDiffusionForMeaning } from "../perMeaningFields";
+import { mintConceptId } from "./conceptIdentity";
 
 /**
  * Phase 28a: single chokepoint for writing a form to the meaning-keyed
@@ -33,6 +34,14 @@ export function setLexiconForm(
   },
 ): void {
   lang.lexicon[meaning] = form;
+  // Phase 72d (full-delivery defer-2): lazy-mint a stable ConceptId
+  // for the meaning if it doesn't have one yet. Setters that coin
+  // genuinely new meanings (genesis, derivation, borrowing) get
+  // their identity anchor here; existing meanings keep their UUID.
+  if (!lang.conceptIds) lang.conceptIds = {};
+  if (!lang.conceptIds[meaning]) {
+    lang.conceptIds[meaning] = mintConceptId();
+  }
   if (!lang.words) return;
   const primary = findPrimaryWordForMeaning(lang, meaning);
   if (primary && primary.formKey === undefined) return; // defensive
@@ -195,14 +204,21 @@ export function deleteMeaning(
   // moved on.
   if (PROTECTED_MEANINGS.has(meaning)) return;
 
-  // Phase 72d T2: record the pathway BEFORE deleting per-meaning
-  // metadata (so the entry is preserved even though everything else is
-  // purged). This is the minimal "concept identity trace" mechanism;
-  // a full UUID-keyed lexicon refactor is deferred (audit Theme D).
+  // Phase 72d T2 + 72d defer-2: record the pathway BEFORE deleting
+  // per-meaning metadata. Captures both the string mergedInto AND
+  // (post-defer-2) the stable ConceptId pair (this meaning's UUID
+  // and the absorber's UUID) so reverse inference can follow merger
+  // pathways across the tree without string-matching.
   if (opts && (opts.mergedInto || opts.reason)) {
     if (!lang.meaningHistory) lang.meaningHistory = {};
+    const conceptId = lang.conceptIds?.[meaning];
+    const mergedIntoConceptId = opts.mergedInto && lang.conceptIds
+      ? lang.conceptIds[opts.mergedInto]
+      : undefined;
     lang.meaningHistory[meaning] = {
       mergedInto: opts.mergedInto,
+      mergedIntoConceptId,
+      conceptId,
       generation: opts.generation ?? 0,
       reason: opts.reason,
     };

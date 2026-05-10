@@ -133,6 +133,18 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     purgeOnDelete: true,
     description: "Phase 70 suppletion table; purged on delete by Phase 71b",
   },
+  // Phase 72d (full-delivery defer-2): stable concept-identity UUIDs.
+  // Inherited shallow-clone (the value is a plain string per meaning;
+  // sister daughters share the same UUID for the same proto-meaning,
+  // which is the cross-tree anchor reverse inference relies on).
+  // PURGED on delete: when a meaning is dropped, its UUID record is
+  // removed from conceptIds — meaningHistory holds the trace instead.
+  {
+    key: "conceptIds",
+    inherit: "shallow-clone",
+    purgeOnDelete: true,
+    description: "Phase 72d concept UUID anchors per meaning",
+  },
 ];
 
 /**

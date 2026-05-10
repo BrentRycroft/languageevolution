@@ -372,7 +372,33 @@ export interface Language {
    * mechanism that unlocks reverse inference without restructuring
    * the lexicon's key shape.
    */
-  meaningHistory?: Record<string, { mergedInto?: string; generation: number; reason?: string }>;
+  meaningHistory?: Record<string, {
+    mergedInto?: string;
+    /**
+     * Phase 72d (full-delivery defer-2): UUID of the meaning that
+     * absorbed this one. Stable across phonological / lexical drift;
+     * lets reverse inference and reconstruction probes follow merger
+     * pathways across the tree without string-matching.
+     */
+    mergedIntoConceptId?: string;
+    /**
+     * Phase 72d (defer-2): UUID of THIS deleted meaning at the time
+     * of deletion. Pre-defer-2, once the string key was gone there
+     * was no way to identify "this was concept X" in the trace.
+     */
+    conceptId?: string;
+    generation: number;
+    reason?: string;
+  }>;
+  /**
+   * Phase 72d (full-delivery defer-2): per-language meaning → UUID
+   * map. Each Meaning gets a stable ConceptId on first reference.
+   * Daughters inherit the parent's map at split, so the same
+   * proto-concept is the SAME UUID across all descendants. Used
+   * for cross-tree reconstruction (which orphan in daughter X
+   * corresponds to which proto-concept).
+   */
+  conceptIds?: Record<string, string>;
   /**
    * Phase 72b T2: language-specific closed-class anchor list. Phase 71c
    * added universal anchors for "the/of/and/i/..." but the audit found
