@@ -1,5 +1,5 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
-import { applyChangesToLexicon, sortByPriority } from "../phonology/apply";
+import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority } from "../phonology/apply";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
@@ -239,7 +239,23 @@ export function stepPhonology(
     // skips its internal sort when this is present.
     _orderedChanges: orderedChanges,
   };
-  lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
+  // Phase 72g T1 (full): stratal cascade. When lang.lexiconUR is
+  // defined, run sound changes in two strata (lexical → post-lexical)
+  // reading from the UR snapshot; otherwise the legacy single-pass
+  // path. After application, refresh the UR snapshot so next gen's
+  // input is this gen's surface (the canonical input chain).
+  if (lang.lexiconUR !== undefined) {
+    lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts);
+    // Refresh UR to mirror the new SR. Future passes that want to
+    // detect opacity should snapshot UR PRIOR to phonology (e.g.,
+    // probes call enableStratalMode() before the run).
+    lang.lexiconUR = {};
+    for (const m of Object.keys(lang.lexicon)) {
+      lang.lexiconUR[m] = lang.lexicon[m]!.slice();
+    }
+  } else {
+    lang.lexicon = applyChangesToLexicon(before, changes, rng, opts);
+  }
   // Phase 72a T2 (Invariant 1 fix): closed-class forms are cached
   // per-language; the cache silently goes stale when phonology rewrites
   // lang.lexicon entries for the/of/and/i/etc. Invalidate here so the

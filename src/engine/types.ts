@@ -85,6 +85,21 @@ export interface SoundChange {
    * choices. One sentence, surfaces in the rule-catalog UI tooltip.
    */
   rationale?: string;
+  /**
+   * Phase 72g T1 (stratal phonology): stratum tag for ordering.
+   *   - "lexical" (post-Phase-72g default for morphologically-
+   *     conditioned rules): applies to UR before allomorph spell-out;
+   *     fires only when stratal mode is enabled. Sees UR phonemes.
+   *   - "post-lexical" (default): applies to the surface form after
+   *     allomorphy and inflection have been built. Sees SR phonemes.
+   *
+   * In stratal mode, lexical rules run first against the UR and
+   * write to an intermediate representation; post-lexical rules then
+   * run against the intermediate to produce the SR. In legacy
+   * (non-stratal) mode this field is ignored — all rules run in
+   * priority order against the surface.
+   */
+  stratum?: "lexical" | "post-lexical";
 }
 
 export interface LanguageEvent {

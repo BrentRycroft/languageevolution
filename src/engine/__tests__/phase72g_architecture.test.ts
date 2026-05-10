@@ -5,7 +5,14 @@ import { enableStratalMode, getUR, isOpaque } from "../phonology/stratal";
 import { refreshContactLinks, linksFor } from "../contact/reticulate";
 import { englishTokensToAST, astToTokens } from "../translator/ast";
 import { tryReanalyseAlignment } from "../grammar/reanalysis";
+import { translateSentenceViaAST } from "../translator/sentence";
 import type { EnglishToken } from "../translator/tokens";
+import type {
+  PhonologyState,
+  MorphologyState,
+  LexiconState,
+  SocialState,
+} from "../domains";
 
 describe("Phase 72g-1 — stratal phonology UR/SR layer", () => {
   it("enableStratalMode snapshots lexicon into lexiconUR", () => {
@@ -190,5 +197,135 @@ describe("Phase 72g-4 — alignment reanalysis", () => {
     };
     const shift = tryReanalyseAlignment(lang, rng);
     expect(shift).toBeNull();
+  });
+});
+
+describe("Phase 72g-1 (full) — stratal cascade in stepPhonology", () => {
+  it("simulator runs with stratal mode enabled without crashing", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72g-stratal-pipeline";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    enableStratalMode(lang);
+    expect(() => {
+      for (let i = 0; i < 30; i++) sim.step();
+    }).not.toThrow();
+    // After running, lexiconUR should still be defined and tracking
+    // surface (stepPhonology refreshes it post-application).
+    expect(lang.lexiconUR).toBeDefined();
+  });
+
+  it("non-stratal mode preserves legacy single-pass behaviour (back-compat)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72g-legacy";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    expect(lang.lexiconUR).toBeUndefined();
+    for (let i = 0; i < 10; i++) sim.step();
+    // Legacy mode does NOT populate lexiconUR.
+    expect(lang.lexiconUR).toBeUndefined();
+  });
+});
+
+describe("Phase 72g-3 (full) — translateSentenceViaAST primary path", () => {
+  it("AST entry point produces a SentenceTranslation with non-empty target", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72g-ast-primary";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    const ast = {
+      head: { lemma: "see", tag: "V" as const, features: { tense: "past" as const } },
+      participants: [
+        { lemma: "king", tag: "N" as const, role: "subject" as const, features: {} },
+        { lemma: "bird", tag: "N" as const, role: "object" as const, features: {} },
+      ],
+      fillers: [],
+    };
+    const t = translateSentenceViaAST(lang, ast);
+    expect(t.targetTokens.length).toBeGreaterThan(0);
+    // Should resolve at least the V (Romance has "see" via vidēre/vedere).
+    const v = t.targetTokens.find((tok) => tok.englishLemma === "see");
+    expect(v).toBeDefined();
+  });
+
+  it("AST projection respects target wordOrder (SOV vs SVO)", () => {
+    // Build minimal ASTs for both orders, project, and verify the
+    // V token's relative position in the resulting tokens.
+    const cfg = presetRomance();
+    cfg.seed = "p72g-ast-order";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    const ast = {
+      head: { lemma: "see", tag: "V" as const, features: {} },
+      participants: [
+        { lemma: "king", tag: "N" as const, role: "subject" as const, features: {} },
+        { lemma: "bird", tag: "N" as const, role: "object" as const, features: {} },
+      ],
+      fillers: [],
+    };
+    // Force the language into SOV for this test.
+    lang.grammar.wordOrder = "SOV";
+    const sov = translateSentenceViaAST(lang, ast);
+    const sovOrder = sov.targetTokens.map((t) => t.englishLemma);
+    const sIdx = sovOrder.indexOf("king");
+    const oIdx = sovOrder.indexOf("bird");
+    const vIdx = sovOrder.indexOf("see");
+    if (sIdx >= 0 && oIdx >= 0 && vIdx >= 0) {
+      // SOV: subject before object before verb.
+      expect(sIdx).toBeLessThan(oIdx);
+      expect(oIdx).toBeLessThan(vIdx);
+    }
+  });
+});
+
+describe("Phase 72g-5 (Phase 1) — domain sub-state type views", () => {
+  it("a Language is structurally assignable to PhonologyState", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72g-domains-phon";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    const phon: PhonologyState = lang;
+    expect(phon.phonemeInventory).toBe(lang.phonemeInventory);
+    expect(phon.activeRules).toBe(lang.activeRules);
+  });
+
+  it("a Language is structurally assignable to MorphologyState", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72g-domains-morph";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    const morph: MorphologyState = lang;
+    expect(morph.morphology).toBe(lang.morphology);
+  });
+
+  it("a Language is structurally assignable to LexiconState", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72g-domains-lex";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    const lex: LexiconState = lang;
+    expect(lex.lexicon).toBe(lang.lexicon);
+    expect(lex.wordFrequencyHints).toBe(lang.wordFrequencyHints);
+  });
+
+  it("a Language is structurally assignable to SocialState", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72g-domains-soc";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    const soc: SocialState = lang;
+    expect(soc.conservatism).toBe(lang.conservatism);
+  });
+
+  it("functions targeting sub-states accept Language as argument", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72g-domains-fn";
+    const sim = createSimulation(cfg);
+    const lang = sim.getState().tree["L-0"]!.language;
+    function inventorySize(p: PhonologyState): number {
+      return p.phonemeInventory.segmental.length;
+    }
+    const size = inventorySize(lang);
+    expect(size).toBeGreaterThan(0);
   });
 });

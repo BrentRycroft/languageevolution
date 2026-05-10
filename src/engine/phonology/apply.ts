@@ -660,6 +660,44 @@ function samplePoissonBounded(lambda: number, rng: Rng): number {
   return k;
 }
 
+/**
+ * Phase 72g T1 (stratal cascade): two-pass lexicon application when
+ * stratal mode is enabled on the language. Order:
+ *
+ *   1. Read input lexicon (= UR snapshot if stratal mode enabled).
+ *   2. Apply LEXICAL-stratum rules → intermediate representation.
+ *   3. Apply POST-LEXICAL-stratum rules → surface representation.
+ *   4. Refresh lang.lexiconUR to mirror current lexicon (next gen's
+ *      UR is this gen's SR — the simulator's input drives forward).
+ *
+ * This wrapper preserves the legacy single-pass path when no rules
+ * are tagged `stratum: "lexical"` (the common case post-72g; default
+ * stratum is "post-lexical"). When at least one lexical rule exists,
+ * both passes run; the intermediate is discarded after step 3.
+ *
+ * Caller decides whether to invoke this or the legacy
+ * `applyChangesToLexicon` based on `lang.lexiconUR !== undefined`.
+ */
+export function stratalApplyChangesToLexicon(
+  lexicon: Lexicon,
+  changes: SoundChange[],
+  rng: Rng,
+  opts: ApplyOptions,
+): Lexicon {
+  const lexicalRules = changes.filter((c) => c.stratum === "lexical");
+  const postLexicalRules = changes.filter((c) => c.stratum !== "lexical");
+
+  // Stratum 1: lexical rules → intermediate. Skip when no lexical
+  // rules tagged (degenerates to single-pass for back-compat).
+  let intermediate = lexicon;
+  if (lexicalRules.length > 0) {
+    intermediate = applyChangesToLexicon(lexicon, lexicalRules, rng, opts);
+  }
+  // Stratum 2: post-lexical rules → surface.
+  const surface = applyChangesToLexicon(intermediate, postLexicalRules, rng, opts);
+  return surface;
+}
+
 export function applyChangesToLexicon(
   lexicon: Lexicon,
   changes: SoundChange[],

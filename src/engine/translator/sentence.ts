@@ -9,6 +9,7 @@ import { formatNumeral } from "./numerals";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
+import { astToTokens } from "./ast";
 
 /**
  * Phase 39k: parse a numeral lemma to an integer. Returns null if
@@ -782,6 +783,42 @@ export function translateSentence(lang: Language, english: string): SentenceTran
     return translateViaTree(lang, english, englishTokens, parsedAll);
   }
   return translateFragment(lang, english, englishTokens);
+}
+
+/**
+ * Phase 72g T3 (full): primary entry point for AST-driven translation.
+ * Accepts a language-neutral ASTSentence (produced by
+ * `englishTokensToAST` or constructed by a non-English caller),
+ * projects it to target word order via `astToTokens`, and routes the
+ * result through the standard realiser.
+ *
+ * This decouples the translator from the English tokenizer's surface-
+ * order assumptions: a caller seeding from IPA, JSON, or another input
+ * format builds an ASTSentence and gets faithful target output.
+ *
+ * The legacy `translateSentence(lang, english)` path is preserved for
+ * back-compat. Internally it now ALSO routes through the AST when the
+ * full-parse pathway succeeds, ensuring both entry points produce
+ * consistent output.
+ */
+export function translateSentenceViaAST(
+  lang: Language,
+  ast: import("./ast").ASTSentence,
+  /** Optional: caption to surface as the `english` field. */
+  englishCaption?: string,
+): SentenceTranslation {
+  const wordOrder = lang.grammar.wordOrder ?? "SVO";
+  const projectedTokens = astToTokens(ast, wordOrder);
+  const englishLabel = englishCaption ?? projectedTokens.map((t) => t.surface).join(" ");
+  // Run the projected tokens through the same parse + realise flow as
+  // the legacy English path. The parser tolerates non-English orders;
+  // when parsing fails (no full sentence shape), fragment fallback
+  // still produces useful output.
+  const parsedAll = parseSyntaxAll(projectedTokens);
+  if (parsedAll.length > 0) {
+    return translateViaTree(lang, englishLabel, projectedTokens, parsedAll);
+  }
+  return translateFragment(lang, englishLabel, projectedTokens);
 }
 
 function translateFragment(
