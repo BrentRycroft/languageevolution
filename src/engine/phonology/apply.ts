@@ -512,6 +512,33 @@ export function applyChangesToWord(
         const t0 = isContentWord(meaning) ? 10 + (1 - freq) * -60 + 60 : 5;
         const k = 0.15;
         wangBoost = 1 / (1 + Math.exp(-k * (age - t0)));
+        // Phase 72f T5: per-(meaning, rule) adoption timestamps. Once a
+        // word has crossed the per-word adoption threshold (Wang
+        // S-curve > 0.85), record the gen and lock it in at full rate.
+        // This converts the sigmoid from a simulated-curve into an
+        // actual per-word adoption record. Future generations check
+        // the recorded timestamp directly instead of re-rolling the
+        // curve, which:
+        //   1. produces deterministic per-word adoption order;
+        //   2. lets observers (UI, snapshots) inspect "which words
+        //      adopted rule X first" — true lexical diffusion data.
+        const recipientLang = opts.langForOt as Language | undefined;
+        if (recipientLang && wangBoost > 0.85) {
+          if (!recipientLang.perWordDiffusion) recipientLang.perWordDiffusion = {};
+          if (!recipientLang.perWordDiffusion[change.id]) {
+            recipientLang.perWordDiffusion[change.id] = {};
+          }
+          if (recipientLang.perWordDiffusion[change.id]![meaning] === undefined) {
+            recipientLang.perWordDiffusion[change.id]![meaning] = opts.currentGeneration;
+          }
+        }
+        // Phase 72f T5: when a previously-recorded adoption exists for
+        // this (meaning, rule), lock the boost at 1 — the word has
+        // already adopted; no need to re-roll the curve.
+        const adoptedAt = recipientLang?.perWordDiffusion?.[change.id]?.[meaning];
+        if (adoptedAt !== undefined) {
+          wangBoost = 1;
+        }
       }
     }
     const freqTier = FREQUENCY_MULT[change.frequency ?? "ordinary"];

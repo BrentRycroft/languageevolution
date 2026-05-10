@@ -155,6 +155,76 @@ export interface Language {
   birthGeneration: number;
   extinct?: boolean;
   deathGeneration?: number;
+  /**
+   * Phase 72f T1: vitality / endangerment level. Pre-72f, languages
+   * had a binary alive→extinct transition. Real-world endangerment
+   * is a continuum:
+   *   - "vigorous"   — actively spoken across all generations.
+   *   - "endangered" — older speakers shifting; child-acquisition rate
+   *                    falling.
+   *   - "moribund"   — only elderly speakers; not transmitted.
+   *   - "extinct"    — no speakers; equivalent to extinct: true.
+   *
+   * The transition logic is driven by population pressure × diversity
+   * (see steps/tree.ts:assessEndangerment). Endangered/moribund
+   * languages get reduced innovation rates (audit S7 row 4: "death is
+   * binary alive→extinct; no endangered states").
+   *
+   * The legacy `extinct: boolean` is kept as the canonical "is this
+   * language alive?" check (every read site uses it). When
+   * endangermentLevel transitions to "extinct" we set
+   * `extinct = true` for back-compat.
+   */
+  endangermentLevel?: "vigorous" | "endangered" | "moribund" | "extinct";
+  endangermentLastTransitionGen?: number;
+  /**
+   * Phase 72f T3: prestige-variety flag. A prestige variety is a
+   * standardised, codified register (Classical Latin, Mandarin
+   * standard, RP English) that exists alongside an unmarked
+   * vernacular. Prestige varieties:
+   *   - innovate slower (×0.5 in the phonology rate composition).
+   *   - resist analogical levelling and grammar drift.
+   *   - get spawned at tier 2 transitions when literacy is
+   *     established (handled in steps/tier.ts).
+   * Per audit S8 row 6 ("no standard-vs-vernacular distinction").
+   * Daughter languages do NOT auto-inherit this flag — prestige is
+   * institutional, not phylogenetic.
+   */
+  prestigeVariety?: boolean;
+  prestigeVarietySinceGen?: number;
+  /**
+   * Phase 72f T2: continuous volatility intensity scalar replacing
+   * the legacy 2-state phase machine (volatilityPhase: "stable" |
+   * "upheaval"). The scalar lives on [0, 2] where 1.0 is the neutral
+   * baseline. The phase machine (volatilityPhase) is preserved for
+   * back-compat readers; new code should consult `volatilityIntensity`
+   * directly. Continuous values let prestige + tier + bilingual
+   * contact each contribute fractional amounts to the resulting rate.
+   * Per audit S8 row 1 ("volatility is 2-state phase machine; should
+   * be continuous").
+   */
+  volatilityIntensity?: number;
+  /**
+   * Phase 72f T5: per-(meaning, ruleId) lexical diffusion timestamps.
+   * Pre-72f, Wang-style S-curve adoption was tracked per-rule
+   * per-language only (`diffusionState[ruleId]`), so every meaning in
+   * the lexicon was treated as adopting at the same generation. Real
+   * diffusion proceeds word-by-word — high-frequency words first,
+   * then medium, then low. This map stores `(ruleId, meaning) →
+   * adoptedAt` so the inner loop can branch on per-word adoption.
+   * Per audit S8 row 9.
+   */
+  perWordDiffusion?: Record<string, Record<string, number>>;
+  /**
+   * Phase 72g T1: stratal phonology underlying-representation layer.
+   * Pre-72g the simulator had a single surface-only lexicon. Post-72g,
+   * `lexiconUR` (when set) preserves the underlying representation
+   * across gens; `lexicon` is the surface. Sound changes still apply
+   * primarily to the surface layer; URs let future passes detect
+   * opacity (SR ≠ UR + applicable rules). Undefined → back-compat.
+   * Helpers live in src/engine/phonology/stratal.ts.
+   */
+  lexiconUR?: Record<string, WordForm>;
   grammar: GrammarFeatures;
   events: LanguageEvent[];
   wordFrequencyHints: Record<Meaning, number>;
@@ -1230,6 +1300,26 @@ export interface PendingArealRule {
   birthGeneration: number;
 }
 
+/**
+ * Phase 72g T2: reticulate (horizontal) link between two languages.
+ * Records sustained contact relationships beyond the strict cladistic
+ * parent / child / sibling structure of `state.tree`. Symmetric:
+ * contactLinks are undirected; (langA, langB) and (langB, langA) are
+ * the same link.
+ */
+export interface ReticulateLink {
+  langA: string;
+  langB: string;
+  /** Categorical contact kind for diagnostics + biased iteration. */
+  kind: "bilingual" | "areal" | "creolisation" | "substrate";
+  /** Strength on [0, 1]; mirrors bilingualLinks scoring. */
+  strength: number;
+  /** First gen when this link was observed. */
+  firstSeenGen: number;
+  /** Last gen when this link was observed (refreshed each gen it persists). */
+  lastSeenGen: number;
+}
+
 export interface SimulationState {
   generation: number;
   tree: LanguageTree;
@@ -1237,6 +1327,29 @@ export interface SimulationState {
   rngState: number;
   pendingArealRules?: PendingArealRule[];
   generationsOverCap?: number;
+  /**
+   * Phase 72g T2: reticulate (network) tree links. The simulator's
+   * primary topology is a strict cladistic tree (LanguageNode.parentId
+   * → single parent). Real linguistic history has horizontal
+   * connections — dialect continua, areal Sprachbund (Balkan, SE Asia,
+   * Mainland Africa), creolisation. Pre-72g these were modeled
+   * indirectly via `bilingualLinks` (per-language partner-strength map)
+   * with no global topology.
+   *
+   * Post-72g, `state.contactLinks` is a global, undirected list of
+   * (langA, langB, kind, strength) tuples. The existing bilingualLinks
+   * remain (per-language partner cache); reticulate links are higher-
+   * level, persistent contact relationships consumed by:
+   *   - reconstruction probes (skip horizontal links to follow only
+   *     phylogeny);
+   *   - structural / areal borrowing helpers (this list is the
+   *     authoritative network topology).
+   *
+   * Pre-72g any consumer that needed contact topology had to scan
+   * every leaf's bilingualLinks. This list is populated/refreshed by
+   * `src/engine/contact/reticulate.ts` once per gen.
+   */
+  contactLinks?: ReticulateLink[];
   /**
    * Phase 70 T1: Historical Mode idempotency tracker. Each milestone
    * key (`${atGen}:${kind}:${role}:${label}`) is appended once when it

@@ -33,6 +33,46 @@ const TRANSFERABLE_FEATURES: ReadonlyArray<keyof GrammarFeatures> = [
   "demonstrativeDistance",
 ];
 
+/**
+ * Phase 72f T4 (Thomason hierarchy): borrowing is gated by prestige.
+ * Thomason & Kaufman (1988) established that borrowing follows a strict
+ * hierarchy of difficulty:
+ *   1. Lexical (easy) — handled by `tryBorrow`.
+ *   2. Phonological (areal phoneme adoption — `maybeArealPhonemeShare`).
+ *   3. Structural / grammatical (this function) — requires prestige
+ *      asymmetry AND sustained heavy contact.
+ *   4. Morphological (rare; outside this simulator's scope).
+ *
+ * Pre-72f the structural-borrow rate was uniform across all
+ * donor-recipient pairs. Post-72f it requires:
+ *   - bilingual link strength ≥ 0.4 (existing gate; "heavy contact").
+ *   - prestige asymmetry: donor.tier > recipient.tier OR
+ *     donor.prestigeVariety AND !recipient.prestigeVariety.
+ *   - When asymmetry is absent, baseRate is halved (rare grammatical
+ *     diffusion via areal Sprachbund still possible).
+ */
+function thomasonStructuralRate(
+  recipient: Language,
+  donor: Language,
+  baseRate: number,
+): number {
+  const tierGap = (donor.culturalTier ?? 0) - (recipient.culturalTier ?? 0);
+  const donorPrestige = donor.prestigeVariety === true;
+  const recipientPrestige = recipient.prestigeVariety === true;
+  const hasAsymmetry = tierGap > 0 || (donorPrestige && !recipientPrestige);
+  const literacyResist = (recipient.literaryStability ?? 0) >= 0.6 ? 0.3 : 1;
+  if (hasAsymmetry) {
+    // Asymmetry boosts the rate (×1 + 0.5 per tier-gap step) and
+    // halves the literacy brake (because prestige overrides it).
+    const tierBoost = 1 + Math.max(0, tierGap) * 0.5;
+    const prestigeBonus = donorPrestige && !recipientPrestige ? 1.6 : 1.0;
+    const adjustedLiteracy = Math.min(1, literacyResist * 2);
+    return baseRate * tierBoost * prestigeBonus * adjustedLiteracy;
+  }
+  // No asymmetry: baseline rate halved, literacy fully applied.
+  return baseRate * 0.5 * literacyResist;
+}
+
 export function tryStructuralBorrow(
   recipient: Language,
   donor: Language,
@@ -43,10 +83,10 @@ export function tryStructuralBorrow(
   // Record<string, number>; 0.4+ is "heavy contact".
   const linkStrength = recipient.bilingualLinks?.[donor.id] ?? 0;
   if (linkStrength < 0.4) return null;
-  // Literacy resistance: tier-2+ literate recipients restructure
-  // less readily under contact.
-  const literacyResist = (recipient.literaryStability ?? 0) >= 0.6 ? 0.3 : 1;
-  if (!rng.chance(baseRate * literacyResist)) return null;
+  // Phase 72f T4: rate is now Thomason-gated by prestige asymmetry
+  // (replaces the previous uniform literacy-only brake).
+  const rate = thomasonStructuralRate(recipient, donor, baseRate);
+  if (!rng.chance(rate)) return null;
   // Pick a feature that differs between donor and recipient.
   const recGram = recipient.grammar as unknown as Record<string, unknown>;
   const donGram = donor.grammar as unknown as Record<string, unknown>;

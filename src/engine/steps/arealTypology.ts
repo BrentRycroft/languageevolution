@@ -76,7 +76,30 @@ export function stepArealTypology(
     }
     if (topValue === undefined) continue;
 
-    const adoptionProb = Math.min(0.5, BASE_ADOPTION * topWeight);
+    // Phase 72f T7: prestige-weighted areal adoption. Pre-72f the
+    // adoption probability was uniform across all neighbours (only
+    // bilingual link strength counted). Real Sprachbund formation
+    // shows a clear directionality: prestige donors (Latin in the
+    // medieval Mediterranean, Mandarin in the Sinosphere, French in
+    // Africa) exert disproportionate pull. We rebuild the topWeight
+    // with a prestige multiplier per donor, where:
+    //   - donor.tier > recipient.tier: ×(1 + 0.5 × tierGap)
+    //   - donor has prestigeVariety: ×1.5
+    let prestigeWeight = 0;
+    for (const [otherId, frac] of strongLinks) {
+      const other = state.tree[otherId]?.language;
+      if (!other) continue;
+      if (other.grammar[key] !== topValue) continue;
+      const tierGap = (other.culturalTier ?? 0) - (lang.culturalTier ?? 0);
+      const tierMult = 1 + Math.max(0, tierGap) * 0.5;
+      const prestigeMult = other.prestigeVariety ? 1.5 : 1.0;
+      prestigeWeight += frac * tierMult * prestigeMult;
+    }
+    // Phase 72f T7: also raise BASE_ADOPTION ceiling — pre-72f cap of
+    // 0.5 was too restrictive given the new prestige multipliers; we
+    // raise to 0.7 for prestige-driven cases (uncapped weight × base
+    // would otherwise saturate too quickly to be useful).
+    const adoptionProb = Math.min(0.7, BASE_ADOPTION * prestigeWeight);
     if (!rng.chance(adoptionProb)) continue;
 
     const before = String(myValue);

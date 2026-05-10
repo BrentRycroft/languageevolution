@@ -1,5 +1,6 @@
 import type { Language, SimulationConfig } from "../types";
 import { driftGrammar, maybeDriftWordOrder } from "../grammar/evolve";
+import { tryReanalyseAlignment } from "../grammar/reanalysis";
 import { decayAffixProductivity } from "../morphology/decay";
 import { enforceTypologicalUniversals } from "../grammar/universals";
 import { pickNextStressForDrift } from "../grammar/stressTransitions";
@@ -55,7 +56,21 @@ export function stepGrammar(
     && generation < lang.siblingDriftDampenUntil
     ? 0.4
     : 1;
-  const shifts = driftGrammar(lang.grammar, rng, simplification, dampener);
+  // Phase 72g T4: reanalysis-driven shifts run BEFORE random drift,
+  // so causally-motivated alignment paths take precedence over the
+  // uniform-random alignment shuffle in DRIFT_RULES. When reanalysis
+  // fires we tell driftGrammar to skip the alignment feature for this
+  // gen so the random drift can't undo the causal flip.
+  const reanalysed = tryReanalyseAlignment(lang, rng);
+  if (reanalysed) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: `reanalysis: ${reanalysed.feature} ${String(reanalysed.from)} → ${String(reanalysed.to)}`,
+    });
+  }
+  const skip = reanalysed ? new Set(["alignment" as const]) : undefined;
+  const shifts = driftGrammar(lang.grammar, rng, simplification, dampener, skip);
   for (const s of shifts) {
     pushEvent(lang, {
       generation,

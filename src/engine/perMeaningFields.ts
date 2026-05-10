@@ -136,6 +136,29 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
 ];
 
 /**
+ * Phase 72f T5: per-(rule, meaning) diffusion timestamps. Stored as
+ * Record<ruleId, Record<meaning, generation>> — i.e., the OUTER key is
+ * the ruleId, not the meaning. The standard `purgeMeaningFromRegistry`
+ * helper can't navigate the nested structure, so we have a dedicated
+ * purge pass for this field.
+ */
+export function purgePerWordDiffusionForMeaning(
+  lang: Language,
+  meaning: Meaning,
+): number {
+  if (!lang.perWordDiffusion) return 0;
+  let count = 0;
+  for (const ruleId of Object.keys(lang.perWordDiffusion)) {
+    const inner = lang.perWordDiffusion[ruleId]!;
+    if (inner[meaning] !== undefined) {
+      delete inner[meaning];
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
  * Helper: purge a meaning from every registered per-meaning field.
  * Call this from `deleteMeaning` (lexicon/mutate.ts) instead of the
  * hand-coded delete chain. Returns the count of fields that had the

@@ -2,7 +2,7 @@ import type { Language, Meaning, WordForm } from "../types";
 import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSense, removeSynonymSense } from "./word";
 import { invalidateReverseLexCache } from "../translator/reverse";
 import { invalidateClosedClassCache } from "../translator/closedClass";
-import { purgeMeaningFromRegistry } from "../perMeaningFields";
+import { purgeMeaningFromRegistry, purgePerWordDiffusionForMeaning } from "../perMeaningFields";
 
 /**
  * Phase 28a: single chokepoint for writing a form to the meaning-keyed
@@ -218,6 +218,9 @@ export function deleteMeaning(
   // per-meaning field requires registering it, which makes the
   // delete handler automatic.
   purgeMeaningFromRegistry(lang, meaning);
+  // Phase 72f T5: nested per-(rule, meaning) diffusion timestamps need
+  // a dedicated purge pass.
+  purgePerWordDiffusionForMeaning(lang, meaning);
   removeSense(lang, meaning);
   // Phase 72a T2 (Invariant 1 fix): invalidate closed-class cache —
   // deleting a closed-class lemma (rare via PROTECTED_MEANINGS but

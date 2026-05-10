@@ -37,12 +37,39 @@ const UPHEAVAL_MAX_DURATION = 28;
 const UPHEAVAL_RANDOM_TRIGGER_RATE = 0.012;
 
 /**
- * Multiplier exposed to phonology / genesis / grammar steps. Returns 1
- * when the language has no phase set (pre-Phase-25 saves get default
- * behavior); otherwise returns the current phase's multiplier.
+ * Multiplier exposed to phonology / genesis / grammar steps.
+ *
+ * Phase 72f T2: continuous volatility. Pre-72f this returned the
+ * binary phase machine's multiplier (0.08-0.23 stable, 2.5-4.0
+ * upheaval). The audit (S8 row 1) flagged this as too coarse:
+ * real volatility is a continuous scalar driven by population +
+ * contact + tier transitions.
+ *
+ * The continuous scalar `lang.volatilityIntensity` lives on [0, 4].
+ * If set, it OVERRIDES the phase machine's value. The phase machine
+ * is preserved for back-compat (existing tests inspect
+ * `lang.volatilityPhase.kind`) and continues to set both fields in
+ * sync. New code should write `volatilityIntensity` directly to
+ * apply continuous adjustments (e.g., contact-density-driven
+ * fractional bumps that don't warrant flipping the phase kind).
  */
 export function volatilityMultiplier(lang: Language): number {
+  if (lang.volatilityIntensity !== undefined) {
+    return Math.max(0, Math.min(4, lang.volatilityIntensity));
+  }
   return lang.volatilityPhase?.multiplier ?? 1;
+}
+
+/**
+ * Phase 72f T2: continuous-scalar mutator. Bumps the volatility
+ * intensity by `delta` (positive = more turbulent), clamped to [0, 4].
+ * Used by language-shift, contact-density, areal-typology callers
+ * that want to nudge the rate without flipping the phase machine
+ * to a binary upheaval.
+ */
+export function bumpVolatilityIntensity(lang: Language, delta: number): void {
+  const current = lang.volatilityIntensity ?? lang.volatilityPhase?.multiplier ?? 1;
+  lang.volatilityIntensity = Math.max(0, Math.min(4, current + delta));
 }
 
 /**
@@ -77,6 +104,8 @@ function rollPhase(
       multiplier,
       trigger,
     };
+    // Phase 72f T2: keep continuous scalar in sync.
+    lang.volatilityIntensity = multiplier;
     pushEvent(lang, {
       generation,
       kind: "volatility",
@@ -93,6 +122,8 @@ function rollPhase(
       until: generation + duration,
       multiplier,
     };
+    // Phase 72f T2: keep continuous scalar in sync.
+    lang.volatilityIntensity = multiplier;
     if (wasUpheavalPhase) {
       pushEvent(lang, {
         generation,

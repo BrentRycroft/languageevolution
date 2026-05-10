@@ -278,6 +278,15 @@ export function splitLeaf(
           establishedGeneration: s.establishedGeneration,
         })),
       culturalTier: parentLang.culturalTier,
+      // Phase 72f T3: prestige is institutional, NOT inherited.
+      // Daughter must re-establish via tier 2 promotion or
+      // dedicated prestige-spawn mechanism.
+      prestigeVariety: undefined,
+      prestigeVarietySinceGen: undefined,
+      // Phase 72f T1: endangerment is per-population; daughters start
+      // vigorous regardless of parent's status.
+      endangermentLevel: "vigorous",
+      endangermentLastTransitionGen: undefined,
       colexifiedAs: parentLang.colexifiedAs
         ? Object.fromEntries(
             Object.entries(parentLang.colexifiedAs).map(([k, v]) => [
