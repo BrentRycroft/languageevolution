@@ -39,6 +39,20 @@ interface PerMeaningFieldSpec {
   inherit: "shallow-clone" | "deep-clone-entries" | "skip";
   /** Whether to delete `lang[key][meaning]` on `deleteMeaning(lang, meaning)`. */
   purgeOnDelete: boolean;
+  /**
+   * Phase 72 code-review fix C17: shape discriminator for the
+   * registry's purge + inherit helpers. Most per-meaning fields are
+   * "flat": `Record<Meaning, X>`. A few are "nested":
+   * `Record<RuleId, Record<Meaning, X>>` (perWordDiffusion is the
+   * only current example). Nested fields can't be purged by the
+   * generic `purgeMeaningFromRegistry` — they need a dedicated pass
+   * (see `purgePerWordDiffusionForMeaning`). The shape field lets
+   * the registry's runtime sanity check flag nested fields without a
+   * paired purge helper.
+   *
+   * Default is "flat" when unspecified.
+   */
+  shape?: "flat" | "nested";
   /** Optional human-readable description for diagnostics. */
   description?: string;
 }
@@ -133,6 +147,18 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     purgeOnDelete: true,
     description: "Phase 70 suppletion table; purged on delete by Phase 71b",
   },
+  // Phase 72d (full-delivery defer-2): stable concept-identity UUIDs.
+  // Inherited shallow-clone (the value is a plain string per meaning;
+  // sister daughters share the same UUID for the same proto-meaning,
+  // which is the cross-tree anchor reverse inference relies on).
+  // PURGED on delete: when a meaning is dropped, its UUID record is
+  // removed from conceptIds — meaningHistory holds the trace instead.
+  {
+    key: "conceptIds",
+    inherit: "shallow-clone",
+    purgeOnDelete: true,
+    description: "Phase 72d concept UUID anchors per meaning",
+  },
 ];
 
 /**
@@ -152,6 +178,90 @@ export function purgePerWordDiffusionForMeaning(
     const inner = lang.perWordDiffusion[ruleId]!;
     if (inner[meaning] !== undefined) {
       delete inner[meaning];
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
+ * Phase 72d-1 (full-delivery defer-1b): registry-driven inheritance
+ * helper. Replaces the manual clone-per-field pattern in
+ * `tree/split.ts:makeChild` for all PER-MEANING fields. Each spec's
+ * `inherit` strategy drives the clone:
+ *
+ *   - "shallow-clone": `{ ...parent[key] }` — copies the top-level
+ *     map but shares value references.
+ *   - "deep-clone-entries": `{ ...parent[key] }` for the outer map
+ *     and `[...inner]` / `{ ...inner }` for each value (one level
+ *     deeper). Used when the values are arrays/objects that the
+ *     daughter shouldn't mutate through the shared reference.
+ *   - "skip": the daughter starts with this field unset.
+ *
+ * Whole-language fields (grammar, phonemeInventory, conservatism, etc.)
+ * are still bespoke in `tree/split.ts:makeChild` — they're not
+ * per-meaning records and have different cloning semantics.
+ *
+ * Returns the count of fields cloned.
+ */
+/**
+ * Phase 72 code-review fix B12: an "empty container" is `{}` (plain
+ * object with no own keys) or `[]` (zero-length array). Other values
+ * — `null`, primitives, non-empty objects/arrays, Sets/Maps — are
+ * considered populated. Sets/Maps are treated as populated even when
+ * empty because their identity carries intent (the closedClassInventory
+ * Set, for example, is shared by reference).
+ */
+function isEmptyContainer(v: unknown): boolean {
+  if (v === null) return false;
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === "object") {
+    if (v instanceof Set || v instanceof Map) return false;
+    return Object.keys(v as object).length === 0;
+  }
+  return false;
+}
+
+export function inheritMeaningFields(
+  parentLang: Language,
+  childLang: Language,
+): number {
+  const parentAsRecord = parentLang as unknown as Record<string, unknown>;
+  const childAsRecord = childLang as unknown as Record<string, unknown>;
+  let count = 0;
+  for (const spec of PER_MEANING_FIELDS) {
+    // Safety-net semantics: only fill fields that the bespoke caller
+    // (e.g., tree/split.ts:makeChild) didn't populate. This means
+    // adding a new per-meaning field to PER_MEANING_FIELDS is enough
+    // to get inheritance — no tree/split.ts edit required — while
+    // existing manual clones (which often do field-specific deep
+    // copies the registry can't replicate) keep their semantics.
+    //
+    // Phase 72 code-review fix B12: treat an EMPTY map/array on the
+    // child as "not populated" so a defensively-initialised `{}` or
+    // `[]` still triggers parent-clone. Pre-B12 only `undefined`
+    // skipped inheritance; a child with `{}` retained its empty
+    // map and orphaned all parent entries.
+    const childVal = childAsRecord[spec.key];
+    if (childVal !== undefined && !isEmptyContainer(childVal)) continue;
+    const parentVal = parentAsRecord[spec.key];
+    if (parentVal === undefined) continue;
+    if (spec.inherit === "skip") continue;
+    if (spec.inherit === "shallow-clone") {
+      childAsRecord[spec.key] = { ...(parentVal as Record<string, unknown>) };
+      count++;
+      continue;
+    }
+    if (spec.inherit === "deep-clone-entries") {
+      const out: Record<string, unknown> = {};
+      const src = parentVal as Record<string, unknown>;
+      for (const k of Object.keys(src)) {
+        const v = src[k];
+        if (Array.isArray(v)) out[k] = [...v];
+        else if (v && typeof v === "object") out[k] = { ...(v as object) };
+        else out[k] = v;
+      }
+      childAsRecord[spec.key] = out;
       count++;
     }
   }

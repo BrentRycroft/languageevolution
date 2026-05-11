@@ -200,7 +200,9 @@ export function progressGrammaticalizationChain(
     };
   }
   // newStage === 4: total loss. Remove from lexicon entirely.
-  deleteMeaning(lang, chosen);
+  // Phase 72d-2 (defer-1a): record grammaticalization-loss pathway.
+  // No mergedInto — the lemma is fully consumed by the paradigm.
+  deleteMeaning(lang, chosen, { generation, reason: "grammaticalization-stage-4" });
   return {
     kind: "grammaticalization",
     description: `"${chosen}" → lost [stage 4] (lexical entry removed; paradigm continues)`,

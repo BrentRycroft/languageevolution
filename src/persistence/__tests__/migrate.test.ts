@@ -96,4 +96,38 @@ describe("migrateSavedRun", () => {
     expect(migrateSavedRun({ version: 99, config: {} })).toBeNull();
     expect(migrateSavedRun({ version: 1 })).toBeNull();
   });
+
+  it("v9→v10 (Phase 72 defer-3) initializes endangermentLevel for non-extinct leaves", () => {
+    const cfg = defaultConfig();
+    const v9Payload = {
+      version: 9,
+      id: "v9-test",
+      label: "v9 test",
+      createdAt: 0,
+      config: cfg,
+      generationsRun: 0,
+      stateSnapshot: {
+        generation: 0,
+        rootId: "L-0",
+        rngState: 1,
+        tree: {
+          "L-0": {
+            language: {
+              id: "L-0",
+              name: "Proto",
+              extinct: false,
+              // Phase 72 fields intentionally absent — migration should init.
+            },
+            parentId: null,
+            childrenIds: [],
+          },
+        },
+      },
+    };
+    const migrated = migrateSavedRun(v9Payload);
+    expect(migrated).not.toBeNull();
+    expect(migrated!.version).toBe(LATEST_SAVE_VERSION);
+    const lang = (migrated!.stateSnapshot as any)?.tree["L-0"]?.language;
+    expect(lang.endangermentLevel).toBe("vigorous");
+  });
 });

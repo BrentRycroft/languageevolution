@@ -329,7 +329,7 @@ export function createSimulation(
             });
           }
           if (priorTier === 0 && nextTier >= 1) {
-            const merges = applyKinshipSimplification(lang, rng, 2);
+            const merges = applyKinshipSimplification(lang, rng, 2, nextGen);
             for (const m of merges) {
               pushEvent(lang, {
                 generation: nextGen,

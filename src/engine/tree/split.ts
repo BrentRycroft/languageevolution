@@ -13,6 +13,7 @@ import type { WorldMap } from "../geo/map";
 import { leafIds } from "./leafIds";
 import { CONSERVATISM_MIN, CONSERVATISM_MAX } from "../constants";
 import { applyFounderInnovation } from "./founder";
+import { inheritMeaningFields } from "../perMeaningFields";
 
 /**
  * split.ts
@@ -326,6 +327,15 @@ export function splitLeaf(
   const children: Language[] = [];
   for (let i = 0; i < childCount; i++) {
     children.push(makeChild(i !== 0));
+  }
+  // Phase 72d-1 (full-delivery defer-1b): registry-driven safety net.
+  // The bespoke `makeChild` above clones each per-meaning field
+  // explicitly; for any field declared in PER_MEANING_FIELDS that the
+  // bespoke code didn't set, the registry fills it from parent.
+  // Adding a new per-meaning field henceforth requires only registering
+  // it (perMeaningFields.ts) — no tree/split.ts edit needed.
+  for (const child of children) {
+    inheritMeaningFields(parentLang, child);
   }
   // Phase 29 Tranche 1e: each daughter's words[] is a fresh deep
   // clone — build a fresh form-key index against the new refs.

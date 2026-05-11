@@ -47,7 +47,12 @@ export function stepObsolescence(
     const winner = loser === a ? b : a;
     const p = config.obsolescence.probabilityPerPairPerGeneration * lang.conservatism;
     if (!rng.chance(p)) return;
-    deleteMeaning(lang, loser);
+    // Phase 72d-2 (defer-1a): record homonym-resolution pathway.
+    deleteMeaning(lang, loser, {
+      mergedInto: winner,
+      generation,
+      reason: "homonym-resolution",
+    });
     pushEvent(lang, {
       generation,
       kind: "semantic_drift",

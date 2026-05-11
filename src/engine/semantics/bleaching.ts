@@ -44,8 +44,9 @@ export function stepSemanticBleaching(
   lang.wordFrequencyHints[meaning] = next;
 
   if (next < DROP_THRESHOLD && rng.chance(0.35)) {
-    // Phase 29 Tranche 1a: route through chokepoint.
-    deleteMeaning(lang, meaning);
+    // Phase 72d-2 (defer-1a): record bleaching pathway. No mergedInto
+    // because bleaching drops a meaning rather than merging it.
+    deleteMeaning(lang, meaning, { generation, reason: "bleach" });
     return { meaning, bleached: true, dropped: true, newFrequency: 0 };
   }
   return { meaning, bleached: true, dropped: false, newFrequency: next };

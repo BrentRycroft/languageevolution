@@ -1,5 +1,6 @@
 import type { Language, Meaning, Word, WordSense, WordForm } from "../types";
 import type { Rng } from "../rng";
+import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 
@@ -40,7 +41,7 @@ export function findWordByForm(
  * Phase 29 Tranche 1e: rebuild the form-key index from scratch after
  * any mutation that may have replaced `lang.words` wholesale.
  */
-export function rebuildFormKeyIndex(lang: Language): void {
+export function rebuildFormKeyIndex(lang: LexiconState): void {
   if (!lang.words) {
     lang.wordsByFormKey = undefined;
     return;

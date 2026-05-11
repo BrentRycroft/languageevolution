@@ -232,14 +232,23 @@ export interface Language {
   perWordDiffusion?: Record<string, Record<string, number>>;
   /**
    * Phase 72g T1: stratal phonology underlying-representation layer.
-   * Pre-72g the simulator had a single surface-only lexicon. Post-72g,
-   * `lexiconUR` (when set) preserves the underlying representation
-   * across gens; `lexicon` is the surface. Sound changes still apply
-   * primarily to the surface layer; URs let future passes detect
-   * opacity (SR ≠ UR + applicable rules). Undefined → back-compat.
-   * Helpers live in src/engine/phonology/stratal.ts.
+   * When `lexiconUR` is defined, sound-change application uses the
+   * stratal cascade (lexical → post-lexical). UR refresh policy is
+   * controlled by `lexiconURRefreshPolicy`:
+   *   - "each-gen" (default): UR is refreshed to match SR after every
+   *     gen's phonology pass. Catches WITHIN-gen opacity only.
+   *   - "manual" (Phase 72g full-delivery defer-1c): UR persists
+   *     across gens; only the caller's explicit `enableStratalMode`
+   *     or `refreshUR` call updates it. Catches CROSS-GEN opacity
+   *     (counter-feeding / counter-bleeding rule interactions).
+   * Undefined `lexiconUR` → legacy single-pass surface phonology.
    */
   lexiconUR?: Record<string, WordForm>;
+  /**
+   * Phase 72g T1 (defer-1c): policy for when stepPhonology refreshes
+   * `lexiconUR`. See `lexiconUR` docstring above.
+   */
+  lexiconURRefreshPolicy?: "each-gen" | "manual";
   grammar: GrammarFeatures;
   events: LanguageEvent[];
   wordFrequencyHints: Record<Meaning, number>;
@@ -363,7 +372,33 @@ export interface Language {
    * mechanism that unlocks reverse inference without restructuring
    * the lexicon's key shape.
    */
-  meaningHistory?: Record<string, { mergedInto?: string; generation: number; reason?: string }>;
+  meaningHistory?: Record<string, {
+    mergedInto?: string;
+    /**
+     * Phase 72d (full-delivery defer-2): UUID of the meaning that
+     * absorbed this one. Stable across phonological / lexical drift;
+     * lets reverse inference and reconstruction probes follow merger
+     * pathways across the tree without string-matching.
+     */
+    mergedIntoConceptId?: string;
+    /**
+     * Phase 72d (defer-2): UUID of THIS deleted meaning at the time
+     * of deletion. Pre-defer-2, once the string key was gone there
+     * was no way to identify "this was concept X" in the trace.
+     */
+    conceptId?: string;
+    generation: number;
+    reason?: string;
+  }>;
+  /**
+   * Phase 72d (full-delivery defer-2): per-language meaning → UUID
+   * map. Each Meaning gets a stable ConceptId on first reference.
+   * Daughters inherit the parent's map at split, so the same
+   * proto-concept is the SAME UUID across all descendants. Used
+   * for cross-tree reconstruction (which orphan in daughter X
+   * corresponds to which proto-concept).
+   */
+  conceptIds?: Record<string, string>;
   /**
    * Phase 72b T2: language-specific closed-class anchor list. Phase 71c
    * added universal anchors for "the/of/and/i/..." but the audit found
@@ -634,6 +669,17 @@ export interface Language {
    * The drift gate enforces a 50-gen cooldown to prevent thrashing.
    */
   wordOrderLastFlipGen?: number;
+  /**
+   * Phase 72 code-review fix A2: cooldown tracker for
+   * `tryReanalyseAlignment` (grammar/reanalysis.ts). Pre-fix the
+   * `generationsSinceFlip` proxy in reanalysisInput() was set to a
+   * hardcoded `50` and never read — so reanalysis could fire every
+   * gen while conditions held, producing ping-pong between alignment
+   * states. Now: caller (stepGrammar) sets this on each reanalysis
+   * flip; `tryReanalyseAlignment` reads it and gates on a 50-gen
+   * cooldown before flipping again.
+   */
+  alignmentLastFlipGen?: number;
   /**
    * Phase 31 Tranche 31a: language-level tonal regime. Tone is
    * essentially all-or-nothing per language: tonal languages (Mandarin,
@@ -1325,8 +1371,19 @@ export interface PendingArealRule {
 export interface ReticulateLink {
   langA: string;
   langB: string;
-  /** Categorical contact kind for diagnostics + biased iteration. */
-  kind: "bilingual" | "areal" | "creolisation" | "substrate";
+  /**
+   * Categorical contact kind. Phase 72g initial scope: only
+   * "bilingual" is currently set (by `refreshContactLinks` from
+   * `lang.bilingualLinks`). The audit envisioned upgrading specific
+   * pairs to "areal" / "creolisation" / "substrate" via dedicated
+   * hooks in `arealTypology.ts` / `creolization.ts` / contact
+   * substrate detection. Those hooks are documented as future work
+   * (see CHANGELOG defer-3 + `docs/LANGUAGE_DOMAINS.md`). For now the
+   * enum is restricted to "bilingual" so consumers don't pattern-
+   * match against values that are never emitted. Phase 72 code-
+   * review fix A4.
+   */
+  kind: "bilingual";
   /** Strength on [0, 1]; mirrors bilingualLinks scoring. */
   strength: number;
   /** First gen when this link was observed. */
@@ -1394,7 +1451,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 9;
+  version: 10;
   id: string;
   label: string;
   createdAt: number;

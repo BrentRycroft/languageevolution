@@ -133,3 +133,106 @@ function orderFor(wo: string): Array<"S" | "V" | "O"> {
     default: return ["S", "V", "O"];
   }
 }
+
+// ────────────────────────────────────────────────────────────────────
+// Phase 72g T3 (full-delivery defer-1d): direct AST → Sentence bridge.
+//
+// Converts an ASTSentence to the syntax `Sentence` interface that
+// `realiseSentence` consumes, bypassing the English parser. Use this
+// for non-English seeds where you want to skip projection-then-reparse.
+//
+// Limitations: the AST is intentionally minimal (head + participants
+// + fillers). Complex constructs (relativisation, embedding,
+// coordination) ride on the AST's feature flags rather than nested
+// structure. Calls fall back to translateSentenceViaAST (project +
+// re-parse) when feature complexity exceeds what the direct bridge
+// can express.
+
+import type { Sentence, NP, VP, NounRef, VerbRef } from "./syntax";
+import type { LexiconState } from "../domains";
+
+function lookupBaseForm(lang: LexiconState, lemma: string): import("../types").WordForm {
+  const direct = lang.lexicon[lemma];
+  if (direct && direct.length > 0) return direct;
+  // Fallback: synthesise a placeholder. The realiser will treat the
+  // missing entry through its standard graceful-fallback paths.
+  return [];
+}
+
+/**
+ * Phase 72 code-review fix A1: the `case` field on `NounRef` is set
+ * to "nom"/"acc" here for back-compat, but the realiser
+ * (realise.ts:355-356, alignmentSubjectCase/alignmentObjectCase) reads
+ * the case slot from `lang.grammar.alignment` and OVERRIDES this
+ * value before any morphology runs. Ergative-absolutive,
+ * tripartite, and split-S languages get the correct case marking
+ * at realisation time despite the hardcoded value here. The
+ * `Case` enum (syntax.ts:13) only has nom/acc/dat/gen/obl/inst —
+ * no erg/abs slots — so a fully-alignment-aware `astToSentence`
+ * would need to either extend `Case` or invent a sentinel. Since
+ * the realiser handles it correctly, this code stays simple.
+ * Other AST consumers (snapshot tests, future direct-realisers)
+ * should call `alignmentSubjectCase`/`alignmentObjectCase` directly
+ * rather than reading NounRef.case.
+ */
+function astNodeToNounRef(node: import("./ast").ASTNode, lang: LexiconState): NounRef {
+  return {
+    lemma: node.lemma,
+    baseForm: lookupBaseForm(lang, node.lemma),
+    number: (node.features?.number === "pl" ? "pl" : "sg") as "pl" | "sg",
+    case: "nom",
+    isPronoun: node.tag === "PRON",
+  };
+}
+
+function astNodeToVerbRef(node: import("./ast").ASTNode, lang: LexiconState): VerbRef {
+  const tense = (node.features?.tense ?? "present") as "past" | "present" | "future";
+  return {
+    lemma: node.lemma,
+    baseForm: lookupBaseForm(lang, node.lemma),
+    tense,
+  };
+}
+
+/**
+ * Phase 72g T3 (full-delivery defer-1d): convert an ASTSentence into
+ * a syntax `Sentence`. Returns null when the AST has no head verb
+ * or no subject participant (those cases must round-trip through the
+ * parser via `translateSentenceViaAST`).
+ */
+export function astToSentence(
+  ast: import("./ast").ASTSentence,
+  lang: LexiconState,
+): Sentence | null {
+  if (!ast.head || ast.head.tag !== "V") return null;
+  const subject = ast.participants.find((p) => p.role === "subject");
+  if (!subject) return null;
+  const object = ast.participants.find((p) => p.role === "object");
+  const subjectNP: NP = {
+    kind: "NP",
+    head: astNodeToNounRef(subject, lang),
+    adjectives: [],
+    pps: [],
+  };
+  const objectNP: NP | undefined = object
+    ? {
+        kind: "NP",
+        head: { ...astNodeToNounRef(object, lang), case: "acc" },
+        adjectives: [],
+        pps: [],
+      }
+    : undefined;
+  const vp: VP = {
+    kind: "VP",
+    verb: astNodeToVerbRef(ast.head, lang),
+    pps: [],
+    adverbs: [],
+    ...(objectNP ? { object: objectNP } : {}),
+  };
+  return {
+    kind: "S",
+    subject: subjectNP,
+    predicate: vp,
+    negated: false,
+  };
+}

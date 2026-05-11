@@ -19,7 +19,7 @@ import { computeActiveModulesFromLegacy } from "../engine/modules/legacyMigratio
  * get default values without needing an explicit migration. Migrations
  * therefore only need to handle field renames, type changes, or removals.
  */
-export const LATEST_SAVE_VERSION = 9;
+export const LATEST_SAVE_VERSION = 10;
 
 type RawObj = Record<string, unknown>;
 
@@ -135,6 +135,39 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
       }
     }
     return { ...raw, version: 9 };
+  },
+  // Phase 72 (full delivery defer-3): v10 adds the Phase 72 fields
+  // (most are optional and back-compat as undefined; this migration
+  // explicitly initializes the ones that callers expect to find).
+  // The fields:
+  //   - lang.endangermentLevel: default "vigorous" if extinct=false.
+  //   - lang.conceptIds: lazy-mint via ensureConceptIdsForLexicon
+  //     (populated on first read).
+  //   - lang.meaningHistory: stays undefined (only populated on
+  //     deleteMeaning calls).
+  //   - lang.lexiconUR / lang.perWordDiffusion / lang.contactLinks:
+  //     optional; undefined → legacy semantics.
+  // Phase 72 also added Language.lexiconURRefreshPolicy,
+  // Language.volatilityIntensity (mirrors phase machine when unset),
+  // Language.prestigeVariety (default false). All are back-compat
+  // because their absence is the legacy behavior.
+  9: (raw) => {
+    const snapshot = raw.stateSnapshot as RawObj | undefined;
+    if (snapshot && snapshot.tree && typeof snapshot.tree === "object") {
+      const tree = snapshot.tree as Record<string, RawObj>;
+      for (const node of Object.values(tree)) {
+        const lang = node.language as Language | undefined;
+        if (!lang) continue;
+        // Initialize endangermentLevel for non-extinct leaves.
+        if (lang.endangermentLevel === undefined && !lang.extinct) {
+          lang.endangermentLevel = "vigorous";
+        }
+        // conceptIds is lazy-minted by setLexiconForm/conceptIdFor;
+        // we don't pre-populate here so existing meanings get fresh
+        // UUIDs on first reference (deterministic per session).
+      }
+    }
+    return { ...raw, version: 10 };
   },
 };
 

@@ -1,5 +1,6 @@
 import type { Language, GrammarFeatures } from "../types";
 import type { Rng } from "../rng";
+import type { SocialState } from "../domains";
 
 /**
  * Phase 38f: structural substrate absorption.
@@ -52,8 +53,8 @@ const TRANSFERABLE_FEATURES: ReadonlyArray<keyof GrammarFeatures> = [
  *     diffusion via areal Sprachbund still possible).
  */
 function thomasonStructuralRate(
-  recipient: Language,
-  donor: Language,
+  recipient: SocialState,
+  donor: SocialState,
   baseRate: number,
 ): number {
   const tierGap = (donor.culturalTier ?? 0) - (recipient.culturalTier ?? 0);

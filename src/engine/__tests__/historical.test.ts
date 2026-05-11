@@ -317,6 +317,57 @@ describe("Phase 71d — grammarPatch + lockWordOrder", () => {
       expect(lang.grammar.wordOrder).toBe("SVO");
     }
   });
+
+  // Phase 72 code-review fix A5: drift-window test for the M3→M4 gap.
+  //
+  // Phase 72b-4 trimmed grammarPatch from M4/M5/M6 daughters so they
+  // inherit grammar features from the M3 parent rather than re-patching
+  // at each tier. The audit's complaint was the original Phase 71d
+  // grammarPatch at every tier "defeats the simulation." But trimming
+  // exposes a real risk: lifecycle drift between M3 (gen 100) and M4
+  // (gen 130) could flip hasCase/wordOrder/alignment back. The existing
+  // Phase 71d tests assert state at gen 200, which can't tell whether
+  // the values were stable through 100-130 or flipped and flipped back.
+  // This test checks the window directly.
+  it("Western daughters' grammar stays stable across the M3→M4 window (gen 100-130)", () => {
+    const cfg = presetRomance();
+    cfg.seed = "p72-a5-drift-window";
+    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
+    const sim = createSimulation(cfg);
+    // Advance to just past M3 (gen 100). M3 daughters should have
+    // hasCase=false / wordOrder=SVO via the M3 grammarPatch.
+    for (let i = 0; i < 105; i++) sim.step();
+    const m3Snapshots: Record<string, { hasCase?: boolean; wordOrder: string }> = {};
+    for (const node of Object.values(sim.getState().tree)) {
+      const l = node.language;
+      if (l.extinct) continue;
+      if (["iberian", "gallo", "italo"].includes(l.historicalRole ?? "")) {
+        m3Snapshots[l.id] = {
+          hasCase: l.grammar.hasCase,
+          wordOrder: l.grammar.wordOrder,
+        };
+      }
+    }
+    expect(Object.keys(m3Snapshots).length).toBeGreaterThan(0);
+    // Step through the M3→M4 window (gens 105 → 130). Western
+    // daughters' grammar should stay stable: hasCase=false +
+    // wordOrder=SVO inherited from M3 parent. No patches re-apply
+    // in this window (M4 is the next patch tier and only its split
+    // daughters get the patch).
+    for (let i = 0; i < 25; i++) sim.step(); // → gen 130
+    for (const id of Object.keys(m3Snapshots)) {
+      const node = sim.getState().tree[id];
+      if (!node || node.language.extinct) continue;
+      // The node may still be a leaf OR may have spawned M4 daughters.
+      // Check the M3-parent itself if still alive; otherwise the
+      // inheritance via M4 daughters is checked by the existing T71d
+      // tests at gen 200.
+      if (node.childrenIds.length === 0) {
+        expect(node.language.grammar.hasCase).toBe(m3Snapshots[id]!.hasCase);
+        expect(node.language.grammar.wordOrder).toBe(m3Snapshots[id]!.wordOrder);
+      }
+    }
+  });
 });
 
 describe("Phase 71c — closed-class anchoring + inventory tightening", () => {

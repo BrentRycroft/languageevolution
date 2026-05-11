@@ -61,7 +61,7 @@ export function stepGrammar(
   // uniform-random alignment shuffle in DRIFT_RULES. When reanalysis
   // fires we tell driftGrammar to skip the alignment feature for this
   // gen so the random drift can't undo the causal flip.
-  const reanalysed = tryReanalyseAlignment(lang, rng);
+  const reanalysed = tryReanalyseAlignment(lang, rng, generation);
   if (reanalysed) {
     pushEvent(lang, {
       generation,

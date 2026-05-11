@@ -68,6 +68,7 @@ export type PhonologyState = Pick<Language,
   | "vocabularyCatchUpUntil"
   | "perWordDiffusion"
   | "lexiconUR"
+  | "lexiconURRefreshPolicy"
 >;
 
 // ─── MorphologyState ────────────────────────────────────────────────
@@ -112,6 +113,7 @@ export type LexiconState = Pick<Language,
   | "lexicalCapacity"
   | "orthography"
   | "lexicalSpelling"
+  | "conceptIds"
 >;
 
 // ─── GrammarState ───────────────────────────────────────────────────
@@ -119,6 +121,7 @@ export type LexiconState = Pick<Language,
 export type GrammarState = Pick<Language,
   | "grammar"
   | "wordOrderLastFlipGen"
+  | "alignmentLastFlipGen"
   | "tierEligibilityStreak"
 >;
 

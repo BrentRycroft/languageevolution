@@ -118,6 +118,7 @@ export function driftOneMeaning(
   lang: Language,
   rng: Rng,
   override?: NeighborOverride,
+  generation: number = 0,
 ): SemanticDrift | null {
   const meanings = Object.keys(lang.lexicon);
   if (meanings.length === 0) return null;
@@ -196,7 +197,14 @@ export function driftOneMeaning(
         lang.lastChangeGeneration[target] = lastChange;
       }
       if (!polysemous) {
-        deleteMeaning(lang, m);
+        // Phase 72d-2 (defer-1a): drift drops the source meaning when
+        // it isn't kept polysemously alongside target. Record the
+        // pathway so reverse translation can resolve "lost" senses.
+        deleteMeaning(lang, m, {
+          mergedInto: target,
+          generation,
+          reason: `drift:${kind}`,
+        });
       } else {
         // Both meanings now share the same form. Persist the relationship
         // so the UI / reconstruction can surface "concept m is colexified

@@ -4,6 +4,45 @@ User-facing summary of shipped phases. Format: phase tag, commit, headline, key 
 
 ## Phase 72 — Audit Triage (May 2026)
 
+### Phase 72 deferred items (defer-3): signature migration + v10 persistence
+- Commit: `<defer-3>` (this commit)
+- Sub-state-typed function signatures across phonology/lexicon/
+  grammar/contact/translator (~15 functions). Phase 1 of the audit's
+  G5 migration in spirit (type-system enforces domain boundaries)
+  without changing Language's runtime shape.
+- `SavedRun.version` bumped 9 → 10 with v9→v10 migration that
+  initializes the Phase 72 fields (endangermentLevel, conceptIds,
+  meaningHistory, etc.) on legacy saves.
+- `docs/LANGUAGE_DOMAINS.md` updated: Phase 1 + Phase 2 + Phase 4
+  shipped; Phase 3 + Phase 5 (full nested-object restructure)
+  explicitly not shipped, with rationale.
+
+### Phase 72 deferred items (defer-2): T72d concept UUIDs
+- Commit: `e38b984`
+- New `lexicon/conceptIdentity.ts`: stable ConceptId UUIDs per
+  meaning. Lazy-mint on setLexiconForm; bulk-init at proto via
+  `ensureConceptIdsForLexicon`. Daughters inherit at split.
+- `meaningHistory` records both string and UUID pathways; reverse
+  inference can follow merger chains across the tree without
+  string-matching.
+- The literal `Lexicon = Record<ConceptId, WordForm>` refactor
+  remains documented but unattempted (1-2 weeks of preset/test
+  migration).
+
+### Phase 72 deferred items (defer-1): meaningHistory wiring + registry inheritance + UR persistence + direct AST bridge
+- Commit: `ab173a5`
+- `deleteMeaning` callers (recarve / drift / bleaching / obsolescence
+  / grammaticalization / kinship) now pass merger context so
+  meaningHistory captures real pathways.
+- Registry-driven inheritance safety net in tree/split.ts. New
+  per-meaning fields get inheritance via PER_MEANING_FIELDS without
+  requiring a tree/split.ts edit.
+- Cross-gen UR persistence under "manual" refresh policy. Caller
+  invokes `refreshUR(lang)` when reanalysis justifies updating UR.
+- Direct AST → Sentence bridge (`astToSentence`) bypasses the
+  English parser when the AST converts cleanly; falls back to
+  project+reparse otherwise.
+
 ### Phase 72g — Architecture (foundations for the long-deferred items)
 - Stratal phonology UR/SR layer (`src/engine/phonology/stratal.ts`).
   Adds `lang.lexiconUR?` for opacity detection. Does NOT yet wire

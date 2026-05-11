@@ -14,6 +14,16 @@ import { realismMultiplier } from "../phonology/rate";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
+/**
+ * Phase 72 code-review fix C14: minimum gens between endangerment-
+ * level transitions. Prevents rapid cycling
+ * (vigorous→endangered→moribund→extinct in a handful of gens) by
+ * locking the language at a level for at least this many gens after
+ * each transition. Calibrated against demographic stochasticity: a
+ * single bad-pressure gen shouldn't cascade.
+ */
+const ENDANGERMENT_COOLDOWN = 5;
+
 export function stepTreeSplit(
   state: SimulationState,
   leafId: string,
@@ -156,8 +166,7 @@ export function stepDeath(
   ];
   const current = lang.endangermentLevel ?? "vigorous";
   const lastTransition = lang.endangermentLastTransitionGen ?? -100;
-  const cooldown = 5;
-  if (rng.chance(p) && state.generation - lastTransition >= cooldown) {
+  if (rng.chance(p) && state.generation - lastTransition >= ENDANGERMENT_COOLDOWN) {
     const idx = stages.indexOf(current);
     const next = stages[Math.min(idx + 1, stages.length - 1)]!;
     if (next !== current) {
