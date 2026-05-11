@@ -202,6 +202,13 @@ export function deleteMeaning(
   // lookups, and narrative slot-fill; their absence is far worse
   // than their continued presence in a language that has otherwise
   // moved on.
+  //
+  // Phase 72 code-review fix C15: this guard runs BEFORE the
+  // meaningHistory record below — protected meanings never get a
+  // history entry because they never actually delete. If a caller
+  // wants to record an attempted deletion for diagnostic purposes,
+  // they can check `PROTECTED_MEANINGS.has(meaning)` themselves
+  // before calling deleteMeaning.
   if (PROTECTED_MEANINGS.has(meaning)) return;
 
   // Phase 72d T2 + 72d defer-2: record the pathway BEFORE deleting

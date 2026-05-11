@@ -395,14 +395,23 @@ export function prunePhonemes(
   // weight. We retain the original proto themes anyway (head-of-list
   // protection in the loop above), but stale post-merger variants
   // that fail every match across the lexicon get pruned.
+  //
+  // Phase 72 code-review fix C16: documenting the chosen semantics
+  // for the verb-collection step below. We collect ALL lexicon
+  // entries as candidate verb forms (no POS filter) for two reasons:
+  //   (1) Importing CONCEPTS / posOf here would create a circular
+  //       import (semantics/concepts.ts → … → phonology/pruning.ts).
+  //   (2) Conservative: a theme that matches the ending of a NOUN
+  //       could plausibly match a future verb coinage too. Pruning
+  //       only themes that match no lexicon word at all is the
+  //       safer rule — never delete a theme that has SOME match,
+  //       at the cost of keeping dead noun-ending themes longer.
+  //   The tradeoff: false-positives (dead noun-ending themes linger)
+  //   instead of false-negatives (accidentally deleting a theme
+  //   that would match the next verb).
   if (lang.grammar.verbThemes && lang.grammar.verbThemes.length > 1) {
-    // Find verbs in the lexicon: meanings with a "verb." paradigm
-    // category match and lexicon entries.
     const verbForms: WordForm[] = [];
     for (const m of Object.keys(lang.lexicon)) {
-      // Heuristic: any meaning that's a verb in CONCEPTS or has POS=V.
-      // We check the lexicon directly here without a CONCEPTS import to
-      // avoid circular imports; assume any lexicon entry MAY be a verb.
       const f = lang.lexicon[m];
       if (f && f.length > 0) verbForms.push(f);
     }

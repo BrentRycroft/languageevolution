@@ -39,6 +39,20 @@ interface PerMeaningFieldSpec {
   inherit: "shallow-clone" | "deep-clone-entries" | "skip";
   /** Whether to delete `lang[key][meaning]` on `deleteMeaning(lang, meaning)`. */
   purgeOnDelete: boolean;
+  /**
+   * Phase 72 code-review fix C17: shape discriminator for the
+   * registry's purge + inherit helpers. Most per-meaning fields are
+   * "flat": `Record<Meaning, X>`. A few are "nested":
+   * `Record<RuleId, Record<Meaning, X>>` (perWordDiffusion is the
+   * only current example). Nested fields can't be purged by the
+   * generic `purgeMeaningFromRegistry` — they need a dedicated pass
+   * (see `purgePerWordDiffusionForMeaning`). The shape field lets
+   * the registry's runtime sanity check flag nested fields without a
+   * paired purge helper.
+   *
+   * Default is "flat" when unspecified.
+   */
+  shape?: "flat" | "nested";
   /** Optional human-readable description for diagnostics. */
   description?: string;
 }
