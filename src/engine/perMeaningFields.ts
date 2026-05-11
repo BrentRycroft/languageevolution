@@ -190,6 +190,24 @@ export function purgePerWordDiffusionForMeaning(
  *
  * Returns the count of fields cloned.
  */
+/**
+ * Phase 72 code-review fix B12: an "empty container" is `{}` (plain
+ * object with no own keys) or `[]` (zero-length array). Other values
+ * — `null`, primitives, non-empty objects/arrays, Sets/Maps — are
+ * considered populated. Sets/Maps are treated as populated even when
+ * empty because their identity carries intent (the closedClassInventory
+ * Set, for example, is shared by reference).
+ */
+function isEmptyContainer(v: unknown): boolean {
+  if (v === null) return false;
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === "object") {
+    if (v instanceof Set || v instanceof Map) return false;
+    return Object.keys(v as object).length === 0;
+  }
+  return false;
+}
+
 export function inheritMeaningFields(
   parentLang: Language,
   childLang: Language,
@@ -204,7 +222,14 @@ export function inheritMeaningFields(
     // to get inheritance — no tree/split.ts edit required — while
     // existing manual clones (which often do field-specific deep
     // copies the registry can't replicate) keep their semantics.
-    if (childAsRecord[spec.key] !== undefined) continue;
+    //
+    // Phase 72 code-review fix B12: treat an EMPTY map/array on the
+    // child as "not populated" so a defensively-initialised `{}` or
+    // `[]` still triggers parent-clone. Pre-B12 only `undefined`
+    // skipped inheritance; a child with `{}` retained its empty
+    // map and orphaned all parent entries.
+    const childVal = childAsRecord[spec.key];
+    if (childVal !== undefined && !isEmptyContainer(childVal)) continue;
     const parentVal = parentAsRecord[spec.key];
     if (parentVal === undefined) continue;
     if (spec.inherit === "skip") continue;
