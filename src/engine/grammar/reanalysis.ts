@@ -23,6 +23,14 @@ import type { GrammarState, SocialState } from "../domains";
  * sation-reanalysis path stays as a hook documented but not yet wired.
  */
 
+/**
+ * Phase 72 code-review fix A2: 50-gen cooldown between alignment
+ * reanalysis flips. Mirror of T72a-5's wordOrderLastFlipGen pattern.
+ * Without this, the function could ping-pong nom-acc → erg-abs →
+ * split-S → ... while conditions remained met.
+ */
+const ALIGNMENT_REANALYSIS_COOLDOWN = 50;
+
 interface AlignmentReanalysisInput {
   /** True when the language has a productive passive construction
    *  (proxy: `grammar.voice` includes "passive", or hasCase is true and
@@ -32,23 +40,14 @@ interface AlignmentReanalysisInput {
   /** True when the case-marked agent in passive is morphologically
    *  obligatory in the recipient language (proxy: hasCase + tier ≥ 1). */
   agentObligatory: boolean;
-  /** Generations since the last alignment flip — older configurations
-   *  reanalyse less often (settled grammar resists). */
-  generationsSinceFlip: number;
 }
 
-/**
- * Read a language's reanalysis-input snapshot. We approximate the
- * conditions from existing fields — the simulator doesn't track passive
- * voice yet, so we use a gated proxy.
- */
 function reanalysisInput(lang: GrammarState & SocialState): AlignmentReanalysisInput {
   const tier = lang.culturalTier ?? 0;
   const hasCase = lang.grammar.hasCase === true;
   return {
     hasPassive: hasCase && tier >= 1,
     agentObligatory: hasCase && tier >= 1,
-    generationsSinceFlip: 50, // proxy; could read a `lastAlignmentFlipGen` field if we add it
   };
 }
 
@@ -62,11 +61,19 @@ function reanalysisInput(lang: GrammarState & SocialState): AlignmentReanalysisI
  * Caller (grammar/evolve.ts) decides when to consult this; we suggest
  * running it before the random alignment-drift rule, so reanalysis
  * paths take precedence when their conditions are met.
+ *
+ * Cooldown: 50 gens between flips. Caller must pass `generation` so
+ * the cooldown can be checked; the function writes
+ * `lang.alignmentLastFlipGen` on each successful flip.
  */
 export function tryReanalyseAlignment(
   lang: GrammarState & SocialState,
   rng: Rng,
+  generation: number = 0,
 ): GrammarShift | null {
+  const lastFlip = lang.alignmentLastFlipGen ?? -ALIGNMENT_REANALYSIS_COOLDOWN;
+  if (generation - lastFlip < ALIGNMENT_REANALYSIS_COOLDOWN) return null;
+
   const input = reanalysisInput(lang);
   const current = lang.grammar.alignment ?? "nom-acc";
 
@@ -74,6 +81,7 @@ export function tryReanalyseAlignment(
     if (rng.chance(0.015)) {
       const next: NonNullable<GrammarFeatures["alignment"]> = "erg-abs";
       lang.grammar.alignment = next;
+      lang.alignmentLastFlipGen = generation;
       return {
         feature: "alignment",
         from: current,
@@ -85,6 +93,7 @@ export function tryReanalyseAlignment(
   if (current === "erg-abs" && rng.chance(0.01)) {
     const next: NonNullable<GrammarFeatures["alignment"]> = "split-S";
     lang.grammar.alignment = next;
+    lang.alignmentLastFlipGen = generation;
     return { feature: "alignment", from: current, to: next };
   }
 

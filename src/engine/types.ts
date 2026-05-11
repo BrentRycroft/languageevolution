@@ -670,6 +670,17 @@ export interface Language {
    */
   wordOrderLastFlipGen?: number;
   /**
+   * Phase 72 code-review fix A2: cooldown tracker for
+   * `tryReanalyseAlignment` (grammar/reanalysis.ts). Pre-fix the
+   * `generationsSinceFlip` proxy in reanalysisInput() was set to a
+   * hardcoded `50` and never read — so reanalysis could fire every
+   * gen while conditions held, producing ping-pong between alignment
+   * states. Now: caller (stepGrammar) sets this on each reanalysis
+   * flip; `tryReanalyseAlignment` reads it and gates on a 50-gen
+   * cooldown before flipping again.
+   */
+  alignmentLastFlipGen?: number;
+  /**
    * Phase 31 Tranche 31a: language-level tonal regime. Tone is
    * essentially all-or-nothing per language: tonal languages (Mandarin,
    * Yoruba, most Niger-Congo) tone every syllable; non-tonal languages
@@ -1360,8 +1371,19 @@ export interface PendingArealRule {
 export interface ReticulateLink {
   langA: string;
   langB: string;
-  /** Categorical contact kind for diagnostics + biased iteration. */
-  kind: "bilingual" | "areal" | "creolisation" | "substrate";
+  /**
+   * Categorical contact kind. Phase 72g initial scope: only
+   * "bilingual" is currently set (by `refreshContactLinks` from
+   * `lang.bilingualLinks`). The audit envisioned upgrading specific
+   * pairs to "areal" / "creolisation" / "substrate" via dedicated
+   * hooks in `arealTypology.ts` / `creolization.ts` / contact
+   * substrate detection. Those hooks are documented as future work
+   * (see CHANGELOG defer-3 + `docs/LANGUAGE_DOMAINS.md`). For now the
+   * enum is restricted to "bilingual" so consumers don't pattern-
+   * match against values that are never emitted. Phase 72 code-
+   * review fix A4.
+   */
+  kind: "bilingual";
   /** Strength on [0, 1]; mirrors bilingualLinks scoring. */
   strength: number;
   /** First gen when this link was observed. */

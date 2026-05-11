@@ -248,11 +248,15 @@ describe("Phase 72g-3 (full) — translateSentenceViaAST primary path", () => {
     expect(v).toBeDefined();
   });
 
-  it("translateSentenceViaAST produces output for both SVO and SOV orders", () => {
-    // Confirm the entry point runs end-to-end for non-SVO targets.
-    // The realiser's exact ordering under SOV is its own concern;
-    // this test only verifies the AST → realisation path doesn't
-    // regress when wordOrder differs from the AST projection default.
+  it("translateSentenceViaAST: V appears in the position prescribed by wordOrder", () => {
+    // Phase 72 code-review fix A3: re-tightened from the previous
+    // "tokens.length > 0" smoke-check. The realiser reads
+    // `lang.grammar.wordOrder` via `sliceOrder` (realise.ts:161), so
+    // V position is a real, testable invariant. We check the V-final
+    // property under SOV (one of: S/O/V last in the realised tokens
+    // when looking at lemmas that resolve). S-before-O under SOV is
+    // separately checked but kept softer because participant ordering
+    // can interact with case-marking morphology.
     const cfg = presetRomance();
     cfg.seed = "p72g-ast-order";
     const sim = createSimulation(cfg);
@@ -265,12 +269,46 @@ describe("Phase 72g-3 (full) — translateSentenceViaAST primary path", () => {
       ],
       fillers: [],
     };
+
+    // Phase 72 code-review fix A3: clear any active wordOrder modules
+    // so the realiser's order-tokens stage falls through to
+    // `sliceOrder(lang.grammar.wordOrder)` (realise.ts:161). With
+    // the Romance preset's "syntactical:wordOrder/svo" module active,
+    // mutating grammar.wordOrder leaves the module stale and the
+    // realiser keeps emitting SVO. This test exercises the
+    // lang.grammar.wordOrder fallback explicitly; a separate test
+    // would be needed to verify the module-swap path.
+    if (lang.activeModules) {
+      for (const m of Array.from(lang.activeModules)) {
+        if (m.startsWith("syntactical:wordOrder/")) lang.activeModules.delete(m);
+      }
+    }
+
     lang.grammar.wordOrder = "SVO";
     const svo = translateSentenceViaAST(lang, ast);
     expect(svo.targetTokens.length).toBeGreaterThan(0);
+    const svoLemmas = svo.targetTokens.map((t) => t.englishLemma);
+    const svoVIdx = svoLemmas.indexOf("see");
+    const svoSIdx = svoLemmas.indexOf("king");
+    const svoOIdx = svoLemmas.indexOf("bird");
+    if (svoSIdx >= 0 && svoVIdx >= 0 && svoOIdx >= 0) {
+      expect(svoSIdx).toBeLessThan(svoVIdx);
+      expect(svoVIdx).toBeLessThan(svoOIdx);
+    }
+
     lang.grammar.wordOrder = "SOV";
     const sov = translateSentenceViaAST(lang, ast);
     expect(sov.targetTokens.length).toBeGreaterThan(0);
+    const sovLemmas = sov.targetTokens.map((t) => t.englishLemma);
+    const sovVIdx = sovLemmas.indexOf("see");
+    const sovSIdx = sovLemmas.indexOf("king");
+    const sovOIdx = sovLemmas.indexOf("bird");
+    // SOV: V should follow both S and O (V-final). This now holds
+    // because we cleared the wordOrder module above.
+    if (sovSIdx >= 0 && sovVIdx >= 0 && sovOIdx >= 0) {
+      expect(sovVIdx).toBeGreaterThan(sovSIdx);
+      expect(sovVIdx).toBeGreaterThan(sovOIdx);
+    }
   });
 });
 

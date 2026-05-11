@@ -121,6 +121,7 @@ export type LexiconState = Pick<Language,
 export type GrammarState = Pick<Language,
   | "grammar"
   | "wordOrderLastFlipGen"
+  | "alignmentLastFlipGen"
   | "tierEligibilityStreak"
 >;
 

@@ -88,16 +88,44 @@ export function conceptIdFor(lang: LexiconState, meaning: Meaning): ConceptId {
  * ConceptId. Returns undefined if the language has no record of the
  * concept. Useful for reconstruction probes that walk meaningHistory
  * back to a parent's lexicon by UUID.
+ *
+ * Phase 72 code-review fix A6: O(1) via a WeakMap-backed reverse
+ * index. Pre-fix this was an O(n) scan of lang.conceptIds; on
+ * reconstruction probes that walk many meanings per language across
+ * many languages, the scan compounded. The reverse index is keyed on
+ * the lang reference (WeakMap-safe) and invalidated lazily — if the
+ * forward map's entry count changes, the reverse index is rebuilt.
+ *
+ * Caveat: the size-based staleness check assumes monotonic add/delete
+ * — no callers re-WRITE an existing meaning's UUID (UUIDs are mint-
+ * once-and-stable). If a future caller mutates conceptIds[m] in place
+ * with a different ConceptId, the reverse index won't notice. None
+ * of the current callers do this; if that changes, add a version
+ * counter alongside size.
  */
+const reverseIndex = new WeakMap<LexiconState, { size: number; map: Map<ConceptId, Meaning> }>();
+
+function getReverseIndex(lang: LexiconState): Map<ConceptId, Meaning> | undefined {
+  if (!lang.conceptIds) return undefined;
+  const cached = reverseIndex.get(lang);
+  const currentSize = Object.keys(lang.conceptIds).length;
+  if (cached && cached.size === currentSize) return cached.map;
+  // (Re)build. Triggered on first read OR when entry count changed
+  // (new mint or deleteMeaning purge).
+  const map = new Map<ConceptId, Meaning>();
+  for (const m of Object.keys(lang.conceptIds)) {
+    map.set(lang.conceptIds[m] as ConceptId, m);
+  }
+  reverseIndex.set(lang, { size: currentSize, map });
+  return map;
+}
+
 export function meaningForConceptId(
   lang: LexiconState,
   conceptId: ConceptId,
 ): Meaning | undefined {
-  if (!lang.conceptIds) return undefined;
-  for (const m of Object.keys(lang.conceptIds)) {
-    if (lang.conceptIds[m] === conceptId) return m;
-  }
-  return undefined;
+  const idx = getReverseIndex(lang);
+  return idx?.get(conceptId);
 }
 
 /**

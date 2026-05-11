@@ -159,6 +159,22 @@ function lookupBaseForm(lang: LexiconState, lemma: string): import("../types").W
   return [];
 }
 
+/**
+ * Phase 72 code-review fix A1: the `case` field on `NounRef` is set
+ * to "nom"/"acc" here for back-compat, but the realiser
+ * (realise.ts:355-356, alignmentSubjectCase/alignmentObjectCase) reads
+ * the case slot from `lang.grammar.alignment` and OVERRIDES this
+ * value before any morphology runs. Ergative-absolutive,
+ * tripartite, and split-S languages get the correct case marking
+ * at realisation time despite the hardcoded value here. The
+ * `Case` enum (syntax.ts:13) only has nom/acc/dat/gen/obl/inst —
+ * no erg/abs slots — so a fully-alignment-aware `astToSentence`
+ * would need to either extend `Case` or invent a sentinel. Since
+ * the realiser handles it correctly, this code stays simple.
+ * Other AST consumers (snapshot tests, future direct-realisers)
+ * should call `alignmentSubjectCase`/`alignmentObjectCase` directly
+ * rather than reading NounRef.case.
+ */
 function astNodeToNounRef(node: import("./ast").ASTNode, lang: LexiconState): NounRef {
   return {
     lemma: node.lemma,
