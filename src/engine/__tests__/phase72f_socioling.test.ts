@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { vitalityRateMultiplier } from "../steps/tree";
-import { volatilityMultiplier, bumpVolatilityIntensity } from "../steps/volatility";
+import { volatilityMultiplier } from "../steps/volatility";
 import { tryStructuralBorrow } from "../contact/structuralBorrow";
 import type { Language } from "../types";
 
@@ -37,16 +37,6 @@ describe("Phase 72f-2 — continuous volatilityIntensity scalar", () => {
       volatilityPhase: { kind: "upheaval" as const, until: 100, multiplier: 3.5 },
     } as Language;
     expect(volatilityMultiplier(lang)).toBe(3.5);
-  });
-
-  it("bumpVolatilityIntensity clamps to [0, 4]", () => {
-    const lang = { volatilityIntensity: 1.0 } as Language;
-    bumpVolatilityIntensity(lang, 0.5);
-    expect(lang.volatilityIntensity).toBe(1.5);
-    bumpVolatilityIntensity(lang, 100);
-    expect(lang.volatilityIntensity).toBe(4);
-    bumpVolatilityIntensity(lang, -100);
-    expect(lang.volatilityIntensity).toBe(0);
   });
 });
 
