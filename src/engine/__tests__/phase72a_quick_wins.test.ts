@@ -55,7 +55,11 @@ describe("Phase 72a-2 — closedClassTable cache invalidation", () => {
   });
 
   it("stepPhonology invalidates the cache implicitly", () => {
-    // Smoke check: closed-class table reflects post-phonology lexicon.
+    // Phase 72 methodological audit D-A2: pre-fix the assertion was
+    // wrapped in `if (lang.lexicon.the)`, which silently passed when
+    // "the" was missing. Now we assert "the" exists (a baseline
+    // Romance preset guarantee) BEFORE the cache check, so a real
+    // bug that deletes "the" would surface as a test failure.
     const cfg = presetRomance();
     cfg.seed = "p72a-step";
     const sim = createSimulation(cfg);
@@ -63,9 +67,9 @@ describe("Phase 72a-2 — closedClassTable cache invalidation", () => {
     for (let i = 0; i < 30; i++) sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
     const post = closedClassTable(lang);
-    if (lang.lexicon.the) {
-      expect(post.the?.join("")).toBe(lang.lexicon.the.join(""));
-    }
+    expect(lang.lexicon.the).toBeDefined();
+    expect(post.the).toBeDefined();
+    expect(post.the?.join("")).toBe(lang.lexicon.the!.join(""));
   });
 });
 

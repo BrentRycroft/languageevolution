@@ -1000,6 +1000,14 @@ export interface LanguageNode {
 export type LanguageTree = Record<string, LanguageNode>;
 
 export interface GrammarFeatures {
+  /**
+   * Canonical S/V/O order. ⚠ Mutating this field at runtime does NOT
+   * update the active `syntactical:wordOrder/*` module on Language;
+   * the realiser prefers the module's `order-tokens` stage output and
+   * only falls back to this field when no such module is active.
+   * See `grammar/mutate.ts:setGrammarFeature` for the full footgun
+   * note + correct mutation pattern. (Phase 72 audit C5.)
+   */
   wordOrder: "SOV" | "SVO" | "VSO" | "VOS" | "OVS" | "OSV";
   affixPosition: "prefix" | "suffix";
   pluralMarking: "none" | "affix" | "reduplication";

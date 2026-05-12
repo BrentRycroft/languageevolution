@@ -60,28 +60,28 @@ describe("Phase 72e-2 — massive event log stress test", () => {
     expect(lang.events.length).toBeLessThanOrEqual(MAX_EVENTS_PER_LANGUAGE);
   });
 
-  it("state.historicalEvents caps at 200 (Phase 72a-4)", () => {
+  it("state.historicalEvents caps at 200 — recordHistoricalEvent enforces cap (Phase 72a-4)", async () => {
+    // Phase 72 methodological audit D-A1: pre-fix this test manually
+    // spliced the array and asserted the splice succeeded — a pure
+    // tautology that would pass even if the production cap were
+    // deleted. Now we invoke the actual `recordHistoricalEvent`
+    // function and verify IT applies the cap.
+    const { recordHistoricalEvent } = await import("../steps/historical");
     const cfg = presetRomance();
     cfg.seed = "p72e-hist";
-    cfg.historical = { scheduleId: "romance", intensity: 1.0 };
     const sim = createSimulation(cfg);
     const state = sim.getState();
     state.historicalEvents = [];
-    // Manually push 250 events; the cap should kick in inside
-    // recordHistoricalEvent if it were called (we test the cap
-    // mechanism directly here).
+    // Call the production writer 250 times. The cap should bound the
+    // array at 200 entries; oldest entries get evicted FIFO.
     for (let i = 0; i < 250; i++) {
-      state.historicalEvents.push({
-        generation: i,
-        label: `m-${i}`,
-        role: "proto",
-        kind: "fired",
-      });
+      recordHistoricalEvent(state, i, `m-${i}`, "proto", "fired");
     }
-    if (state.historicalEvents.length > 200) {
-      state.historicalEvents.splice(0, state.historicalEvents.length - 200);
-    }
-    expect(state.historicalEvents.length).toBeLessThanOrEqual(200);
+    expect(state.historicalEvents.length).toBe(200);
+    // FIFO eviction: the OLDEST 50 events (i=0..49) should be gone;
+    // entries 50..249 should remain.
+    expect(state.historicalEvents[0]!.generation).toBe(50);
+    expect(state.historicalEvents[state.historicalEvents.length - 1]!.generation).toBe(249);
   });
 });
 

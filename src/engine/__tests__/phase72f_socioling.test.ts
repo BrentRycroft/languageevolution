@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { vitalityRateMultiplier } from "../steps/tree";
-import { volatilityMultiplier, bumpVolatilityIntensity } from "../steps/volatility";
+import { volatilityMultiplier } from "../steps/volatility";
 import { tryStructuralBorrow } from "../contact/structuralBorrow";
 import type { Language } from "../types";
 
@@ -38,16 +38,6 @@ describe("Phase 72f-2 — continuous volatilityIntensity scalar", () => {
     } as Language;
     expect(volatilityMultiplier(lang)).toBe(3.5);
   });
-
-  it("bumpVolatilityIntensity clamps to [0, 4]", () => {
-    const lang = { volatilityIntensity: 1.0 } as Language;
-    bumpVolatilityIntensity(lang, 0.5);
-    expect(lang.volatilityIntensity).toBe(1.5);
-    bumpVolatilityIntensity(lang, 100);
-    expect(lang.volatilityIntensity).toBe(4);
-    bumpVolatilityIntensity(lang, -100);
-    expect(lang.volatilityIntensity).toBe(0);
-  });
 });
 
 describe("Phase 72f-3 — prestigeVariety dampens phonology rate", () => {
@@ -63,6 +53,11 @@ describe("Phase 72f-3 — prestigeVariety dampens phonology rate", () => {
   });
 
   it("prestigeVariety is NOT auto-inherited by daughters", async () => {
+    // Phase 72 methodological audit D-A5: pre-fix the per-daughter
+    // assertion was inside a loop that skipped the proto, with no
+    // pre-check that any non-proto daughters actually existed. The
+    // test passed vacuously if the M2 split hadn't fired yet. Now we
+    // assert at least one non-proto daughter exists before the loop.
     const cfg = presetRomance();
     cfg.seed = "p72f-prestige-inherit";
     cfg.historical = { scheduleId: "romance", intensity: 1.0 };
@@ -75,8 +70,9 @@ describe("Phase 72f-3 — prestigeVariety dampens phonology rate", () => {
     const leaves = Object.values(sim.getState().tree)
       .filter((n) => n.childrenIds.length === 0)
       .map((n) => n.language);
-    for (const lang of leaves) {
-      if (lang.id === proto.id) continue;
+    const daughters = leaves.filter((l) => l.id !== proto.id);
+    expect(daughters.length).toBeGreaterThan(0); // M2 must have fired
+    for (const lang of daughters) {
       // Daughters do NOT inherit; prestige must be re-established
       expect(lang.prestigeVariety).toBeFalsy();
     }
@@ -117,25 +113,24 @@ describe("Phase 72f-4 — Thomason-gated structural borrowing", () => {
 });
 
 describe("Phase 72f-5 — per-(rule, meaning) diffusion timestamps", () => {
-  it("perWordDiffusion records adoption gen for each word as the rule diffuses", () => {
+  it("perWordDiffusion records at least one adoption after a long-enough run", () => {
+    // Phase 72 methodological audit D-A4: pre-fix this asserted
+    // `>= 0` which is a literal tautology — would pass even if the
+    // entire diffusion-recording mechanism were stripped out. Now
+    // we run 200 gens (was 80) to give Wang's sigmoid time to cross
+    // 0.85 for at least one (rule, meaning) pair, and assert > 0.
     const cfg = presetRomance();
     cfg.seed = "p72f-perword";
     const sim = createSimulation(cfg);
-    for (let i = 0; i < 80; i++) sim.step();
+    for (let i = 0; i < 200; i++) sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
-    // Some Wang-curve adoptions should have crossed 0.85 → recorded.
     expect(lang.perWordDiffusion).toBeDefined();
-    if (lang.perWordDiffusion) {
-      const ruleIds = Object.keys(lang.perWordDiffusion);
-      // At least one rule should have recorded adoption for at least
-      // one meaning (Wang threshold is 0.85, baseline t0 ~5-15 gens
-      // for low-freq function words — we ran 80 gens).
-      const totalAdoptions = ruleIds.reduce(
-        (acc, rid) => acc + Object.keys(lang.perWordDiffusion![rid]!).length,
-        0,
-      );
-      expect(totalAdoptions).toBeGreaterThanOrEqual(0); // permissive — RNG may cause variance
-    }
+    const ruleIds = Object.keys(lang.perWordDiffusion!);
+    const totalAdoptions = ruleIds.reduce(
+      (acc, rid) => acc + Object.keys(lang.perWordDiffusion![rid]!).length,
+      0,
+    );
+    expect(totalAdoptions).toBeGreaterThan(0);
   });
 });
 

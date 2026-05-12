@@ -61,18 +61,6 @@ export function volatilityMultiplier(lang: Language): number {
 }
 
 /**
- * Phase 72f T2: continuous-scalar mutator. Bumps the volatility
- * intensity by `delta` (positive = more turbulent), clamped to [0, 4].
- * Used by language-shift, contact-density, areal-typology callers
- * that want to nudge the rate without flipping the phase machine
- * to a binary upheaval.
- */
-export function bumpVolatilityIntensity(lang: Language, delta: number): void {
-  const current = lang.volatilityIntensity ?? lang.volatilityPhase?.multiplier ?? 1;
-  lang.volatilityIntensity = Math.max(0, Math.min(4, current + delta));
-}
-
-/**
  * Roll a fresh phase. Called on transitions (when `until` is reached)
  * or on triggered upheavals.
  */

@@ -33,29 +33,25 @@ import type { Language, Meaning } from "./types";
  */
 
 interface PerMeaningFieldSpec {
-  /** The field name on Language (must be a per-meaning Record). */
+  /** The field name on Language (must be a per-meaning `Record<Meaning, X>`). */
   key: keyof Language;
   /** How to inherit the parent's entries when a daughter is created. */
-  inherit: "shallow-clone" | "deep-clone-entries" | "skip";
+  inherit: "shallow-clone" | "deep-clone-entries";
   /** Whether to delete `lang[key][meaning]` on `deleteMeaning(lang, meaning)`. */
   purgeOnDelete: boolean;
-  /**
-   * Phase 72 code-review fix C17: shape discriminator for the
-   * registry's purge + inherit helpers. Most per-meaning fields are
-   * "flat": `Record<Meaning, X>`. A few are "nested":
-   * `Record<RuleId, Record<Meaning, X>>` (perWordDiffusion is the
-   * only current example). Nested fields can't be purged by the
-   * generic `purgeMeaningFromRegistry` — they need a dedicated pass
-   * (see `purgePerWordDiffusionForMeaning`). The shape field lets
-   * the registry's runtime sanity check flag nested fields without a
-   * paired purge helper.
-   *
-   * Default is "flat" when unspecified.
-   */
-  shape?: "flat" | "nested";
   /** Optional human-readable description for diagnostics. */
   description?: string;
 }
+
+// Phase 72 methodological audit Batch E: nested-shape fields (e.g.
+// `perWordDiffusion: Record<ruleId, Record<meaning, gen>>`) live OUTSIDE
+// the registry with dedicated helpers (see
+// `purgePerWordDiffusionForMeaning`). The generic registry handles
+// only flat `Record<Meaning, X>` fields. Pre-fix, the spec had a
+// `shape?: "flat" | "nested"` discriminator and an `"inherit": "skip"`
+// strategy — both declared but never read by any helper and never set
+// by any registry entry. Deleted as speculative future-proofing
+// (CLAUDE.md guideline 2: no flexibility that wasn't requested).
 
 /**
  * Per-meaning fields. Add new fields here; the registry helpers below
@@ -196,7 +192,6 @@ export function purgePerWordDiffusionForMeaning(
  *     and `[...inner]` / `{ ...inner }` for each value (one level
  *     deeper). Used when the values are arrays/objects that the
  *     daughter shouldn't mutate through the shared reference.
- *   - "skip": the daughter starts with this field unset.
  *
  * Whole-language fields (grammar, phonemeInventory, conservatism, etc.)
  * are still bespoke in `tree/split.ts:makeChild` — they're not
@@ -246,7 +241,6 @@ export function inheritMeaningFields(
     if (childVal !== undefined && !isEmptyContainer(childVal)) continue;
     const parentVal = parentAsRecord[spec.key];
     if (parentVal === undefined) continue;
-    if (spec.inherit === "skip") continue;
     if (spec.inherit === "shallow-clone") {
       childAsRecord[spec.key] = { ...(parentVal as Record<string, unknown>) };
       count++;
