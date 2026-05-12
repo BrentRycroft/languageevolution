@@ -417,13 +417,17 @@ export function splitLeaf(
   }
 
   const usedKinds = new Set<string>();
-  // Phase 39l: sister-grammar dampening. Fresh daughters get a 30-gen
+  // Phase 39l: sister-grammar dampening. Fresh daughters get a
   // window where their grammar drift is dampened to 0.4× — modelling
-  // the ~400-yr mutual-intelligibility window between Old English
-  // and Old Saxon post-split. The flag is read by driftGrammar in
+  // the mutual-intelligibility window between Old English and Old
+  // Saxon post-split. The flag is read by driftGrammar in
   // grammar/evolve.ts.
+  // Phase 73a: shortened 30 → 12 gens. At 25 yr/gen the original 30
+  // dampened for 750 real years — well past real Romance differentiation
+  // onset (Strasbourg Oaths attests vernacular split by ~842 CE, ~400 yrs
+  // post-Latin). 12 gens ≈ 300 yrs is closer to attested divergence speed.
   for (const child of children) {
-    child.siblingDriftDampenUntil = generation + 30;
+    child.siblingDriftDampenUntil = generation + 12;
   }
   for (const child of children) {
     const innovation = applyFounderInnovation(

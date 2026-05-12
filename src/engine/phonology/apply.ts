@@ -76,7 +76,14 @@ const ABSOLUTE_FLOOR_LEN = 2;
 // lexical-replacement-dominated than sound-change-dominated. Phase
 // 38g already cut the rate; 39b cuts it further to balance against
 // the now-tripled synonym genesis rate (steps/grammar.ts).
-const GENERATION_RATE_SCALE = 0.25;
+// Phase 73a: restored to 0.4. Post-Phase-72 audit confirmed sister
+// daughters converged into mutual-intelligibility shells (probe
+// phase70c_romance_convergence) — five compounding brakes left
+// effective drift ≈0.027/word/gen. Raising this knob is the highest-
+// leverage single change. Latin-stability anchoring is unaffected
+// because the per-rule weights and stable-phase volatility still
+// dominate quiet periods.
+const GENERATION_RATE_SCALE = 0.4;
 
 /**
  * Phase 36 Tranche 36g: per-rule frequency-tier multiplier.
@@ -417,11 +424,16 @@ export function applyChangesToWord(
   //   2. Function words drift slower than content words in real
   //      languages (acquired earlier; rarely innovated). They get a
   //      stronger brake (×0.3 vs content's ×0.4).
+  // Phase 73a: loosened from 0.4/0.3 → 0.6/0.5. Real Swadesh items
+  // do drift (Lat. aqua → Sp. agua / Fr. eau); English þæt → the
+  // shows closed-class moves too. The brakes still hold direction
+  // (closed-class strictly < content) but stop hard-locking high-
+  // freq vocabulary out of the convergence-divergence balance.
   if (freq >= 0.85) {
     if (SWADESH_CONTENT_CORE.has(meaning)) {
-      freqExponent *= 0.4;
+      freqExponent *= 0.6;
     } else if (isClosedClassAnchor(meaning, opts.langForHomonym)) {
-      freqExponent *= 0.3;
+      freqExponent *= 0.5;
     }
   }
   // Phase 38d: low-freq content boost. Real low-freq vocabulary
