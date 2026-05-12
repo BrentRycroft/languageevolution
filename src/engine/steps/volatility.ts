@@ -30,7 +30,11 @@ import { pushEvent } from "./helpers";
 // simulator feel locked in long quiet plateaus. Real diachrony also
 // has shorter stable interludes (a 400-yr quiet period punctuated by
 // a 100-yr upheaval is realistic).
-const STABLE_MIN_DURATION = 15;
+// Phase 73a: further shortened 15 → 8. Daughters spend ~75% of their
+// timeline in stable phases with multiplier 0.08-0.23, hard-capping
+// drift. Letting upheaval windows reach daughters more often is one
+// of the five Tier-A levers for cross-sister divergence.
+const STABLE_MIN_DURATION = 8;
 const STABLE_MAX_DURATION = 120;
 const UPHEAVAL_MIN_DURATION = 8;
 const UPHEAVAL_MAX_DURATION = 28;
