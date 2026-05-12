@@ -15,13 +15,29 @@ see "Why deferred" below for the rationale.
 functions can declare narrow sub-state arguments and accept any
 Language.
 
-**Phase 2 (signature migration)** — partially shipped in commit
+**Phase 2 (signature migration)** — ~7.5% shipped in commit
 `<defer-3>`. Leaf-level helpers in `phonology/`, `lexicon/`,
 `grammar/`, `contact/`, `translator/` accept the appropriate
-sub-state type instead of full `Language`. The migration is
-demonstrative rather than exhaustive: ~15 functions converted.
-Future call-site touches can opt into sub-state typing one function
-at a time.
+sub-state type instead of full `Language` — but only ~15 of the
+documented ~200 target functions have been converted.
+
+**This is NOT "Phase 2 complete."** The defer-3 commit framed the
+migration as "Phase 2 in spirit" because the type-system enforces
+domain boundaries on the converted functions; the methodological
+audit (Phase 72 batch F) flagged this framing as imprecise and
+this entry has been corrected. The bulk of `lang: Language`
+function signatures across the engine remain unconverted. Each
+future call-site touch can opt into sub-state typing one function
+at a time; a coordinated sweep is the way to actually finish
+Phase 2.
+
+Concretely: a `grep -rn "lang: Language" src/engine` will surface
+the ~185 remaining call-targets. Each conversion is mechanical
+(identify the fields the function reads/writes; assemble the
+corresponding sub-state Pick<> intersection; swap the parameter
+type). The engine's existing tests cover most of these paths, so
+regression risk per conversion is low — the cost is breadth, not
+depth.
 
 **Phase 4 (persistence v10)** — shipped in commit `<defer-3>`.
 `SavedRun.version: 10` adds a v9→v10 migration that initializes
