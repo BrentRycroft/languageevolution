@@ -16,23 +16,40 @@ import type { Language, SavedRun } from "../types";
  */
 
 describe("B7 (T72b-3) — closed-class lemmas drift slower than content lemmas", () => {
-  it("after 80 gens, closed-class words have ≤ content words' average edit distance", () => {
+  it("after 200 gens, average closed-class drift < average content drift", () => {
+    // Phase 72 methodological audit D-A7: pre-fix this test used a
+    // 1.1× tolerance (allowing closed-class drift up to 10% FASTER
+    // than content — the very inversion the brake was meant to
+    // prevent) and only 5 lemmas per category. Now: 15+ lemmas per
+    // category, 200-gen run for statistical signal, and the bound
+    // is `<` (strictly slower) — anything else would be a brake
+    // inversion.
     const cfg = presetRomance();
     cfg.seed = "p72-b7-drift-ratio";
     const sim = createSimulation(cfg);
     const lang0 = sim.getState().tree["L-0"]!.language;
-    // Sample lemmas: closed-class (declared in Romance preset) vs content (Swadesh).
-    const closedClassSample = ["the", "of", "and", "in", "to"].filter((m) => lang0.lexicon[m]);
-    const contentSample = ["water", "fire", "stone", "tree", "fish"].filter((m) => lang0.lexicon[m]);
-    expect(closedClassSample.length).toBeGreaterThanOrEqual(3);
-    expect(contentSample.length).toBeGreaterThanOrEqual(3);
+    // Sample lemmas: declared closed-class vs content Swadesh.
+    const closedClassPool = [
+      "the", "of", "and", "in", "to", "or", "but", "with",
+      "from", "by", "for", "at", "they", "he", "she", "it",
+      "is", "be", "have", "do",
+    ];
+    const contentPool = [
+      "water", "fire", "stone", "tree", "fish", "bird", "dog", "sun",
+      "moon", "star", "blood", "head", "hand", "eye", "tooth", "earth",
+      "leaf", "bone", "skin", "mouth",
+    ];
+    const closedClassSample = closedClassPool.filter((m) => lang0.lexicon[m]);
+    const contentSample = contentPool.filter((m) => lang0.lexicon[m]);
+    expect(closedClassSample.length).toBeGreaterThanOrEqual(15);
+    expect(contentSample.length).toBeGreaterThanOrEqual(15);
     // Snapshot pre-drift forms.
     const beforeCC: Record<string, string[]> = {};
     const beforeContent: Record<string, string[]> = {};
     for (const m of closedClassSample) beforeCC[m] = lang0.lexicon[m]!.slice();
     for (const m of contentSample) beforeContent[m] = lang0.lexicon[m]!.slice();
-    // Run drift.
-    for (let i = 0; i < 80; i++) sim.step();
+    // Longer run for statistical signal.
+    for (let i = 0; i < 200; i++) sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
     const dist = (a: string[], b: string[]): number => {
       // Symmetric difference: count of positions/elements that differ.
@@ -55,11 +72,13 @@ describe("B7 (T72b-3) — closed-class lemmas drift slower than content lemmas",
     }
     const ccAvg = ccTotal / closedClassSample.length;
     const contentAvg = contentTotal / contentSample.length;
-    // Closed-class brake is ×0.3, content Swadesh is ×0.4. Closed-class
-    // SHOULD drift ≤ content (lower-bound; allow ratio noise from RNG).
-    // The strict ratio is 0.3/0.4 = 0.75; we accept ≤ 1.1 (closed-class
-    // can be marginally above content under high-variance RNG seeds).
-    expect(ccAvg).toBeLessThanOrEqual(contentAvg * 1.1);
+    // Closed-class freq=0.95 (Phase 71c seed); content Swadesh freq
+    // varies. The combination of (high freq → high freqExp via the
+    // function-word direction) × (closed-class ×0.3 brake) yields
+    // smaller adjusted drift probability than content's
+    // (freqInput=1-freq × content-×0.4 brake when applicable).
+    // Direction is closed-class strictly slower.
+    expect(ccAvg).toBeLessThan(contentAvg);
   });
 });
 
@@ -249,11 +268,13 @@ describe("B13 (T72f-6) — speaker conservation during language shift", () => {
     const totalAfter = Object.values(sim.getState().tree)
       .filter((n) => !n.language.extinct)
       .reduce((s, n) => s + (n.language.speakers ?? 0), 0);
-    // Conservation modulo Malthusian growth: total shouldn't shrink
-    // dramatically (we're not testing exact equality because births/
-    // deaths and Malthusian decay both change totals). Just verify the
-    // simulator didn't lose >50% of speakers (sanity).
-    expect(totalAfter).toBeGreaterThan(totalBefore * 0.5);
-    expect(totalAfter).toBeLessThan(totalBefore * 5);
+    // Phase 72 methodological audit D-A8: pre-fix the bounds were
+    // 0.5× to 5× (admits 50% loss / 400% gain — would silently miss
+    // half the speakers vanishing). Tightened to ±15% which still
+    // accommodates Malthusian growth and sister-birth/death noise
+    // over a 10-gen window but actually catches conservation
+    // violations.
+    expect(totalAfter).toBeGreaterThan(totalBefore * 0.85);
+    expect(totalAfter).toBeLessThan(totalBefore * 1.15);
   });
 });

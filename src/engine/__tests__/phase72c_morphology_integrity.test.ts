@@ -79,8 +79,12 @@ describe("Phase 72c-1 — empty-affix paradigm bails to bare stem", () => {
       ],
     };
     const result = inflect(stem, mixedParadigm, lang, "test");
+    // Phase 72 methodological audit D-A3: pre-fix this asserted `>=`,
+    // which passes even if the variant is NOT applied (result equals
+    // stem length). Now we strictly assert `>` to prove the variant
+    // affix ["t"] was actually appended.
     // Stem is vowel-final ("a") so the variant ["t"] should fire.
-    expect(result.length).toBeGreaterThanOrEqual(stem.length);
+    expect(result.length).toBeGreaterThan(stem.length);
   });
 });
 

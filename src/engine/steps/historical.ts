@@ -47,7 +47,12 @@ import type { RuleFamily } from "../phonology/generated-types";
  */
 const HISTORICAL_EVENTS_CAP = 200;
 
-function recordHistoricalEvent(
+/**
+ * Phase 72 methodological audit D-A1: exported for tests so we can
+ * verify the cap mechanism without rebuilding the entire Historical
+ * Mode milestone trigger chain. Production callers stay in this file.
+ */
+export function recordHistoricalEvent(
   state: SimulationState,
   generation: number,
   label: string,
