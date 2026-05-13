@@ -57,19 +57,66 @@ function pick<T>(pool: readonly T[], rng: Rng): T {
   return pool[rng.int(pool.length)]!;
 }
 
+/**
+ * Phase 73b B5: when the template's tense isn't supported by the
+ * language's declared morphology + auxiliary realisation, downcast to
+ * present. Pre-73b a tenseless daughter would render a "past" English
+ * gloss against a surface form with no past morphology — the gloss
+ * and surface disagreed. Downcasting aligns them.
+ *
+ * A language supports past iff `tenseMarking` includes it.
+ * A language supports future iff `tenseMarking` includes it OR a
+ * periphrastic strategy (go/will/shall-future) is set.
+ */
+function downcastTenseToLang(
+  template: AbstractTemplate,
+  lang: Language,
+): AbstractTemplate {
+  if (template.tense === "present") return template;
+  const tm = lang.grammar.tenseMarking ?? "past";
+  if (template.tense === "past") {
+    if (tm === "past" || tm === "both") return template;
+    return { ...template, tense: "present" };
+  }
+  // future
+  if (tm === "future" || tm === "both") return template;
+  const fr = lang.grammar.futureRealisation ?? "synthetic";
+  if (fr === "go-future" || fr === "will-future" || fr === "shall-future") {
+    return template;
+  }
+  return { ...template, tense: "present" };
+}
+
 function pickTemplate(
   genre: DiscourseGenre,
+  lang: Language,
   ctx: DiscourseContext,
   rng: Rng,
 ): AbstractTemplate {
   const all = templatesFor(genre);
-  const introducing = all.filter((t) => t.introducesEntity);
-  const continuing = all.filter((t) => t.topicSubject);
-  if (ctx.turnIndex === 0 || !ctx.topic) return pick(introducing, rng);
-  // Phase 26d: when a genre has no topicSubject templates (e.g. poetry's
-  // tight introducing-only set), fall back to introducing templates.
-  if (continuing.length === 0) return pick(introducing, rng);
-  return rng.next() < 0.6 ? pick(continuing, rng) : pick(introducing, rng);
+  // Phase 73b B5: prefer templates whose adjective requirement the
+  // language's actual lexicon can satisfy. fillSlots still falls
+  // through to ADJECTIVE_POOL when no lexical adjectives exist, but
+  // skipping adj-requiring shapes when possible avoids leaking the
+  // curated English-shaped fallback into non-English daughter output.
+  const hasAdjLex = adjectivePool(lang).length > 0;
+  const pool: readonly AbstractTemplate[] = hasAdjLex
+    ? all
+    : (() => {
+        const filtered = all.filter((t) => !t.needs.adjective);
+        return filtered.length > 0 ? filtered : all;
+      })();
+  const introducing = pool.filter((t) => t.introducesEntity);
+  const continuing = pool.filter((t) => t.topicSubject);
+  let picked: AbstractTemplate;
+  if (ctx.turnIndex === 0 || !ctx.topic) {
+    picked = pick(introducing.length > 0 ? introducing : pool, rng);
+  } else if (continuing.length === 0) {
+    picked = pick(introducing.length > 0 ? introducing : pool, rng);
+  } else {
+    picked = rng.next() < 0.6 ? pick(continuing, rng) : pick(introducing, rng);
+  }
+  return downcastTenseToLang(picked, lang);
 }
 
 /**
@@ -275,7 +322,7 @@ export function generateDiscourseNarrative(
   const haveForm = lang.lexicon["have"];
 
   for (let i = 0; i < lines; i++) {
-    const baseTemplate = pickTemplate(genre, ctx, rng);
+    const baseTemplate = pickTemplate(genre, lang, ctx, rng);
     // Negation: ~negationRate of templates flip to negated.
     let template: AbstractTemplate = rng.chance(negationRate)
       ? { ...baseTemplate, negated: true }
@@ -341,7 +388,7 @@ export function generateDiscourseNarrative(
     let finalSurface = composed.surface;
     let finalGloss = morphologicalGloss(composed.tokens);
     if (andForm && rng.chance(coordRate)) {
-      const tpl2 = pickTemplate(genre, ctx, rng);
+      const tpl2 = pickTemplate(genre, lang, ctx, rng);
       const slots2 = fillSlots(tpl2, lang, rng);
       const composed2 = composeTargetSentence(lang, tpl2, slots2, ctx, script, {
         rng,
@@ -395,7 +442,7 @@ function generatePoetryStanza(
   const candidatePoolSize = Math.max(16, lineCount * 8);
   const candidates: import("./poetry").CandidateLine[] = [];
   for (let i = 0; i < candidatePoolSize; i++) {
-    const baseTemplate = pickTemplate("poetry", ctx, rng);
+    const baseTemplate = pickTemplate("poetry", lang, ctx, rng);
     const slots = fillSlots(baseTemplate, lang, rng);
     if (baseTemplate.needs.subject && slots.subject) {
       mention(ctx, slots.subject as Meaning);

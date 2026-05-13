@@ -4,7 +4,8 @@ import { formToString } from "../phonology/ipa";
 import { formatForm, type DisplayScript } from "../phonology/display";
 import { inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
-import { translateSentence } from "../translator/sentence";
+import { tokeniseEnglish, translateSentenceViaAST } from "../translator/sentence";
+import { englishTokensToAST } from "../translator/ast";
 import { posOf } from "../lexicon/pos";
 
 /**
@@ -428,7 +429,15 @@ function realizeSkeleton(
       objectNoun,
       adjective,
     );
-    const translated = translateSentence(lang, englishStr);
+    // Phase 73b B2: route narrative through the AST bridge so the
+    // realiser gets explicit role tags (subject/object) rather than
+    // having to recover them from the parser's English-shaped tree.
+    // The bridge's astToSentence handles the common case directly;
+    // translateSentenceViaAST falls back to parse-on-projected-tokens
+    // when the AST IR can't yet express the construction.
+    const englishTokens = tokeniseEnglish(englishStr);
+    const ast = englishTokensToAST(englishTokens);
+    const translated = translateSentenceViaAST(lang, ast, englishStr);
     if (translated.targetTokens.length > 0) {
       const text = translated.targetTokens
         .map((t) => {
