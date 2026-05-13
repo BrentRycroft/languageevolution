@@ -10,6 +10,10 @@ import { glossToEnglish } from "../translator/glossToEnglish";
 import { pickSynonymForGenre } from "./genre_bias";
 import { closedClassForm } from "../translator/closedClass";
 import { tryDerivedFormFromMeaning } from "../morphology/derivation";
+import { composeTargetClause } from "./roleProjection";
+import type { RoleClause } from "../translator/syntax";
+
+export { composeTargetClause };
 
 /**
  * composer.ts
@@ -745,7 +749,28 @@ function arrangeSV(
   }
 }
 
-export function composeTargetSentence(
+/**
+ * Phase 73c Tier C Phase 2: token-realisation half of the composer.
+ *
+ * Pre-Phase-2, `composeTargetSentence` was a single ~250-line
+ * function that mixed structural extraction (which participants
+ * play which roles) with token emission (do-support, perfect-aspect
+ * AUX, word-order arrangement, English caption rendering).
+ *
+ * Phase 2 splits the function in two:
+ *   1. `composeTargetClause` (in `./roleProjection.ts`) — pure data
+ *      transform producing a `RoleClause` IR view of the inputs.
+ *   2. `projectRoleClauseToTokens` (this function) — the legacy
+ *      token-realisation body, now consuming the clause alongside
+ *      `(template, slots)` for back-compat reads of fields the IR
+ *      doesn't yet cover (shape-driven opener/adjunct dispatch).
+ *
+ * The Phase 2 contract is byte-identical narrative output. Phase 4
+ * narrows this signature to `(clause, lang, ctx, script, options)`
+ * once the clause is sufficient.
+ */
+export function projectRoleClauseToTokens(
+  clause: RoleClause,
   lang: Language,
   template: AbstractTemplate,
   slots: SlotAssignment,
@@ -753,6 +778,9 @@ export function composeTargetSentence(
   script: DisplayScript = "ipa",
   options: ComposeOptions = {},
 ): ComposedSentence {
+  void clause; // Phase 2 byte-identity: clause is constructed for
+               // tests + Phase 4. Token realisation here still reads
+               // template/slots directly; Phase 4 will narrow.
   const tense = template.tense;
   const openerTokens: RoleToken[] = [];
 
@@ -996,4 +1024,30 @@ export function composeTargetSentence(
     surface: targetSurface,
     english,
   };
+}
+
+/**
+ * Phase 73c Tier C Phase 2: thin wrapper preserving the legacy
+ * `composeTargetSentence` signature for the existing five call
+ * sites in `discourse_generate.ts`. Builds the RoleClause IR
+ * view, then projects via `projectRoleClauseToTokens`.
+ */
+export function composeTargetSentence(
+  lang: Language,
+  template: AbstractTemplate,
+  slots: SlotAssignment,
+  ctx: DiscourseContext,
+  script: DisplayScript = "ipa",
+  options: ComposeOptions = {},
+): ComposedSentence {
+  const clause = composeTargetClause(lang, template, slots, ctx);
+  return projectRoleClauseToTokens(
+    clause,
+    lang,
+    template,
+    slots,
+    ctx,
+    script,
+    options,
+  );
 }
