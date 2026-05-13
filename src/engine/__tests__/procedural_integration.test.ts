@@ -49,7 +49,17 @@ describe("procedural sound-change integration", () => {
     expect(childIds.length).toBeGreaterThanOrEqual(2);
     for (const id of childIds) {
       const rules = state.tree[id]!.language.activeRules ?? [];
-      expect(rules.length).toBeLessThanOrEqual(fakeRules.length);
+      // Phase 73a: bound is fakeRules.length + 1 (not fakeRules.length).
+      // splitLeaf filters parent's activeRules with chance(0.7) AND
+      // applyFounderInnovation can propose ONE additional phonology
+      // rule. Pre-73a Tier A, the seed's gen-40 RNG state happened to
+      // never trigger both "keep all 6" + "fire founder phonology" in
+      // the same daughter, so the upper bound was effectively 6.
+      // Tier A's higher rule-firing rate shifted the seed's state and
+      // exposed the latent off-by-one in the bound. Test intent stays:
+      // children inherit the parent's rules with a drop probability,
+      // plus possibly one founder innovation.
+      expect(rules.length).toBeLessThanOrEqual(fakeRules.length + 1);
     }
   });
 
