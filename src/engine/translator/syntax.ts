@@ -130,3 +130,17 @@ export interface Sentence {
   leadingConj?: { lemma: string };
   leadingWh?: { lemma: string };
 }
+
+// Tier C Phase 0 (Phase 73c): role-frame IR. Defined in
+// `./roleFrame.ts`; re-exported here so existing imports of
+// `./syntax` discover the new types without changing their
+// import paths once Phase 2+ start consuming them.
+export type {
+  SemanticRole,
+  ParticipantFeatures,
+  ParticipantModifier,
+  Participant,
+  PredicateFeatures,
+  PredicateFrame,
+  RoleClause,
+} from "./roleFrame";
