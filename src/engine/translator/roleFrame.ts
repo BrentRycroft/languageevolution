@@ -29,6 +29,7 @@ import type {
   Person,
   Voice,
 } from "./syntax";
+export type { Degree };
 
 /**
  * Semantic-role inventory. Drawn from canonical case-grammar /
@@ -69,6 +70,14 @@ export interface ParticipantFeatures {
   person?: Person;
   isPronoun?: boolean;
   nounClass?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  /**
+   * Phase 3 internal flag: set when the parser synthesised this
+   * participant (WH-subject fallback, imperative "you", RC
+   * subject-gap fill-in). Used by `parseSyntaxAllAsClauses` to
+   * track which subjects can be inherited from a preceding clause
+   * in S-coordination. The realiser does NOT read this.
+   */
+  synthesized?: boolean;
 }
 
 /**
@@ -106,6 +115,13 @@ export interface Participant {
   features?: ParticipantFeatures;
   modifiers?: ParticipantModifier[];
   adjunct?: boolean;
+  /**
+   * Phase 3: original preposition lemma for adjunct participants.
+   * Necessary because role-tag → preposition is not injective (`at`,
+   * `in`, `on` all map to `location`), and byte-identity through
+   * the `Sentence` adapter requires preserving the surface lemma.
+   */
+  preposition?: string;
 }
 
 /**
@@ -134,6 +150,15 @@ export interface PredicateFrame {
   lemma: string;
   features?: PredicateFeatures;
   argFrame?: ReadonlyArray<SemanticRole>;
+  /**
+   * Phase 3: predicative complements for copular constructions
+   * ("X is happy"). Each entry is a property attributed to the
+   * subject; the realiser surfaces these per the language's
+   * copular strategy. Attributive adjectives ("the big king")
+   * stay on the participant via `ParticipantModifier.kind:
+   * "adjective"`.
+   */
+  complement?: ReadonlyArray<{ lemma: string; degree?: Degree }>;
 }
 
 /**

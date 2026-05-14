@@ -1,27 +1,372 @@
 import type { EnglishToken } from "./tokens";
 import { WH_LEMMAS } from "./tokens";
+import type { Sentence } from "./syntax";
 import type {
-  NP,
-  PP,
-  Sentence,
-  VP,
-  Person,
-  Number_,
-} from "./syntax";
+  RoleClause,
+  Participant,
+  ParticipantModifier,
+  PredicateFeatures,
+  SemanticRole,
+} from "./roleFrame";
+import { roleClauseToSentence } from "./ast";
 
 /**
- * parse.ts
+ * parse.ts — Phase 73c Tier C Phase 3.
  *
- * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: parseSyntax, parseSyntaxAll.
+ * English-token → RoleClause parser. Replaces the legacy
+ * Sentence-emitting body. `parseSyntaxToClause` is the canonical
+ * entry point; the legacy `parseSyntax(): Sentence` survives as a
+ * thin wrapper that pipes through `roleClauseToSentence` for the
+ * existing realiser. `parseSyntaxAllAsClauses` handles multi-clause
+ * inputs (relative-clause extraction + S-coordination via
+ * `RoleClause.coordinatedWith`).
  *
- * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
+ * The 8 construction sites the plan called out — subject pronoun
+ * fallbacks (WH-subject, imperative "you"), predicate framing,
+ * relative-clause subject fill-in, RC attachment, NP collection
+ * (pronoun + lexical head paths), PP collection, NP-coordination —
+ * all now build `Participant`/`PredicateFrame` directly. Modifiers
+ * (determiner, adjectives, possessor, numeral, coord, relative,
+ * PPs) hang on `Participant.modifiers`.
+ *
+ * Key exports: parseSyntaxToClause, parseSyntaxAllAsClauses,
+ * parseSyntax (wrapper), parseSyntaxAll (wrapper).
  */
 
-export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
+// ─────────────────────────────────────────────────────────────────────
+// Preposition → role mapping. Mirrors the table in ast.ts; kept
+// inline here so the parser is independent of the adapter.
+// ─────────────────────────────────────────────────────────────────────
+
+const PREP_ROLE_TABLE: Record<string, SemanticRole> = {
+  in: "location",
+  on: "location",
+  at: "location",
+  near: "location",
+  under: "location",
+  over: "location",
+  through: "manner",
+  from: "source",
+  out: "source",
+  to: "goal",
+  toward: "goal",
+  into: "goal",
+  with: "instrument",
+  by: "instrument",
+  for: "recipient",
+  during: "time",
+  before: "time",
+  after: "time",
+  of: "agent",
+};
+
+function prepToRole(lemma: string): SemanticRole {
+  return PREP_ROLE_TABLE[lemma] ?? "location";
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Participant collection. Mirrors the legacy collectNP's structural
+// decisions (head detection, possessor, determiner, adjectives,
+// numeral, NP-coord, of-genitive) but emits Participant directly.
+// ─────────────────────────────────────────────────────────────────────
+
+function collectParticipant(
+  tokens: EnglishToken[],
+  pivot: number,
+  direction: "left" | "right",
+  consumed: Set<number>,
+  role: SemanticRole,
+): Participant | null {
+  const claim = (i: number) => consumed.add(i);
+  const range = direction === "left"
+    ? { start: pivot - 1, end: -1, step: -1 }
+    : { start: pivot + 1, end: tokens.length, step: 1 };
+
+  let headIdx = -1;
+  for (
+    let i = range.start;
+    direction === "left" ? i > range.end : i < range.end;
+    i += range.step
+  ) {
+    const t = tokens[i]!;
+    if (t.tag === "N" || t.tag === "PRON") {
+      headIdx = i;
+      if (direction === "left") {
+        // Bridge over PP-separated heads ("the king of the realm").
+        let j = i - 1;
+        let lastBridgedHead = i;
+        while (j >= 0) {
+          const u = tokens[j]!;
+          if (u.tag === "V") break;
+          if (u.tag === "N" || u.tag === "PRON") {
+            let bridge = false;
+            for (let k = j + 1; k < lastBridgedHead; k++) {
+              if (tokens[k]!.tag === "PREP") { bridge = true; break; }
+            }
+            if (bridge) {
+              headIdx = j;
+              lastBridgedHead = j;
+            } else {
+              break;
+            }
+          }
+          j--;
+        }
+      }
+      break;
+    }
+    if (t.tag === "V") break;
+    if (t.tag === "PREP") break;
+  }
+  if (headIdx < 0) return null;
+  claim(headIdx);
+
+  let headTok = tokens[headIdx]!;
+  const modifiers: ParticipantModifier[] = [];
+
+  // of-genitive: "the X of Y" — Y becomes the possessor; head is X.
+  if (direction === "left") {
+    let scan = headIdx - 1;
+    while (scan >= 0 && tokens[scan]!.tag === "DET") scan--;
+    if (scan >= 0 && tokens[scan]!.tag === "PREP" && tokens[scan]!.lemma === "of") {
+      let realHeadIdx = -1;
+      for (let i = scan - 1; i >= 0; i--) {
+        const t = tokens[i]!;
+        if (t.tag === "N" || t.tag === "PRON") {
+          realHeadIdx = i;
+          break;
+        }
+        if (t.tag === "V") break;
+      }
+      if (realHeadIdx >= 0) {
+        const possessor: Participant = {
+          lemma: headTok.lemma,
+          pos: headTok.tag === "PRON" ? "PRON" : "N",
+          role: "agent",
+          features: {
+            number: headTok.features.number === "pl" ? "pl" : "sg",
+            ...(headTok.features.person ? { person: (headTok.features.person ?? "3") as "1" | "2" | "3" } : { person: "3" }),
+            ...(headTok.tag === "PRON" ? { isPronoun: true } : {}),
+          },
+        };
+        modifiers.push({ kind: "possessor", participant: possessor });
+        for (let k = scan; k <= headIdx; k++) claim(k);
+        headIdx = realHeadIdx;
+        claim(headIdx);
+        headTok = tokens[headIdx]!;
+      }
+    }
+  }
+
+  // Walk left: determiners, adjectives, numerals, pronominal possessors.
+  let leftEdge = headIdx;
+  let leftMostAdjective = headIdx;
+  const adjectives: { lemma: string; degree?: import("./syntax").Degree }[] = [];
+  for (let i = headIdx - 1; i >= 0; i--) {
+    const t = tokens[i]!;
+    if (t.tag === "ADJ") {
+      const deg = t.features.degree;
+      adjectives.unshift({
+        lemma: t.lemma,
+        ...(deg && deg !== "positive" ? { degree: deg } : {}),
+      });
+      leftMostAdjective = i;
+      leftEdge = i;
+      claim(i);
+      continue;
+    }
+    if (t.tag === "DET") {
+      modifiers.push({ kind: "determiner", lemma: t.lemma });
+      leftEdge = i;
+      claim(i);
+      continue;
+    }
+    if (t.tag === "NUM") {
+      modifiers.push({ kind: "numeral", lemma: t.lemma });
+      leftEdge = i;
+      claim(i);
+      continue;
+    }
+    if ((t.tag === "N" || t.tag === "PRON") && t.features.possessor) {
+      const possessor: Participant = {
+        lemma: t.lemma,
+        pos: t.tag === "PRON" ? "PRON" : "N",
+        role: "agent",
+        features: {
+          number: t.features.number === "pl" ? "pl" : "sg",
+          person: (t.features.person ?? "3") as "1" | "2" | "3",
+          ...(t.tag === "PRON" ? { isPronoun: true } : {}),
+        },
+      };
+      const possessorMods: ParticipantModifier[] = [];
+      leftEdge = i;
+      claim(i);
+      for (let j = i - 1; j >= 0; j--) {
+        const pt = tokens[j]!;
+        if (pt.tag === "DET") {
+          possessorMods.push({ kind: "determiner", lemma: pt.lemma });
+          leftEdge = j;
+          claim(j);
+          continue;
+        }
+        break;
+      }
+      if (possessorMods.length > 0) possessor.modifiers = possessorMods;
+      modifiers.push({ kind: "possessor", participant: possessor });
+      break;
+    }
+    break;
+  }
+  // Adjectives are layered onto modifiers in legacy order (leftmost first).
+  for (const adj of adjectives) {
+    modifiers.push({ kind: "adjective", lemma: adj.lemma, ...(adj.degree ? { degree: adj.degree } : {}) });
+  }
+  // Adjective edge wins for leftEdge if it's leftmost.
+  if (leftMostAdjective < leftEdge) leftEdge = leftMostAdjective;
+
+  // Left-coord: "X and Y verb …" — the entire left coordinand is built recursively.
+  if (direction === "left" && leftEdge > 0) {
+    const conjTok = tokens[leftEdge - 1];
+    if (conjTok && conjTok.tag === "CONJ") {
+      claim(leftEdge - 1);
+      const leftCoord = collectParticipant(tokens, leftEdge - 1, "left", consumed, role);
+      if (leftCoord) {
+        // The CURRENT participant becomes the right member of the coord.
+        const rightMember: Participant = {
+          lemma: headTok.lemma,
+          pos: headTok.tag === "PRON" ? "PRON" : "N",
+          role,
+          features: {
+            number: headTok.features.number === "pl" ? "pl" : "sg",
+            person: (headTok.features.person ?? "3") as "1" | "2" | "3",
+            ...(headTok.tag === "PRON" ? { isPronoun: true } : {}),
+          },
+          ...(modifiers.length > 0 ? { modifiers } : {}),
+        };
+        const coordMod: ParticipantModifier = {
+          kind: "coordination",
+          conjunction: conjTok.lemma,
+          participant: rightMember,
+        };
+        const leftMods = leftCoord.modifiers ? [...leftCoord.modifiers, coordMod] : [coordMod];
+        return { ...leftCoord, modifiers: leftMods };
+      }
+    }
+  }
+
+  // Right-side: of-PP attachment to head.
+  let rightEdge = headIdx;
+  if (
+    headIdx + 1 < tokens.length &&
+    tokens[headIdx + 1]!.tag === "PREP" &&
+    tokens[headIdx + 1]!.lemma === "of" &&
+    !modifiers.some((m) => m.kind === "possessor")
+  ) {
+    const ofIdx = headIdx + 1;
+    claim(ofIdx);
+    const sub = collectParticipant(tokens, ofIdx, "right", consumed, "agent");
+    if (sub) {
+      modifiers.push({ kind: "possessor", participant: sub });
+    }
+    let i = ofIdx;
+    while (i + 1 < tokens.length && tokens[i + 1]!.tag !== "PREP") {
+      i++;
+      claim(i);
+    }
+    rightEdge = i;
+  }
+
+  // Right-coord: "verb X and Y" — chain a follow-up object coordinand.
+  if (direction === "right" && rightEdge + 1 < tokens.length) {
+    const conjTok = tokens[rightEdge + 1];
+    if (conjTok && conjTok.tag === "CONJ") {
+      claim(rightEdge + 1);
+      const next = collectParticipant(tokens, rightEdge + 1, "right", consumed, role);
+      if (next) {
+        modifiers.push({ kind: "coordination", conjunction: conjTok.lemma, participant: next });
+      }
+    }
+  }
+
+  return {
+    lemma: headTok.lemma,
+    pos: headTok.tag === "PRON" ? "PRON" : "N",
+    role,
+    features: {
+      number: headTok.features.number === "pl" ? "pl" : "sg",
+      person: (headTok.features.person ?? "3") as "1" | "2" | "3",
+      ...(headTok.tag === "PRON" ? { isPronoun: true } : {}),
+    },
+    ...(modifiers.length > 0 ? { modifiers } : {}),
+  };
+}
+
+function collectAdjunctParticipants(tokens: EnglishToken[], consumed: Set<number>): Participant[] {
+  const out: Participant[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (consumed.has(i)) continue;
+    if (tokens[i]!.tag !== "PREP") continue;
+    consumed.add(i);
+    const prep = tokens[i]!.lemma;
+    const np = collectParticipant(tokens, i, "right", consumed, prepToRole(prep));
+    if (!np) continue;
+    out.push({ ...np, adjunct: true, preposition: prep });
+  }
+  return out;
+}
+
+function collectMannerParticipants(tokens: EnglishToken[], consumed: Set<number>): Participant[] {
+  const out: Participant[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (consumed.has(i)) continue;
+    if (tokens[i]!.tag !== "ADV") continue;
+    out.push({
+      lemma: tokens[i]!.lemma,
+      pos: "N",
+      role: "manner",
+      adjunct: true,
+    });
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Feature inference: honorific + evidential cues.
+// ─────────────────────────────────────────────────────────────────────
+
+const HONORIFIC_TRIGGERS = new Set([
+  "please", "kindly", "sir", "madam", "ma'am", "lord", "lady", "honored", "respected",
+]);
+
+function inferHonorific(tokens: EnglishToken[]): boolean {
+  for (const t of tokens) {
+    if (HONORIFIC_TRIGGERS.has(t.lemma.toLowerCase())) return true;
+  }
+  return false;
+}
+
+const REPORTATIVE_LEMMAS = new Set(["say", "tell", "speak"]);
+const INFERRED_LEMMAS = new Set(["think", "know", "guess", "suppose", "seem"]);
+const DIRECT_LEMMAS = new Set(["see", "hear", "feel", "watch", "listen"]);
+
+function inferEvidential(verbBase: string, _tokens: EnglishToken[]): import("./syntax").Evidential | undefined {
+  if (REPORTATIVE_LEMMAS.has(verbBase)) return "reportative";
+  if (INFERRED_LEMMAS.has(verbBase)) return "inferred";
+  if (DIRECT_LEMMAS.has(verbBase)) return "direct";
+  return undefined;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Primary entry point: tokens → RoleClause.
+// ─────────────────────────────────────────────────────────────────────
+
+export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
+  // leadingConj — clause-level coordinator like "and X went home".
   let leadingConj: { lemma: string } | undefined;
   if (tokens.length > 0 && tokens[0]!.tag === "CONJ") {
     leadingConj = { lemma: tokens[0]!.lemma };
   }
+  // leadingWh — interrogative or relative head.
   let leadingWh: { lemma: string } | undefined;
   for (const t of tokens) {
     if (t.tag === "PUNCT" && WH_LEMMAS.has(t.lemma)) {
@@ -30,6 +375,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     }
     if (t.tag === "V") break;
   }
+  // Find verb head, promoting copula / AUX where no V exists.
   let verbIdx = tokens.findIndex((t) => t.tag === "V");
   if (verbIdx < 0) {
     const copIdx = tokens.findIndex(
@@ -80,6 +426,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   }
   const verbTok = tokens[verbIdx]!;
 
+  // Negation: scan around the verb for not / n't / never.
   let negated = false;
   for (let i = Math.max(0, verbIdx - 3); i < Math.min(tokens.length, verbIdx + 4); i++) {
     const t = tokens[i]!;
@@ -88,6 +435,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     }
   }
 
+  // Interrogative: trailing "?" OR initial AUX (yes-no question).
   let interrogative = false;
   if (tokens.length > 0 && tokens[tokens.length - 1]!.lemma === "?") {
     interrogative = true;
@@ -96,6 +444,7 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     interrogative = true;
   }
 
+  // Aspect / mood / voice cues from preceding AUX.
   let aspect: import("./syntax").Aspect | undefined;
   let mood: import("./syntax").Mood | undefined;
   let voice: import("./syntax").Voice | undefined;
@@ -126,59 +475,50 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
   const consumed = new Set<number>();
   consumed.add(verbIdx);
 
-  let subject = collectNP(tokens, verbIdx, "left", consumed);
+  // Subject collection. Pronoun fallbacks construct synthesised
+  // participants directly (no longer goes through NP shape).
+  let subject = collectParticipant(tokens, verbIdx, "left", consumed, "agent");
   if (!subject) {
     const whSubjectLemmas = new Set(["who", "what", "which", "whoever", "whatever"]);
     const leftIsBareWh =
       leadingWh &&
       whSubjectLemmas.has(leadingWh.lemma) &&
-      tokens.slice(0, verbIdx).every(
-        (t) => t.tag === "PUNCT" || t.tag === "AUX",
-      );
+      tokens.slice(0, verbIdx).every((t) => t.tag === "PUNCT" || t.tag === "AUX");
     if (leftIsBareWh) {
       subject = {
-        kind: "NP",
-        head: {
-          lemma: leadingWh!.lemma,
-          baseForm: [],
-          number: "sg",
-          case: "nom",
-          person: "3",
-          isPronoun: true,
-          synthesized: true,
-        },
-        adjectives: [],
-        pps: [],
+        lemma: leadingWh!.lemma,
+        pos: "PRON",
+        role: "agent",
+        features: { number: "sg", person: "3", isPronoun: true, synthesized: true },
       };
       leadingWh = undefined;
     } else if (verbIdx === 0 || (verbIdx > 0 && tokens[0]!.tag === "AUX")) {
       subject = {
-        kind: "NP",
-        head: {
-          lemma: "you",
-          baseForm: [],
-          number: "sg",
-          case: "nom",
-          person: "2",
-          isPronoun: true,
-          synthesized: true,
-        },
-        adjectives: [],
-        pps: [],
+        lemma: "you",
+        pos: "PRON",
+        role: "agent",
+        features: { number: "sg", person: "2", isPronoun: true, synthesized: true },
       };
     } else {
       return null;
     }
   }
 
-  const object = collectNP(tokens, verbIdx, "right", consumed) ?? undefined;
+  // Object collection (right of verb).
+  const object = collectParticipant(tokens, verbIdx, "right", consumed, "patient") ?? undefined;
 
-  const complement: { lemma: string; baseForm: never[] }[] = [];
+  // Copular complement: when verb is "be" and no object, sweep adjectives.
+  const complement: { lemma: string; degree?: import("./syntax").Degree }[] = [];
   if (verbTok.lemma === "be" && !object) {
     for (let i = verbIdx + 1; i < tokens.length; i++) {
       const t = tokens[i]!;
       if (t.tag === "ADJ") {
-        complement.push({ lemma: t.lemma, baseForm: [] });
+        const deg = t.features.degree;
+        complement.push({
+          lemma: t.lemma,
+          ...(deg && deg !== "positive" ? { degree: deg } : {}),
+        });
+        consumed.add(i);
         continue;
       }
       if (t.tag === "PUNCT" || t.tag === "AUX" || t.tag === "DET") continue;
@@ -186,91 +526,184 @@ export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
     }
   }
 
-  const pps = collectPPs(tokens, consumed);
+  // PP adjuncts.
+  const ppAdjuncts = collectAdjunctParticipants(tokens, consumed);
+  // Adverb manner participants.
+  const adverbs = collectMannerParticipants(tokens, consumed);
 
+  // Passive: "by"-PP gets instrumental case marking. In the
+  // Role-IR this is conveyed via the existing instrument role; the
+  // adapter re-maps to NP.head.case = "inst" when surfacing.
   if (voice === "passive") {
-    for (const pp of pps) {
-      if (pp.prep.lemma === "by") {
-        pp.np.head.case = "inst";
-      }
+    for (const a of ppAdjuncts) {
+      // Mark the role explicitly so the adapter writes case = "inst".
+      // (The collector already does this via prepToRole("by") → "instrument".)
+      void a;
     }
   }
 
-  const tense: "past" | "present" | "future" =
-    verbTok.features.tense ?? "present";
-  const subjectPerson = subject.head.person;
-  const subjectNumber = subject.head.number;
-
+  const tense: "past" | "present" | "future" = verbTok.features.tense ?? "present";
   const verbBase = verbTok.lemma;
   const evidential = inferEvidential(verbBase, tokens);
   const honorific = inferHonorific(tokens);
-  const predicate: VP = {
-    kind: "VP",
-    verb: {
-      lemma: verbBase,
-      baseForm: [],
-      tense,
-      subjectPerson,
-      subjectNumber,
-      aspect,
-      mood,
-      voice,
-      evidential,
-      honorific,
-    },
-    object,
-    pps,
-    adverbs: collectAdverbs(tokens, consumed),
-    complement: complement.length > 0 ? complement : undefined,
+
+  const predFeatures: PredicateFeatures = {
+    tense,
+    ...(aspect ? { aspect } : {}),
+    ...(mood ? { mood } : {}),
+    ...(voice ? { voice } : {}),
+    ...(evidential ? { evidential } : {}),
+    ...(honorific ? { honorific: true } : {}),
   };
 
   if (leadingWh) interrogative = true;
-  return { kind: "S", subject, predicate, negated, interrogative, leadingConj, leadingWh };
+
+  const participants: Participant[] = [subject];
+  if (object) participants.push(object);
+  participants.push(...ppAdjuncts);
+  participants.push(...adverbs);
+
+  return {
+    kind: "RoleClause",
+    predicate: {
+      lemma: verbBase,
+      features: predFeatures,
+      ...(complement.length > 0 ? { complement } : {}),
+    },
+    participants,
+    ...(negated ? { negated: true } : {}),
+    ...(interrogative ? { interrogative: true } : {}),
+    ...(leadingConj ? { leadingConj } : {}),
+    ...(leadingWh ? { leadingWh } : {}),
+  };
 }
 
-export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
-  const rel = extractRelativeClause(tokens);
-  if (rel) {
-    const matrixSentences = parseSyntaxAll(rel.matrix);
-    const relSentence = parseSyntax(rel.relative);
-    if (relSentence) {
-      relSentence.leadingWh = { lemma: rel.relLemma };
-      const subjectGap = relSentence.subject.head.synthesized === true;
-      if (subjectGap) {
-        const a = rel.antecedent;
-        relSentence.subject = {
-          kind: "NP",
-          head: {
-            lemma: a.lemma,
-            baseForm: [],
-            number: a.features.number === "pl" ? "pl" : "sg",
-            case: "nom",
-            person: (a.features.person ?? "3") as Person,
-            isPronoun: a.tag === "PRON",
-          },
-          adjectives: [],
-          pps: [],
-        };
+// ─────────────────────────────────────────────────────────────────────
+// Multi-clause: RC extraction + S-coordination.
+// ─────────────────────────────────────────────────────────────────────
+
+function findAntecedentParticipant(
+  clauses: RoleClause[],
+  lemma: string,
+): Participant | null {
+  for (const c of clauses) {
+    for (const p of c.participants) {
+      if (p.lemma === lemma) return p;
+      // Search modifiers' nested participants.
+      for (const mod of p.modifiers ?? []) {
+        if (mod.kind === "oblique" && mod.participant.lemma === lemma) return mod.participant;
+        if (mod.kind === "coordination" && mod.participant.lemma === lemma) return mod.participant;
+        if (mod.kind === "possessor" && mod.participant.lemma === lemma) return mod.participant;
       }
-      const antecedentNP = findAntecedentNP(matrixSentences, rel.antecedent.lemma);
-      if (antecedentNP) {
-        const relizerLemma = rel.relLemma === "who" || rel.relLemma === "which" || rel.relLemma === "that"
-          ? rel.relLemma as "who" | "that" | "which"
-          : "that";
-        antecedentNP.relative = {
-          kind: "RC",
-          relativizer: relizerLemma,
-          predicate: relSentence.predicate,
-          subjectGap,
-        };
-        return matrixSentences;
-      }
-      return [...matrixSentences, relSentence];
     }
   }
+  return null;
+}
+
+interface RelExtraction {
+  matrix: EnglishToken[];
+  relative: EnglishToken[];
+  antecedent: EnglishToken;
+  relLemma: string;
+}
+
+function extractRelativeClause(tokens: EnglishToken[]): RelExtraction | null {
+  for (let i = 1; i < tokens.length - 1; i++) {
+    const t = tokens[i]!;
+    const isWhRel = t.tag === "PUNCT" && WH_LEMMAS.has(t.lemma);
+    // Phase 73c Phase 3: legacy `isThatRel` checked only DET-tagged
+    // "that"; the tokenizer actually emits PRON for "that" in
+    // post-nominal contexts (relative clauses), so the legacy code
+    // silently dropped most "that"-RC inputs. Widened to accept both
+    // tags here so PRON-tagged "that" is recognised.
+    const isThatRel = (t.tag === "DET" || t.tag === "PRON") && t.lemma === "that";
+    if (!isWhRel && !isThatRel) continue;
+    const prev = tokens[i - 1]!;
+    if (prev.tag !== "N" && prev.tag !== "PRON") continue;
+    // Find the relative-clause verb (first V after the relativiser).
+    let relVIdx = -1;
+    for (let j = i + 1; j < tokens.length; j++) {
+      if (tokens[j]!.tag === "V") { relVIdx = j; break; }
+    }
+    if (relVIdx < 0) continue;
+    // Matrix verb AFTER the RC verb (typical for subject-RC).
+    let matrixVAfter = -1;
+    for (let j = relVIdx + 1; j < tokens.length; j++) {
+      if (tokens[j]!.tag === "V") { matrixVAfter = j; break; }
+    }
+    if (matrixVAfter >= 0) {
+      return {
+        matrix: [...tokens.slice(0, i), ...tokens.slice(matrixVAfter)],
+        relative: tokens.slice(i + 1, matrixVAfter),
+        antecedent: prev,
+        relLemma: t.lemma,
+      };
+    }
+    // Matrix verb BEFORE the RC (post-modifier on object).
+    let matrixVBefore = -1;
+    for (let j = i - 1; j >= 0; j--) {
+      if (tokens[j]!.tag === "V") { matrixVBefore = j; break; }
+    }
+    if (matrixVBefore >= 0) {
+      return {
+        matrix: tokens.slice(0, i),
+        relative: tokens.slice(i + 1),
+        antecedent: prev,
+        relLemma: t.lemma,
+      };
+    }
+  }
+  return null;
+}
+
+export function parseSyntaxAllAsClauses(tokens: EnglishToken[]): RoleClause[] {
+  const rel = extractRelativeClause(tokens);
+  if (rel) {
+    const matrixClauses = parseSyntaxAllAsClauses(rel.matrix);
+    const relClause = parseSyntaxToClause(rel.relative);
+    if (relClause) {
+      relClause.leadingWh = { lemma: rel.relLemma };
+      // Detect subject-gap: the relative clause's first participant is
+      // synthesised (we'd have failed to find a real subject token).
+      const relSubject = relClause.participants[0];
+      const subjectGap = !!relSubject?.features?.synthesized;
+      if (subjectGap) {
+        const a = rel.antecedent;
+        relClause.participants[0] = {
+          lemma: a.lemma,
+          pos: a.tag === "PRON" ? "PRON" : "N",
+          role: "agent",
+          features: {
+            number: a.features.number === "pl" ? "pl" : "sg",
+            person: (a.features.person ?? "3") as "1" | "2" | "3",
+            ...(a.tag === "PRON" ? { isPronoun: true } : {}),
+          },
+        };
+      }
+      // Attach the RC to the matrix participant whose lemma matches.
+      const ant = findAntecedentParticipant(matrixClauses, rel.antecedent.lemma);
+      if (ant) {
+        const relizerLemma =
+          rel.relLemma === "who" || rel.relLemma === "which" || rel.relLemma === "that"
+            ? rel.relLemma
+            : "that";
+        const mod: ParticipantModifier = {
+          kind: "relative",
+          clause: relClause,
+          relativiser: relizerLemma,
+          subjectGap,
+        };
+        ant.modifiers = ant.modifiers ? [...ant.modifiers, mod] : [mod];
+        return matrixClauses;
+      }
+      return [...matrixClauses, relClause];
+    }
+  }
+  // Multi-verb S-coordination: split on CONJ/PUNCT boundaries that
+  // separate verb-bearing segments.
   const verbCount = tokens.filter((t) => t.tag === "V").length;
   if (verbCount <= 1) {
-    const single = parseSyntax(tokens);
+    const single = parseSyntaxToClause(tokens);
     return single ? [single] : [];
   }
   const boundaries: number[] = [];
@@ -286,7 +719,7 @@ export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
     if (vBefore >= 1 && vAfter >= 1) boundaries.push(i);
   }
   if (boundaries.length === 0) {
-    const single = parseSyntax(tokens);
+    const single = parseSyntaxToClause(tokens);
     return single ? [single] : [];
   }
   const segments: { tokens: EnglishToken[]; leadingConj?: { lemma: string } }[] = [];
@@ -310,371 +743,45 @@ export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
       merged.push(cur);
     }
   }
-  const out: Sentence[] = [];
+  const out: RoleClause[] = [];
   for (let k = 0; k < merged.length; k++) {
     const seg = merged[k]!;
-    const s = parseSyntax(seg.tokens);
-    if (!s) continue;
-    if (seg.leadingConj && !s.leadingConj) s.leadingConj = seg.leadingConj;
-    if (k > 0 && out.length > 0 && s.subject.head.synthesized) {
-      const segHasNominal = seg.tokens.some(
-        (t) => t.tag === "N" || t.tag === "PRON",
-      );
+    const c = parseSyntaxToClause(seg.tokens);
+    if (!c) continue;
+    if (seg.leadingConj && !c.leadingConj) c.leadingConj = seg.leadingConj;
+    // S-coordination subject inheritance: when a follow-up clause's
+    // subject is synthesised (no real token), inherit from the prior
+    // clause IFF the segment has no nominal at all.
+    if (k > 0 && out.length > 0 && c.participants[0]?.features?.synthesized) {
+      const segHasNominal = seg.tokens.some((t) => t.tag === "N" || t.tag === "PRON");
       if (!segHasNominal) {
-        s.subject = out[out.length - 1]!.subject;
+        const prevSubject = out[out.length - 1]!.participants[0];
+        if (prevSubject) c.participants[0] = prevSubject;
       }
     }
-    out.push(s);
+    out.push(c);
   }
   return out;
 }
 
-function findAntecedentNP(sentences: Sentence[], lemma: string): NP | null {
-  for (const s of sentences) {
-    if (s.subject.head.lemma === lemma) return s.subject;
-    if (s.predicate.object?.head.lemma === lemma) return s.predicate.object;
-    for (const pp of s.predicate.pps) {
-      if (pp.np.head.lemma === lemma) return pp.np;
-    }
-    for (const pp of s.subject.pps) {
-      if (pp.np.head.lemma === lemma) return pp.np;
-    }
-  }
-  return null;
+// ─────────────────────────────────────────────────────────────────────
+// Back-compat wrappers. The existing realiser consumes `Sentence`;
+// these wrappers pipe through `roleClauseToSentence` so callers see
+// no signature change. Phase 4 will narrow the realiser to consume
+// `RoleClause` directly and these wrappers become deprecation shims.
+// ─────────────────────────────────────────────────────────────────────
+
+export function parseSyntax(tokens: EnglishToken[]): Sentence | null {
+  const rc = parseSyntaxToClause(tokens);
+  return rc ? roleClauseToSentence(rc) : null;
 }
 
-function extractRelativeClause(tokens: EnglishToken[]): {
-  matrix: EnglishToken[];
-  relative: EnglishToken[];
-  relLemma: string;
-  antecedent: EnglishToken;
-} | null {
-  for (let i = 1; i < tokens.length - 1; i++) {
-    const t = tokens[i]!;
-    const isWhRel = t.tag === "PUNCT" && WH_LEMMAS.has(t.lemma);
-    const isThatRel = t.tag === "DET" && t.lemma === "that";
-    if (!isWhRel && !isThatRel) continue;
-    const prev = tokens[i - 1]!;
-    if (prev.tag !== "N" && prev.tag !== "PRON") continue;
-    let relVIdx = -1;
-    for (let j = i + 1; j < tokens.length; j++) {
-      if (tokens[j]!.tag === "V") { relVIdx = j; break; }
-    }
-    if (relVIdx < 0) continue;
-    let matrixVAfter = -1;
-    for (let j = relVIdx + 1; j < tokens.length; j++) {
-      if (tokens[j]!.tag === "V") { matrixVAfter = j; break; }
-    }
-    let matrixVBefore = -1;
-    for (let j = i - 1; j >= 0; j--) {
-      if (tokens[j]!.tag === "V") { matrixVBefore = j; break; }
-    }
-    if (matrixVAfter >= 0) {
-      return {
-        matrix: [...tokens.slice(0, i), ...tokens.slice(matrixVAfter)],
-        relative: tokens.slice(i + 1, matrixVAfter),
-        relLemma: t.lemma,
-        antecedent: prev,
-      };
-    }
-    if (matrixVBefore >= 0) {
-      return {
-        matrix: tokens.slice(0, i),
-        relative: tokens.slice(i + 1),
-        relLemma: t.lemma,
-        antecedent: prev,
-      };
-    }
-  }
-  return null;
-}
-
-function collectNP(
-  tokens: EnglishToken[],
-  pivot: number,
-  direction: "left" | "right",
-  consumed?: Set<number>,
-): NP | null {
-  const claim = (i: number) => consumed?.add(i);
-  const range = direction === "left"
-    ? { start: pivot - 1, end: -1, step: -1 }
-    : { start: pivot + 1, end: tokens.length, step: 1 };
-
-  let headIdx = -1;
-  for (
-    let i = range.start;
-    direction === "left" ? i > range.end : i < range.end;
-    i += range.step
-  ) {
-    const t = tokens[i]!;
-    if (t.tag === "N" || t.tag === "PRON") {
-      headIdx = i;
-      if (direction === "left") {
-        let j = i - 1;
-        let lastBridgedHead = i;
-        while (j >= 0) {
-          const u = tokens[j]!;
-          if (u.tag === "V") break;
-          if (u.tag === "N" || u.tag === "PRON") {
-            let bridge = false;
-            for (let k = j + 1; k < lastBridgedHead; k++) {
-              if (tokens[k]!.tag === "PREP") { bridge = true; break; }
-            }
-            if (bridge) {
-              headIdx = j;
-              lastBridgedHead = j;
-            } else {
-              break;
-            }
-          }
-          j--;
-        }
-      }
-      break;
-    }
-    if (t.tag === "V") break;
-    if (t.tag === "PREP") break;
-  }
-  if (headIdx < 0) return null;
-  claim(headIdx);
-
-  let headTokRef = tokens[headIdx]!;
-  let number_: Number_ = headTokRef.features.number === "pl" ? "pl" : "sg";
-  let person = (headTokRef.features.person ?? "3") as Person;
-
-  let possessor: NP | undefined;
-  if (direction === "left") {
-    let scan = headIdx - 1;
-    while (scan >= 0 && tokens[scan]!.tag === "DET") scan--;
-    if (scan >= 0 && tokens[scan]!.tag === "PREP" && tokens[scan]!.lemma === "of") {
-      let realHeadIdx = -1;
-      for (let i = scan - 1; i >= 0; i--) {
-        const t = tokens[i]!;
-        if (t.tag === "N" || t.tag === "PRON") {
-          realHeadIdx = i;
-          break;
-        }
-        if (t.tag === "V") break;
-      }
-      if (realHeadIdx >= 0) {
-        possessor = {
-          kind: "NP",
-          head: {
-            lemma: headTokRef.lemma,
-            baseForm: [],
-            number: number_,
-            case: "gen",
-            person,
-            isPronoun: headTokRef.tag === "PRON",
-          },
-          adjectives: [],
-          pps: [],
-        };
-        for (let k = scan; k <= headIdx; k++) claim(k);
-        headIdx = realHeadIdx;
-        claim(headIdx);
-        headTokRef = tokens[headIdx]!;
-        number_ = headTokRef.features.number === "pl" ? "pl" : "sg";
-        person = (headTokRef.features.person ?? "3") as Person;
-      }
-    }
-  }
-  const adjectives: { lemma: string; baseForm: never[]; degree?: import("./syntax").Degree }[] = [];
-  let determiner: { lemma: string } | undefined;
-  let numeral: { lemma: string } | undefined;
-  let leftEdge = headIdx;
-  for (let i = headIdx - 1; i >= 0; i--) {
-    const t = tokens[i]!;
-    if (t.tag === "ADJ") {
-      const deg = t.features.degree;
-      adjectives.unshift({
-        lemma: t.lemma,
-        baseForm: [],
-        ...(deg && deg !== "positive" ? { degree: deg } : {}),
-      });
-      leftEdge = i;
-      claim(i);
-      continue;
-    }
-    if (t.tag === "DET") {
-      determiner = { lemma: t.lemma };
-      leftEdge = i;
-      claim(i);
-      continue;
-    }
-    if (t.tag === "NUM") {
-      numeral = { lemma: t.lemma };
-      leftEdge = i;
-      claim(i);
-      continue;
-    }
-    if ((t.tag === "N" || t.tag === "PRON") && t.features.possessor) {
-      possessor = {
-        kind: "NP",
-        head: {
-          lemma: t.lemma,
-          baseForm: [],
-          number: t.features.number === "pl" ? "pl" : "sg",
-          case: "gen",
-          person: (t.features.person ?? "3") as Person,
-          isPronoun: t.tag === "PRON",
-        },
-        adjectives: [],
-        pps: [],
-      };
-      leftEdge = i;
-      claim(i);
-      for (let j = i - 1; j >= 0; j--) {
-        const pt = tokens[j]!;
-        if (pt.tag === "DET") {
-          possessor.determiner = { lemma: pt.lemma };
-          leftEdge = j;
-          claim(j);
-          continue;
-        }
-        break;
-      }
-      break;
-    }
-    break;
-  }
-
-  if (direction === "left" && leftEdge > 0) {
-    const conjTok = tokens[leftEdge - 1];
-    if (conjTok && conjTok.tag === "CONJ") {
-      claim(leftEdge - 1);
-      const leftCoord = collectNP(tokens, leftEdge - 1, "left", consumed);
-      if (leftCoord) {
-        const rightMember: NP = {
-          kind: "NP",
-          head: {
-            lemma: headTokRef.lemma,
-            baseForm: [],
-            number: number_,
-            case: direction === "left" ? "nom" : "acc",
-            person,
-            isPronoun: headTokRef.tag === "PRON",
-          },
-          determiner,
-          adjectives,
-          numeral,
-          possessor,
-          pps: [],
-        };
-        return {
-          ...leftCoord,
-          coord: { lemma: conjTok.lemma, np: rightMember },
-        };
-      }
-    }
-  }
-
-  const pps: PP[] = [];
-  let rightEdge = headIdx;
-  if (
-    headIdx + 1 < tokens.length &&
-    tokens[headIdx + 1]!.tag === "PREP" &&
-    tokens[headIdx + 1]!.lemma === "of" &&
-    !possessor
-  ) {
-    const ofIdx = headIdx + 1;
-    claim(ofIdx);
-    const sub = collectNP(tokens, ofIdx, "right", consumed);
-    if (sub) {
-      possessor = { ...sub, head: { ...sub.head, case: "gen" } };
-    }
-    let i = ofIdx;
-    while (i + 1 < tokens.length && tokens[i + 1]!.tag !== "PREP") {
-      i++;
-      claim(i);
-    }
-    rightEdge = i;
-  }
-
-  let rightCoord: { lemma: string; np: NP } | undefined;
-  if (direction === "right" && rightEdge + 1 < tokens.length) {
-    const conjTok = tokens[rightEdge + 1];
-    if (conjTok && conjTok.tag === "CONJ") {
-      claim(rightEdge + 1);
-      const next = collectNP(tokens, rightEdge + 1, "right", consumed);
-      if (next) {
-        rightCoord = { lemma: conjTok.lemma, np: next };
-      }
-    }
-  }
-
-  return {
-    kind: "NP",
-    head: {
-      lemma: headTokRef.lemma,
-      baseForm: [],
-      number: number_,
-      case: direction === "left" ? "nom" : "acc",
-      person,
-      isPronoun: headTokRef.tag === "PRON",
-    },
-    determiner,
-    adjectives,
-    numeral,
-    possessor,
-    pps,
-    coord: rightCoord,
-  };
-}
-
-function collectPPs(tokens: EnglishToken[], consumed: Set<number>): PP[] {
-  const out: PP[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    if (consumed.has(i)) continue;
-    if (tokens[i]!.tag !== "PREP") continue;
-    consumed.add(i);
-    const np = collectNP(tokens, i, "right", consumed);
-    if (!np) continue;
-    out.push({ kind: "PP", prep: { lemma: tokens[i]!.lemma }, np });
+export function parseSyntaxAll(tokens: EnglishToken[]): Sentence[] {
+  const clauses = parseSyntaxAllAsClauses(tokens);
+  const out: Sentence[] = [];
+  for (const c of clauses) {
+    const s = roleClauseToSentence(c);
+    if (s) out.push(s);
   }
   return out;
-}
-
-function collectAdverbs(
-  tokens: EnglishToken[],
-  consumed: Set<number>,
-): { lemma: string; baseForm: never[] }[] {
-  const out: { lemma: string; baseForm: never[] }[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    if (consumed.has(i)) continue;
-    if (tokens[i]!.tag !== "ADV") continue;
-    out.push({ lemma: tokens[i]!.lemma, baseForm: [] });
-  }
-  return out;
-}
-
-const HONORIFIC_TRIGGERS = new Set([
-  "please", "kindly", "sir", "madam", "ma'am", "lord", "lady", "honored", "respected",
-]);
-
-function inferHonorific(tokens: EnglishToken[]): boolean {
-  for (const t of tokens) {
-    if (HONORIFIC_TRIGGERS.has(t.lemma.toLowerCase())) return true;
-  }
-  return false;
-}
-
-const REPORTATIVE_LEMMAS = new Set(["say", "tell", "speak"]);
-const INFERRED_LEMMAS = new Set(["think", "know", "guess", "suppose", "seem"]);
-const DIRECT_LEMMAS = new Set(["see", "hear", "feel", "watch", "listen"]);
-
-function inferEvidential(
-  verbLemma: string,
-  tokens: EnglishToken[],
-): "direct" | "reportative" | "inferred" | undefined {
-  if (DIRECT_LEMMAS.has(verbLemma)) return "direct";
-  if (REPORTATIVE_LEMMAS.has(verbLemma)) return "reportative";
-  if (INFERRED_LEMMAS.has(verbLemma)) return "inferred";
-  for (const t of tokens) {
-    if (t.tag === "ADV") {
-      if (t.lemma === "apparently" || t.lemma === "evidently") return "inferred";
-      if (t.lemma === "reportedly" || t.lemma === "allegedly") return "reportative";
-    }
-  }
-  return undefined;
 }

@@ -148,8 +148,29 @@ function orderFor(wo: string): Array<"S" | "V" | "O"> {
 // re-parse) when feature complexity exceeds what the direct bridge
 // can express.
 
-import type { Sentence, NP, VP } from "./syntax";
+import type {
+  Sentence,
+  NP,
+  VP,
+  PP,
+  AdjRef,
+  RelativeClause,
+  Person,
+  Number_,
+  Aspect,
+  Mood,
+  Voice,
+  Evidential,
+  Case,
+  Degree,
+} from "./syntax";
 import type { LexiconState } from "../domains";
+import type {
+  RoleClause,
+  Participant,
+  ParticipantModifier,
+  SemanticRole,
+} from "./roleFrame";
 
 /**
  * Phase 72g T3 (full-delivery defer-1d): convert an ASTSentence into
@@ -226,4 +247,407 @@ export function astToSentence(
     predicate: vp,
     negated: false,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Tier C Phase 3 (Phase 73c): RoleClause ↔ Sentence adapters.
+//
+// `roleClauseToSentence` is the complete back-compat bridge from
+// the participant-role IR (`RoleClause`) to the English-shaped
+// legacy `Sentence` parse tree. It's the function that lets the
+// new RoleClause-emitting parser (`parseSyntaxToClause`) supply
+// the existing `realiseSentence` consumer without behavioural
+// change. Phase 4 swaps the realiser to consume `RoleClause`
+// directly and this adapter becomes a deprecation shim.
+//
+// `sentenceToRoleClause` is the inverse direction — used by the
+// composer-side path (`narrative/roleProjection.ts`) and by tests.
+//
+// Both adapters preserve every Sentence-side field the legacy
+// realiser reads (negated, interrogative, leadingConj, leadingWh,
+// NP determiner/adjectives/possessor/numeral/coord/relative, VP
+// aspect/mood/voice/evidential/honorific/complement/adverbs/pps).
+// Hardcoded "nom"/"acc" case assignment matches the existing
+// ast.ts:158 comment — the realiser overrides per alignment.
+// ─────────────────────────────────────────────────────────────────────
+
+const PREP_ROLE_TABLE: Record<string, SemanticRole> = {
+  in: "location",
+  on: "location",
+  at: "location",
+  near: "location",
+  under: "location",
+  over: "location",
+  through: "manner",
+  from: "source",
+  out: "source",
+  to: "goal",
+  toward: "goal",
+  into: "goal",
+  with: "instrument",
+  by: "instrument",
+  for: "recipient",
+  during: "time",
+  before: "time",
+  after: "time",
+  of: "agent",
+};
+
+function prepToRole(lemma: string): SemanticRole {
+  return PREP_ROLE_TABLE[lemma] ?? "location";
+}
+
+const ROLE_TO_PREP: Partial<Record<SemanticRole, string>> = {
+  location: "in",
+  source: "from",
+  goal: "to",
+  instrument: "with",
+  recipient: "for",
+  time: "at",
+  manner: "through",
+};
+
+function roleToPrep(role: SemanticRole): string {
+  return ROLE_TO_PREP[role] ?? "in";
+}
+
+function npToParticipant(np: NP, role: SemanticRole, adjunct = false): Participant {
+  const modifiers: ParticipantModifier[] = [];
+  if (np.determiner) {
+    modifiers.push({ kind: "determiner", lemma: np.determiner.lemma });
+  }
+  for (const adj of np.adjectives) {
+    modifiers.push({ kind: "adjective", lemma: adj.lemma, ...(adj.degree ? { degree: adj.degree } : {}) });
+  }
+  if (np.possessor) {
+    modifiers.push({ kind: "possessor", participant: npToParticipant(np.possessor, "agent") });
+  }
+  if (np.numeral) {
+    modifiers.push({ kind: "numeral", lemma: np.numeral.lemma });
+  }
+  for (const pp of np.pps) {
+    modifiers.push({
+      kind: "oblique",
+      relation: prepToRole(pp.prep.lemma),
+      preposition: pp.prep.lemma,
+      participant: npToParticipant(pp.np, prepToRole(pp.prep.lemma), true),
+    });
+  }
+  if (np.coord) {
+    modifiers.push({
+      kind: "coordination",
+      conjunction: np.coord.lemma,
+      participant: npToParticipant(np.coord.np, role),
+    });
+  }
+  if (np.relative) {
+    modifiers.push({
+      kind: "relative",
+      clause: relativeClauseToRoleClause(np.relative),
+      relativiser: np.relative.relativizer,
+      subjectGap: np.relative.subjectGap,
+    });
+  }
+  return {
+    lemma: np.head.lemma,
+    pos: np.head.isPronoun ? "PRON" : "N",
+    role,
+    features: {
+      number: np.head.number,
+      ...(np.head.person ? { person: np.head.person } : {}),
+      ...(np.head.isPronoun ? { isPronoun: true } : {}),
+      ...(np.head.nounClass ? { nounClass: np.head.nounClass } : {}),
+      ...(np.head.synthesized ? { synthesized: true } : {}),
+    },
+    ...(modifiers.length > 0 ? { modifiers } : {}),
+    ...(adjunct ? { adjunct: true } : {}),
+  };
+}
+
+function relativeClauseToRoleClause(rc: RelativeClause): RoleClause {
+  const participants: Participant[] = [];
+  if (rc.predicate.object) {
+    participants.push(npToParticipant(rc.predicate.object, "patient"));
+  }
+  for (const pp of rc.predicate.pps) {
+    participants.push(npToParticipant(pp.np, prepToRole(pp.prep.lemma), true));
+  }
+  return {
+    kind: "RoleClause",
+    predicate: {
+      lemma: rc.predicate.verb.lemma,
+      features: {
+        tense: rc.predicate.verb.tense,
+        ...(rc.predicate.verb.aspect ? { aspect: rc.predicate.verb.aspect } : {}),
+        ...(rc.predicate.verb.mood ? { mood: rc.predicate.verb.mood } : {}),
+        ...(rc.predicate.verb.voice ? { voice: rc.predicate.verb.voice } : {}),
+      },
+    },
+    participants,
+  };
+}
+
+/**
+ * Promote a legacy `Sentence` to a `RoleClause`. Lossless for the
+ * constructs the parser currently emits (RC, NP-coord, PP adjuncts,
+ * complement, adverbs).
+ */
+export function sentenceToRoleClause(s: Sentence): RoleClause {
+  const participants: Participant[] = [npToParticipant(s.subject, "agent")];
+  if (s.predicate.object) {
+    participants.push(npToParticipant(s.predicate.object, "patient"));
+  }
+  for (const pp of s.predicate.pps) {
+    participants.push({
+      ...npToParticipant(pp.np, prepToRole(pp.prep.lemma), true),
+      preposition: pp.prep.lemma,
+    });
+  }
+  for (const adv of s.predicate.adverbs) {
+    participants.push({
+      lemma: adv.lemma,
+      pos: "N",
+      role: "manner",
+      adjunct: true,
+      ...(adv.degree ? { modifiers: [{ kind: "adjective", lemma: adv.lemma, degree: adv.degree }] } : {}),
+    });
+  }
+  const complement = s.predicate.complement && s.predicate.complement.length > 0
+    ? s.predicate.complement.map((c) => ({
+        lemma: c.lemma,
+        ...(c.degree ? { degree: c.degree } : {}),
+      }))
+    : undefined;
+  return {
+    kind: "RoleClause",
+    predicate: {
+      lemma: s.predicate.verb.lemma,
+      features: {
+        tense: s.predicate.verb.tense,
+        ...(s.predicate.verb.aspect ? { aspect: s.predicate.verb.aspect } : {}),
+        ...(s.predicate.verb.mood ? { mood: s.predicate.verb.mood } : {}),
+        ...(s.predicate.verb.voice ? { voice: s.predicate.verb.voice } : {}),
+        ...(s.predicate.verb.evidential ? { evidential: s.predicate.verb.evidential } : {}),
+        ...(s.predicate.verb.honorific ? { honorific: s.predicate.verb.honorific } : {}),
+      },
+      ...(complement ? { complement } : {}),
+    },
+    participants,
+    ...(s.negated ? { negated: true } : {}),
+    ...(s.interrogative ? { interrogative: true } : {}),
+    ...(s.leadingConj ? { leadingConj: s.leadingConj } : {}),
+    ...(s.leadingWh ? { leadingWh: s.leadingWh } : {}),
+  };
+}
+
+function participantToNP(p: Participant, defaultCase: Case): NP {
+  let determiner: { lemma: string } | undefined;
+  const adjectives: AdjRef[] = [];
+  let possessor: NP | undefined;
+  let numeral: { lemma: string } | undefined;
+  const pps: PP[] = [];
+  let coord: { lemma: string; np: NP } | undefined;
+  let relative: RelativeClause | undefined;
+  for (const mod of p.modifiers ?? []) {
+    switch (mod.kind) {
+      case "determiner":
+        determiner = { lemma: mod.lemma };
+        break;
+      case "adjective":
+        adjectives.push({
+          lemma: mod.lemma,
+          baseForm: [],
+          ...(mod.degree ? { degree: mod.degree } : {}),
+        });
+        break;
+      case "possessor":
+        possessor = participantToNP(mod.participant, "gen");
+        break;
+      case "numeral":
+        numeral = { lemma: mod.lemma };
+        break;
+      case "oblique": {
+        const preposition = mod.preposition ?? roleToPrep(mod.relation);
+        pps.push({
+          kind: "PP",
+          prep: { lemma: preposition },
+          np: participantToNP(mod.participant, "obl"),
+        });
+        break;
+      }
+      case "coordination":
+        coord = {
+          lemma: mod.conjunction,
+          np: participantToNP(mod.participant, defaultCase),
+        };
+        break;
+      case "relative":
+        relative = roleClauseToRelativeClause(mod.clause, mod.relativiser, mod.subjectGap);
+        break;
+    }
+  }
+  return {
+    kind: "NP",
+    head: {
+      lemma: p.lemma,
+      baseForm: [],
+      number: (p.features?.number ?? "sg") as Number_,
+      case: defaultCase,
+      ...(p.features?.person ? { person: p.features.person as Person } : {}),
+      ...(p.pos === "PRON" ? { isPronoun: true } : {}),
+      ...(p.features?.nounClass ? { nounClass: p.features.nounClass } : {}),
+      ...(p.features?.synthesized ? { synthesized: true } : {}),
+    },
+    ...(determiner ? { determiner } : {}),
+    adjectives,
+    ...(possessor ? { possessor } : {}),
+    ...(numeral ? { numeral } : {}),
+    pps,
+    ...(coord ? { coord } : {}),
+    ...(relative ? { relative } : {}),
+  };
+}
+
+function roleClauseToRelativeClause(
+  rc: RoleClause,
+  relativiser: string | undefined,
+  subjectGap: boolean,
+): RelativeClause {
+  const objectP = rc.participants.find((p) => p.role === "patient");
+  const pps: PP[] = [];
+  for (const p of rc.participants) {
+    if (!p.adjunct) continue;
+    pps.push({
+      kind: "PP",
+      prep: { lemma: roleToPrep(p.role) },
+      np: participantToNP(p, "obl"),
+    });
+  }
+  const reliz: "who" | "that" | "which" =
+    relativiser === "who" || relativiser === "which" || relativiser === "that"
+      ? relativiser
+      : "that";
+  return {
+    kind: "RC",
+    relativizer: reliz,
+    predicate: {
+      kind: "VP",
+      verb: {
+        lemma: rc.predicate.lemma,
+        baseForm: [],
+        tense: (rc.predicate.features?.tense ?? "present") as "past" | "present" | "future",
+        ...(rc.predicate.features?.aspect ? { aspect: rc.predicate.features.aspect as Aspect } : {}),
+        ...(rc.predicate.features?.mood ? { mood: rc.predicate.features.mood as Mood } : {}),
+        ...(rc.predicate.features?.voice ? { voice: rc.predicate.features.voice as Voice } : {}),
+      },
+      pps,
+      adverbs: [],
+      ...(objectP ? { object: participantToNP(objectP, "acc") } : {}),
+    },
+    subjectGap,
+  };
+}
+
+/**
+ * Phase 73c Tier C Phase 3: convert a `RoleClause` back to a
+ * legacy `Sentence`. Used as the back-compat bridge from the new
+ * RoleClause-emitting parser (`parseSyntaxToClause`) into the
+ * existing `realiseSentence` pipeline. Returns null when the
+ * clause has no participant labelled `agent`/`experiencer`/`theme`
+ * (no subject equivalent).
+ *
+ * S-level coordination (`clause.coordinatedWith`) is the caller's
+ * concern: `roleClausesToSentences` walks the chain.
+ */
+export function roleClauseToSentence(rc: RoleClause): Sentence | null {
+  // Locate the subject participant. Phase 5 will refine role
+  // dispatch; Phase 3 accepts any of the canonical "subject-like"
+  // roles (agent, experiencer, theme) as the subject NP.
+  const subjectP = rc.participants.find(
+    (p) => !p.adjunct && (p.role === "agent" || p.role === "experiencer" || p.role === "theme"),
+  );
+  if (!subjectP) return null;
+  const objectP = rc.participants.find(
+    (p) => !p.adjunct && (p.role === "patient" || p.role === "stimulus"),
+  );
+  const adjuncts = rc.participants.filter((p) => p.adjunct);
+
+  const subjectNP: NP = participantToNP(subjectP, "nom");
+  const objectNP: NP | undefined = objectP ? participantToNP(objectP, "acc") : undefined;
+
+  // Adjunct participants other than `manner` are realised as PPs;
+  // manner-adjuncts come from `adverbs`.
+  const pps: PP[] = [];
+  const adverbs: AdjRef[] = [];
+  for (const a of adjuncts) {
+    if (a.role === "manner") {
+      adverbs.push({
+        lemma: a.lemma,
+        baseForm: [],
+        ...(a.modifiers && a.modifiers.length > 0 && a.modifiers[0]!.kind === "adjective" && a.modifiers[0]!.degree
+          ? { degree: a.modifiers[0]!.degree as Degree }
+          : {}),
+      });
+    } else {
+      pps.push({
+        kind: "PP",
+        prep: { lemma: a.preposition ?? roleToPrep(a.role) },
+        np: participantToNP(a, "obl"),
+      });
+    }
+  }
+
+  const complementAdj: AdjRef[] | undefined =
+    rc.predicate.complement && rc.predicate.complement.length > 0
+      ? rc.predicate.complement.map((c) => ({
+          lemma: c.lemma,
+          baseForm: [],
+          ...(c.degree ? { degree: c.degree } : {}),
+        }))
+      : undefined;
+  const vp: VP = {
+    kind: "VP",
+    verb: {
+      lemma: rc.predicate.lemma,
+      baseForm: [],
+      tense: (rc.predicate.features?.tense ?? "present") as "past" | "present" | "future",
+      ...(subjectP.features?.person ? { subjectPerson: subjectP.features.person as Person } : {}),
+      ...(subjectP.features?.number ? { subjectNumber: subjectP.features.number as Number_ } : {}),
+      ...(rc.predicate.features?.aspect ? { aspect: rc.predicate.features.aspect as Aspect } : {}),
+      ...(rc.predicate.features?.mood ? { mood: rc.predicate.features.mood as Mood } : {}),
+      ...(rc.predicate.features?.voice ? { voice: rc.predicate.features.voice as Voice } : {}),
+      ...(rc.predicate.features?.evidential ? { evidential: rc.predicate.features.evidential as Evidential } : {}),
+      ...(rc.predicate.features?.honorific ? { honorific: true } : {}),
+    },
+    ...(objectNP ? { object: objectNP } : {}),
+    pps,
+    adverbs,
+    ...(complementAdj ? { complement: complementAdj } : {}),
+  };
+
+  return {
+    kind: "S",
+    subject: subjectNP,
+    predicate: vp,
+    negated: !!rc.negated,
+    ...(rc.interrogative ? { interrogative: true } : {}),
+    ...(rc.leadingConj ? { leadingConj: rc.leadingConj } : {}),
+    ...(rc.leadingWh ? { leadingWh: rc.leadingWh } : {}),
+  };
+}
+
+/**
+ * Walk a `coordinatedWith` chain (each `RoleClause` carrying its
+ * successor) and produce one `Sentence` per clause. Clauses that
+ * can't be converted (no subject participant) are dropped.
+ */
+export function roleClausesToSentences(rc: RoleClause): Sentence[] {
+  const out: Sentence[] = [];
+  let cur: RoleClause | undefined = rc;
+  while (cur) {
+    const s = roleClauseToSentence(cur);
+    if (s) out.push(s);
+    cur = cur.coordinatedWith;
+  }
+  return out;
 }
