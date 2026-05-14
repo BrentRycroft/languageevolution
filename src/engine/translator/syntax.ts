@@ -5,6 +5,21 @@ import type { WordForm } from "../types";
  *
  * English → target sentence (parse / realise / sentence) and target → English caption (glossToEnglish, cognates, reverse). Key exports: Person, Number_, Case.
  *
+ * Phase 73c Tier C migration status (as of Phase 6):
+ *   - The `Sentence` / `NP` / `VP` / `PP` / `RelativeClause` shapes
+ *     below are the LEGACY English-shaped parse tree. They remain
+ *     in active use because the realiser (`realise.ts`) still
+ *     consumes them; the role-IR-emitting parser and composer
+ *     bridge through `roleClauseToSentence` for back-compat.
+ *   - The NEW types (`RoleClause`, `Participant`, `PredicateFrame`,
+ *     `ParticipantModifier`, `SemanticRole`) re-exported below
+ *     live in `./roleFrame.ts`. New code should prefer these.
+ *   - The legacy types are NOT yet `@deprecated` — Phase 6 stops
+ *     short of marking them so because the realiser internal
+ *     rewrite (originally planned for Phase 4) was scoped down;
+ *     removing the legacy types would require Phase 4's deferred
+ *     work to land first.
+ *
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
