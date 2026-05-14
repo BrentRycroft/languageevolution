@@ -6,7 +6,8 @@ import { pluralClassOf } from "../lexicon/nounClass";
 import { pickSynonym, formKeyOf } from "../lexicon/word";
 import { closedClassForm } from "./closedClass";
 import { fnv1a } from "../rng";
-import type { NP, PP, Sentence, VP } from "./syntax";
+import type { NP, PP, RoleClause, Sentence, VP } from "./syntax";
+import { roleClauseToSentence, roleClausesToSentences } from "./ast";
 import { sliceOrder } from "./wordOrder";
 import { runRealiseStage } from "./pipeline";
 import { classifierMeaningFor, classifierFormFor } from "./classifiers";
@@ -32,6 +33,44 @@ export type LemmaResolution = "direct" | "concept" | "colex" | "reverse-colex" |
 
 export interface RealiseDeps {
   resolveOpen: (lemma: string) => { form: WordForm | null; resolution: LemmaResolution };
+}
+
+/**
+ * Phase 73c Tier C Phase 4: canonical entry point for the realiser
+ * when the caller has a `RoleClause` (the participant-role IR
+ * introduced in Phase 0). Walks a `coordinatedWith` chain via
+ * `roleClausesToSentences`, then realises each clause through the
+ * existing `realiseSentence` body. Phase 6 cleanup will narrow this
+ * to consume `RoleClause` directly, dropping the Sentence adapter;
+ * for now the adapter ensures byte-identity with the legacy path.
+ */
+export function realiseClause(
+  clause: RoleClause,
+  lang: Language,
+  deps: RealiseDeps,
+): RealisedToken[] {
+  const sentences = roleClausesToSentences(clause);
+  const out: RealisedToken[] = [];
+  for (const s of sentences) {
+    out.push(...realiseSentence(s, lang, deps));
+  }
+  return out;
+}
+
+/**
+ * Phase 73c Tier C Phase 4: realise a single clause without
+ * unfolding its `coordinatedWith` chain. Useful for callers that
+ * coordinate clauses externally (e.g., relative-clause embedding
+ * via `roleClauseToRelativeClause`).
+ */
+export function realiseSingleClause(
+  clause: RoleClause,
+  lang: Language,
+  deps: RealiseDeps,
+): RealisedToken[] {
+  const s = roleClauseToSentence(clause);
+  if (!s) return [];
+  return realiseSentence(s, lang, deps);
 }
 
 export function realiseSentence(
