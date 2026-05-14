@@ -86,13 +86,14 @@ const CONJUNCTIONS = new Set([
   "because", "so", "if", "when", "while", "though", "although",
   "than", "as",
 ]);
-const AUX_VERBS = new Set([
-  "am", "is", "are", "was", "were", "be", "been",
-  "do", "does", "did",
-  "will", "would", "shall", "should",
-  "can", "could", "may", "might", "must",
-  "have", "has", "had",
-]);
+// Phase 73c Tier C Phase 5.5: per-language morphology tables moved
+// to `dialects/english.ts`. AUX_VERBS is read off the dialect.
+// COPULAS stays here — it's a parser-internal classification used
+// for copula promotion, not a tokenizer feature.
+import { ENGLISH_DIALECT } from "./dialects/english";
+export type { SourceDialect } from "./dialects/types";
+import type { SourceDialect } from "./dialects/types";
+const AUX_VERBS: ReadonlySet<string> = ENGLISH_DIALECT.auxVerbs;
 const COPULAS = new Set(["am", "is", "are", "was", "were", "be"]);
 
 // Phase 52 T1: FALLBACK_SKIP moved into lexicon/lookup.ts (the
@@ -155,14 +156,8 @@ const COMPARATIVE_BASES = new Set([
   "poor", "strong", "weak", "happy", "sad", "easy", "hard",
 ]);
 
-const PAST_PARTICIPLES = new Set([
-  "seen", "gone", "taken", "given", "made", "fallen", "flown",
-  "swum", "written", "broken", "spoken", "known", "heard",
-  "felt", "brought", "bought", "sold", "thought", "built",
-  "fought", "been", "done", "eaten", "drunk", "said", "had",
-  "told", "kept", "left", "lost", "met", "paid", "sent",
-  "shown", "sung", "sat", "stood", "found",
-]);
+// Phase 5.5: past participles now sourced from the dialect.
+const PAST_PARTICIPLES: ReadonlySet<string> = ENGLISH_DIALECT.pastParticiples;
 
 const isBareNoun = (w: string): boolean =>
   BARE_NOUNS.has(w) || posOf(w) === "noun";
@@ -186,80 +181,40 @@ const PRONOUN_FEATURES: Record<string, EnglishToken["features"]> = {
   them: { person: "3", number: "pl", role: "object" },
 };
 
-const IRREGULAR_VERBS: Record<string, string> = {
-  went: "go", goes: "go", gone: "go", going: "go",
-  came: "come", comes: "come", coming: "come",
-  saw: "see", seen: "see", seeing: "see", sees: "see",
-  said: "say", says: "say", saying: "say",
-  knew: "know", known: "know", knowing: "know", knows: "know",
-  ate: "eat", eaten: "eat", eating: "eat", eats: "eat",
-  drank: "drink", drunk: "drink", drinks: "drink", drinking: "drink",
-  slept: "sleep", sleeping: "sleep", sleeps: "sleep",
-  died: "die", dying: "die", dies: "die",
-  had: "have", has: "have", having: "have",
-  took: "take", taken: "take", taking: "take", takes: "take",
-  gave: "give", given: "give", giving: "give", gives: "give",
-  made: "make", makes: "make", making: "make",
-  fell: "fall", fallen: "fall", falls: "fall", falling: "fall",
-  ran: "run", running: "run", runs: "run",
-  flew: "fly", flown: "fly", flying: "fly", flies: "fly",
-  swam: "swim", swum: "swim", swimming: "swim", swims: "swim",
-  fought: "fight", fights: "fight", fighting: "fight",
-  brought: "bring", bring: "bring", brings: "bring", bringing: "bring",
-  bought: "buy", buys: "buy", buying: "buy",
-  sold: "sell", sells: "sell", selling: "sell",
-  thought: "think", thinks: "think", thinking: "think",
-  built: "build", builds: "build", building: "build",
-  broke: "break", broken: "break", breaks: "break", breaking: "break",
-  wrote: "write", written: "write", writes: "write", writing: "write",
-  read: "read", reads: "read", reading: "read",
-  spoke: "speak", spoken: "speak", speaks: "speak", speaking: "speak",
-  heard: "hear", hears: "hear", hearing: "hear",
-  felt: "feel", feels: "feel", feeling: "feel",
-};
+// Phase 5.5: all four moved to `dialects/english.ts`. Local
+// references resolve through the dialect descriptor.
+const IRREGULAR_VERBS: Readonly<Record<string, string>> = ENGLISH_DIALECT.irregularVerbs;
+const IRREGULAR_PLURALS: Readonly<Record<string, string>> = ENGLISH_DIALECT.irregularPlurals;
+const stripVerbSuffix = ENGLISH_DIALECT.stripVerbSuffix;
+const stripNounSuffix = ENGLISH_DIALECT.stripNounSuffix;
 
-const IRREGULAR_PLURALS: Record<string, string> = {
-  men: "man", women: "woman", children: "child",
-  feet: "foot", teeth: "tooth", mice: "mouse",
-  geese: "goose", oxen: "ox", people: "person",
-};
-
-function stripVerbSuffix(s: string): string {
-  if (IRREGULAR_VERBS[s]) return IRREGULAR_VERBS[s]!;
-  if (s.length >= 4 && s.endsWith("ies")) return s.slice(0, -3) + "y";
-  if (s.length >= 4 && s.endsWith("ied")) return s.slice(0, -3) + "y";
-  if (s.length >= 5 && s.endsWith("ing")) {
-    const stem = s.slice(0, -3);
-    return stem;
-  }
-  if (s.length >= 3 && s.endsWith("ed")) {
-    const stem = s.slice(0, -2);
-    return stem;
-  }
-  if (s.length >= 4 && s.endsWith("es")) {
-    const dropS = s.slice(0, -1);
-    if (isBareVerb(dropS)) return dropS;
-    return s.slice(0, -2);
-  }
-  if (s.length >= 2 && s.endsWith("s") && !s.endsWith("ss")) {
-    return s.slice(0, -1);
-  }
-  return s;
-}
-
-function stripNounSuffix(s: string): string {
-  if (IRREGULAR_PLURALS[s]) return IRREGULAR_PLURALS[s]!;
-  if (s.length >= 4 && s.endsWith("ies")) return s.slice(0, -3) + "y";
-  if (s.length >= 4 && s.endsWith("ses")) return s.slice(0, -2);
-  if (s.length >= 5 && s.endsWith("ves")) {
-    const stem = s.slice(0, -3);
-    return stem + "f";
-  }
-  if (s.length >= 3 && s.endsWith("s") && !s.endsWith("ss")) return s.slice(0, -1);
-  return s;
+/**
+ * Phase 73c Tier C Phase 5.5: tokenise an input string into
+ * `EnglishToken[]` using a per-source-language descriptor. For
+ * English input the descriptor is `ENGLISH_DIALECT` (default);
+ * future seed pathways supply their own to reuse the tokenizer
+ * shape across source languages.
+ *
+ * The legacy `tokeniseEnglish(text)` entry point is a thin
+ * back-compat shim that defaults to `ENGLISH_DIALECT`.
+ */
+export function tokenise(text: string, dialect: SourceDialect = ENGLISH_DIALECT): EnglishToken[] {
+  // Phase 5.5 scope: the function body still reads from module-
+  // level constants (which are themselves derived from
+  // `ENGLISH_DIALECT`). When called with a non-default `dialect`,
+  // the dialect's contraction-host table is honoured; other
+  // English-specific tables continue to come from the module-level
+  // constants. Threading `dialect` through every reference is a
+  // future extension.
+  void dialect;
+  return tokeniseEnglishImpl(text, dialect);
 }
 
 export function tokeniseEnglish(text: string): EnglishToken[] {
+  return tokeniseEnglishImpl(text, ENGLISH_DIALECT);
+}
+
+function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken[] {
   const tokens: EnglishToken[] = [];
   const rawSplit = text
     .toLowerCase()
@@ -267,15 +222,8 @@ export function tokeniseEnglish(text: string): EnglishToken[] {
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-  const CONTRACTION_HOST: Record<string, string> = {
-    doesn: "does", don: "do", didn: "did",
-    won: "will", wouldn: "would",
-    isn: "is", aren: "are", wasn: "was", weren: "were",
-    hasn: "has", haven: "have", hadn: "had",
-    couldn: "could", shouldn: "should", mustn: "must",
-    shan: "shall", mightn: "might",
-    "can": "can",
-  };
+  // Phase 5.5: contraction host map sourced from the caller's dialect.
+  const CONTRACTION_HOST: Readonly<Record<string, string>> = dialect.contractionHosts;
 
   const raw: string[] = [];
   const possessorIndices = new Set<number>();
