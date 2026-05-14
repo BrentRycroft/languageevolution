@@ -1,7 +1,7 @@
 import type { Morphology, MorphCategory, Paradigm } from "./types";
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
-import { semanticTagOf, pathwayTargets } from "../semantics/grammaticalization";
+import { semanticTagOf, pathwayTargetsForLang } from "../semantics/grammaticalization";
 import { posOf, isClosedClass } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
@@ -96,7 +96,12 @@ export function maybeGrammaticalize(
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
     const freqFloor = isClitic ? 0.4 : 0.6;
     if (freq < freqFloor) continue;
-    for (const target of pathwayTargets(tag)) {
+    // Phase 73c Tier C Phase 1: filter pathway targets through the
+    // language's declared `grammaticalisedAxes` (when set). A
+    // language with `aspect: ["pfv","ipfv"]` will no longer seed
+    // `verb.aspect.prog` etc. via the pathway map. Unset → no
+    // filtering (legacy behaviour).
+    for (const target of pathwayTargetsForLang(tag, lang)) {
       if (lang.morphology.paradigms[target]) continue;
       const entry: Candidate = { meaning: m, tag, target, form };
       candidates.push(entry);

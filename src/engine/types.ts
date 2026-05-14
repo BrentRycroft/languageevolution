@@ -1165,6 +1165,19 @@ export interface GrammarFeatures {
    * remove them as the language evolves.
    */
   verbThemes?: Phoneme[][];
+  /**
+   * Phase 73c Tier C Phase 1: language-declared grammaticalised
+   * TAM/voice/evidentiality/case axes. When set, the
+   * grammaticalisation driver (`maybeGrammaticalize`) skips pathway
+   * targets whose axis-value isn't listed — so a language with
+   * `aspect: ["pfv", "ipfv"]` never seeds `verb.aspect.prog` /
+   * `.hab` / `.perf` / `.prosp` via the pathway map.
+   *
+   * Absent → no gating; legacy behaviour where every pathway target
+   * can fire. Phase 4+ may auto-populate from existing flags via
+   * `deriveGrammaticalisedAxes` (currently opt-in helper).
+   */
+  grammaticalisedAxes?: import("./morphology/types").GrammaticalisedAxes;
 }
 
 export interface SimulationConfig {

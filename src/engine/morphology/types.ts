@@ -78,6 +78,132 @@ export type MorphCategory =
 
 export type StemShape = "vowel-final" | "consonant-final";
 
+// ─────────────────────────────────────────────────────────────────────
+// Tier C Phase 1 (Phase 73c): CategoryAxis taxonomy.
+//
+// The 77-literal `MorphCategory` union is kept unchanged. The axis
+// taxonomy is a SIBLING view that decomposes the dotted name
+// (`scope.axis.value`) into an `{axis, value}` pair. Used by the
+// grammaticalisation gate (`grammaticalisedAxes` on GrammarFeatures)
+// to let languages declare which TAM / voice / case dimensions they
+// grammaticalise — instead of every language having access to the
+// universal English-shaped category cuts.
+//
+// Phase 1 scope covers the six axes the plan calls out (tense,
+// aspect, mood, voice, evidentiality, case). Other axes (person,
+// number, nounClass, verbClass, honor, subord, form, degree,
+// discourse) round-trip is not implemented yet — the mapper
+// returns null for those categories. Phase 4+ can extend the
+// axis set as gating demands.
+// ─────────────────────────────────────────────────────────────────────
+
+export type CategoryAxisKind =
+  | "tense"
+  | "aspect"
+  | "mood"
+  | "voice"
+  | "evidentiality"
+  | "case";
+
+export type TenseAxisValue = "past" | "fut";
+export type AspectAxisValue = "pfv" | "ipfv" | "prog" | "hab" | "perf" | "prosp";
+export type MoodAxisValue = "subj" | "imp" | "cond" | "opt" | "jus" | "irr" | "dub" | "hort";
+export type VoiceAxisValue = "pass";
+export type EvidentialityAxisValue = "dir" | "rep" | "inf";
+export type CaseAxisValue =
+  | "nom" | "acc" | "gen" | "dat" | "loc" | "inst" | "abl" | "erg" | "abs";
+
+export interface CategoryAxis {
+  axis: CategoryAxisKind;
+  value: string;
+}
+
+/**
+ * Map a `MorphCategory` to its `{axis, value}` decomposition.
+ * Returns null for categories that don't fall on one of the six
+ * Phase-1 axes (number, nounClass, person, etc.) — those are not
+ * gated by `grammaticalisedAxes` and round-trip is undefined.
+ *
+ * The dotted layout is parsed structurally (`scope.middle.value`);
+ * the `middle` slot maps to a `CategoryAxisKind` via a small table
+ * to handle the two abbreviation cases (`evid` → `evidentiality`).
+ */
+export function toCategoryAxis(cat: MorphCategory): CategoryAxis | null {
+  const parts = cat.split(".");
+  if (parts.length !== 3) return null;
+  const middle = parts[1]!;
+  const value = parts[2]!;
+  switch (middle) {
+    case "tense":         return { axis: "tense", value };
+    case "aspect":        return { axis: "aspect", value };
+    case "mood":          return { axis: "mood", value };
+    case "voice":         return { axis: "voice", value };
+    case "evid":          return { axis: "evidentiality", value };
+    case "case":          return { axis: "case", value };
+    default:              return null;
+  }
+}
+
+/**
+ * Reverse of `toCategoryAxis`. Returns null when the resulting
+ * concatenation isn't a valid `MorphCategory` (e.g., a tense value
+ * other than past/fut). The caller is responsible for narrowing
+ * the value type — pass `TenseAxisValue` if you want type-level
+ * safety on the way in.
+ *
+ * The reverse mapping commits to `verb.*` for TAM/voice/evidentiality
+ * and `noun.*` for case, matching the existing MorphCategory layout.
+ */
+export function fromCategoryAxis(ax: CategoryAxis): MorphCategory | null {
+  const v = ax.value;
+  switch (ax.axis) {
+    case "tense":
+      if (v === "past" || v === "fut") return `verb.tense.${v}` as MorphCategory;
+      return null;
+    case "aspect":
+      if (v === "pfv" || v === "ipfv" || v === "prog" || v === "hab" || v === "perf" || v === "prosp") {
+        return `verb.aspect.${v}` as MorphCategory;
+      }
+      return null;
+    case "mood":
+      if (v === "subj" || v === "imp" || v === "cond" || v === "opt" || v === "jus" || v === "irr" || v === "dub" || v === "hort") {
+        return `verb.mood.${v}` as MorphCategory;
+      }
+      return null;
+    case "voice":
+      if (v === "pass") return "verb.voice.pass";
+      return null;
+    case "evidentiality":
+      if (v === "dir" || v === "rep" || v === "inf") return `verb.evid.${v}` as MorphCategory;
+      return null;
+    case "case":
+      if (v === "nom" || v === "acc" || v === "gen" || v === "dat" || v === "loc" || v === "inst" || v === "abl" || v === "erg" || v === "abs") {
+        return `noun.case.${v}` as MorphCategory;
+      }
+      return null;
+  }
+}
+
+/**
+ * Language-declared grammaticalised axes. When set on
+ * `GrammarFeatures.grammaticalisedAxes`, the grammaticalisation
+ * driver (`maybeGrammaticalize`) skips pathway targets whose axis
+ * value isn't listed. Absent → no gating (legacy behaviour).
+ *
+ * Phase 1 ships the scaffold + opt-in gate. Phase 4+ may auto-
+ * populate from existing `tenseMarking` / `aspectSystem` /
+ * `moodMarking` / `evidentialMarking` / `voice` / `alignment` flags
+ * via `deriveGrammaticalisedAxes`; for now that helper is opt-in.
+ */
+export interface GrammaticalisedAxes {
+  tense?: ReadonlyArray<TenseAxisValue>;
+  aspect?: ReadonlyArray<AspectAxisValue>;
+  mood?: ReadonlyArray<MoodAxisValue>;
+  voice?: ReadonlyArray<VoiceAxisValue>;
+  evidentiality?: ReadonlyArray<EvidentialityAxisValue>;
+  case?: ReadonlyArray<CaseAxisValue>;
+}
+
 /**
  * Phase 29 Tranche 5e: inflection class. Latin-style 1st/2nd/3rd/4th
  * conjugations (or noun declensions). Each language assigns each

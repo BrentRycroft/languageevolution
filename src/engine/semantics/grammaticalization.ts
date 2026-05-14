@@ -1,4 +1,9 @@
-import type { MorphCategory } from "../morphology/types";
+import type {
+  MorphCategory,
+  GrammaticalisedAxes,
+} from "../morphology/types";
+import { toCategoryAxis } from "../morphology/types";
+import type { GrammarFeatures, Language } from "../types";
 
 /**
  * grammaticalization.ts
@@ -122,4 +127,106 @@ export function semanticTagOf(meaning: string): SemanticTag | undefined {
 
 export function pathwayTargets(tag: SemanticTag): MorphCategory[] {
   return PATHWAYS[tag] ?? [];
+}
+
+/**
+ * Phase 73c Tier C Phase 1: filter pathway targets by a language's
+ * declared `grammaticalisedAxes`. A target like `verb.tense.fut`
+ * decomposes to `{axis: "tense", value: "fut"}`; if the language's
+ * `grammaticalisedAxes.tense` is set and doesn't include "fut",
+ * the target is skipped.
+ *
+ * Categories that don't decompose to one of the six Phase-1 axes
+ * (person, number, nounClass, discourse, etc.) pass through
+ * unchanged — they're not gated yet.
+ *
+ * When `grammaticalisedAxes` is absent, returns the pathway list
+ * unchanged (legacy behaviour). This keeps Phase 1 strictly
+ * additive: existing languages see no behaviour change until they
+ * opt in to gating.
+ */
+export function pathwayTargetsForLang(
+  tag: SemanticTag,
+  lang: Pick<Language, "grammar">,
+): MorphCategory[] {
+  const axes = lang.grammar.grammaticalisedAxes;
+  const targets = pathwayTargets(tag);
+  if (!axes) return targets;
+  return targets.filter((cat) => isCategoryAllowed(cat, axes));
+}
+
+function isCategoryAllowed(
+  cat: MorphCategory,
+  axes: GrammaticalisedAxes,
+): boolean {
+  const decomposed = toCategoryAxis(cat);
+  if (!decomposed) return true; // unmapped axis — not gated
+  const allowed = axes[decomposed.axis];
+  if (!allowed) return true; // axis not declared — not gated
+  return (allowed as ReadonlyArray<string>).includes(decomposed.value);
+}
+
+/**
+ * Phase 73c Tier C Phase 1: derive `grammaticalisedAxes` from a
+ * language's existing TAM / voice / case / alignment flags. The
+ * conversion table mirrors the semantics of the legacy declarations:
+ *
+ *   tenseMarking: "past"  → tense: ["past"]
+ *   tenseMarking: "future" → tense: ["fut"]
+ *   tenseMarking: "both"  → tense: ["past", "fut"]
+ *   tenseMarking: "none"  → tense: []
+ *   aspectSystem: "simple"   → aspect: []
+ *   aspectSystem: "pfv-ipfv" → aspect: ["pfv", "ipfv"]
+ *   aspectSystem: "prog"     → aspect: ["prog"]
+ *   aspectSystem: "rich"     → aspect: ["pfv", "ipfv", "prog", "hab"]
+ *
+ * Phase 1 ships this as an opt-in helper; callers choose when to
+ * apply it. Phase 4+ may invoke it at language construction to
+ * apply the gate universally (with snapshot regen).
+ */
+export function deriveGrammaticalisedAxes(
+  grammar: GrammarFeatures,
+): GrammaticalisedAxes {
+  const out: GrammaticalisedAxes = {};
+  switch (grammar.tenseMarking) {
+    case "past":   out.tense = ["past"]; break;
+    case "future": out.tense = ["fut"]; break;
+    case "both":   out.tense = ["past", "fut"]; break;
+    case "none":   out.tense = []; break;
+  }
+  switch (grammar.aspectSystem) {
+    case "simple":   out.aspect = []; break;
+    case "pfv-ipfv": out.aspect = ["pfv", "ipfv"]; break;
+    case "prog":     out.aspect = ["prog"]; break;
+    case "rich":     out.aspect = ["pfv", "ipfv", "prog", "hab"]; break;
+  }
+  switch (grammar.moodMarking) {
+    case "declarative": out.mood = []; break;
+    case "subjunctive": out.mood = ["subj"]; break;
+    case "imperative":  out.mood = ["imp"]; break;
+  }
+  switch (grammar.voice) {
+    case "active": out.voice = []; break;
+    case "mixed":  out.voice = ["pass"]; break;
+  }
+  switch (grammar.evidentialMarking) {
+    case "none":        out.evidentiality = []; break;
+    case "direct-only": out.evidentiality = ["dir"]; break;
+    case "three-way":   out.evidentiality = ["dir", "rep", "inf"]; break;
+  }
+  // Case axis is derived jointly from `hasCase` + `alignment`. A
+  // language with `hasCase: false` and `caseStrategy: preposition`
+  // grammaticalises no morphological cases; an erg-abs language
+  // exposes `erg` + `abs` instead of `nom` + `acc`.
+  if (grammar.hasCase === false) {
+    out.case = [];
+  } else {
+    switch (grammar.alignment) {
+      case "nom-acc":    out.case = ["nom", "acc", "gen", "dat", "loc", "inst", "abl"]; break;
+      case "erg-abs":    out.case = ["erg", "abs", "gen", "dat", "loc", "inst", "abl"]; break;
+      case "tripartite": out.case = ["nom", "acc", "erg", "gen", "dat", "loc", "inst", "abl"]; break;
+      case "split-S":    out.case = ["nom", "acc", "erg", "abs", "gen", "dat", "loc", "inst", "abl"]; break;
+    }
+  }
+  return out;
 }
