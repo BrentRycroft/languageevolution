@@ -9,6 +9,7 @@ import type {
   SemanticRole,
 } from "./roleFrame";
 import { roleClauseToSentence } from "./ast";
+import { subjectRoleOf, objectRoleOf } from "../lexicon/argFrames";
 
 /**
  * parse.ts — Phase 73c Tier C Phase 3.
@@ -475,9 +476,15 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   const consumed = new Set<number>();
   consumed.add(verbIdx);
 
+  // Phase 73c Phase 5: dispatch subject + object roles on the
+  // predicate's lexical argFrame. `see` → experiencer + stimulus,
+  // `fall` → theme (subject), `give` → agent + theme, etc.
+  const subjectRole = subjectRoleOf(verbTok.lemma);
+  const objectRole = objectRoleOf(verbTok.lemma);
+
   // Subject collection. Pronoun fallbacks construct synthesised
   // participants directly (no longer goes through NP shape).
-  let subject = collectParticipant(tokens, verbIdx, "left", consumed, "agent");
+  let subject = collectParticipant(tokens, verbIdx, "left", consumed, subjectRole);
   if (!subject) {
     const whSubjectLemmas = new Set(["who", "what", "which", "whoever", "whatever"]);
     const leftIsBareWh =
@@ -488,7 +495,7 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
       subject = {
         lemma: leadingWh!.lemma,
         pos: "PRON",
-        role: "agent",
+        role: subjectRole,
         features: { number: "sg", person: "3", isPronoun: true, synthesized: true },
       };
       leadingWh = undefined;
@@ -496,7 +503,7 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
       subject = {
         lemma: "you",
         pos: "PRON",
-        role: "agent",
+        role: subjectRole,
         features: { number: "sg", person: "2", isPronoun: true, synthesized: true },
       };
     } else {
@@ -505,7 +512,7 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   }
 
   // Object collection (right of verb).
-  const object = collectParticipant(tokens, verbIdx, "right", consumed, "patient") ?? undefined;
+  const object = collectParticipant(tokens, verbIdx, "right", consumed, objectRole) ?? undefined;
 
   // Copular complement: when verb is "be" and no object, sweep adjectives.
   const complement: { lemma: string; degree?: import("./syntax").Degree }[] = [];

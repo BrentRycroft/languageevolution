@@ -5,7 +5,8 @@ import { tokeniseEnglish } from "../translator/sentence";
 import { parseSyntaxToClause } from "../translator/parse";
 import { realiseClause, realiseSingleClause, realiseSentence } from "../translator/realise";
 import { sentenceToRoleClause, roleClauseToSentence } from "../translator/ast";
-import type { RoleClause, Language } from "../translator/syntax";
+import type { RoleClause } from "../translator/syntax";
+import type { Language } from "../types";
 
 /**
  * Phase 73c Tier C Phase 4 — realiser consumes RoleClause.

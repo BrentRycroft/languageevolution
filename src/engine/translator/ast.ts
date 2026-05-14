@@ -513,7 +513,12 @@ function roleClauseToRelativeClause(
   relativiser: string | undefined,
   subjectGap: boolean,
 ): RelativeClause {
-  const objectP = rc.participants.find((p) => p.role === "patient");
+  // Phase 5: find the direct-object positionally. Subject is
+  // participant[0]; the first non-adjunct after the subject is
+  // the direct object regardless of its semantic role tag
+  // (`patient`, `stimulus`, `theme` for `give`, etc.).
+  const cores = rc.participants.filter((p) => !p.adjunct);
+  const objectP = cores[1];
   const pps: PP[] = [];
   for (const p of rc.participants) {
     if (!p.adjunct) continue;
@@ -560,16 +565,16 @@ function roleClauseToRelativeClause(
  * concern: `roleClausesToSentences` walks the chain.
  */
 export function roleClauseToSentence(rc: RoleClause): Sentence | null {
-  // Locate the subject participant. Phase 5 will refine role
-  // dispatch; Phase 3 accepts any of the canonical "subject-like"
-  // roles (agent, experiencer, theme) as the subject NP.
-  const subjectP = rc.participants.find(
-    (p) => !p.adjunct && (p.role === "agent" || p.role === "experiencer" || p.role === "theme"),
-  );
+  // Phase 5: locate subject + object POSITIONALLY in the
+  // participants list (first non-adjunct = subject, second =
+  // direct object). The role tag is preserved on the participant
+  // but no longer filtered — the parser and composer both lay out
+  // the list in `argFrame` order, so this is reliable. Adjuncts
+  // (PP-shaped participants with `adjunct: true`) are skipped.
+  const cores = rc.participants.filter((p) => !p.adjunct);
+  const subjectP = cores[0];
   if (!subjectP) return null;
-  const objectP = rc.participants.find(
-    (p) => !p.adjunct && (p.role === "patient" || p.role === "stimulus"),
-  );
+  const objectP = cores[1];
   const adjuncts = rc.participants.filter((p) => p.adjunct);
 
   const subjectNP: NP = participantToNP(subjectP, "nom");

@@ -49,21 +49,31 @@ function findP(rc: RoleClause, lemma: string): Participant | undefined {
 }
 
 describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
-  it("transitive: subject=agent, object=patient, predicate carries tense", () => {
+  it("transitive 'see' (psych): subject=experiencer, object=stimulus", () => {
+    // Phase 5: argFrame for 'see' is ["experiencer", "stimulus"]
+    // because the subject isn't a volitional agent.
     const rc = parse("the king sees the wolf");
     expect(rc.kind).toBe("RoleClause");
     expect(rc.predicate.lemma).toBe("see");
     expect(rc.predicate.features?.tense).toBe("present");
     const king = findP(rc, "king")!;
     const wolf = findP(rc, "wolf")!;
-    expect(king.role).toBe("agent");
-    expect(wolf.role).toBe("patient");
+    expect(king.role).toBe("experiencer");
+    expect(wolf.role).toBe("stimulus");
   });
 
-  it("intransitive: subject only", () => {
+  it("transitive 'kill' (default agent+patient frame)", () => {
+    // No argFrame override → default frame from argFrames.ts.
+    const rc = parse("the king kills the wolf");
+    expect(findP(rc, "king")!.role).toBe("agent");
+    expect(findP(rc, "wolf")!.role).toBe("patient");
+  });
+
+  it("intransitive 'run' (unaccusative): subject=theme", () => {
+    // Phase 5: argFrame for 'run' is ["theme"] (movement verb).
     const rc = parse("the dog runs");
     const dog = findP(rc, "dog")!;
-    expect(dog.role).toBe("agent");
+    expect(dog.role).toBe("theme");
     expect(rc.participants.filter((p) => !p.adjunct)).toHaveLength(1);
   });
 

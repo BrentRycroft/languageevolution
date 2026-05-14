@@ -57,7 +57,9 @@ const ALL_SLOTS: SlotAssignment = {
 };
 
 describe("Phase 73c Phase 2 — composeTargetClause IR shape", () => {
-  it("transitive: subject=agent, object=patient, no adjuncts", () => {
+  it("transitive 'see' (psych): subject=experiencer, object=stimulus", () => {
+    // Phase 5: `see` has argFrame ["experiencer", "stimulus"] so
+    // its subject is NOT an agent (king doesn't volitionally see).
     const { lang, ctx } = freshLang("p2-trans");
     const clause = composeTargetClause(lang, transitive(), { verb: "see", subject: "king", object: "wolf" }, ctx);
     expect(clause.kind).toBe("RoleClause");
@@ -66,13 +68,29 @@ describe("Phase 73c Phase 2 — composeTargetClause IR shape", () => {
     expect(clause.participants).toHaveLength(2);
     const subj = clause.participants.find((p) => p.lemma === "king")!;
     const obj = clause.participants.find((p) => p.lemma === "wolf")!;
-    expect(subj.role).toBe("agent");
-    expect(obj.role).toBe("patient");
+    expect(subj.role).toBe("experiencer");
+    expect(obj.role).toBe("stimulus");
     expect(subj.adjunct).toBeUndefined();
     expect(obj.adjunct).toBeUndefined();
   });
 
-  it("intransitive: subject only, no object", () => {
+  it("transitive 'kill' (default agent+patient frame): no argFrame override", () => {
+    const { lang, ctx } = freshLang("p2-trans-default");
+    const tpl: AbstractTemplate = {
+      shape: "transitive",
+      tense: "past",
+      needs: { subject: true, object: true, adjective: false, time: false, place: false },
+    };
+    const clause = composeTargetClause(lang, tpl, { verb: "kill", subject: "king", object: "wolf" }, ctx);
+    const subj = clause.participants.find((p) => p.lemma === "king")!;
+    const obj = clause.participants.find((p) => p.lemma === "wolf")!;
+    expect(subj.role).toBe("agent");
+    expect(obj.role).toBe("patient");
+  });
+
+  it("intransitive 'run' (unaccusative): subject=theme", () => {
+    // Phase 5: `run` has argFrame ["theme"] (movement verb where
+    // the subject is the thing moving, not volitional agent).
     const { lang, ctx } = freshLang("p2-intrans");
     const tpl: AbstractTemplate = {
       shape: "intransitive",
@@ -81,7 +99,7 @@ describe("Phase 73c Phase 2 — composeTargetClause IR shape", () => {
     };
     const clause = composeTargetClause(lang, tpl, { verb: "run", subject: "dog" }, ctx);
     expect(clause.participants).toHaveLength(1);
-    expect(clause.participants[0]!.role).toBe("agent");
+    expect(clause.participants[0]!.role).toBe("theme");
     expect(clause.predicate.features?.tense).toBe("present");
   });
 

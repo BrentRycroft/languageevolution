@@ -8,6 +8,7 @@ import type {
   SemanticRole,
 } from "../translator/syntax";
 import type { AbstractTemplate, SlotAssignment, TemplateShape } from "./composer";
+import { subjectRoleOf, objectRoleOf } from "../lexicon/argFrames";
 
 /**
  * roleProjection.ts — Tier C Phase 2 (Phase 73c).
@@ -34,20 +35,22 @@ import type { AbstractTemplate, SlotAssignment, TemplateShape } from "./composer
  */
 
 /**
- * Decide the semantic role of the subject participant.
- * Phase 2: positional default (`agent`). Phase 5 will dispatch on
- * the predicate's lexical `argFrame`.
+ * Decide the semantic role of the subject participant. Phase 5
+ * dispatches on the predicate's lexical `argFrame` (table in
+ * `lexicon/argFrames.ts`): `see` → experiencer, `fall` → theme,
+ * `give` → agent, default → agent for verbs not in the table.
  */
-function subjectRoleFor(_verb: Meaning): SemanticRole {
-  return "agent";
+function subjectRoleFor(verb: Meaning): SemanticRole {
+  return subjectRoleOf(verb);
 }
 
 /**
- * Decide the semantic role of the object participant.
- * Phase 2: positional default (`patient`). Phase 5 will refine.
+ * Decide the semantic role of the object participant. Phase 5
+ * dispatches on the predicate's lexical `argFrame`: `see` →
+ * stimulus, `give` → theme, default → patient.
  */
-function objectRoleFor(_verb: Meaning): SemanticRole {
-  return "patient";
+function objectRoleFor(verb: Meaning): SemanticRole {
+  return objectRoleOf(verb);
 }
 
 /**
