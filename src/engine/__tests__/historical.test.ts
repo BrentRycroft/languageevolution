@@ -376,11 +376,20 @@ describe("Phase 71c — closed-class anchoring + inventory tightening", () => {
     expect(cfg.seedPhonemeTarget).toBe(26);
   });
 
-  it("Romance preset declares seedRuleBias suppressing length-emergence rules", () => {
+  it("Romance preset does NOT declare seedRuleBias (Phase 73d audit: preset-specific evolution bias removed)", () => {
+    // Phase 73d audit: pre-73d the Romance preset declared
+    // `seedRuleBias` at init-time to suppress vowel-lengthening
+    // rules (`vowel.lengthening_open_syllable`, etc.) to 0.4×.
+    // That was a preset-specific evolutionary bias firing outside
+    // historical mode — which contradicts the design rule that
+    // presets should only set initial conditions, and evolution
+    // dynamics must be general. The bias has been removed.
+    //
+    // If Latin-stability behaviour needs to be re-anchored, it
+    // belongs in a `BiasMilestone` in the Romance historical
+    // schedule (`historical/romance/index.ts`), not at preset init.
     const cfg = presetRomance();
-    expect(cfg.seedRuleBias).toBeDefined();
-    expect(cfg.seedRuleBias!["vowel.lengthening_open_syllable"]).toBeLessThan(1);
-    expect(cfg.seedRuleBias!["stress.open_syllable_lengthening"]).toBeLessThan(1);
+    expect(cfg.seedRuleBias).toBeUndefined();
   });
 
   it("After 200 gens, Romance daughters' inventories are bounded (<= 46)", () => {

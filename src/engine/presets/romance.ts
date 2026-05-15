@@ -532,20 +532,14 @@ export function presetRomance(): SimulationConfig {
     // emergence of length / nasal allotones. Pulling the target to
     // 26 lets `runHomeostasis` keep the inventory honest.
     seedPhonemeTarget: 26,
-    // Phase 71c T3 (G2): suppress phonemic vowel length emergence.
-    // Spanish/Italian/French/Portuguese/Romanian have at most
-    // marginal length (Italian distinguishes geminate consonants but
-    // not phonemic long vowels). Pre-71c the Romance railroad ended
-    // up with `aː`/`eː`/`oː` as separate inventory phonemes simply
-    // because lengthening rules fire freely. seedRuleBias is a soft
-    // prior that multiplies the catalog default at language birth
-    // (Phase 40d, types.ts:1151) and inherits with jitter on splits.
-    seedRuleBias: {
-      "vowel.lengthening_open_syllable": 0.4,
-      "compensatory.final_coda_lengthening": 0.4,
-      "compensatory.medial_coda_lengthening": 0.4,
-      "stress.open_syllable_lengthening": 0.4,
-    },
+    // Phase 73d audit: removed the Phase 71c T3 `seedRuleBias` entries
+    // that down-weighted vowel-lengthening rules to 0.4× at language
+    // birth. Those were preset-specific evolutionary biases firing
+    // outside historical mode. The Romance railroad's historical
+    // schedule (`historical/romance/index.ts`) is the supported way
+    // to pin Latin-stability behaviour; if the railroad isn't anchoring
+    // vowel-length suppression strongly enough, add the bias to a
+    // `BiasMilestone` in the schedule instead of seeding it at init.
     // Phase 72b T2: Romance closed-class inventory (function words).
     // Includes article candidates (the/a — derived from ille/illa later
     // in the grammaticalisation cycle), conjunctions (and = et, or =
