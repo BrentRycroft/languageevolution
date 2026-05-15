@@ -4,6 +4,7 @@ import { generateName } from "./naming";
 import { makeRng, type Rng } from "./rng";
 import { buildInitialState } from "./steps/init";
 import { stepPhonology, stepArealWaves } from "./steps/phonology";
+import { stepPhonotacticDrift } from "./steps/phonotacticDrift";
 import { validateConfig, summarizeValidation } from "./configValidation";
 import { stepGenesis, bootstrapNeologismNeighbors } from "./steps/genesis";
 import { stepVolatility, triggerVolatilityUpheaval } from "./steps/volatility";
@@ -378,6 +379,12 @@ export function createSimulation(
       if (config.modes.phonology) timed("phonology", () => stepPhonology(lang, config, rng, nextGen, state));
       if (config.modes.phonology && config.modes.learner) timed("learner", () => stepLearner(lang, config, rng, nextGen));
       if (config.modes.phonology) timed("inventoryMgmt", () => stepInventoryManagement(lang, rng, nextGen));
+      // Phase 73d D2: phonotactic profile drifts over generations
+      // driven by cumulative rule firings. Runs alongside the
+      // phonology stack so the daughter's cluster allowance can
+      // diverge from its sister's based on which rule families
+      // its `ruleBias` (D1-seeded) is firing.
+      if (config.modes.phonology) timed("phonotacticDrift", () => stepPhonotacticDrift(lang, nextGen, rng));
       if (config.modes.obsolescence) timed("obsolescence", () => stepObsolescence(lang, config, rng, nextGen));
       if (config.modes.copula) timed("copula", () => {
         stepCopulaErosion(lang, config, rng, nextGen);
