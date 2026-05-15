@@ -549,20 +549,15 @@ export function presetPIE(): SimulationConfig {
     seedToneRegime: "non-tonal",
     seedBoundMorphemes: PIE_BOUND_MORPHEMES,
     seedPhonemeTarget: 36,
-    // Phase 40d: PIE descendants historically LOST aspirates (Greek
-    // bʰ→pʰ, Latin bʰ→f), not gained them. Pre-40d the simulator
-    // drifted PIE daughters toward bʰ/dʰ/gʷʰ-heavy outputs because
-    // fortition.initial_aspiration fired at catalog default. This
-    // prior down-weights it 10× and boosts attested IE patterns
-    // (intervocalic voicing, lenition, monophthongisation). Soft
-    // prior — daughters can still drift away from it via per-language
-    // weight evolution and naturalBiasOverride drift.
-    seedRuleBias: {
-      "fortition.initial_aspiration": 0.1,
-      "voicing.s_intervocalic": 1.5,
-      "lenition.tap_intervocalic": 1.2,
-      "monophthongization.au_to_o": 1.4,
-    },
+    // Phase 73d audit: removed the Phase 40d `seedRuleBias` entries
+    // (fortition.initial_aspiration ×0.1, voicing.s_intervocalic ×1.5,
+    // lenition.tap_intervocalic ×1.2, monophthongization.au_to_o ×1.4).
+    // Those were preset-specific evolutionary biases firing outside
+    // historical mode — exactly the rule violation the audit flagged.
+    // PIE daughters can now evolve aspirate-heavy or aspirate-light
+    // depending on D1's per-daughter typological direction; if you
+    // want a specific PIE-family trajectory anchored, declare it via
+    // a historical schedule.
     // Phase 46a-migration: Proto-Indo-European — SOV, full case system
     // (8 cases), sg-du-pl numbers, no articles. The articles module is
     // off; daughters that grammaticalise articles activate it via
