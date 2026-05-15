@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { proposeOneRule } from "../phonology/propose";
 import { pickNextStressForSplit } from "../grammar/stressTransitions";
 import { setGrammarFeature } from "../grammar/mutate";
+import { maybeExpandInventory } from "./inventoryExpansion";
 
 /**
  * founder.ts
@@ -97,6 +98,14 @@ export function applyFounderInnovation(
   for (const kind of order) {
     if (forbidden?.has(kind)) continue;
     if (kind === "phonology") {
+      // Phase 73d D4: roll inventory expansion ALONGSIDE the
+      // existing rule proposal. The two can both fire — D4 is
+      // additive and is direction-weighted.
+      const expansion = maybeExpandInventory(child, child.typologicalDirection, rng, generation);
+      if (expansion) {
+        descriptions.push(`inventory expansion: ${expansion}`);
+        primaryKind ??= "phonology";
+      }
       const rule = proposeOneRule(child, rng, generation);
       if (rule) {
         if (!child.activeRules) child.activeRules = [];
@@ -106,7 +115,10 @@ export function applyFounderInnovation(
       }
     } else if (kind === "stress") {
       const current = child.stressPattern ?? "penult";
-      const next = pickNextStressForSplit(current, rng);
+      // Phase 73d D3: weight the stress target by the daughter's
+      // typologicalDirection.synthesis (positive → fixed-stress,
+      // negative → free-stress patterns).
+      const next = pickNextStressForSplit(current, rng, child.typologicalDirection);
       if (next !== current) {
         child.stressPattern = next;
         descriptions.push(`stress pattern: ${current} → ${next}`);
@@ -134,6 +146,24 @@ export function applyFounderInnovation(
         descriptions.push(`${flip.feature}: ${String(flip.from)} → ${String(flip.to)}`);
         primaryKind ??= kind;
       }
+    }
+  }
+
+  // Phase 73d D3: extra-roll stress flip. The shuffled-category
+  // loop above picks stress at most once and competes with
+  // phonology/grammar; in practice founder events almost never
+  // fire stress because phonology/grammar typically grab the
+  // slot. D3 adds a separate 45% roll to flip stress AS WELL,
+  // independently of the shuffled outcome. Direction-weighted
+  // target via pickNextStressForSplit.
+  const stressAlreadyFlipped = descriptions.some((d) => d.startsWith("stress pattern:"));
+  if (!stressAlreadyFlipped && !forbidden?.has("stress") && rng.chance(0.45)) {
+    const current = child.stressPattern ?? "penult";
+    const next = pickNextStressForSplit(current, rng, child.typologicalDirection);
+    if (next !== current) {
+      child.stressPattern = next;
+      descriptions.push(`stress pattern: ${current} → ${next}`);
+      primaryKind ??= "stress";
     }
   }
 

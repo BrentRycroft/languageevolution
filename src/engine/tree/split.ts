@@ -13,6 +13,7 @@ import type { WorldMap } from "../geo/map";
 import { leafIds } from "./leafIds";
 import { CONSERVATISM_MIN, CONSERVATISM_MAX } from "../constants";
 import { applyFounderInnovation } from "./founder";
+import { sampleDirection, applyDirectionDeltas, hasHistoricalInitialBias } from "./typologicalDirection";
 import { inheritMeaningFields } from "../perMeaningFields";
 
 /**
@@ -123,6 +124,15 @@ export function pickFirstSplitChildCount(rng: Rng): number {
 export interface SplitOptions {
   childCount?: number;
   worldMap?: WorldMap;
+  /**
+   * Phase 73d D1: when set, suppress the typological-direction
+   * delta application. Historical-mode callers pass `true` because
+   * `applyBiasMilestone` is about to overwrite `ruleBias` with the
+   * scheduled values; allowing D1 deltas first would compound
+   * (multiplicatively) with the schedule's factors. The direction
+   * TAG is still assigned to each daughter for narrative colour.
+   */
+  skipTypologicalDirectionDeltas?: boolean;
 }
 
 export function splitLeaf(
@@ -341,6 +351,23 @@ export function splitLeaf(
   // clone — build a fresh form-key index against the new refs.
   for (const child of children) {
     if (child.words) rebuildFormKeyIndex(child);
+  }
+  // Phase 73d Tier D Phase D1: assign each daughter a latent
+  // typological direction vector with anti-correlation against
+  // earlier sisters, then apply correlated bias deltas to
+  // `ruleBias` / `phonotacticProfile` / `synthesisIndex` /
+  // `fusionIndex`. Historical-mode daughters get the tag but NOT
+  // the deltas — `applyBiasMilestone` in `steps/historical.ts`
+  // wholesale-overwrites `ruleBias` afterward, so the Romance
+  // railroad continues to pin canonical Latin-daughter biases.
+  const directedSiblings: Language[] = [];
+  for (const child of children) {
+    const direction = sampleDirection(parentLang, rng, directedSiblings);
+    child.typologicalDirection = direction;
+    if (!opts.skipTypologicalDirectionDeltas && !hasHistoricalInitialBias(child)) {
+      applyDirectionDeltas(child, direction);
+    }
+    directedSiblings.push(child);
   }
   // Phase 40c: sister differentiation. Each daughter gets a clone of
   // parent's diffusionState / categoryMomentum / naturalBiasOverride

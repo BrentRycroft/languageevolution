@@ -26,7 +26,12 @@ export function stepTypologyDrift(lang: Language, generation: number): void {
   const synthFromParadigms = 0.8 + 0.2 * paradigmCount;
   const currentSynth = g.synthesisIndex ?? 2.0;
   const targetSynth = Math.max(0.8, Math.min(4.5, synthFromParadigms));
-  const newSynth = currentSynth * 0.85 + targetSynth * 0.15;
+  // Phase 73d D5: smoothing reduced 0.85 → 0.70 so daughters'
+  // synthesis index adapts faster to their paradigm-richness
+  // trajectory. Combined with D1's split-time seed delta, sisters
+  // diverge sharply on the analytic-vs-synthetic axis instead of
+  // converging on the same paradigm-count target.
+  const newSynth = currentSynth * 0.70 + targetSynth * 0.30;
 
   let avgAffixLen = 0;
   let n = 0;
@@ -39,7 +44,8 @@ export function stepTypologyDrift(lang: Language, generation: number): void {
   if (n > 0) avgAffixLen /= n;
   const fusionFromAffixes = avgAffixLen <= 1.2 ? 0.7 : avgAffixLen >= 2.5 ? 0.25 : 0.45;
   const currentFusion = g.fusionIndex ?? 0.5;
-  const newFusion = currentFusion * 0.85 + fusionFromAffixes * 0.15;
+  // Phase 73d D5: smoothing reduced 0.85 → 0.70 alongside synth.
+  const newFusion = currentFusion * 0.70 + fusionFromAffixes * 0.30;
 
   g.synthesisIndex = newSynth;
   g.fusionIndex = newFusion;

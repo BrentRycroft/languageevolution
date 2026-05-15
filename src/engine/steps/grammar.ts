@@ -115,7 +115,7 @@ export function stepGrammar(
   }
   if (rng.chance(0.3)) {
     const current = lang.stressPattern ?? "penult";
-    const next = pickNextStressForDrift(current, rng);
+    const next = pickNextStressForDrift(current, rng, lang.typologicalDirection);
     if (next !== current) {
       lang.stressPattern = next;
       pushEvent(lang, {
