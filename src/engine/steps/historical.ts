@@ -206,6 +206,11 @@ function applySplitMilestone(
     const childIds = splitLeaf(state.tree, id, generation, rng, {
       childCount: m.daughters.length,
       worldMap,
+      // Phase 73d D1: historical-mode daughters get their
+      // `ruleBias` wholesale-overwritten by `applyBiasMilestone`
+      // below; suppressing D1's multiplicative deltas avoids
+      // compounding with the schedule's factors.
+      skipTypologicalDirectionDeltas: true,
     });
     for (let i = 0; i < childIds.length && i < m.daughters.length; i++) {
       const daughter = state.tree[childIds[i]!]!.language;

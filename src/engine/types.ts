@@ -102,6 +102,31 @@ export interface SoundChange {
   stratum?: "lexical" | "post-lexical";
 }
 
+/**
+ * Phase 73d Tier D Phase D1: per-daughter latent typological
+ * direction. Three orthogonal-ish axes each in [-1, 1]. The
+ * combination determines a daughter's correlated bias profile:
+ * a daughter with `simplification: +0.8, palatalization: +0.4,
+ * synthesis: -0.3` will favour lenition + open syllables +
+ * palatalization + isolating morphology — the Romance-ish corner.
+ * Opposing axes give the Slavic / Germanic / Indic profiles.
+ *
+ * Sampled per-daughter at split with anti-correlation across
+ * siblings; sisters end up in opposing halves of the typology
+ * space.
+ */
+export interface TypologicalDirection {
+  /** + = lenition + cluster-loss + open-syllable target;
+   *  − = fortition + cluster-preservation + closed-syllable. */
+  simplification: number;
+  /** + = palatalization + harmony developing;
+   *  − = back-vowel + no harmony. */
+  palatalization: number;
+  /** + = synthetic + fixed stress;
+   *  − = isolating + lexical/final stress. */
+  synthesis: number;
+}
+
 export interface LanguageEvent {
   generation: number;
   kind:
@@ -471,6 +496,21 @@ export interface Language {
     /** 0..1 — how aggressively the engine biases toward compliance. */
     strictness: number;
   };
+  /**
+   * Phase 73d Tier D Phase D1: latent typological direction vector
+   * assigned at split. Drives correlated bias deltas across
+   * `ruleBias`, `phonotacticProfile`, stress preference, and
+   * `synthesisIndex`/`fusionIndex`. Each axis in [-1, 1]; sister
+   * daughters at every split sample with anti-correlation, so they
+   * occupy opposing halves of the typology space.
+   *
+   * NOT preset-specific. Historical mode opts out: when a
+   * `SplitMilestone` overrides the daughter's `ruleBias` via
+   * `initialBias`, the direction tag is still assigned (for
+   * narrative colour) but the deltas are NOT applied — historical
+   * mode wins on quantitative bias.
+   */
+  typologicalDirection?: TypologicalDirection;
   /**
    * Phase 27b: per-phoneme functional-load cache. Updated lazily by
    * `functionalLoadMap(lang, generation)`. Generation key invalidates
