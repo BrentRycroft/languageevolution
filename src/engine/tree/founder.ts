@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { proposeOneRule } from "../phonology/propose";
 import { pickNextStressForSplit } from "../grammar/stressTransitions";
 import { setGrammarFeature } from "../grammar/mutate";
+import { maybeExpandInventory } from "./inventoryExpansion";
 
 /**
  * founder.ts
@@ -97,6 +98,14 @@ export function applyFounderInnovation(
   for (const kind of order) {
     if (forbidden?.has(kind)) continue;
     if (kind === "phonology") {
+      // Phase 73d D4: roll inventory expansion ALONGSIDE the
+      // existing rule proposal. The two can both fire — D4 is
+      // additive and is direction-weighted.
+      const expansion = maybeExpandInventory(child, child.typologicalDirection, rng, generation);
+      if (expansion) {
+        descriptions.push(`inventory expansion: ${expansion}`);
+        primaryKind ??= "phonology";
+      }
       const rule = proposeOneRule(child, rng, generation);
       if (rule) {
         if (!child.activeRules) child.activeRules = [];

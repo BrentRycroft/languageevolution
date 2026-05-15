@@ -279,7 +279,7 @@ export interface Language {
   wordFrequencyHints: Record<Meaning, number>;
   phonemeInventory: PhonemeInventory;
   inventoryProvenance?: Record<string, {
-    source: "native" | "areal" | "internal-rule";
+    source: "native" | "areal" | "internal-rule" | "founder-addition";
     sourceLangId?: string;
     sourceLangName?: string;
     generation?: number;
