@@ -1375,6 +1375,17 @@ export interface SimulationConfig {
    */
   seedBoundMorphemes?: ReadonlySet<Meaning>;
   /**
+   * Phase 73e: preset-declared colexifications — concepts that share a
+   * single lexeme in this language. Maps a "winner" meaning (whose form is
+   * used) to the meanings it absorbs. Recorded on `colexifiedAs` at language
+   * birth; the lookup cascade's reverse-colex rung resolves an absorbed
+   * meaning to the winner's form. Lets presets carve the concept space the
+   * way the language actually does (e.g. Bantu arm=hand, many languages
+   * finger=toe) instead of mirroring the English seed inventory.
+   * Example: `seedColexification: { hand: ["arm"] }`.
+   */
+  seedColexification?: Record<Meaning, Meaning[]>;
+  /**
    * Phase 36 Tranche 36b: opt the proto language into a Bantu-style
    * noun-class system. When true, `assignAllNounClasses` runs at
    * language birth and the realiser inflects every noun with its

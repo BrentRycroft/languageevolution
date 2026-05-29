@@ -48,7 +48,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
-| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). |
+| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook now lets presets declare colexifications (recorded in colexifiedAs); preset adoption pending. |
 | **Language-agnosticism** (cross-cutting) | needs assessment | Audit for baked-in English structure. |
 | **Performance** | partial | apply.ts hot path; known optimisation targets open. |
 | **UX / GUI** | needs assessment | No play session run yet. |
@@ -117,14 +117,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [x] Audit presets for English-based encoding (code-level): forms are NOT
       relexified English (Bantu authentic proto-Bantu; default lexicon is
       PIE-flavored). Real anglocentrism = the shared English concept inventory.
-- [ ] De-anglicization: let presets declare genuine colexifications (e.g. Bantu
-      arm=hand) so the concept inventory differs per language instead of storing
-      duplicate forms. CONFIRMED: `colexifiedAs` exists on Language but there's
-      NO `seedColexification` config hook — presets only activate the dynamic
-      `semantic:colexification` module. Needs a small additive config field +
-      wiring at language construction. One design question first (NEEDS
-      DECISION-lite): does a seeded colexification share ONE form, or link two
-      distinct-but-related forms?
+- [x] De-anglicization: added the `seedColexification` config hook (winner →
+      absorbed meanings) + wiring in init.ts → populates `colexifiedAs` at
+      language birth; the lookup cascade's reverse-colex rung resolves an
+      absorbed meaning to the winner's form. + tests (seed_colexification).
+      Design question resolved: it RECORDS the colexification (one shared form);
+      whether the absorbed meaning also has its own seedLexicon entry is an
+      orthogonal preset-authoring choice.
+- [ ] De-anglicization (adopt the hook): have presets declare real, attested
+      colexifications grounded in typology (e.g. Bantu arm=hand `mukono`,
+      finger=toe in many families). Changes preset starting state → verify
+      determinism + preset tests. [next de-anglicization step]
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -134,6 +137,12 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Added the `seedColexification` config hook (types.ts + init.ts): presets can
+  declare concepts that share one lexeme (winner → absorbed meanings), recorded
+  on colexifiedAs at birth and resolved via the lookup cascade's reverse-colex
+  rung. The de-anglicization lever — lets a language carve its own concept space
+  (Bantu arm=hand) rather than mirror the English seed inventory. Additive (no
+  preset adopts it yet); + seed_colexification tests; tsc + determinism green.
 - Narrative simple-render copular path now emits an overt copula (placed like a
   verb per `grammar.wordOrder`) when the language has lexicalised "be";
   zero-copula languages keep bare S–A juxtaposition. Principle: overt-copula vs

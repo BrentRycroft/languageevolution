@@ -229,6 +229,17 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   seedNativeProvenance(rootLang);
+  // Phase 73e: preset-declared colexifications. Records concepts that share
+  // one lexeme in this language (winner → absorbed meanings) on colexifiedAs;
+  // the lookup cascade's reverse-colex rung resolves an absorbed meaning to
+  // the winner's form. Lets a preset carve its own concept space (e.g. Bantu
+  // arm=hand) instead of mirroring the English seed inventory.
+  if (config.seedColexification) {
+    rootLang.colexifiedAs = {};
+    for (const [winner, absorbed] of Object.entries(config.seedColexification)) {
+      rootLang.colexifiedAs[winner] = absorbed.slice();
+    }
+  }
   // Phase 70 T1: tag the proto-language so Historical Mode milestones
   // targeting role "proto" find a leaf to nudge. Skipped when
   // Historical Mode is off — leaves the field undefined.
