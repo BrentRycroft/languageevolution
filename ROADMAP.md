@@ -50,7 +50,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; all presets de-anglicized — Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep), Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name), PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby); default/English have no attested duplicate pairs. |
 | **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
-| **Performance** | partial | apply.ts hot loop already early-continues (zero weight/prob) + caches the priority sort. MEASURED (2026-05-29): hoisting the 4 word-invariant rule scalars (stressBias/naturalBias/freqTier/catMomentum) out of the per-word×rule loop is byte-identical but shows NO end-to-end win — the per-pass array allocation offsets the tiny saving; the loop's real cost is the `probabilityFor` closures + the candidate inner loop. Reverted (see Assessment notes). Don't re-attempt micro-scalar hoists; a real win needs substep profiling (PROFILE_STEP) to find a MACRO hot spot. CONFIRMED: rules are opaque `probabilityFor(w)` closures (catalog.ts, via `countSites`) with NO declarative phoneme targets — so safe inventory-based rule pre-filtering needs catalog-wide target metadata FIRST (a real refactor → NEEDS DECISION). Bundle: 944 kB main chunk (load-time). |
+| **Performance** | partial | Profiled (PROFILE_STEP via vitest, 2026-05-29): phonology = **64-67%** of step time, inventoryMgmt ~18%, genesis ~15%, all else <1%. So apply.ts IS the macro hot spot; its dominant cost is the per-word×rule `probabilityFor` (countSites scan + Math.pow). **DONE: trigger pre-filter (factory subset)** — factory rules (simpleSub/contextSub/mappingSub) now expose `triggers` (the `from`/mapping phonemes); the hot loop skips a rule via an O(1) `includes` check when none are present (provably probability 0). Byte-identical (perfcheck hashes c2e431df/524c8f2c/e7b438a3 unchanged); skips **26-30%** of probabilityFor calls → **0.8-1.7% faster phonology pass** (interleaved drift-cancelled A/B). NEGATIVE/reverted earlier: word-invariant scalar hoist (no win, allocation offset it — see Assessment notes; don't re-attempt). NEXT (bigger win, NEEDS DECISION): extend `triggers` to the ~43 inline catalog rules — would multiply the skip rate, but needs per-rule byte-identical auditing. Bundle: 944 kB main chunk (load-time). |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
 ## Backlog (top = next)
@@ -168,11 +168,26 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Perf: trigger pre-filter (factory subset).** Profiling (PROFILE_STEP via
+  vitest) showed phonology is 64-67% of step time, dominated by the per-word×rule
+  `probabilityFor` (countSites word-scan + Math.pow). The factory rules
+  (simpleSub/contextSub/mappingSub) have a provable necessary trigger (their
+  `from`/mapping phoneme — absent ⇒ probability 0), so added an optional
+  `triggers` field (types.ts) set by the 3 factories (catalog.ts) and an O(1)
+  allocation-free `includes` pre-check in the hot loop (apply.ts) that skips a
+  rule before paying for `probabilityFor` when no trigger is present. Byte-
+  identical (perfcheck hashes unchanged); skips 26-30% of probabilityFor calls →
+  0.8-1.7% faster phonology pass (interleaved drift-cancelled A/B). + invariant
+  test (apply.test) locking that any declared `triggers` truly forces 0. Principle:
+  inventory-based pre-filtering of inapplicable rules + O(1) phoneme-presence.
+  Earlier same-session NEGATIVE result: word-invariant scalar hoist showed no win
+  (allocation offset) → reverted (see below).
 - Perf-feasibility investigation: confirmed sound-change rules are opaque
   `probabilityFor(w)` closures (catalog.ts, via countSites) with no declarative
   phoneme targets — so the safe inventory-based rule pre-filter needs
   catalog-wide target metadata first (a real refactor). Logged under NEEDS
-  DECISION; not guessed.
+  DECISION; not guessed. (PARTIALLY SUPERSEDED: factory rules now expose
+  `triggers`; only the ~43 inline rules still lack declarative targets.)
 - De-anglicization COMPLETE across presets: added PIE (tree=wood, eye=face,
   flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby) — all
   registry-attested COLEX_PAIRS, duplicate forms removed, no new stale-freq. + a
@@ -328,15 +343,21 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## NEEDS DECISION
 
-- **Engine performance — rule pre-filtering (sim speed).** The per-step hot
-  path (apply.ts) evaluates every active sound-change rule against every word;
-  many are inapplicable to a given language (target phonemes absent) yet still
-  evaluated. Safe win: pre-filter inapplicable rules once per language/step.
-  BLOCKED: rules are opaque `probabilityFor(w)` closures (catalog.ts) with no
-  declarative target metadata, so "this rule can't apply here" isn't statically
-  knowable. To enable: add a declarative `targets` field (phonemes/features each
-  rule needs) across catalog.ts + filter on it, with byte-identical
-  verification. A sizeable, careful refactor — want me to take it on?
+- **Engine performance — extend the trigger pre-filter to inline rules.**
+  The factory subset is DONE (see Done log): factory rules expose `triggers`,
+  the hot loop skips them via O(1) presence check, skipping 26-30% of
+  probabilityFor calls / 0.8-1.7% faster phonology pass, byte-identical. The
+  REMAINING win: the ~43 inline catalog.ts rules (deletion/insertion/stress/
+  tone/harmony/metathesis + many substitutions) still lack `triggers`, so they're
+  always evaluated. Many of them DO have a provable necessary phoneme (a single
+  `from`), and adding `triggers` to those would multiply the skip rate — but each
+  needs individual auditing to confirm absence-⇒-probability-0 (rules like
+  deletion/insertion/stress have NO single trigger and must stay unfiltered).
+  This is the "sizeable careful refactor" from before, now with data showing the
+  per-rule payoff. Want me to take on the inline-rule audit (one careful pass,
+  byte-identical verified via perfcheck)? The harness + invariant test are in
+  place. NOTE: phonology is 64-67% of step time, so this is the highest-leverage
+  perf area; inventoryMgmt (~18%) + genesis (~15%) are the next macro targets.
 
 - **Translator realiser refactor.** `realise.ts` is a ~766-line monolith
   hardcoding word-order/alignment/NP-VP realisation; the Phase 41c stage-hook +

@@ -1,4 +1,4 @@
-import type { Lexicon, Meaning, SoundChange, SoundChangeCategory, WordForm } from "../types";
+import type { Lexicon, Meaning, Phoneme, SoundChange, SoundChangeCategory, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
 // Phase 26e: corenessResistance import removed. Swadesh-membership-based
@@ -396,6 +396,18 @@ export const SWADESH_CORE_SET: ReadonlySet<string> = new Set([
   ...CLOSED_CLASS_DEFAULT,
 ]);
 
+/**
+ * Phase 74 (perf): true if any of `triggers` is present in the word.
+ * Allocation-free (native `includes`, short-circuits) — cheaper than the
+ * `countSites` scan inside `probabilityFor` it lets us skip.
+ */
+function anyTriggerPresent(triggers: readonly Phoneme[], word: WordForm): boolean {
+  for (let i = 0; i < triggers.length; i++) {
+    if (word.includes(triggers[i]!)) return true;
+  }
+  return false;
+}
+
 export function applyChangesToWord(
   word: WordForm,
   changes: SoundChange[],
@@ -456,6 +468,11 @@ export function applyChangesToWord(
   for (const change of ordered) {
     const weight = opts.weights[change.id] ?? change.baseWeight;
     if (weight <= 0) continue;
+    // Phase 74 (perf): a rule that declares `triggers` returns probability
+    // 0 when none are present in `current`, so skip it before paying for
+    // the `probabilityFor` word-scan — a byte-identical fast path for the
+    // existing `base <= 0` early-out.
+    if (change.triggers && !anyTriggerPresent(change.triggers, current)) continue;
     if (change.stressFilter && change.stressFilter !== "any") {
       if (!hasStressFilterMatch(current, change.stressFilter, opts.stressPattern, lexicalIdx)) {
         continue;
