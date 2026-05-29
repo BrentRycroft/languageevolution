@@ -57,7 +57,16 @@ export function stepContact(
       )
     : null;
   if (loan) {
-    lang.wordOrigin[loan.meaning] = `borrow:${loan.donor}`;
+    // Only re-tag the meaning's provenance as borrowed when the loan
+    // actually became the primary form. When the recipient already had
+    // the meaning, the loan is just a synonym sense and the primary form
+    // is still native — overwriting wordOrigin here mislabels the
+    // meaning AND desyncs its frequency hint through later sense churn
+    // (origin persisted while freq was dropped → "coined word without
+    // a frequency hint").
+    if (!loan.addedAsSynonym) {
+      lang.wordOrigin[loan.meaning] = `borrow:${loan.donor}`;
+    }
     bumpFrequency(lang, loan.meaning, 0.1);
     if (!lang.recentLoanGens) lang.recentLoanGens = [];
     lang.recentLoanGens.push(generation);

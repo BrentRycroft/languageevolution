@@ -28,9 +28,16 @@ describe("§D — narrative skeleton expansion", () => {
 
   it("compare-mode narratives use the same skeleton across two languages", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "narrative-compare" });
-    for (let i = 0; i < 80; i++) sim.step();
+    // Phase 70.1: no day-one split; step until at least two daughter
+    // lineages are alive (this seed diverges around gen ~124).
+    let alive: string[] = [];
+    for (let i = 0; i < 300; i++) {
+      sim.step();
+      const st = sim.getState();
+      alive = leafIds(st.tree).filter((id) => !st.tree[id]!.language.extinct);
+      if (alive.length >= 2) break;
+    }
     const state = sim.getState();
-    const alive = leafIds(state.tree).filter((id) => !state.tree[id]!.language.extinct);
     expect(alive.length).toBeGreaterThanOrEqual(2);
     const langA = state.tree[alive[0]!]!.language;
     const langB = state.tree[alive[1]!]!.language;

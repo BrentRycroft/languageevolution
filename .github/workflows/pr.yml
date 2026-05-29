@@ -17,6 +17,11 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  # Fast PR gate: the default `npm test` (RUN_SLOW unset). After the
+  # generation-count reductions this is the quick feedback loop. The
+  # heavyweight, genuinely-long-run tier (property tests, multi-hundred-
+  # generation divergence / calibration smokes) runs in `nightly.yml`
+  # so it can't rot unchecked, without making every PR wait minutes.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -30,5 +35,17 @@ jobs:
       - run: npm ci
 
       - run: npm test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
 
       - run: npm run build

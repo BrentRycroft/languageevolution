@@ -108,6 +108,24 @@ describe("inflectCascade", () => {
     expect(result.form.slice(0, 2)).toEqual(["s", "ɔ"]);
   });
 
+  it("fusion (fusionIndex>=0.7) collapses a doubled phoneme at the seam", () => {
+    const lang = makeLang({
+      grammar: { ...makeLang().grammar, synthesisIndex: 1.0, fusionIndex: 0.8 },
+    });
+    // Stem ends in /d/; past affix is /d/ → seam doubling /dd/ collapses.
+    const result = inflectCascade(["b", "a", "d"], ["verb.tense.past"], lang, "x");
+    expect(result.applied).toEqual(["verb.tense.past"]);
+    expect(result.form).toEqual(["b", "a", "d"]);
+  });
+
+  it("fusion leaves a non-doubled seam untouched", () => {
+    const lang = makeLang({
+      grammar: { ...makeLang().grammar, synthesisIndex: 1.0, fusionIndex: 0.8 },
+    });
+    const result = inflectCascade(["b", "a", "t"], ["verb.tense.past"], lang, "x");
+    expect(result.form).toEqual(["b", "a", "t", "d"]);
+  });
+
   it("returns empty applied when no paradigms exist", () => {
     const lang = makeLang({
       morphology: { paradigms: {} },

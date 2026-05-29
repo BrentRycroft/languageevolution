@@ -23,7 +23,11 @@ export function stepCopulaErosion(
   if (!rng.chance(p)) return;
   const oldForm = lang.lexicon["be"]!.join("");
   // Phase 29 Tranche 1 round 2: route through chokepoint.
-  deleteMeaning(lang, "be");
+  // `force`: copula erosion is a DELIBERATE, modeled loss (→ zero-copula
+  // language), so it must bypass the PROTECTED_MEANINGS guard that
+  // otherwise (since Phase 71b) keeps "be" un-deletable and silently
+  // turned this whole step into a no-op.
+  deleteMeaning(lang, "be", { force: true, reason: "copula-erosion", generation });
   pushEvent(lang, {
     generation,
     kind: "semantic_drift",

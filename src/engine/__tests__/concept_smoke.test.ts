@@ -96,8 +96,14 @@ function runPreset(presetId: string, generations: number): {
 }
 
 describe("concept-dictionary integration smoke test", () => {
-  it.each(PRESETS.map((p) => p.id))("preset %s runs 800 gens cleanly", (presetId) => {
-    const result = runPreset(presetId, 800);
+  it.each(PRESETS.map((p) => p.id))("preset %s runs cleanly", (presetId) => {
+    // 60 generations is plenty to exercise coinage / recarve / tier /
+    // colexification and to surface a crash or a lexicon that collapses
+    // or bloats. This is a SMOKE test — the multi-hundred-generation
+    // long-run sanity surface lives in the RUN_SLOW tier (smoke_2k,
+    // rate_calibration). Pre-fix this ran 800 gens × every preset and
+    // was ~60% of the ENTIRE suite's runtime on its own.
+    const result = runPreset(presetId, 60);
     // eslint-disable-next-line no-console
     console.log(
       `\n=== ${presetId} @ gen ${result.generation} ===\n` +
@@ -134,32 +140,35 @@ describe("concept-dictionary integration smoke test", () => {
     }
   });
 
-  it("default preset shows tier advancement over a long run", () => {
-    const SEEDS = ["tier-stress-a", "tier-stress-b", "tier-stress-c", "tier-stress-d"];
-    let bestTier = 0;
-    let bestSpeakers = 0;
-    for (const seed of SEEDS) {
-      const config = defaultConfig();
-      const sim = createSimulation({ ...config, seed });
-      for (let i = 0; i < 2500; i++) sim.step();
+  it("a language advances cultural tier as its population sustains the floor", () => {
+    // Tier advancement is population-driven: the tier-1 floor is 5,000
+    // speakers, evaluated every 20 gens with 2-tick hysteresis (~40 gens
+    // of sustained eligibility). The seed starts at 10,000 speakers and
+    // settles toward the tier-0 cap of 6,000 — comfortably above the
+    // floor — so a non-splitting lineage advances to tier 1 within tens
+    // of generations.
+    //
+    // Pre-fix this brute-forced the same mechanism through 4 seeds ×
+    // 2,500 gens of a SPLITTING tree, where every split divides a leaf's
+    // speakers and keeps it below the floor. Disabling tree splits tests
+    // the identical tier logic ~100× faster.
+    const config = defaultConfig();
+    const sim = createSimulation({
+      ...config,
+      seed: "tier-advance",
+      modes: { ...config.modes, tree: false },
+    });
+    let maxTier = 0;
+    for (let i = 0; i < 300; i++) {
+      sim.step();
       const state = sim.getState();
-      const alive = leafIds(state.tree).filter((id) => !state.tree[id]!.language.extinct);
-      const tiers = alive.map((id) => state.tree[id]!.language.culturalTier ?? 0);
-      const speakers = alive.map((id) => state.tree[id]!.language.speakers ?? 0);
-      const maxTier = tiers.length > 0 ? Math.max(...tiers) : 0;
-      const maxSpeakers = speakers.length > 0 ? Math.max(...speakers) : 0;
-      if (maxTier > bestTier) bestTier = maxTier;
-      if (maxSpeakers > bestSpeakers) bestSpeakers = maxSpeakers;
-      if (bestTier >= 1) break;
+      maxTier = leafIds(state.tree)
+        .filter((id) => !state.tree[id]!.language.extinct)
+        .reduce((m, id) => Math.max(m, state.tree[id]!.language.culturalTier ?? 0), 0);
+      if (maxTier >= 1) break;
     }
-    // eslint-disable-next-line no-console
-    console.log(
-      `\n=== tier-stress test === highest tier: ${bestTier}, max speakers: ${bestSpeakers}`,
-    );
-    if (bestTier === 0) {
-      throw new Error(
-        `tier-stress test: no leaf advanced past tier 0 across ${SEEDS.length} seeds (max speakers: ${bestSpeakers})`,
-      );
+    if (maxTier === 0) {
+      throw new Error("no leaf advanced past tier 0 within 300 non-splitting gens");
     }
   });
 });

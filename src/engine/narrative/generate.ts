@@ -527,6 +527,12 @@ export function randomNarrativeSeed(): string {
   const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
   let out = "";
   for (let i = 0; i < 6; i++) {
+    // Sanctioned exception to the "no Math.random outside rng.ts" rule:
+    // this is a UI entropy source for a FRESH narrative seed (the
+    // CompareView "new seed" button). The returned string then drives
+    // generateNarrative() through a seeded Rng deterministically. It is
+    // never reached from the simulation step pipeline, so it does not
+    // affect simulation determinism.
     out += alphabet[Math.floor(Math.random() * alphabet.length)];
   }
   return out;

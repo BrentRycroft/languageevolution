@@ -510,6 +510,18 @@ export function createSimulation(
             : Object.values(lang.boundMorphemes as Record<string, string>);
           lang.boundMorphemes = new Set(arr as string[]);
         }
+        // Phase 72b: closedClassInventory is a Set too — added after the
+        // two rehydrations above and never wired in here, so a JSON-
+        // degraded snapshot (share link / naive serialise) left it as a
+        // plain object and the phonology brake's `.has()` threw. Same
+        // shape-recovery as the Sets above.
+        if (lang.closedClassInventory && !(lang.closedClassInventory instanceof Set)) {
+          const raw = lang.closedClassInventory as unknown;
+          const arr = Array.isArray(raw)
+            ? raw
+            : Object.values(raw as Record<string, string>);
+          lang.closedClassInventory = new Set(arr as string[]);
+        }
       }
       state = {
         generation: snapshot.generation,

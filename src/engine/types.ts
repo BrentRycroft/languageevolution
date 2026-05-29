@@ -425,6 +425,17 @@ export interface Language {
    */
   conceptIds?: Record<string, string>;
   /**
+   * Per-language monotonic sequence used to mint ConceptIds
+   * deterministically. Combined with the language `id` it namespaces
+   * every mint to this language, so two runs of the same config
+   * produce identical ConceptIds (the prior module-global counter
+   * did not — it depended on process-wide mint order). Not inherited
+   * at split: each language namespaces its own mints by its own `id`,
+   * so a fresh daughter restarting at 0 cannot collide with the
+   * ancestor ids it inherited (those carry the ancestor's `id`).
+   */
+  conceptIdSeq?: number;
+  /**
    * Phase 72b T2: language-specific closed-class anchor list. Phase 71c
    * added universal anchors for "the/of/and/i/..." but the audit found
    * this is typologically wrong (Polynesian, Mandarin, Quechua all

@@ -25,8 +25,36 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     // Every meaning in the lexicon should have an ID.
     for (const m of Object.keys(lang.lexicon)) {
       expect(lang.conceptIds![m]).toBeDefined();
-      expect(lang.conceptIds![m]).toMatch(/^c_[0-9a-f]{8}_\d+$/);
+      // Format: c_<8-hex>_<langId>_<seq>. Proto meanings are minted on
+      // the root language (id "L-0").
+      expect(lang.conceptIds![m]).toMatch(/^c_[0-9a-f]{8}_L-\d+_\d+$/);
     }
+  });
+
+  it("two sims with the same config produce identical conceptIds (determinism)", () => {
+    // Regression for the pre-fix module-global counter: two sims built
+    // and stepped in the SAME process used to get different ConceptIds
+    // for the same meaning (the counter advanced across both). With the
+    // per-language deterministic mint they must match exactly.
+    const make = () => {
+      const cfg = presetRomance();
+      cfg.seed = "p72-defer2-determinism";
+      return createSimulation(cfg);
+    };
+    const a = make();
+    const b = make();
+    for (let i = 0; i < 20; i++) {
+      a.step();
+      b.step();
+    }
+    const collect = (sim: ReturnType<typeof createSimulation>) => {
+      const out: Record<string, Record<string, string>> = {};
+      for (const [id, node] of Object.entries(sim.getState().tree)) {
+        out[id] = { ...(node.language.conceptIds ?? {}) };
+      }
+      return out;
+    };
+    expect(collect(a)).toEqual(collect(b));
   });
 
   it("conceptIdFor returns the same ID on repeat calls (idempotent)", () => {
@@ -113,9 +141,10 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
   });
 
   it("mintConceptId produces unique values", () => {
+    const lang = { id: "L-test", conceptIdSeq: 0 };
     const ids = new Set<string>();
     for (let i = 0; i < 100; i++) {
-      ids.add(mintConceptId());
+      ids.add(mintConceptId(lang));
     }
     expect(ids.size).toBe(100);
   });

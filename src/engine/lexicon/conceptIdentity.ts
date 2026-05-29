@@ -1,5 +1,6 @@
 import type { Meaning } from "../types";
 import type { LexiconState } from "../domains";
+import { fnv1a } from "../rng";
 
 /**
  * conceptIdentity.ts — Phase 72d (full-delivery defer-2).
@@ -39,29 +40,35 @@ import type { LexiconState } from "../domains";
 
 export type ConceptId = string & { readonly __brand: "ConceptId" };
 
-let counter = 0;
-
 /**
- * Mint a fresh ConceptId. Format: `c_<8-hex>_<seq>` — short enough
- * to keep saved JSON compact, deterministic enough for reproducible
- * runs (the seq counter is process-local but reset per-test). Real
- * UUID v4 is overkill; collision space across one simulation run is
- * trivially below 10⁴ concepts.
+ * Mint a fresh ConceptId for `lang`. Format:
+ * `c_<8-hex>_<langId>_<seq>` where `seq` is a per-language monotonic
+ * counter (`lang.conceptIdSeq`).
+ *
+ * Determinism: the id is a pure function of `(lang.id, seq)` and the
+ * seq advances in deterministic mint order, so two runs of the same
+ * config produce identical ConceptIds. The previous implementation
+ * drew from a MODULE-GLOBAL counter, which made ids depend on
+ * process-wide mint order — two sims in one process (or a run
+ * regenerated from a share link) got different ids for the same
+ * meaning even though the linguistic trajectory was identical.
+ *
+ * Uniqueness: embedding `langId` namespaces every language's mints,
+ * so the `_<seq>` suffix only needs to be unique WITHIN a language —
+ * which a per-language counter guarantees. Sister daughters that
+ * independently coin the same meaning get distinct ids (distinct
+ * `langId`), exactly as before. The new format also carries an extra
+ * `_<langId>` segment the old format lacked, so new ids can never
+ * collide with old-format ids inherited from a pre-existing save —
+ * no migration is required.
+ *
+ * No RNG is consumed, so minting never perturbs the simulation's
+ * random stream.
  */
-export function mintConceptId(): ConceptId {
-  counter = (counter + 1) >>> 0;
-  // Eight hex chars from a hash of the counter; distinct from any
-  // simple integer pattern.
-  const h = ((counter * 0x9e3779b1) >>> 0).toString(16).padStart(8, "0");
-  return `c_${h}_${counter}` as ConceptId;
-}
-
-/**
- * Reset the counter — used by tests that need deterministic IDs.
- * Production code should never call this.
- */
-export function resetConceptIdCounter(): void {
-  counter = 0;
+export function mintConceptId(lang: { id: string; conceptIdSeq?: number }): ConceptId {
+  const seq = (lang.conceptIdSeq = (lang.conceptIdSeq ?? 0) + 1);
+  const h = fnv1a(`${lang.id}:${seq}`).toString(16).padStart(8, "0");
+  return `c_${h}_${lang.id}_${seq}` as ConceptId;
 }
 
 /**
@@ -78,7 +85,7 @@ export function conceptIdFor(lang: LexiconState, meaning: Meaning): ConceptId {
   if (!lang.conceptIds) lang.conceptIds = {};
   const existing = lang.conceptIds[meaning];
   if (existing) return existing as ConceptId;
-  const id = mintConceptId();
+  const id = mintConceptId(lang);
   lang.conceptIds[meaning] = id;
   return id;
 }
@@ -139,7 +146,7 @@ export function ensureConceptIdsForLexicon(lang: LexiconState): number {
   if (!lang.conceptIds) lang.conceptIds = {};
   for (const m of Object.keys(lang.lexicon)) {
     if (!lang.conceptIds[m]) {
-      lang.conceptIds[m] = mintConceptId();
+      lang.conceptIds[m] = mintConceptId(lang);
       assigned++;
     }
   }

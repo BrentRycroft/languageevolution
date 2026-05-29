@@ -24,7 +24,10 @@ function makeLang(opts: Partial<Language> = {}): Language {
       affixPosition: "suffix",
       pluralMarking: "affix",
       tenseMarking: "past",
-      hasCase: false,
+      // Phase 71b: inflect() suppresses noun.case.* paradigms when
+      // hasCase is false. These tests exercise noun.case.acc variant
+      // selection, so the language must declare a case system.
+      hasCase: true,
       genderCount: 2,
     },
     events: [],

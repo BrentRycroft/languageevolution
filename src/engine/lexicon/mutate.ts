@@ -40,7 +40,7 @@ export function setLexiconForm(
   // their identity anchor here; existing meanings keep their UUID.
   if (!lang.conceptIds) lang.conceptIds = {};
   if (!lang.conceptIds[meaning]) {
-    lang.conceptIds[meaning] = mintConceptId();
+    lang.conceptIds[meaning] = mintConceptId(lang);
   }
   if (!lang.words) return;
   const primary = findPrimaryWordForMeaning(lang, meaning);
@@ -188,6 +188,13 @@ export interface DeleteMeaningOptions {
   generation?: number;
   /** Human-readable reason ("homonym", "bleach", "taboo-replacement", ...). */
   reason?: string;
+  /**
+   * Bypass the PROTECTED_MEANINGS guard. For DELIBERATE, modeled removals
+   * (e.g. copula erosion → zero-copula language) as opposed to the
+   * incidental drift/bleach/merger deletions the guard exists to block.
+   * The translator + lookup layers already handle a missing "be"/"have".
+   */
+  force?: boolean;
 }
 
 export function deleteMeaning(
@@ -209,7 +216,9 @@ export function deleteMeaning(
   // wants to record an attempted deletion for diagnostic purposes,
   // they can check `PROTECTED_MEANINGS.has(meaning)` themselves
   // before calling deleteMeaning.
-  if (PROTECTED_MEANINGS.has(meaning)) return;
+  // Deliberate, modeled removals (opts.force) bypass the guard; only
+  // incidental deletions (drift/bleach/merger/obsolescence) are blocked.
+  if (PROTECTED_MEANINGS.has(meaning) && !opts?.force) return;
 
   // Phase 72d T2 + 72d defer-2: record the pathway BEFORE deleting
   // per-meaning metadata. Captures both the string mergedInto AND
