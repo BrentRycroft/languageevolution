@@ -44,7 +44,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Sociolinguistics (register/prestige/endangerment) | partial | Phase 72 added prestige/endangerment/bilingual. |
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
-| **Translator** | partial | User flagged WEAK — needs heavy improvement. |
+| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path) BUT: word-level `translate()` bypasses the shared 8-rung cascade (gives up early); realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete); graceful fallback compound-only. See backlog + NEEDS DECISION. |
 | **Narrative generation** | partial | Extensive code; output quality unverified by play. |
 | **Presets — coverage** | partial | 6 families: bantu/english/germanic/pie/romance/tokipona. |
 | **Presets — word count** | partial | Assess lexicon sizes; user wants many more words. |
@@ -71,8 +71,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       FAST tier, not RUN_SLOW; verify whether they break early / aren't sim.step
       before touching. Don't weaken statistical/long-run assertions.)**
 - [ ] Baseline GUI play session (Manual/GUI verification); log under UX findings.
-- [ ] Assess translator quality against its tests + a real phrase; scope the
-      "heavy improvement" into concrete sub-items.
+- [x] Assess translator quality (code-level): feature-rich, but word-level
+      `translate()` is weaker than the sentence path; realiser on legacy English
+      IR; fallback compound-only. (Live-phrase check deferred to GUI play.)
+- [ ] Translator: route word-level `translate()` (translate.ts) through
+      `lookupFormWithResolution` (the shared 8-rung cascade) + optional graceful
+      fallback, so single-word translation matches sentence-level resolution.
+      Add focused tests. [highest-value translator win, low risk]
+- [ ] Translator anglocentrism audit: render sentences for non-SVO / case /
+      article-less presets (bantu, tokipona) and check adjective/possessive/
+      relative-clause ordering + morphology aren't English-shaped; log fixes.
 - [ ] Assess narrative-generation output quality (play session) and
       language-agnosticism of its grammar assembly.
 - [ ] Audit presets for English-based encoding; scope de-anglicization.
@@ -92,6 +100,28 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 _(populated by GUI play sessions)_
 
+## Assessment notes
+
+- **Translator** (read pipeline/translate/syntax/sentence/gracefulFallback,
+  2026-05-29): feature-rich. Sentence path: tokeniseEnglish → parseSyntaxAll →
+  `translateViaTree` (realiseSentence) or `translateFragment`; a newer
+  `translateSentenceViaAST` projects a language-neutral AST to target word order
+  before realising. Lemma resolution = shared 8-rung `lookupFormWithResolution`
+  (translator + narrative). Output respects target wordOrder/caseStrategy/
+  articlePresence/numeralBase/aspectSystem/moodMarking. Weak spots: (1) word-
+  level `translate()` uses a shallower exact→neighbor→compound chain and gives
+  up to "missing" instead of the 8-rung cascade; (2) realiser consumes the
+  legacy English IR (role-IR migration incomplete) → see NEEDS DECISION;
+  (3) `attemptGracefulFallback` is compound-only since Phase 58.5.
+
 ## NEEDS DECISION
 
-_(empty)_
+- **Translator realiser refactor.** `realise.ts` is a ~766-line monolith
+  hardcoding word-order/alignment/NP-VP realisation; the Phase 41c stage-hook +
+  role-IR migration is incomplete (it still consumes the legacy English-shaped
+  `Sentence/NP/VP/PP` IR). Finishing it would make sentence STRUCTURE fully
+  typology-driven, but it's a large, behaviour-changing refactor. Options:
+  (a) leave as-is — output is already reordered per target word-order/case/
+  article via `astToTokens`, so it's not pure relexified English;
+  (b) incrementally move one realise-stage at a time behind the existing hooks;
+  (c) full role-IR rewrite. Needs your call on appetite/scope before I touch it.
