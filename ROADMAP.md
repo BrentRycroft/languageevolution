@@ -64,12 +64,23 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       provides the data to target that sweep at the real long poles instead of
       guessing. If this log exists and is complete, analyze it; if absent/stale,
       re-run `RUN_SLOW=1 npx vitest run`.)**
+- [ ] **FAST-TIER long pole: `historical.test.ts` is NOT gated** (not in the
+      exclude list, no `it.skipIf`) yet runs MULTIPLE 200-gen Romance+historical
+      sims (lines ~310/400/458/501/604) — one measured 443s under full-suite
+      load. Gate the multi-hundred-gen BEHAVIOURAL tests behind
+      `it.skipIf(!RUN_SLOW)`, keep the cheap unit tests (schedule/milestone/
+      validate registration) in the fast tier. Verify `npm test` drops. [HIGH
+      value for PR velocity; do AFTER the baseline run frees the CPU — don't edit
+      this file while the bg suite is still executing it.]
 - [ ] Sweep oversized `sim.step()` gen-counts in RUN_SLOW files; reduce where
       the assertion doesn't require them. **(Blocked on the RUN_SLOW timing data
-      above. NOTE: grep shows the biggest loops — cluster_expansion 500,
-      tone_sandhi 1000, typological_completion 1000, sampling 3000 — are in the
-      FAST tier, not RUN_SLOW; verify whether they break early / aren't sim.step
-      before touching. Don't weaken statistical/long-run assertions.)**
+      above. Once `runslow-baseline.log` completes, MINE it for the slowest
+      tests across ALL files — the verbose log has per-test ms — to find every
+      mis-gated heavy file like historical.test.ts, not just the RUN_SLOW set.
+      NOTE: grep shows big loops — cluster_expansion 500, tone_sandhi 1000,
+      typological_completion 1000, sampling 3000 — in the FAST tier; verify
+      whether they break early / aren't sim.step before touching. Don't weaken
+      statistical/long-run assertions.)**
 - [ ] Baseline GUI play session (Manual/GUI verification); log under UX findings.
 - [x] Assess translator quality (code-level): feature-rich, but word-level
       `translate()` is weaker than the sentence path; realiser on legacy English
