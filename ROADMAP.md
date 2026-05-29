@@ -57,9 +57,19 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 - [x] Trim PR long-pole tests `phase72_code_review_batch_b` and
       `phase73d_direction_vector` to <60s without weakening assertions.
-- [ ] Sweep oversized `sim.step()` gen-counts in RUN_SLOW files; reduce where
-      the assertion doesn't require them.
 - [ ] One clean end-to-end `RUN_SLOW=1 npx vitest run`; fix what it surfaces.
+      **(IN PROGRESS — running in background to establish green/red baseline +
+      per-test timing; output captured to `runslow-baseline.log` in repo root
+      (untracked, do NOT commit). Pulled ahead of the gen-count sweep because it
+      provides the data to target that sweep at the real long poles instead of
+      guessing. If this log exists and is complete, analyze it; if absent/stale,
+      re-run `RUN_SLOW=1 npx vitest run`.)**
+- [ ] Sweep oversized `sim.step()` gen-counts in RUN_SLOW files; reduce where
+      the assertion doesn't require them. **(Blocked on the RUN_SLOW timing data
+      above. NOTE: grep shows the biggest loops — cluster_expansion 500,
+      tone_sandhi 1000, typological_completion 1000, sampling 3000 — are in the
+      FAST tier, not RUN_SLOW; verify whether they break early / aren't sim.step
+      before touching. Don't weaken statistical/long-run assertions.)**
 - [ ] Baseline GUI play session (Manual/GUI verification); log under UX findings.
 - [ ] Assess translator quality against its tests + a real phrase; scope the
       "heavy improvement" into concrete sub-items.
