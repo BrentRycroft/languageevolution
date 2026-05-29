@@ -45,7 +45,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
 | **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. |
-| **Narrative generation** | partial | Extensive code; output quality unverified by play. |
+| **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); complex typology routed through the translator. Residual: copular simple-render emits NO copula; deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). |
@@ -95,8 +95,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Translator anglocentrism audit: render sentences for non-SVO / case /
       article-less presets (bantu, tokipona) and check adjective/possessive/
       relative-clause ordering + morphology aren't English-shaped; log fixes.
-- [ ] Assess narrative-generation output quality (play session) and
-      language-agnosticism of its grammar assembly.
+- [x] Assess narrative generation (code-level): genuinely grammar-driven
+      (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
+      `synthesisIndex`-gated morphology; complex typology via the translator.
+      Not English-pool-based.
+- [ ] Narrative: simple-render copular shape emits bare "S A" with no copula
+      even when the language has one (only deep routing handles the copula).
+      Emit the copula form when `lang.lexicon["be"]` exists. [small realism fix]
+- [ ] Narrative live-quality check — fold into the baseline GUI play session:
+      read whether multi-line output reads like a real (non-English-shaped)
+      language across SOV / ergative / tonal presets.
 - [x] Audit presets for English-based encoding (code-level): forms are NOT
       relexified English (Bantu authentic proto-Bantu; default lexicon is
       PIE-flavored). Real anglocentrism = the shared English concept inventory.
@@ -176,6 +184,16 @@ _(populated by GUI play sessions)_
   225s / "Tuscan accusative" 105s; `properties` determinism 84s / monotonic 53s /
   tree-never-shrinks 72s. → item-2 targets: the two ~30-min RUN_SLOW tests +
   ungated historical.test; + investigate the 8.6-min collect cost separately.
+- **Narrative generation** (read narrative/generate.ts, 2026-05-29): well
+  de-anglicized. `generateNarrative` → `planSkeletonForLanguage` (samples
+  S/V/O/adj from the lang's lexicon by POS, freq-weighted) → `realizeSkeleton`.
+  Two render paths: (1) deep routing (`usesDeepRouting`: non-nom-acc alignment /
+  harmony / classifiers / evidentials / RC-strategy / serial-verbs / politeness)
+  builds an English clause string and routes it through `translateSentenceViaAST`
+  for full pipeline treatment; (2) simple render inflects via synthesisIndex-
+  gated stacks and arranges with `arrange(grammar.wordOrder, …)`. Residual:
+  the deep path's English round-trip inherits the translator-realiser limits
+  (NEEDS DECISION); simple-render copular path lacks copula logic.
 
 ## NEEDS DECISION
 
