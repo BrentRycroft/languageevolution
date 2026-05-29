@@ -44,7 +44,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Sociolinguistics (register/prestige/endangerment) | partial | Phase 72 added prestige/endangerment/bilingual. |
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
-| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path) BUT: word-level `translate()` bypasses the shared 8-rung cascade (gives up early); realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete); graceful fallback compound-only. See backlog + NEEDS DECISION. |
+| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. |
 | **Narrative generation** | partial | Extensive code; output quality unverified by play. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
@@ -85,10 +85,13 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [x] Assess translator quality (code-level): feature-rich, but word-level
       `translate()` is weaker than the sentence path; realiser on legacy English
       IR; fallback compound-only. (Live-phrase check deferred to GUI play.)
-- [ ] Translator: route word-level `translate()` (translate.ts) through
-      `lookupFormWithResolution` (the shared 8-rung cascade) + optional graceful
-      fallback, so single-word translation matches sentence-level resolution.
-      Add focused tests. [highest-value translator win, low risk]
+- [x] Translator: word-level `translate()` now routes through the shared
+      `lookupFormWithResolution` cascade as a final fallback (after the
+      exact/neighbor/compound chain, before "missing"), so single-word lookups
+      gain synthesis / concept-decomposition / colexification / graceful coinage
+      — matching the sentence path. Additive (existing tests unchanged) + a new
+      reverse-colex regression test. Verified: tsc + 77 translator tests green.
+      (Live GUI check folded into the pending baseline play-session item.)
 - [ ] Translator anglocentrism audit: render sentences for non-SVO / case /
       article-less presets (bantu, tokipona) and check adjective/possessive/
       relative-clause ordering + morphology aren't English-shaped; log fixes.
@@ -114,6 +117,12 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Routed word-level `translate()` through the shared `lookupFormWithResolution`
+  cascade (translate.ts) as a fallback before "missing", so single-word lookups
+  match the sentence path's resolution power (synthesis / colexification /
+  graceful coinage). Additive — the exact/neighbor/compound chain still runs
+  first (river→water preferred over coining a fresh form). tsc + 77 translator
+  tests green; added a reverse-colex regression test.
 - Fixed the nightly's lone failure: `driftOneMeaning` × PROTECTED_MEANINGS
   (`drift.ts`). A protected source meaning (be/eat/go/…) couldn't be removed by
   the Phase-71b guard, so drift left its form on both source+target while

@@ -3,6 +3,8 @@ import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
+import { lookupFormWithResolution } from "../lexicon/lookup";
+import type { LemmaResolution } from "./syntax";
 
 /**
  * translate.ts
@@ -87,11 +89,45 @@ export function translate(
     }
   }
 
+  // Phase 73e: before giving up, route through the shared resolution
+  // cascade (`lookupFormWithResolution`) — the same one the sentence
+  // translator uses — so single-word lookups gain its richer rungs
+  // (morphological synthesis, concept decomposition, registered
+  // colexification, and on-demand graceful coinage) instead of stopping at
+  // "missing". The simple exact/neighbor/compound chain above runs first so
+  // a related existing word (e.g. river → water) is still preferred over
+  // coining a fresh form.
+  const resolved = lookupFormWithResolution(lang, key);
+  if (resolved.form && resolved.form.length > 0) {
+    const inflected =
+      options.inflect && lang.morphology.paradigms[options.inflect]
+        ? inflect(resolved.form, lang.morphology.paradigms[options.inflect], lang, key)
+        : resolved.form;
+    const SOURCE_BY_RESOLUTION: Record<LemmaResolution, TranslationResult["source"]> = {
+      direct: "exact",
+      concept: "exact",
+      colex: "neighbor",
+      "reverse-colex": "neighbor",
+      "synth-affix": "compound",
+      "synth-neg-affix": "compound",
+      "synth-concept": "compound",
+      "synth-cluster": "compound",
+      "synth-fallback": "ai",
+      fallback: "neighbor",
+    };
+    return {
+      form: formToString(inflected),
+      phonemes: inflected,
+      source: SOURCE_BY_RESOLUTION[resolved.resolution] ?? "neighbor",
+      notes: `Resolved via ${resolved.resolution}${resolved.glossNote ? ` (${resolved.glossNote})` : ""}.`,
+    };
+  }
+
   return {
     form: "—",
     phonemes: [],
     source: "missing",
-    notes: `No direct translation; consider enabling AI drift to seed neighbors for "${key}".`,
+    notes: `No translation; "${key}" couldn't be resolved or coined for ${lang.name}.`,
   };
 }
 
