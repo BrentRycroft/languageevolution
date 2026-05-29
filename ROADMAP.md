@@ -49,7 +49,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep) + Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name) complete; IE presets (marginal) pending. |
-| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor ordering verified language-driven (regression test); RC ordering still English-ish (realiser). Narrative grammar-driven; presets de-anglicized via seedColexification. |
+| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/relative-clause ordering verified language-driven (regression tests; RC postnominal for VO/relativizer langs — fixed). Narrative grammar-driven; presets de-anglicized via seedColexification (Bantu + Toki Pona). |
 | **Performance** | partial | apply.ts hot path; known optimisation targets open. |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
@@ -106,10 +106,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       with `translator_agnosticism.test.ts`. FOUND: relative-clause ordering is
       scrambled for post-nominal languages (Bantu "the king who sees the dog
       walks" → "see dog who king walk") — a legacy-realiser IR limitation.
-- [ ] Translator: fix relative-clause ordering for non-English typologies (RC
-      should follow the head noun in post-nominal langs, respect
-      `relativeClauseStrategy`). Tied to the realiser-refactor NEEDS DECISION —
-      likely needs the role-IR migration; scope before touching.
+- [x] Translator: fixed relative-clause ordering — the "relativizer" strategy
+      emitted the clause BEFORE the head (prenominal), scrambling VO languages
+      (Bantu "the king who sees the dog" → "see dog who king"). Relativizer-
+      strategy langs are VO (per the RC drift constraints) → postnominal RC
+      (head + relativizer + clause). Surgical one-branch fix in realise.ts
+      `attachRelativeClause` (no role-IR rewrite). + RC regression test
+      (translator_agnosticism). Verified: 159 translator/narrative/RC/
+      determinism tests green.
 - [x] Assess narrative generation (code-level): genuinely grammar-driven
       (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
       `synthesisIndex`-gated morphology; complex typology via the translator.
@@ -155,6 +159,13 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Fixed translator relative-clause ordering (realise.ts `attachRelativeClause`):
+  the "relativizer" strategy emitted the clause prenominally (before the head),
+  scrambling VO languages — "the king who sees the dog" came out "see dog who
+  king". Relativizer ⇒ VO ⇒ postnominal RC (head + relativizer + clause).
+  Surgical one-branch reorder, no realiser rewrite. + RC regression test
+  (translator_agnosticism). Translator-only (no determinism impact); 159 tests
+  green. Principle: relativizer strategy implies postnominal RC (VO typology).
 - Completed Bantu de-anglicization: added child=son (mwana) and lie=sleep (lala)
   to its seedColexification (now 5 attested pairs) and removed the duplicates.
   tsc + preset/Bantu/concepts/determinism green (109).
@@ -279,6 +290,9 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   article via `astToTokens`, so it's not pure relexified English;
   (b) incrementally move one realise-stage at a time behind the existing hooks;
   (c) full role-IR rewrite. Needs your call on appetite/scope before I touch it.
+  UPDATE (2026-05-29): the concrete RC-ordering symptom this would have fixed is
+  now resolved surgically (relativizer RC made postnominal in realise.ts); the
+  open question is only the broader legacy-IR cleanup — lower urgency now.
 
 - **GUI verification capability.** The loop prompt asks for periodic GUI play
   sessions ("see the app the way the user does"), but this environment has NO

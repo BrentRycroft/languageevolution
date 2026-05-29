@@ -59,4 +59,21 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
       }
     }
   });
+
+  it("relativizer-strategy languages place the relative clause postnominally (head before clause)", () => {
+    // Relativizer-strategy languages are VO and put the RC after the head noun:
+    // "the king who sees the dog" — head, then relativizer, then clause. The
+    // RC verb ('see') must therefore follow the head noun ('king'), not precede
+    // it (the pre-fix bug rendered Bantu as "see dog who king").
+    for (const [name, build] of [["bantu", presetBantu], ["english", presetEnglish]] as const) {
+      const lang = protoOf(build, `agn-rc-${name}`);
+      if ((lang.grammar.relativeClauseStrategy ?? "relativizer") !== "relativizer") continue;
+      const { targetTokens: t } = translateSentence(lang, "the king who sees the dog walks");
+      const head = idxOf(t, "king");
+      const rcVerb = idxOf(t, "see");
+      expect(head, `${name}: 'king' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
+      expect(rcVerb, `${name}: RC verb 'see' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
+      expect(head, `${name}: postnominal RC → head 'king' before RC verb 'see' ("${surface(t)}")`).toBeLessThan(rcVerb);
+    }
+  });
 });

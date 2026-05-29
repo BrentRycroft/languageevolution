@@ -614,9 +614,14 @@ function attachRelativeClause(
     case "internal-headed":
       return relTokens;
     case "relativizer": {
-      const merged = [...relTokens];
-      if (relizerTok) merged.push(relizerTok);
-      return [...merged, ...npTokens];
+      // Relativizer-strategy languages are VO (see the relative_clause drift
+      // constraints: an OV language never drifts to "relativizer") and place
+      // the relative clause POSTnominally — head + relativizer + clause ("the
+      // king who sees the dog"), not clause-first. Pre-fix this returned
+      // [clause, relizer, head], which scrambled VO relative clauses (e.g.
+      // Bantu "the king who sees the dog" → "see dog who king"). Prenominal
+      // RCs are produced by the internal-headed / OV-gap paths instead.
+      return [...npTokens, ...(relizerTok ? [relizerTok] : []), ...relTokens];
     }
     case "resumptive": {
       const resumptiveLemma = pickResumptivePronoun(np, role);
