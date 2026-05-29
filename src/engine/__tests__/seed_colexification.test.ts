@@ -46,11 +46,18 @@ describe("seedColexification", () => {
     expect(lang.colexifiedAs).toBeUndefined();
   });
 
-  it("Bantu adopts the hook: arm is colexified into hand (mukono), not a duplicate", () => {
+  it("Bantu adopts the hook: arm=hand, mouth=lip, flesh=meat colexified (not duplicates)", () => {
     const lang = buildInitialState(presetBantu()).tree["L-0"]!.language;
-    expect(lang.lexicon["arm"], "arm should not be a separate Bantu lexicon entry").toBeUndefined();
-    expect(lang.colexifiedAs?.["hand"]).toContain("arm");
-    // `arm` resolves to hand's form (mukono) via the resolution cascade.
-    expect(lookupForm(lang, "arm", { allowFallbackCoinage: false })).toEqual(lang.lexicon["hand"]);
+    const pairs: Array<[winner: string, absorbed: string]> = [
+      ["hand", "arm"],
+      ["mouth", "lip"],
+      ["meat", "flesh"],
+    ];
+    for (const [winner, absorbed] of pairs) {
+      expect(lang.lexicon[absorbed], `${absorbed} should not be a separate Bantu lexicon entry`).toBeUndefined();
+      expect(lang.colexifiedAs?.[winner], `colexifiedAs[${winner}] should contain ${absorbed}`).toContain(absorbed);
+      // The absorbed meaning resolves to the winner's form via the cascade.
+      expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false })).toEqual(lang.lexicon[winner]);
+    }
   });
 });

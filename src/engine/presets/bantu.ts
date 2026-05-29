@@ -76,7 +76,6 @@ const LEXICON: Lexicon = {
   mouth: ["m", "u", "l", "o˩", "m", "o"],
   tooth: ["i", "j", "i", "n", "o"],
   tongue: ["l", "u", "l", "i", "m", "i"],
-  lip: ["m", "u", "l", "o˩", "m", "o"],
   neck: ["i", "ⁿg", "o", "s", "i"],
   shoulder: ["i", "p", "e", "g", "a"],
   hand: ["m", "u", "k", "o˩", "n", "o"],
@@ -91,7 +90,6 @@ const LEXICON: Lexicon = {
   bone: ["i", "k", "u", "p", "a"],
   blood: ["m", "u", "g", "a", "z", "i"],
   skin: ["ⁿg", "o", "p", "i"],
-  flesh: ["ɲ", "a˩", "m", "a"],
   knee: ["i", "g", "o", "t", "i"],
   leg: ["m", "u", "a˩", "g", "u", "l", "u"],
   foot: ["m", "u", "g", "u", "l", "u"],
@@ -380,12 +378,13 @@ export function presetBantu(): SimulationConfig {
     // class-prefix realiser and verb-agreement pathway.
     seedNounClassSystem: true,
     seedBoundMorphemes: BANTU_BOUND_MORPHEMES,
-    // Phase 73e de-anglicization: proto-Bantu lexicalises ARM and HAND as one
-    // word (*-kono → mukono) — a colexification attested across Bantu and very
-    // common worldwide. Declare it instead of duplicating the form, so the
-    // concept space reflects Bantu's carving rather than the English arm≠hand
-    // split. (`hand` keeps the form; `arm` resolves to it via reverse-colex.)
-    seedColexification: { hand: ["arm"] },
+    // Phase 73e de-anglicization: proto-Bantu colexifies several concept pairs
+    // that English separates — ARM=HAND (*-kono → mukono), MOUTH=LIP (mulomo),
+    // FLESH=MEAT (ɲama). All three are registry-attested (concepts.ts
+    // COLEX_PAIRS) and were stored as duplicate forms; declare them instead so
+    // the concept space reflects Bantu's carving. The winner keeps the form;
+    // the absorbed meaning resolves to it via reverse-colex.
+    seedColexification: { hand: ["arm"], mouth: ["lip"], meat: ["flesh"] },
     seedPhonemeTarget: 32,
     // Phase 46a-migration: proto-Bantu — SVO, post-head modifiers,
     // tonal, rich noun-class agreement, mood marking, honorific

@@ -48,7 +48,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
-| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; Bantu adopts arm=hand (mukono); more pairs/presets pending. |
+| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; Bantu adopts arm=hand, mouth=lip, flesh=meat; more pairs/presets pending. |
 | **Language-agnosticism** (cross-cutting) | needs assessment | Audit for baked-in English structure. |
 | **Performance** | partial | apply.ts hot path; known optimisation targets open. |
 | **UX / GUI** | needs assessment | No play session run yet. |
@@ -124,12 +124,12 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       Design question resolved: it RECORDS the colexification (one shared form);
       whether the absorbed meaning also has its own seedLexicon entry is an
       orthogonal preset-authoring choice.
-- [x] De-anglicization (adopt the hook): Bantu now declares arm=hand (mukono)
-      via `seedColexification` and the duplicate `arm` entry is removed —
-      registry-backed (`colexWith` already pairs arm↔hand). arm resolves to
-      hand's form via the cascade. Verified: tsc + preset_coverage/ipa +
-      phonotactics + phase_29_invariants (30-gen Bantu) + concepts + determinism
-      green (108 tests).
+- [x] De-anglicization (adopt the hook): Bantu now declares arm=hand (mukono),
+      mouth=lip (mulomo), flesh=meat (ɲama) via `seedColexification`, with the
+      duplicate `arm`/`lip`/`flesh` entries removed — all registry-backed
+      (`COLEX_PAIRS`). Absorbed meanings resolve to the winner's form via the
+      cascade. Verified: tsc + preset_coverage/ipa + phonotactics +
+      phase_29_invariants (30-gen Bantu) + concepts + determinism green (108).
 - [ ] De-anglicization (more): extend attested colexifications to other presets/
       concepts (finger=toe, tree=wood, skin=bark, …) grounded in typology — one
       preset/pair at a time with verification.
@@ -142,6 +142,9 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Extended Bantu colexifications to mouth=lip (mulomo) and flesh=meat (ɲama) —
+  both registry-attested COLEX_PAIRS stored as duplicate forms; dropped the
+  `lip` and `flesh` duplicates. tsc + preset/Bantu/determinism green (108).
 - Bantu adopts `seedColexification`: declares arm=hand (*mukono) and drops the
   duplicate `arm` entry — registry-backed (`colexWith` already pairs them), so
   arm resolves to hand's form via the cascade. First real de-anglicization of a
