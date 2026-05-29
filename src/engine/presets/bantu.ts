@@ -79,7 +79,6 @@ const LEXICON: Lexicon = {
   lip: ["m", "u", "l", "o˩", "m", "o"],
   neck: ["i", "ⁿg", "o", "s", "i"],
   shoulder: ["i", "p", "e", "g", "a"],
-  arm: ["m", "u", "k", "o˩", "n", "o"],
   hand: ["m", "u", "k", "o˩", "n", "o"],
   finger: ["i", "j", "a˩", "a˩"],
   nail: ["m", "u", "k", "u", "l", "a"],
@@ -381,6 +380,12 @@ export function presetBantu(): SimulationConfig {
     // class-prefix realiser and verb-agreement pathway.
     seedNounClassSystem: true,
     seedBoundMorphemes: BANTU_BOUND_MORPHEMES,
+    // Phase 73e de-anglicization: proto-Bantu lexicalises ARM and HAND as one
+    // word (*-kono → mukono) — a colexification attested across Bantu and very
+    // common worldwide. Declare it instead of duplicating the form, so the
+    // concept space reflects Bantu's carving rather than the English arm≠hand
+    // split. (`hand` keeps the form; `arm` resolves to it via reverse-colex.)
+    seedColexification: { hand: ["arm"] },
     seedPhonemeTarget: 32,
     // Phase 46a-migration: proto-Bantu — SVO, post-head modifiers,
     // tonal, rich noun-class agreement, mood marking, honorific

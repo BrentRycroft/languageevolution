@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildInitialState } from "../steps/init";
 import { defaultConfig } from "../config";
 import { lookupForm } from "../lexicon/lookup";
+import { presetBantu } from "../presets/bantu";
 
 /**
  * seed_colexification.test.ts
@@ -43,5 +44,13 @@ describe("seedColexification", () => {
   it("leaves colexifiedAs unset when no colexifications are declared", () => {
     const lang = buildInitialState({ ...defaultConfig(), seed: "no-colex" }).tree["L-0"]!.language;
     expect(lang.colexifiedAs).toBeUndefined();
+  });
+
+  it("Bantu adopts the hook: arm is colexified into hand (mukono), not a duplicate", () => {
+    const lang = buildInitialState(presetBantu()).tree["L-0"]!.language;
+    expect(lang.lexicon["arm"], "arm should not be a separate Bantu lexicon entry").toBeUndefined();
+    expect(lang.colexifiedAs?.["hand"]).toContain("arm");
+    // `arm` resolves to hand's form (mukono) via the resolution cascade.
+    expect(lookupForm(lang, "arm", { allowFallbackCoinage: false })).toEqual(lang.lexicon["hand"]);
   });
 });
