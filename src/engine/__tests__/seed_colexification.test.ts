@@ -53,6 +53,8 @@ describe("seedColexification", () => {
       ["hand", "arm"],
       ["mouth", "lip"],
       ["meat", "flesh"],
+      ["child", "son"],
+      ["sleep", "lie"],
     ];
     for (const [winner, absorbed] of pairs) {
       expect(lang.lexicon[absorbed], `${absorbed} should not be a separate Bantu lexicon entry`).toBeUndefined();

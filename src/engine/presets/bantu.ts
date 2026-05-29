@@ -100,7 +100,6 @@ const LEXICON: Lexicon = {
   baby: ["m", "u", "o˥", "t", "o"],
   mother: ["m", "a˩", "m", "a˩"],
   father: ["b", "a˩", "b", "a˩"],
-  son: ["m", "w", "a˩", "n", "a"],
   daughter: ["m", "w", "a˩", "n", "a", "m", "k", "e"],
   brother: ["k", "a˩", "k", "a"],
   sister: ["k", "a˩", "i", "k", "a"],
@@ -133,7 +132,6 @@ const LEXICON: Lexicon = {
   run: ["k", "i", "m", "b", "i", "a"],
   stand: ["s", "i", "m", "a"],
   sit: ["k", "a˩", "a˩"],
-  lie: ["l", "a˩", "l", "a"],
   fall: ["a", "ⁿg", "u", "k", "a"],
   fly: ["p", "a˩", "a˩"],
   swim: ["o", "g", "e", "l", "e", "a"],
@@ -384,7 +382,7 @@ export function presetBantu(): SimulationConfig {
     // COLEX_PAIRS) and were stored as duplicate forms; declare them instead so
     // the concept space reflects Bantu's carving. The winner keeps the form;
     // the absorbed meaning resolves to it via reverse-colex.
-    seedColexification: { hand: ["arm"], mouth: ["lip"], meat: ["flesh"] },
+    seedColexification: { hand: ["arm"], mouth: ["lip"], meat: ["flesh"], child: ["son"], sleep: ["lie"] },
     seedPhonemeTarget: 32,
     // Phase 46a-migration: proto-Bantu — SVO, post-head modifiers,
     // tonal, rich noun-class agreement, mood marking, honorific
