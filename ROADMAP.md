@@ -49,7 +49,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep) + Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name) complete; IE presets (marginal) pending. |
-| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/relative-clause ordering verified language-driven (regression tests; RC postnominal for VO/relativizer langs — fixed). Narrative grammar-driven; presets de-anglicized via seedColexification (Bantu + Toki Pona). |
+| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
 | **Performance** | partial | apply.ts hot path; known optimisation targets open. |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
@@ -114,6 +114,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       `attachRelativeClause` (no role-IR rewrite). + RC regression test
       (translator_agnosticism). Verified: 159 translator/narrative/RC/
       determinism tests green.
+- [x] Translator: numeral placement verified language-driven (Bantu postnominal
+      "dog two", English prenominal "two dog") — follows the language's modifier
+      order. Locked with a regression test (translator_agnosticism).
+- [ ] Translator/grammar: demonstratives are placed PREnominally for ALL
+      languages — there is NO `demonstrativePosition` grammar axis. Anglocentric
+      for postnominal-demonstrative languages (many Bantu: Swahili "kitabu hiki"
+      = book-this). Adding the axis is a feature (grammar field + default + drift
+      correlation, likely with adjectivePosition / Greenbergian consistency +
+      realiser wiring + per-preset values). NEEDS DECISION on default + drift
+      behaviour before building — don't guess.
 - [x] Assess narrative generation (code-level): genuinely grammar-driven
       (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
       `synthesisIndex`-gated morphology; complex typology via the translator.
@@ -159,6 +169,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Translator ordering audit (cont.): numeral placement verified language-driven
+  (Bantu postnominal "dog two", English prenominal "two dog"); locked with a
+  regression test. Found a latent anglocentrism — demonstratives are hardcoded
+  prenominal (no demonstrativePosition axis); logged as a feature/NEEDS DECISION
+  (postnominal-demonstrative langs like Bantu would render "king this").
 - Fixed translator relative-clause ordering (realise.ts `attachRelativeClause`):
   the "relativizer" strategy emitted the clause prenominally (before the head),
   scrambling VO languages — "the king who sees the dog" came out "see dog who

@@ -60,6 +60,22 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     }
   });
 
+  it("numeral placement follows the language's modifier order (Bantu post, English pre)", () => {
+    for (const [name, build] of [["bantu", presetBantu], ["english", presetEnglish]] as const) {
+      const lang = protoOf(build, `agn-num-${name}`);
+      const { targetTokens: t } = translateSentence(lang, "the king sees two dogs");
+      const num = idxOf(t, "two");
+      const noun = idxOf(t, "dog");
+      expect(num, `${name}: 'two' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
+      expect(noun, `${name}: 'dog' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
+      if (lang.grammar.adjectivePosition === "post") {
+        expect(num, `${name}: post-modifier → numeral 'two' after noun 'dog' ("${surface(t)}")`).toBeGreaterThan(noun);
+      } else {
+        expect(num, `${name}: pre-modifier → numeral 'two' before noun 'dog' ("${surface(t)}")`).toBeLessThan(noun);
+      }
+    }
+  });
+
   it("relativizer-strategy languages place the relative clause postnominally (head before clause)", () => {
     // Relativizer-strategy languages are VO and put the RC after the head noun:
     // "the king who sees the dog" — head, then relativizer, then clause. The
