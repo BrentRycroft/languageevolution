@@ -60,11 +60,12 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [x] Ran the end-to-end `RUN_SLOW=1` pass (35.6 min wall; **1873 pass / 1 FAIL
       / 8 skip**). NOT clean yet — surfaced one real, pre-existing failure (next
       item). Log: `runslow-baseline.log` (untracked, do NOT commit).
-- [ ] **Fix the RUN_SLOW failure** `properties.test.ts > driftOneMeaning result
-      has from !== to and form moved correctly`. Root cause fully diagnosed
-      (drift × PROTECTED_MEANINGS inconsistency) — see NEEDS DECISION for the bug
-      + two fix options. Pending your approach choice; needs determinism + drift
-      tests + the property re-run to verify.
+- [x] **Fixed the RUN_SLOW failure** (`driftOneMeaning` × PROTECTED_MEANINGS) —
+      implemented option (b): a protected source now drifts polysemously
+      (recordColexification, keeps m + freq/register), OR'd last to preserve rng
+      order. Verified: tsc clean; the property test + determinism + colexification
+      + semantic_modules + narrative_snapshot all green. Full RUN_SLOW
+      re-confirmation in progress (background).
 - [x] **FAST-TIER long pole fixed: `historical.test.ts` was ungated** yet ran
       multiple 200-gen Romance+historical sims (one ~443s under load). Gated
       wholesale to nightly via the vite.config exclude (predominantly heavy).
@@ -113,6 +114,15 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Fixed the nightly's lone failure: `driftOneMeaning` × PROTECTED_MEANINGS
+  (`drift.ts`). A protected source meaning (be/eat/go/…) couldn't be removed by
+  the Phase-71b guard, so drift left its form on both source+target while
+  reporting a clean move and purging the source's freq/register. Per user choice
+  (option b), a protected source now drifts polysemously: m is kept, freq/register
+  preserved, m↔target colexification recorded. Implemented as an rng-order-
+  preserving one-liner (OR'd last) so determinism + all other trajectories are
+  unchanged. Principle: protected core vocabulary persists and broadens
+  (colexifies) rather than being lost — matches the Phase-71b protection intent.
 - Gated `historical.test.ts` to the nightly tier (vite.config exclude). It was
   ungated yet ran multiple 200-gen Romance+historical sims, silently bloating
   the fast PR suite. Verified via `vitest list` (0 in fast, 36 in nightly).
@@ -169,24 +179,3 @@ _(populated by GUI play sessions)_
   article via `astToTokens`, so it's not pure relexified English;
   (b) incrementally move one realise-stage at a time behind the existing hooks;
   (c) full role-IR rewrite. Needs your call on appetite/scope before I touch it.
-
-- **`driftOneMeaning` × PROTECTED_MEANINGS inconsistency** (real bug, surfaced by
-  the nightly `properties.test.ts`). When semantic drift picks a PROTECTED
-  meaning (be/have/do/will/go/come/see/give/say/make/take/get/know/want/find/
-  think/eat/drink) as its source `m`, drift.ts:182 copies m's form to the target,
-  then drift.ts:203 calls `deleteMeaning(m)` — which the Phase-71b guard REFUSES
-  (protected). So m is kept, but the function still returns `polysemous:false`,
-  deletes m's frequency hint + register (drift.ts:187/191), and does NOT
-  `recordColexification`. Net: the form lives at BOTH m and target while the
-  engine believes m was dropped — an inconsistent, unrecorded de-facto
-  colexification with m's freq/register metadata wrongly purged.
-  Fix options:
-   (a) RECOMMENDED — skip protected meanings as drift SOURCES, mirroring the
-       existing closed-class skip (drift.ts:140): `if (PROTECTED_MEANINGS.has(m))
-       continue;`. Conservative (protected = stable anchors); avoids touching the
-       freq/decay coupling; makes the property pass without changing the test.
-   (b) Treat a protected source as a polysemous drift (recordColexification, keep
-       m + metadata, return polysemous:true). More realistic broadening but
-       changes the freq-hint coupling and may over-generate colexifications.
-  Both alter drift trajectories (engine-behaviour) → need determinism + drift/
-  semantics tests + the failing property re-run to verify. **Recommend (a).**
