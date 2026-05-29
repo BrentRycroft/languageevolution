@@ -50,7 +50,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; all presets de-anglicized — Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep), Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name), PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby); default/English have no attested duplicate pairs. |
 | **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
-| **Performance** | partial | apply.ts hot loop already early-continues (zero weight/prob) + caches the priority sort. CONFIRMED: rules are opaque `probabilityFor(w)` closures (catalog.ts, via `countSites`) with NO declarative phoneme targets — so safe inventory-based rule pre-filtering needs catalog-wide target metadata FIRST (a real refactor → NEEDS DECISION). Bundle: 944 kB main chunk (load-time). |
+| **Performance** | partial | apply.ts hot loop already early-continues (zero weight/prob) + caches the priority sort. MEASURED (2026-05-29): hoisting the 4 word-invariant rule scalars (stressBias/naturalBias/freqTier/catMomentum) out of the per-word×rule loop is byte-identical but shows NO end-to-end win — the per-pass array allocation offsets the tiny saving; the loop's real cost is the `probabilityFor` closures + the candidate inner loop. Reverted (see Assessment notes). Don't re-attempt micro-scalar hoists; a real win needs substep profiling (PROFILE_STEP) to find a MACRO hot spot. CONFIRMED: rules are opaque `probabilityFor(w)` closures (catalog.ts, via `countSites`) with NO declarative phoneme targets — so safe inventory-based rule pre-filtering needs catalog-wide target metadata FIRST (a real refactor → NEEDS DECISION). Bundle: 944 kB main chunk (load-time). |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
 ## Backlog (top = next)
@@ -308,6 +308,23 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   gated stacks and arranges with `arrange(grammar.wordOrder, …)`. Residual:
   the deep path's English round-trip inherits the translator-realiser limits
   (NEEDS DECISION); simple-render copular path lacks copula logic.
+
+- **Perf experiment — apply.ts scalar hoist (NEGATIVE result, 2026-05-29).**
+  Hypothesis: the per-word×rule hot loop recomputes 4 word-INVARIANT scalars
+  (stressBias [P67], naturalBias [P28c/39g], freqTier, catMomentum [P38e]) that
+  depend only on (rule, language); precomputing them once per lexicon pass
+  (indexed parallel to `_orderedChanges`, length-guarded fallback) should save
+  work. Implemented byte-identically (perfcheck hashes UNCHANGED: romance
+  c2e431df / pie 524c8f2c / bantu e7b438a3). Measured min-of-5 back-to-back vs a
+  stashed baseline: romance 6485→6582, pie 4328→4339, bantu 8167→8287 minMs —
+  i.e. WITHIN NOISE / marginally slower. Conclusion: the saving is below the
+  end-to-end noise floor (phonology is a fraction of sim.step; the dominant
+  apply.ts cost is the `probabilityFor` closures + the candidate inner loop), and
+  the per-pass `new Array(R)` allocation likely offsets it. REVERTED. Lesson for
+  future iterations: micro-scalar hoists in apply.ts aren't worth it — a real
+  perf win must target a MACRO hot spot identified by `PROFILE_STEP=1 npx tsx
+  scripts/probes/phase69_perf_baseline.ts` (substep breakdown). `perfcheck.test.ts`
+  (untracked, repo root) is the byte-identical baseline harness for next time.
 
 ## NEEDS DECISION
 
