@@ -57,13 +57,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 - [x] Trim PR long-pole tests `phase72_code_review_batch_b` and
       `phase73d_direction_vector` to <60s without weakening assertions.
-- [ ] One clean end-to-end `RUN_SLOW=1 npx vitest run`; fix what it surfaces.
-      **(IN PROGRESS — running in background to establish green/red baseline +
-      per-test timing; output captured to `runslow-baseline.log` in repo root
-      (untracked, do NOT commit). Pulled ahead of the gen-count sweep because it
-      provides the data to target that sweep at the real long poles instead of
-      guessing. If this log exists and is complete, analyze it; if absent/stale,
-      re-run `RUN_SLOW=1 npx vitest run`.)**
+- [x] Ran the end-to-end `RUN_SLOW=1` pass (35.6 min wall; **1873 pass / 1 FAIL
+      / 8 skip**). NOT clean yet — surfaced one real, pre-existing failure (next
+      item). Log: `runslow-baseline.log` (untracked, do NOT commit).
+- [ ] **Fix the RUN_SLOW failure** `properties.test.ts > driftOneMeaning result
+      has from !== to and form moved correctly`. Root cause fully diagnosed
+      (drift × PROTECTED_MEANINGS inconsistency) — see NEEDS DECISION for the bug
+      + two fix options. Pending your approach choice; needs determinism + drift
+      tests + the property re-run to verify.
 - [ ] **FAST-TIER long pole: `historical.test.ts` is NOT gated** (not in the
       exclude list, no `it.skipIf`) yet runs MULTIPLE 200-gen Romance+historical
       sims (lines ~310/400/458/501/604) — one measured 443s under full-suite
@@ -146,6 +147,15 @@ _(populated by GUI play sessions)_
   English concept inventory (every preset lexicalizes the same English Swadesh
   set and carves semantic space the same way) — that's the "English with
   different words" risk at the concept level, not the form level.
+- **RUN_SLOW baseline timing** (2026-05-29; 35.6 min wall, tests-cum 15900s,
+  collect 516s = 8.6 min — high, worth a separate perf look). Mega long poles
+  (ms inflated by parallel CPU contention but relative order holds):
+  `phase73d_synthesis_divergence` "4-daughter @gen300" ~1922s; `properties.test`
+  "alive leaf through long runs" ~1906s; `historical.test` (FAST-tier, ungated!)
+  "200 gens inventories" 443s / "4 terminal daughters" 352s / "ruleBias clamp"
+  225s / "Tuscan accusative" 105s; `properties` determinism 84s / monotonic 53s /
+  tree-never-shrinks 72s. → item-2 targets: the two ~30-min RUN_SLOW tests +
+  ungated historical.test; + investigate the 8.6-min collect cost separately.
 
 ## NEEDS DECISION
 
@@ -158,3 +168,24 @@ _(populated by GUI play sessions)_
   article via `astToTokens`, so it's not pure relexified English;
   (b) incrementally move one realise-stage at a time behind the existing hooks;
   (c) full role-IR rewrite. Needs your call on appetite/scope before I touch it.
+
+- **`driftOneMeaning` × PROTECTED_MEANINGS inconsistency** (real bug, surfaced by
+  the nightly `properties.test.ts`). When semantic drift picks a PROTECTED
+  meaning (be/have/do/will/go/come/see/give/say/make/take/get/know/want/find/
+  think/eat/drink) as its source `m`, drift.ts:182 copies m's form to the target,
+  then drift.ts:203 calls `deleteMeaning(m)` — which the Phase-71b guard REFUSES
+  (protected). So m is kept, but the function still returns `polysemous:false`,
+  deletes m's frequency hint + register (drift.ts:187/191), and does NOT
+  `recordColexification`. Net: the form lives at BOTH m and target while the
+  engine believes m was dropped — an inconsistent, unrecorded de-facto
+  colexification with m's freq/register metadata wrongly purged.
+  Fix options:
+   (a) RECOMMENDED — skip protected meanings as drift SOURCES, mirroring the
+       existing closed-class skip (drift.ts:140): `if (PROTECTED_MEANINGS.has(m))
+       continue;`. Conservative (protected = stable anchors); avoids touching the
+       freq/decay coupling; makes the property pass without changing the test.
+   (b) Treat a protected source as a polysemous drift (recordColexification, keep
+       m + metadata, return polysemous:true). More realistic broadening but
+       changes the freq-hint coupling and may over-generate colexifications.
+  Both alter drift trajectories (engine-behaviour) → need determinism + drift/
+  semantics tests + the failing property re-run to verify. **Recommend (a).**
