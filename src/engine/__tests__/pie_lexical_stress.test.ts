@@ -92,7 +92,12 @@ describe("PIE lexical-accent map", () => {
 
   it("daughter languages inherit the lexical-stress map at split time", () => {
     const sim = createSimulation(cfg);
-    sim.step();
+    // Phase 70.1: the proto no longer auto-splits on the first tick.
+    // Step until L-0 produces daughters (PIE splits within ~100 gens).
+    for (let i = 0; i < 300; i++) {
+      sim.step();
+      if (Object.values(sim.getState().tree).some((n: any) => n.parentId === "L-0")) break;
+    }
     const tree = sim.getState().tree;
     const daughters = Object.values(tree).filter(
       (n: any) => n.parentId === "L-0",

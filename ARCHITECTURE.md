@@ -2,6 +2,8 @@
 
 This document is for someone landing on the codebase cold and wanting to know how the simulator actually works. It is **not** a feature list — see `README.md` for that.
 
+> **Two architecture docs.** This file is the **subsystem map + data-flow** view (per-directory roles, the module system, translator/narrative flows, per-step pipeline). `docs/ARCHITECTURE.md` is the **layered-structure + data-model + conventions** view (dependency layers, the `Language` shape, determinism/testing/performance rules). They cross-reference each other.
+
 ## Big picture
 
 The simulator is a deterministic generation-stepped model of a phylogenetic language tree. A single proto-language splits into daughters, each of which mutates its phonology, morphology, semantics, and grammar over time. Every per-generation transformation is seeded from a single RNG so the same config + step count always produces the same state.
@@ -55,13 +57,44 @@ config (presets/) ──► createSimulation ──► state.tree ──► step
 | `engine/translator/` | English → target sentence (`sentence.ts`, `parse.ts`, `realise.ts`); target → English caption (`glossToEnglish.ts`); cognate finder. |
 | `engine/narrative/` | Discourse-genre narrative composer (target-side: `composer.ts`); legacy skeleton mode (`generate.ts`). |
 | `engine/tree/` | Phylogenetic split mechanics + MSA-based proto-form reconstruction. |
-| `engine/steps/` | The orchestrator entry points called from `simulation.ts`. |
+| `engine/modules/` | **Largest subsystem (54 files).** Phase 41+ capability modules in four kinds (`grammatical` / `syntactical` / `morphological` / `semantic`). Each is a static `SimulationModule` (`id`, `kind`, `requires`, `initState`, `step`); a language activates a subset (`lang.activeModules`) and the step loop runs them in `requires`-topological order, skipping inactive ones (the perf win). See "Module system" below. |
+| `engine/historical/` | Historical Mode: scripted schedules (e.g. Romance) of dated milestones that bias evolution toward an attested outcome. `stepHistorical` applies due milestones each generation; no-op unless `config.historical.scheduleId` is set. |
+| `engine/steps/` | The orchestrator entry points called from `simulation.ts` (one file per major substep). |
 | `engine/presets/` | Built-in language seeds (PIE, Germanic, Romance, Bantu, Toki Pona, English, …). |
+| `engine/analysis/`, `engine/achievements/`, `engine/diagnostics/` | Read-only analyzers, achievement detection, and debug instrumentation over simulation state. |
 | `engine/utils/` | Cloning, generic helpers. |
+| `engine/` (top-level) | Cross-cutting files: `domains.ts` (typed `Pick<Language>` slices — the god-object decomposition seam), `perMeaningFields.ts` (registry governing per-meaning-field inheritance at split + purge on delete), `defaults.ts`, `config.ts`, `rng.ts`, `naming.ts`, `worker.ts`/`workerClient.ts`. |
 | `state/` | Zustand store + history / activity recording. |
 | `persistence/` | Save format, autosave, schema migrations, user presets. |
 | `ui/` | React app. |
 | `share/` | URL-encoded share links. |
+
+## Module system
+
+Phases 41+ progressively migrated typological behaviour out of the
+monolithic `steps/*` functions into self-contained **modules** under
+`engine/modules/{grammatical,syntactical,morphological,semantic}/`.
+
+- A module is a static declaration (`modules/types.ts SimulationModule`):
+  `id`, `kind`, optional `requires` (soft deps), `initState`, `step`,
+  and optional `serialise`/`deserialise` for reference-typed state.
+- All modules self-register at boot via the side-effect import
+  `import "./modules"` in `simulation.ts` → `modules/registry.ts`
+  (a global singleton — modules are static capabilities, not instances).
+- A language carries `activeModules: Set<string>` + per-module
+  `moduleState`. `activeModulesOf(lang)` returns its active modules in
+  `requires`-topological order (stable, id-sorted for determinism).
+- Each generation, after the legacy `steps/*` calls, `simulation.step()`
+  runs every active module's `step(lang, state, ctx)` in that order.
+  Modules outside the active set are skipped entirely — the perf win for
+  isolating/analytic languages.
+- `modules/legacyMigration.ts computeActiveModulesFromLegacy` derives the
+  right active set from a language's legacy typology flags (used by the
+  save migration and by older presets).
+- At tree split, daughters inherit `activeModules` (copied) and a cloned
+  `moduleState` (via the module's `serialise`/`deserialise` or
+  `structuredClone`). `restoreState` rehydrates `activeModules` (a `Set`)
+  from JSON-degraded saves.
 
 ## Translator / narrative directions
 
@@ -170,9 +203,33 @@ After all steps, `state.rngState = rng.state()` is committed.
 
 ## Testing
 
-- `src/engine/__tests__/` — engine units + integration. ~100 test files.
-- `src/ui/__tests__/` — render smoke + behaviour tests. Currently sparse — every tab has at least a render check via `render_every_tab.test.tsx`.
-- `src/persistence/__tests__/` — schema migrations + user presets.
-- The `rate_calibration.test.ts` long-run test is gated behind `RUN_SLOW=1`.
+~235 test files (`src/engine/__tests__/` engine units + integration;
+`src/ui/__tests__/` render/behaviour; `src/persistence/__tests__/` schema
+migrations + user presets).
 
-`npx vitest run` runs the fast suite. `npx tsc --noEmit` is the typecheck.
+**Two tiers** (the test bodies run real simulations, so the heavy ones are
+gated):
+
+- **Fast / default — `npm test`** (`vitest run`, `RUN_SLOW` unset). The PR
+  feedback loop. `vite.config.ts` excludes the heavyweight files (property
+  tests, multi-hundred-generation smokes, divergence/calibration probes) via
+  the `RUN_SLOW`-gated exclude list. Some files keep their fast unit tests in
+  this tier and gate only their heavy cases with `it.skipIf(!RUN_SLOW)`.
+- **Full / nightly — `RUN_SLOW=1 npx vitest run`** (also `npm run
+  test:slow`). Runs the entire surface including the gated tier.
+
+**CI** (`.github/workflows/`):
+- `pr.yml` — on every PR: `npm test` (fast tier) + `npm run build`.
+- `nightly.yml` — daily cron: the full `RUN_SLOW` suite, sharded ×4. This is
+  the comprehensive gate; it catches the gated tier's regressions within a
+  day without slowing PRs. (Before this split, the gated tier ran nowhere in
+  CI and accumulated stale assertions.)
+
+Environment: most engine tests run in the `node` vitest environment;
+`environmentMatchGlobs` in `vite.config.ts` switches UI + persistence tests
+to `jsdom`. `npx tsc --noEmit` is the typecheck.
+
+Determinism is enforced by `simulation.test.ts` ("two sims with identical
+config produce identical state after N steps"); statistical properties
+(e.g. `frequency_direction`) are pooled across seeds in the nightly tier so
+single-trajectory noise can't flip them.

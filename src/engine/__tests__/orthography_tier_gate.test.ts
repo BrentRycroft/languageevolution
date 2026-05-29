@@ -59,8 +59,8 @@ describe("tierOrthographyMultiplier", () => {
     expect(tierOrthographyMultiplier(2)).toBe(1);
   });
 
-  it("returns 3 for tier 3+", () => {
-    expect(tierOrthographyMultiplier(3)).toBe(3);
+  it("returns 0.2 for tier 3+ (Phase 72a: standardisation DAMPENS drift)", () => {
+    expect(tierOrthographyMultiplier(3)).toBe(0.2);
   });
 });
 
@@ -95,7 +95,7 @@ describe("driftOrthography tier gate", () => {
     expect(fires).toBeLessThan(200);
   });
 
-  it("fires more often (~3x) for tier-3 languages than tier-2", () => {
+  it("fires LESS often for tier-3 than tier-2 (Phase 72a: standardisation dampens drift)", () => {
     let t2Fires = 0;
     let t3Fires = 0;
     for (let i = 0; i < 500; i++) {
@@ -104,7 +104,7 @@ describe("driftOrthography tier gate", () => {
       if (driftOrthography(langT2, makeRng(`t2x-${i}`), 0.05)) t2Fires++;
       if (driftOrthography(langT3, makeRng(`t3x-${i}`), 0.05)) t3Fires++;
     }
-    expect(t3Fires).toBeGreaterThan(t2Fires);
+    expect(t3Fires).toBeLessThan(t2Fires);
   });
 });
 

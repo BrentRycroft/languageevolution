@@ -31,7 +31,10 @@ describe("cognates + etymology", () => {
     const state = sim.getState();
     const leaf = leafIds(state.tree)[0]!;
     const steps = traceEtymology(state.tree, leaf, "water");
-    expect(steps[0]!.languageName).toBe("Proto");
+    // Phase 70.1: the proto is renamed from "Proto" to a procedurally
+    // generated name on its first tick, so assert the chain starts at
+    // the ROOT node by id rather than by the literal name "Proto".
+    expect(steps[0]!.languageId).toBe(state.rootId);
     expect(steps[steps.length - 1]!.languageId).toBe(leaf);
   });
 });

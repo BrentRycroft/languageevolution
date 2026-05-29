@@ -53,7 +53,18 @@ export default defineConfig(({ command }) => ({
     }),
   ],
   test: {
-    environment: "jsdom",
+    // Default to the lightweight `node` environment. Booting jsdom per
+    // test FILE is expensive, and ~225 of the ~235 test files are pure
+    // engine logic with no DOM access. Only the UI tests and the
+    // persistence tests (which touch localStorage) need a browser
+    // environment; those are matched below. This keeps the default
+    // suite from paying the jsdom-boot cost ~225 times.
+    environment: "node",
+    environmentMatchGlobs: [
+      ["**/*.test.tsx", "jsdom"],
+      ["**/ui/**", "jsdom"],
+      ["**/persistence/**", "jsdom"],
+    ],
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     // Long-running property + multi-thousand-generation smoke tests
@@ -81,6 +92,30 @@ export default defineConfig(({ command }) => ({
             "**/sprint4_realism_polish.test.ts",
             "**/rate_calibration.test.ts",
             "**/genesis_mechanisms.test.ts",
+            // Multi-hundred-generation behaviour suites: each test runs a
+            // full growing-tree simulation for minutes. Every test in
+            // these files is heavy (no fast units to preserve), so they
+            // gate cleanly at the file level. Run via `npm run test:slow`.
+            "**/phase72e_stress_tests.test.ts",
+            "**/pacing.test.ts",
+            "**/stagnation.test.ts",
+            "**/soft_cap.test.ts",
+            "**/phase73d_historical_preserved.test.ts",
+            "**/achievements.test.ts",
+            "**/procedural_integration.test.ts",
+            "**/targeted_derivation_integration.test.ts",
+            "**/ablaut_chain.test.ts",
+            "**/phase72f_socioling.test.ts",
+            "**/phase72a_quick_wins.test.ts",
+            "**/cognates.test.ts",
+            // Long-run typological-divergence probes: each asserts that
+            // sister lineages drift apart over hundreds of generations, so
+            // the generation count is intrinsic and can't be shortened
+            // without changing what's measured. Nightly tier.
+            "**/phase73a_divergence.test.ts",
+            "**/phase73d_typology_divergence.test.ts",
+            "**/phase73d_synthesis_divergence.test.ts",
+            "**/frequency_direction.test.ts",
           ]),
     ],
   },

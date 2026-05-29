@@ -74,6 +74,11 @@ describe("copula evolution — erosion + genesis", () => {
     const { makeRng } = await import("../rng");
     const lang = preset(presetPIE);
     expect(lang.lexicon["be"]).toBeDefined();
+    // stepCopulaErosion scales probability by 1/conservatism, so a
+    // conservative PIE (conservatism > 1) makes copulaLossProbability:1
+    // sub-certain. Force conservatism to 1 so the erosion is guaranteed
+    // and the test deterministically exercises the deletion path.
+    lang.conservatism = 1;
     const cfg = { obsolescence: { copulaLossProbability: 1 } } as never;
     stepCopulaErosion(lang, cfg, makeRng("erosion"), 1);
     expect(lang.lexicon["be"]).toBeUndefined();

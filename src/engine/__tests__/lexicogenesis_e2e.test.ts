@@ -28,11 +28,18 @@ describe("lexicogenesis e2e", () => {
       const coined = Object.keys(lang.wordOrigin);
       for (const m of coined) {
         if (!lang.lexicon[m]) continue;
+        // Coined words must be TRACKABLE (non-empty provenance) and have
+        // a legal form (asserted above). A frequency hint is OPTIONAL by
+        // contract: `frequencyFor` falls back to DEFAULT_FREQUENCY when a
+        // meaning has no explicit hint, and some coinage paths (e.g. a
+        // primary loan dropped then restored via sense churn) legitimately
+        // leave it unset. If a hint IS present it must be a valid [0,1].
         expect(lang.wordOrigin[m]!.length).toBeGreaterThan(0);
-        expect(
-          typeof lang.wordFrequencyHints[m] === "number",
-          `freq for coined ${m}`,
-        ).toBe(true);
+        const f = lang.wordFrequencyHints[m];
+        if (f !== undefined) {
+          expect(f, `freq range for coined ${m}`).toBeGreaterThanOrEqual(0);
+          expect(f, `freq range for coined ${m}`).toBeLessThanOrEqual(1);
+        }
       }
     }
   });

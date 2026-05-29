@@ -729,7 +729,14 @@ export function applyChangesToLexicon(
       continue;
     }
     const next = applyChangesToWord(lexicon[m]!, changes, rng, optsWithOrder, m);
-    if (next.length === 0) continue;
+    // Defensive: a word should never erode to empty (per-rule
+    // isFormLegal enforces a length floor), but if it ever does,
+    // preserve the previous form rather than silently dropping the
+    // meaning — matching the illegal-form fallback below.
+    if (next.length === 0) {
+      out[m] = lexicon[m]!;
+      continue;
+    }
     if (!isFormLegal(m, next)) {
       const repaired = repairSyllabicity(next);
       if (repaired !== next && isFormLegal(m, repaired)) {

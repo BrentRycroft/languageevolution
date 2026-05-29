@@ -668,13 +668,10 @@ export function inflectCascade(
     applied.push(cat);
 
     if (fusion >= 0.7 && p.position === "suffix") {
-      while (
-        form.length >= 2 &&
-        form[form.length - p.affix.length - 1] === p.affix[0]
-      ) {
-        form.splice(form.length - p.affix.length, 0);
-        break;
-      }
+      // Fusion haplology: collapse a doubled phoneme at the morpheme
+      // seam (e.g. stem-final /t/ + suffix-initial /t/ → single /t/).
+      // `seam` is the boundary; inflect() returns a fresh array so
+      // before.length is still the pre-suffix length.
       const seam = before.length;
       if (seam > 0 && seam < form.length && form[seam - 1] === form[seam]) {
         form.splice(seam, 1);

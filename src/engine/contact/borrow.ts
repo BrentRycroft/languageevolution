@@ -65,6 +65,14 @@ export interface LoanEvent {
   originalForm: string;
   adaptedForm: string;
   distance: number;
+  /**
+   * True when the recipient already had this meaning and the loan was
+   * registered as a SYNONYM sense rather than replacing the (still
+   * native) primary form. Callers must not re-tag the meaning's
+   * provenance as borrowed in this case — the primary form's origin is
+   * unchanged.
+   */
+  addedAsSynonym: boolean;
 }
 
 const BORROW_HALF_LIFE = 200;
@@ -209,6 +217,7 @@ export function tryBorrow(
     originalForm: originalForm.join(""),
     adaptedForm: adapted.join(""),
     distance,
+    addedAsSynonym: alreadyHas,
   };
 }
 

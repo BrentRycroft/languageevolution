@@ -92,6 +92,8 @@ export type MorphologyState = Pick<Language,
 // ─── LexiconState ───────────────────────────────────────────────────
 
 export type LexiconState = Pick<Language,
+  | "id"
+  | "conceptIdSeq"
   | "lexicon"
   | "words"
   | "wordsByFormKey"

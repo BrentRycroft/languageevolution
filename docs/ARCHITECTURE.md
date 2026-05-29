@@ -4,6 +4,11 @@ A high-level map of the language-evolution simulator. For build / run
 instructions and feature surface, see the top-level `README.md`. For
 contributor onboarding, see `docs/CONTRIBUTING.md`.
 
+> **Two architecture docs.** This file is the **layered-structure +
+> data-model + conventions** view. The top-level `ARCHITECTURE.md` is the
+> **subsystem map + data-flow** view (per-directory roles, the module
+> system, translator/narrative flows). They cross-reference each other.
+
 ## Layered structure
 
 The codebase is layered: each row depends only on the rows above it.
@@ -22,21 +27,33 @@ Worker (`src/engine/worker.ts`).
 
 ## The simulation pipeline
 
-Every generation, `simulation.step()` runs each leaf language through
-the pipeline in this fixed order. Each step is gated by a flag in
-`SimulationConfig.modes`:
+Every generation, `simulation.step()` first runs Historical Mode
+(`stepHistorical`, a no-op unless `config.historical.scheduleId` is set),
+then runs each leaf language through the pipeline in this fixed order. Most
+steps are gated by a flag in `SimulationConfig.modes`:
 
 ```
-volatility → phonology → learner → inventoryManagement → obsolescence
-→ copula{Erosion,Genesis} → taboo → genesis → grammar → morphology
-→ semantics → contact → arealTypology → treeSplit → death
+(per leaf preamble: speaker drift → territory tick → tier hysteresis)
+volatility → phonology → learner → inventoryManagement → phonotacticDrift
+→ obsolescence → copula{Erosion,Genesis} → taboo → genesis
+→ grammar → morphology → semantics → [active module step() hooks]
+→ contact → arealTypology → treeSplit → death
 ```
+
+The `[active module step() hooks]` run every module in `lang.activeModules`
+in `requires`-topological order (see "Module system" below) — this is where
+Phases 41+ behaviour lives, alongside the legacy `steps/*` calls.
 
 Then post-loop, regardless of leaf:
 
 ```
-arealWaves → creolization → reabsorbExtinctTerritory
+arealWaves → creolization → reticulate (refresh contact links)
+→ reabsorbExtinctTerritory
 ```
+
+The canonical, fully-commented ordering lives in `simulation.ts step()`;
+the root `ARCHITECTURE.md` has the per-subsystem map and the translator /
+narrative flows.
 
 Each step may mutate the language in place. After the loop, the
 top-level state object is replaced with `{ ...state, generation,
@@ -65,14 +82,46 @@ cluster into:
   `correspondences`, `diffusionState`
 - **morphology / grammar**: `morphology.paradigms`,
   `derivationalSuffixes`, `grammar` (50+ typology axes)
-- **semantics / discourse**: `registerOf`, `colexifiedAs`, `variants`
+- **semantics / discourse**: `registerOf`, `colexifiedAs`, `variants`,
+  `meaningHistory`
+- **concept identity (Phase 72)**: `conceptIds` (meaning → stable id),
+  `conceptIdSeq` (per-language mint counter), `perWordDiffusion`
+- **sociolinguistic (Phase 72)**: `endangermentLevel`, `prestigeVariety`,
+  `bilingualLinks`, `contactLinks`
+- **modules (Phase 41+)**: `activeModules` (`Set<string>`), `moduleState`
+- **historical**: `historicalRole`, `grammaticalisationCascade`
 - **state / metadata**: `events`, `extinct`, `culturalTier`, `speakers`,
-  `coords`, `territory`, `volatilityPhase`, `localNeighbors`,
-  `bilingualLinks`
+  `coords`, `territory`, `volatilityPhase`, `localNeighbors`
 
 Most fields are `?:` optional with a sensible default at the read site;
 this keeps migration painless when new features land. The `defaults.ts`
 factory is the canonical place to construct fresh languages.
+
+`Language` is a large god-object. Two helpers tame it:
+
+- **`domains.ts`** defines typed `Pick<Language, …>` slices —
+  `LexiconState`, `PhonologyState`, `MorphologyState`, `GrammarState`,
+  `SocialState`, `GeoState`, `ContactState`, `HistoricalRoleState`,
+  `ModuleHostState` — so a function can declare exactly which slice it
+  touches instead of the whole object. This is the seam for an eventual
+  decomposition.
+- **`perMeaningFields.ts`** is the registry of per-meaning `Record<Meaning,
+  X>` fields with declared lifecycle handlers (how to inherit at tree-split,
+  whether to purge on `deleteMeaning`). Adding a per-meaning field means
+  registering it here rather than hand-editing `tree/split.ts` and
+  `mutate.ts:deleteMeaning`.
+
+## Module system
+
+Phases 41+ moved typological behaviour into self-registering **modules**
+under `engine/modules/{grammatical,syntactical,morphological,semantic}/`
+(the largest subsystem, 54 files). Each `SimulationModule`
+(`modules/types.ts`) declares `id`, `kind`, optional `requires`,
+`initState`, `step`, and optional `serialise`/`deserialise`. They register
+at boot (`import "./modules"` → `modules/registry.ts`, a global singleton);
+a language activates a subset (`activeModules`) and the step loop runs the
+active ones in `requires`-topological order, skipping the rest. See the
+root `ARCHITECTURE.md` "Module system" for the full lifecycle.
 
 ## Single source of truth (Tranche 1)
 
@@ -105,22 +154,40 @@ identical state after N steps"` validates this end-to-end.
 
 ## Testing strategy
 
-- Default `npm test` runs the full surface in under 5 minutes
-  (vite.config.ts gates a handful of multi-hundred-gen tests behind
-  `RUN_SLOW=1`).
-- `npm run test:slow` runs everything; CI pre-push uses this.
-- Property tests via `fast-check` cover invariants that should hold
-  under arbitrary random input
-  (`__tests__/phase_29_invariants.test.ts`).
-- Each major engine subsystem has a focused test file
-  (`__tests__/<subsystem>.test.ts`).
+~235 test files, split into two tiers because the test bodies run real
+simulations (the heavy ones step a growing tree for hundreds of
+generations):
+
+- **Fast / default — `npm test`** (`RUN_SLOW` unset). The PR feedback loop.
+  `vite.config.ts` excludes the heavyweight files (property tests,
+  multi-hundred-generation smokes, divergence/calibration probes); some
+  files gate only their heavy cases with `it.skipIf(!RUN_SLOW)`.
+- **Full / nightly — `RUN_SLOW=1 npx vitest run`** (= `npm run test:slow`):
+  the entire surface, including the gated tier.
+
+CI: `.github/workflows/pr.yml` runs the fast tier + `npm run build` on every
+PR; `.github/workflows/nightly.yml` runs the full `RUN_SLOW` suite sharded
+×4 on a daily cron (the comprehensive gate — without it the gated tier runs
+nowhere and rots).
+
+- Property tests via `fast-check` cover invariants that should hold under
+  arbitrary random input (e.g. `__tests__/phase_29_invariants.test.ts`).
+- Each major engine subsystem has a focused test file.
+- Statistical-property tests (e.g. `frequency_direction`) pool across
+  multiple seeds in the nightly tier so single-trajectory noise can't flip
+  a tight margin.
+- Most engine tests use the `node` vitest environment; `vite.config.ts`
+  `environmentMatchGlobs` switches UI + persistence tests to `jsdom`.
 - UI tests are mostly shallow renders (`src/ui/__tests__/`).
 
 ## Performance posture
 
-- The hot path is `applyChangesToLexicon` (~40% of step time on a
-  tier-3 English run) followed by `inventoryManagement` (~28%).
-- Per-step cost scales with `lexicon size × active rules × leaves`.
+- The dominant hot path is `phonology/apply.ts applyChangesToLexicon`
+  (~65–80% of step time per its own header), with `inventoryManagement`
+  next. Profile with `PROFILE_STEP=1` (per-substep wall time) before
+  optimising.
+- Per-step cost scales with `lexicon size × active rules × leaves × active
+  modules`. In tests this dominated runtime — see the two-tier split above.
 - Heavy work caches per call (`SORTED_CACHE` for rule priority sort,
   `WeakMap` for closed-class table, `RANDOM_CACHE` for world maps).
 - Phase 29 Tranche 6 hoisted `getWorldMap` out of the per-leaf loop
@@ -138,18 +205,26 @@ A typical engine feature:
 
 1. Add the data field on `Language` (or a sub-type) in `types.ts`.
 2. Initialise in `defaults.ts` and any preset that should seed it.
-3. Plumb the read/write through the relevant `steps/<X>.ts`.
-4. Cover with a focused test in `__tests__/<feature>.test.ts`.
+3. Plumb the read/write through the relevant `steps/<X>.ts`, or — for
+   typological behaviour — add/extend a module under `engine/modules/`
+   and activate it (see "Module system").
+4. Cover with a focused test in `__tests__/<feature>.test.ts`. Put cheap,
+   deterministic tests in the default tier; multi-hundred-generation or
+   statistical tests behind `RUN_SLOW` (the `vite.config.ts` exclude list).
 5. Surface a UI affordance in the relevant panel.
 6. If the feature changes save format, bump `LATEST_SAVE_VERSION` and
    add a migrator in `persistence/migrate.ts`.
 
 ## Known open follow-ups
 
-See the top-level Phase 29 plan for the live list. The most relevant:
+The live regression signal is the nightly `RUN_SLOW` suite — treat its
+failures as the current list rather than any hand-maintained note here
+(which drifts). Standing items:
 
-- `applyOneRegularChange` per-meaning safety bound is currently a
-  fixed cap of 10. Should detect fixed point / cycle instead.
-- Three pre-existing test failures (`translator_stress` relative
-  clauses, `phase18a` phoneme pruning preference, `ipa_pie` occasional
-  vowel-less forms) are tracked and not from Phase 29.
+- `applyOneRegularChange` per-meaning safety bound is a fixed cap of 10;
+  should detect fixed point / cycle instead.
+- The `Language` god-object decomposition: `domains.ts` slices are the seam,
+  but most code still takes the whole `Language`.
+- Performance: the `apply.ts` hot path and the long tail of
+  simulation-heavy tests both have headroom (the latter is why most
+  integration tests are gated to the nightly tier).

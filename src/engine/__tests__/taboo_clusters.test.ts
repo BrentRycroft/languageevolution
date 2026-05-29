@@ -16,6 +16,9 @@ import type { Language } from "../types";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
+const RUN_SLOW = !!(globalThis as { process?: { env?: Record<string, string | undefined> } })
+  .process?.env?.RUN_SLOW;
+
 describe("semantic clusters", () => {
   it("core body meanings cluster together", () => {
     expect(clusterOf("hand")).toBe("body");
@@ -104,7 +107,10 @@ describe("taboo replacement", () => {
 });
 
 describe("simulation end-to-end with clusters + taboo + expressive", () => {
-  it("produces at least one taboo event in 600 generations", () => {
+  // Heavyweight: 600 generations of a full default simulation (growing
+  // tree) takes minutes. Gated behind RUN_SLOW so the default suite stays
+  // fast; CI / pre-push runs the full surface via `npm run test:slow`.
+  it.skipIf(!RUN_SLOW)("produces at least one taboo event in 600 generations", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "taboo-probe" });
     for (let i = 0; i < 600; i++) sim.step();
     const events = Object.values(sim.getState().tree).flatMap(
