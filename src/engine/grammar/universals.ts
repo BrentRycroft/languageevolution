@@ -9,8 +9,11 @@ import type { Rng } from "../rng";
  * Universals checked:
  *  U1: Verb-final (SOV) ↔ postpositional. SOV + preposition is rare; SVO/V-
  *      initial + postposition is rare. With pRepair we flip caseStrategy.
- *  U2: Verb-final (SOV) ↔ pre-noun modifiers. SOV + post-adjective and
- *      SOV + post-numeral are uncommon; nudge toward pre.
+ *  U2: Verb-final (SOV) ↔ pre-noun modifiers. SOV + post-adjective,
+ *      SOV + post-numeral, and SOV + post-possessor (NounGen) are uncommon;
+ *      nudge toward pre. The possessor case is Greenberg's Universal 2/4:
+ *      OV/postpositional languages overwhelmingly have genitive-before-noun
+ *      (GenN) — one of the strongest cross-linguistic word-order correlations.
  *  U3: No morphological case ↔ nom-acc only. Already enforced as a hard
  *      constraint elsewhere; included here for completeness in tests.
  *
@@ -83,6 +86,18 @@ export function enforceTypologicalUniversals(
         reason: "SOV correlates with pre-noun numerals",
       });
       g.numeralPosition = "pre";
+    }
+    // Greenberg U2/U4: OV/postpositional languages overwhelmingly place the
+    // genitive before the noun (GenN). Appended AFTER the adjective/numeral
+    // draws so their rng stream — and outcomes — stay unchanged.
+    if (g.possessorPosition === "post" && rng.chance(REPAIR_PROBABILITY)) {
+      repairs.push({
+        feature: "possessorPosition",
+        from: "post",
+        to: "pre",
+        reason: "SOV correlates with genitive-before-noun (possessor-before-noun)",
+      });
+      g.possessorPosition = "pre";
     }
   }
 

@@ -38,7 +38,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Phonology (sound change) | solid | Mature; also the perf hot path (apply.ts). |
 | Phonotactics & prosody | partial | Drift + stress exist; assess depth when touched. |
 | Morphology (infl/deriv/fusion/ablaut) | partial | Broad coverage; assess realism per-axis. |
-| Syntax (order/alignment/agreement) | partial | Typology axes exist; check agnosticism. |
+| Syntax (order/alignment/agreement) | partial | Typology axes exist; check agnosticism. Soft Greenberg universals (grammar/universals.ts) enforce SOV↔postposition + SOV↔pre-adj/num/possessor (OV⟹GenN). Adposition order is caseStrategy-driven (realiser); case langs drop oblique adpositions (deliberate — possible realism gap, not yet a decision). |
 | Semantics (drift/colex/metaphor) | partial | Colexification + recarve exist; metaphor? assess. |
 | Lexicon (coin/borrow/compound/loss) | partial | Strong; compounding depth unassessed. |
 | Sociolinguistics (register/prestige/endangerment) | partial | Phase 72 added prestige/endangerment/bilingual. |
@@ -172,6 +172,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Realism: added the OV ⟹ GenN soft universal** (grammar/universals.ts).
+  `enforceTypologicalUniversals` already nudged SOV languages toward
+  postpositions + pre-noun adjective/numeral; it was missing the possessor
+  correlate. Greenberg's Universal 2/4: OV/postpositional languages
+  overwhelmingly place the genitive BEFORE the noun (GenN) — one of the
+  strongest word-order correlations. Added an SOV + possessor-"post" → "pre"
+  soft repair (same 1.5%/gen rate, so real exceptions persist), appended AFTER
+  the adjective/numeral rng draws so their outcomes stay byte-identical. Fires
+  during sims when a language drifts to SOV while areal spread/drift left
+  possessor-post (incoherent OV+NounGen). + 2 tests (positive repair + fully-
+  consistent-SOV no-op now incl. possessor). tsc + determinism (simulation.test)
+  + full fast suite (211 files / 1675) green — no trajectory regressions.
 - **Fixed a RED fast tier** (regression from `82a94a6`): the RC-ordering fix made
   the relativizer strategy postnominal, but a pre-existing test
   (`typological_routing.test.ts` "relativizer strategy: rel clause precedes

@@ -86,6 +86,20 @@ describe("enforceTypologicalUniversals", () => {
     expect(repaired).toBe(true);
   });
 
+  it("U2: SOV + post-possessor can repair to pre-possessor (GenN; Greenberg U2/U4)", () => {
+    const lang = makeLang({ wordOrder: "SOV", possessorPosition: "post" });
+    let repaired = false;
+    for (let i = 0; i < 200; i++) {
+      const r = enforceTypologicalUniversals(lang, makeRng(`u2poss-${i}`));
+      if (r.some((x) => x.feature === "possessorPosition")) {
+        expect(lang.grammar.possessorPosition).toBe("pre");
+        repaired = true;
+        break;
+      }
+    }
+    expect(repaired).toBe(true);
+  });
+
   it("does not touch already-consistent SVO + preposition", () => {
     const lang = makeLang({ wordOrder: "SVO", caseStrategy: "preposition" });
     for (let i = 0; i < 50; i++) {
@@ -94,12 +108,13 @@ describe("enforceTypologicalUniversals", () => {
     }
   });
 
-  it("does not touch already-consistent SOV + postposition + pre-adj + pre-num", () => {
+  it("does not touch already-consistent SOV + postposition + pre-adj + pre-num + pre-poss", () => {
     const lang = makeLang({
       wordOrder: "SOV",
       caseStrategy: "postposition",
       adjectivePosition: "pre",
       numeralPosition: "pre",
+      possessorPosition: "pre",
     });
     for (let i = 0; i < 50; i++) {
       const r = enforceTypologicalUniversals(lang, makeRng(`ok-sov-${i}`));
