@@ -77,10 +77,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       above. Once `runslow-baseline.log` completes, MINE it for the slowest
       tests across ALL files — the verbose log has per-test ms — to find every
       mis-gated heavy file like historical.test.ts, not just the RUN_SLOW set.
-      NOTE: grep shows big loops — cluster_expansion 500, tone_sandhi 1000,
-      typological_completion 1000, sampling 3000 — in the FAST tier; verify
-      whether they break early / aren't sim.step before touching. Don't weaken
-      statistical/long-run assertions.)**
+      Don't weaken statistical/long-run assertions.) CHECKED 2026-05-29: the
+      previously-suspected fast-tier loops (cluster_expansion, tone_sandhi,
+      typological_completion, sampling) are actually CHEAP — 5/37/17/237ms — the
+      big loop bounds break early / aren't sim.step. NOT the long pole; lead
+      closed. The real fast-tier signal: full `npx vitest run` wall ≈ 149s with
+      cumulative collect ≈ 162s (across workers) — the COLLECT/transform cost
+      (module graph), not any single sim loop, is the thing worth a separate
+      look. Per-file fast-tier timing not yet captured.)**
 - [~] Baseline GUI play session — autonomous browser-driving is NOT available in
       this environment (no Playwright/screenshot/click tool; WebFetch only does
       public URLs as markdown — useless for a localhost JS SPA). Automatable
@@ -168,6 +172,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Fixed a RED fast tier** (regression from `82a94a6`): the RC-ordering fix made
+  the relativizer strategy postnominal, but a pre-existing test
+  (`typological_routing.test.ts` "relativizer strategy: rel clause precedes
+  head") asserted the OLD prenominal order on an SVO language and was never
+  updated (I'd only added a new test elsewhere + run targeted tests, not this
+  file). A full `npx vitest run` caught it (1 failed / 1673 passed). Corrected the
+  stale test to assert POSTnominal (VO ⟹ NRel, Greenberg U24 / Dryer), matching
+  the realiser. Test-only; tsc + RC/agnosticism tests green. LESSON: after an
+  engine-behaviour change, grep the WHOLE test suite for assertions of the old
+  behaviour, not just the area's obvious tests.
 - **Perf: trigger pre-filter (factory subset).** Profiling (PROFILE_STEP via
   vitest) showed phonology is 64-67% of step time, dominated by the per-word×rule
   `probabilityFor` (countSites word-scan + Math.pow). The factory rules

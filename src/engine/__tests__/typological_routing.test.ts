@@ -65,7 +65,13 @@ describe("Phase 13 — relative clauses, serial verbs, narrative routing", () =>
       expect(seeIdx, "rel verb 'see' realised").toBeGreaterThanOrEqual(0);
     });
 
-    it("relativizer strategy: rel clause precedes head", () => {
+    it("relativizer strategy: rel clause follows head (postnominal; VO ⟹ NRel)", () => {
+      // makeLang defaults to SVO (VO). Greenberg Universal 24 / Dryer:
+      // relativizer-strategy languages are VO and take POSTnominal relatives
+      // ("the man who saw the dog", head before clause), not prenominal —
+      // prenominal RCs come from the OV gap / internally-headed paths. This
+      // locks the Phase-correction in realise.ts attachRelativeClause that
+      // stopped scrambling VO relatives (clause-first → head-first).
       const lang = makeLang(
         { grammar: { ...makeLang().grammar, relativeClauseStrategy: "relativizer" } },
         {
@@ -79,7 +85,7 @@ describe("Phase 13 — relative clauses, serial verbs, narrative routing", () =>
       const headIdx = out.targetTokens.findIndex((t) => t.englishLemma === "man");
       const seeIdx = out.targetTokens.findIndex((t) => t.englishLemma === "see");
       if (headIdx >= 0 && seeIdx >= 0) {
-        expect(seeIdx, "rel verb precedes head in relativizer strategy").toBeLessThan(headIdx);
+        expect(seeIdx, "rel verb follows head in relativizer strategy (postnominal)").toBeGreaterThan(headIdx);
       }
     });
   });
