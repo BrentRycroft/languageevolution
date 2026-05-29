@@ -45,7 +45,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
 | **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. |
-| **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); complex typology routed through the translator. Residual: copular simple-render emits NO copula; deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
+| **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). |
@@ -99,9 +99,10 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
       `synthesisIndex`-gated morphology; complex typology via the translator.
       Not English-pool-based.
-- [ ] Narrative: simple-render copular shape emits bare "S A" with no copula
-      even when the language has one (only deep routing handles the copula).
-      Emit the copula form when `lang.lexicon["be"]` exists. [small realism fix]
+- [x] Narrative: simple-render copular shape now emits the copula (placed like
+      a verb per wordOrder) when `lang.lexicon["be"]` exists; zero-copula
+      languages keep bare juxtaposition. + focused test (narrative_copula).
+      Verified: tsc + 88 narrative/composer tests green.
 - [ ] Narrative live-quality check — fold into the baseline GUI play session:
       read whether multi-line output reads like a real (non-English-shaped)
       language across SOV / ergative / tonal presets.
@@ -125,6 +126,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Narrative simple-render copular path now emits an overt copula (placed like a
+  verb per `grammar.wordOrder`) when the language has lexicalised "be";
+  zero-copula languages keep bare S–A juxtaposition. Principle: overt-copula vs
+  zero-copula is a typological parameter. + focused test (narrative_copula);
+  tsc + 88 narrative/composer tests green.
 - Routed word-level `translate()` through the shared `lookupFormWithResolution`
   cascade (translate.ts) as a fallback before "missing", so single-word lookups
   match the sentence path's resolution power (synthesis / colexification /
