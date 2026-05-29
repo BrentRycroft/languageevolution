@@ -3,6 +3,7 @@ import { buildInitialState } from "../steps/init";
 import { defaultConfig } from "../config";
 import { lookupForm } from "../lexicon/lookup";
 import { presetBantu } from "../presets/bantu";
+import { presetTokipona } from "../presets/tokipona";
 
 /**
  * seed_colexification.test.ts
@@ -57,6 +58,22 @@ describe("seedColexification", () => {
       expect(lang.lexicon[absorbed], `${absorbed} should not be a separate Bantu lexicon entry`).toBeUndefined();
       expect(lang.colexifiedAs?.[winner], `colexifiedAs[${winner}] should contain ${absorbed}`).toContain(absorbed);
       // The absorbed meaning resolves to the winner's form via the cascade.
+      expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false })).toEqual(lang.lexicon[winner]);
+    }
+  });
+
+  it("Toki Pona adopts the hook: registry-attested colexifications declared, not duplicated", () => {
+    const lang = buildInitialState(presetTokipona()).tree["L-0"]!.language;
+    const pairs: Array<[winner: string, absorbed: string]> = [
+      ["sun", "day"],
+      ["sky", "god"],
+      ["eat", "drink"],
+      ["fight", "war"],
+      ["word", "name"],
+    ];
+    for (const [winner, absorbed] of pairs) {
+      expect(lang.lexicon[absorbed], `${absorbed} should not be a separate Toki Pona entry`).toBeUndefined();
+      expect(lang.colexifiedAs?.[winner], `colexifiedAs[${winner}] should contain ${absorbed}`).toContain(absorbed);
       expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false })).toEqual(lang.lexicon[winner]);
     }
   });

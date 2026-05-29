@@ -48,7 +48,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
-| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; Bantu adopts arm=hand, mouth=lip, flesh=meat; more pairs/presets pending. |
+| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; Bantu (arm=hand, mouth=lip, flesh=meat) + Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name); IE presets pending. |
 | **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor ordering verified language-driven (regression test); RC ordering still English-ish (realiser). Narrative grammar-driven; presets de-anglicized via seedColexification. |
 | **Performance** | partial | apply.ts hot path; known optimisation targets open. |
 | **UX / GUI** | needs assessment | No play session run yet. |
@@ -137,9 +137,15 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       (`COLEX_PAIRS`). Absorbed meanings resolve to the winner's form via the
       cascade. Verified: tsc + preset_coverage/ipa + phonotactics +
       phase_29_invariants (30-gen Bantu) + concepts + determinism green (108).
-- [ ] De-anglicization (more): extend attested colexifications to other presets/
-      concepts (finger=toe, tree=wood, skin=bark, …) grounded in typology — one
-      preset/pair at a time with verification.
+- [~] De-anglicization (more): Toki Pona done — declared 5 registry-attested
+      colexifications (sun=day, sky=god, eat=drink, fight=war, word=name) and
+      removed the duplicates. This exposed + fixed a latent cascade bug:
+      declared colexifications (`colexifiedAs`) now resolve BEFORE synthesis
+      (lookup.ts rung 2b), so an absorbed meaning surfaces as the shared lexeme
+      rather than a coined form. Remaining presets with attested duplicate
+      pairs: PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat),
+      Romance (flesh=meat, child=baby), Bantu (also child=son, lie=sleep). One
+      preset at a time.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -149,6 +155,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- De-anglicized Toki Pona: declared 5 registry-attested colexifications
+  (suno=sun/day, sewi=sky/god, moku=eat/drink, utala=fight/war, nimi=word/name)
+  via seedColexification; removed the duplicate entries + a stale `drink` freq
+  hint. + Toki Pona test in seed_colexification.
+- Fixed declared-colexification resolution precedence (lexicon/lookup.ts): moved
+  the `colexifiedAs` reverse-colex rung BEFORE synthesis (new rung 2b). A
+  recorded colexification (seeded OR evolved via drift/merge) now resolves an
+  absorbed meaning to the winner's lexeme instead of letting synthesis coin a
+  novel form — a latent bug Toki Pona exposed (e.g. "god" was coining a form
+  instead of surfacing sewi). Translator-only path (no sim-determinism impact);
+  324 translator/narrative/lookup/preset/determinism tests green.
 - Translator anglocentrism audit (programmatic): confirmed adjective + possessor
   ordering follow the language's typology (Bantu post-nominal, English pre-), not
   English — locked with translator_agnosticism.test.ts (2 tests). Surfaced a real
