@@ -50,7 +50,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; all presets de-anglicized — Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep), Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name), PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby); default/English have no attested duplicate pairs. |
 | **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
-| **Performance** | partial | apply.ts hot loop already early-continues (zero weight/prob) + caches the priority sort; remaining win = inventory-based rule pre-filtering (skip rules whose target phonemes can't occur in the lang) — needs declarative rule targets + byte-identical verification (careful dedicated effort). Bundle: 944 kB main chunk (load-time). |
+| **Performance** | partial | apply.ts hot loop already early-continues (zero weight/prob) + caches the priority sort. CONFIRMED: rules are opaque `probabilityFor(w)` closures (catalog.ts, via `countSites`) with NO declarative phoneme targets — so safe inventory-based rule pre-filtering needs catalog-wide target metadata FIRST (a real refactor → NEEDS DECISION). Bundle: 944 kB main chunk (load-time). |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
 ## Backlog (top = next)
@@ -168,6 +168,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Perf-feasibility investigation: confirmed sound-change rules are opaque
+  `probabilityFor(w)` closures (catalog.ts, via countSites) with no declarative
+  phoneme targets — so the safe inventory-based rule pre-filter needs
+  catalog-wide target metadata first (a real refactor). Logged under NEEDS
+  DECISION; not guessed.
 - De-anglicization COMPLETE across presets: added PIE (tree=wood, eye=face,
   flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby) — all
   registry-attested COLEX_PAIRS, duplicate forms removed, no new stale-freq. + a
@@ -305,6 +310,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   (NEEDS DECISION); simple-render copular path lacks copula logic.
 
 ## NEEDS DECISION
+
+- **Engine performance — rule pre-filtering (sim speed).** The per-step hot
+  path (apply.ts) evaluates every active sound-change rule against every word;
+  many are inapplicable to a given language (target phonemes absent) yet still
+  evaluated. Safe win: pre-filter inapplicable rules once per language/step.
+  BLOCKED: rules are opaque `probabilityFor(w)` closures (catalog.ts) with no
+  declarative target metadata, so "this rule can't apply here" isn't statically
+  knowable. To enable: add a declarative `targets` field (phonemes/features each
+  rule needs) across catalog.ts + filter on it, with byte-identical
+  verification. A sizeable, careful refactor — want me to take it on?
 
 - **Translator realiser refactor.** `realise.ts` is a ~766-line monolith
   hardcoding word-order/alignment/NP-VP realisation; the Phase 41c stage-hook +
