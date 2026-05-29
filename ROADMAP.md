@@ -49,7 +49,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; Bantu adopts arm=hand, mouth=lip, flesh=meat; more pairs/presets pending. |
-| **Language-agnosticism** (cross-cutting) | needs assessment | Audit for baked-in English structure. |
+| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor ordering verified language-driven (regression test); RC ordering still English-ish (realiser). Narrative grammar-driven; presets de-anglicized via seedColexification. |
 | **Performance** | partial | apply.ts hot path; known optimisation targets open. |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
@@ -100,9 +100,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       — matching the sentence path. Additive (existing tests unchanged) + a new
       reverse-colex regression test. Verified: tsc + 77 translator tests green.
       (Live GUI check folded into the pending baseline play-session item.)
-- [ ] Translator anglocentrism audit: render sentences for non-SVO / case /
-      article-less presets (bantu, tokipona) and check adjective/possessive/
-      relative-clause ordering + morphology aren't English-shaped; log fixes.
+- [x] Translator anglocentrism audit (programmatic, not GUI): adjective +
+      possessor ordering correctly follow `grammar.adjectivePosition` /
+      `possessorPosition` (Bantu post, English pre) — NOT English-shaped. Locked
+      with `translator_agnosticism.test.ts`. FOUND: relative-clause ordering is
+      scrambled for post-nominal languages (Bantu "the king who sees the dog
+      walks" → "see dog who king walk") — a legacy-realiser IR limitation.
+- [ ] Translator: fix relative-clause ordering for non-English typologies (RC
+      should follow the head noun in post-nominal langs, respect
+      `relativeClauseStrategy`). Tied to the realiser-refactor NEEDS DECISION —
+      likely needs the role-IR migration; scope before touching.
 - [x] Assess narrative generation (code-level): genuinely grammar-driven
       (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
       `synthesisIndex`-gated morphology; complex typology via the translator.
@@ -142,6 +149,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Translator anglocentrism audit (programmatic): confirmed adjective + possessor
+  ordering follow the language's typology (Bantu post-nominal, English pre-), not
+  English — locked with translator_agnosticism.test.ts (2 tests). Surfaced a real
+  relative-clause ordering problem for post-nominal languages (logged as a
+  follow-up under the realiser NEEDS DECISION). tsc + test green.
 - Extended Bantu colexifications to mouth=lip (mulomo) and flesh=meat (ɲama) —
   both registry-attested COLEX_PAIRS stored as duplicate forms; dropped the
   `lip` and `flesh` duplicates. tsc + preset/Bantu/determinism green (108).
