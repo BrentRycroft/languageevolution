@@ -4,6 +4,9 @@ import { defaultConfig } from "../config";
 import { lookupForm } from "../lexicon/lookup";
 import { presetBantu } from "../presets/bantu";
 import { presetTokipona } from "../presets/tokipona";
+import { presetPIE } from "../presets/pie";
+import { presetGermanic } from "../presets/germanic";
+import { presetRomance } from "../presets/romance";
 
 /**
  * seed_colexification.test.ts
@@ -61,6 +64,29 @@ describe("seedColexification", () => {
       expect(lang.colexifiedAs?.[winner], `colexifiedAs[${winner}] should contain ${absorbed}`).toContain(absorbed);
       // The absorbed meaning resolves to the winner's form via the cascade.
       expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false })).toEqual(lang.lexicon[winner]);
+    }
+  });
+
+  it("every preset's declared colexifications resolve to the winner's form (no duplicate entry)", () => {
+    const builds: Record<string, () => ReturnType<typeof presetBantu>> = {
+      pie: presetPIE,
+      germanic: presetGermanic,
+      romance: presetRomance,
+      bantu: presetBantu,
+      tokipona: presetTokipona,
+    };
+    for (const [name, build] of Object.entries(builds)) {
+      const cfg = build();
+      const colex = cfg.seedColexification;
+      if (!colex) continue;
+      const lang = buildInitialState({ ...cfg, seed: `colex-all-${name}` }).tree["L-0"]!.language;
+      for (const [winner, absorbedList] of Object.entries(colex)) {
+        for (const absorbed of absorbedList) {
+          expect(lang.lexicon[absorbed], `${name}: '${absorbed}' should be absorbed (no own lexicon entry)`).toBeUndefined();
+          expect(lang.colexifiedAs?.[winner], `${name}: colexifiedAs['${winner}'] should contain '${absorbed}'`).toContain(absorbed);
+          expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false }), `${name}: '${absorbed}' should resolve to '${winner}' form`).toEqual(lang.lexicon[winner]);
+        }
+      }
     }
   });
 

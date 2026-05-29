@@ -48,9 +48,9 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
-| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep) + Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name) complete; IE presets (marginal) pending. |
+| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; all presets de-anglicized — Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep), Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name), PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby); default/English have no attested duplicate pairs. |
 | **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
-| **Performance** | partial | apply.ts hot path; known optimisation targets open. |
+| **Performance** | partial | apply.ts hot loop already early-continues (zero weight/prob) + caches the priority sort; remaining win = inventory-based rule pre-filtering (skip rules whose target phonemes can't occur in the lang) — needs declarative rule targets + byte-identical verification (careful dedicated effort). Bundle: 944 kB main chunk (load-time). |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
 ## Backlog (top = next)
@@ -151,15 +151,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       (`COLEX_PAIRS`). Absorbed meanings resolve to the winner's form via the
       cascade. Verified: tsc + preset_coverage/ipa + phonotactics +
       phase_29_invariants (30-gen Bantu) + concepts + determinism green (108).
-- [~] De-anglicization (more): Toki Pona done — declared 5 registry-attested
-      colexifications (sun=day, sky=god, eat=drink, fight=war, word=name) and
-      removed the duplicates. This exposed + fixed a latent cascade bug:
-      declared colexifications (`colexifiedAs`) now resolve BEFORE synthesis
-      (lookup.ts rung 2b), so an absorbed meaning surfaces as the shared lexeme
-      rather than a coined form. Remaining presets with attested duplicate
-      pairs: PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat),
-      Romance (flesh=meat, child=baby). LOW priority — marginal pairs, mostly
-      flesh=meat. Bantu now COMPLETE (added child=son, lie=sleep).
+- [x] De-anglicization (more): COMPLETE across all presets. Bantu (arm=hand,
+      mouth=lip, flesh=meat, child=son, lie=sleep) + Toki Pona (sun=day, sky=god,
+      eat=drink, fight=war, word=name) + PIE (tree=wood, eye=face, flesh=meat) +
+      Germanic (flesh=meat) + Romance (flesh=meat, child=baby). All registry-
+      attested (`COLEX_PAIRS`); duplicate forms removed; absorbed senses resolve
+      to the winner via the cascade (precedence fixed at rung 2b). default +
+      English have no attested duplicate pairs. A general test in
+      seed_colexification verifies every preset's declared colexifications.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -169,6 +168,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- De-anglicization COMPLETE across presets: added PIE (tree=wood, eye=face,
+  flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby) — all
+  registry-attested COLEX_PAIRS, duplicate forms removed, no new stale-freq. + a
+  general all-presets colexification test. tsc + 84 preset/concepts/determinism
+  tests green.
+- Perf investigation (apply.ts hot path): the per-form rule loop already
+  early-continues on zero weight/probability and uses a cached priority sort;
+  the remaining win is inventory-based rule pre-filtering (skip rules whose
+  target phonemes can't occur in the language), which needs rules to expose
+  declarative targets + rigorous byte-identical verification — logged as a
+  careful dedicated effort rather than guessed.
 - Translator ordering audit (cont.): numeral placement verified language-driven
   (Bantu postnominal "dog two", English prenominal "two dog"); locked with a
   regression test. Found a latent anglocentrism — demonstratives are hardcoded

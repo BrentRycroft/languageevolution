@@ -46,7 +46,6 @@ const LEXICON: Lexicon = {
   summer: ["s", "a", "m"],
   time: ["d", "e", "m", "n̩"],
   tree: ["d", "o", "ɾ", "u"],
-  wood: ["d", "o", "ɾ", "u"],
   leaf: ["bʰ", "o", "l", "j", "o"],
   flower: ["bʰ", "l", "o", "s"],
   grass: ["gʰ", "r̩", "s"],
@@ -82,7 +81,6 @@ const LEXICON: Lexicon = {
   body: ["kʷ", "r̩", "p"],
   head: ["kʲ", "e", "ɾ"],
   hair: ["p", "u", "l"],
-  face: ["o", "kʷ"],
   eye: ["o", "kʷ"],
   ear: ["o", "w", "s"],
   nose: ["n", "e", "s"],
@@ -103,7 +101,6 @@ const LEXICON: Lexicon = {
   bone: ["o", "s", "t"],
   blood: ["k", "ɾ", "e", "w"],
   skin: ["k", "o", "ɾ", "j", "o"],
-  flesh: ["m", "eː", "m", "s", "o"],
   knee: ["gʲ", "o", "n", "u"],
   foot: ["p", "o", "d", "s"],
   person: ["dʰ", "gʲʰ", "m", "oː"],
@@ -509,6 +506,11 @@ export function presetPIE(): SimulationConfig {
     seed: "pie",
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
+    // Phase 73e de-anglicization: PIE colexifies attested pairs — *dóru =
+    // tree/wood, *h₃ekʷ- = eye/face, *mēms- = flesh/meat. Declare them instead
+    // of storing duplicate forms so the concept space reflects PIE, not the
+    // English split (winners keep the form; absorbed senses resolve via colex).
+    seedColexification: { tree: ["wood"], eye: ["face"], meat: ["flesh"] },
     seedMorphology: MORPHOLOGY,
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 0,
