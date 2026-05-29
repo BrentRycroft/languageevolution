@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { splitLeaf } from "../tree/split";
@@ -40,8 +40,17 @@ function firstAlive(state: ReturnType<ReturnType<typeof createSimulation>["getSt
 }
 
 describe("Phase 73d D1 — typological direction sister anti-correlation", () => {
+  // Each statistical test below asserts a DIFFERENT property of the SAME kind
+  // of split. Simulate the 60 splits once here rather than re-running a fresh
+  // set of ~60 simulations per test (~300 total) — same statistical power per
+  // property, ~5× less compute.
+  let samples: ReturnType<typeof setupAndSplit>[] = [];
+  beforeAll(() => {
+    samples = Array.from({ length: SAMPLE_SEEDS }, (_, i) => setupAndSplit(`d1-${i}`));
+  });
+
   it("every daughter gets a typologicalDirection vector at split", () => {
-    const { childA, childB } = setupAndSplit("d1-shape");
+    const { childA, childB } = samples[0]!;
     expect(childA.typologicalDirection).toBeDefined();
     expect(childB.typologicalDirection).toBeDefined();
     for (const axis of ["simplification", "palatalization", "synthesis"] as const) {
@@ -58,8 +67,7 @@ describe("Phase 73d D1 — typological direction sister anti-correlation", () =>
     // probability of same-half overlap is ~25-35% per axis.
     // Lower bound 60% gives headroom for stochastic variance.
     let opposing = 0;
-    for (let i = 0; i < SAMPLE_SEEDS; i++) {
-      const { childA, childB } = setupAndSplit(`d1-simpl-${i}`);
+    for (const { childA, childB } of samples) {
       const a = childA.typologicalDirection!.simplification;
       const b = childB.typologicalDirection!.simplification;
       if (Math.sign(a) !== Math.sign(b) && a !== 0 && b !== 0) opposing++;
@@ -73,8 +81,7 @@ describe("Phase 73d D1 — typological direction sister anti-correlation", () =>
     // (1 + 1.5×a)×base vs (1 + 1.5×b)×base. With a,b ∈ ±0.5
     // typical, the ratio difference is ≥0.5.
     let differ = 0;
-    for (let i = 0; i < SAMPLE_SEEDS; i++) {
-      const { childA, childB } = setupAndSplit(`d1-bias-${i}`);
+    for (const { childA, childB } of samples) {
       const la = childA.ruleBias?.lenition ?? 1;
       const lb = childB.ruleBias?.lenition ?? 1;
       if (Math.abs(la - lb) >= 0.4) differ++;
@@ -88,8 +95,7 @@ describe("Phase 73d D1 — typological direction sister anti-correlation", () =>
     // axes are non-trivial). Cross-axis monotonicity check.
     let consistent = 0;
     let tested = 0;
-    for (let i = 0; i < SAMPLE_SEEDS; i++) {
-      const { childA, childB } = setupAndSplit(`d1-monot-${i}`);
+    for (const { childA, childB } of samples) {
       const sa = childA.typologicalDirection!.simplification;
       const sb = childB.typologicalDirection!.simplification;
       if (Math.abs(sa - sb) < 0.3) continue; // skip near-tied draws
@@ -111,8 +117,7 @@ describe("Phase 73d D1 — typological direction sister anti-correlation", () =>
     // positive simplification (simplifier) → lower maxCoda.
     let consistent = 0;
     let tested = 0;
-    for (let i = 0; i < SAMPLE_SEEDS; i++) {
-      const { childA, childB } = setupAndSplit(`d1-phono-${i}`);
+    for (const { childA, childB } of samples) {
       if (!childA.phonotacticProfile || !childB.phonotacticProfile) continue;
       const sa = childA.typologicalDirection!.simplification;
       const sb = childB.typologicalDirection!.simplification;
@@ -133,8 +138,7 @@ describe("Phase 73d D1 — typological direction sister anti-correlation", () =>
   it("synthesisIndex shifts in direction-correlated way", () => {
     let consistent = 0;
     let tested = 0;
-    for (let i = 0; i < SAMPLE_SEEDS; i++) {
-      const { childA, childB } = setupAndSplit(`d1-synth-${i}`);
+    for (const { childA, childB } of samples) {
       const da = childA.typologicalDirection!.synthesis;
       const db = childB.typologicalDirection!.synthesis;
       if (Math.abs(da - db) < 0.4) continue;

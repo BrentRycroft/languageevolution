@@ -55,7 +55,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## Backlog (top = next)
 
-- [ ] Trim PR long-pole tests `phase72_code_review_batch_b` and
+- [x] Trim PR long-pole tests `phase72_code_review_batch_b` and
       `phase73d_direction_vector` to <60s without weakening assertions.
 - [ ] Sweep oversized `sim.step()` gen-counts in RUN_SLOW files; reduce where
       the assertion doesn't require them.
@@ -72,6 +72,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Trimmed the two PR long-pole tests under 60s (test-only): B7 runs a
+  non-splitting lineage (intrinsic drift property — tree splitting was
+  irrelevant cost+noise), 37.5s→20s; phase73d shares one 60-split sample across
+  its five statistical tests via beforeAll (~5× less compute, same power),
+  66s→~17s. Both files now <60s; combined wall 80s→50s.
 
 ## UX findings
 

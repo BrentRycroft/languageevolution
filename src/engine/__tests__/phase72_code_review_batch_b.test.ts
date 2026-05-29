@@ -26,6 +26,12 @@ describe("B7 (T72b-3) — closed-class lemmas drift slower than content lemmas",
     // inversion.
     const cfg = presetRomance();
     cfg.seed = "p72-b7-drift-ratio";
+    // Closed-class vs content drift is an intrinsic per-language property;
+    // tree splitting is irrelevant to it and only adds cost (a growing tree of
+    // leaves to step) plus noise (a leaf that splits early freezes as an
+    // internal node and stops drifting). Run a single non-splitting lineage so
+    // all 200 gens of drift land on L-0 — same assertion, ~10× faster.
+    cfg.modes = { ...cfg.modes, tree: false };
     const sim = createSimulation(cfg);
     const lang0 = sim.getState().tree["L-0"]!.language;
     // Sample lemmas: declared closed-class vs content Swadesh.
