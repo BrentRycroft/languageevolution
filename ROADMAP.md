@@ -88,9 +88,12 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       PIE-flavored). Real anglocentrism = the shared English concept inventory.
 - [ ] De-anglicization: let presets declare genuine colexifications (e.g. Bantu
       arm=hand) so the concept inventory differs per language instead of storing
-      duplicate forms. Check whether the concept registry / seedColexization
-      already supports this before adding. [may become NEEDS DECISION if it needs
-      concept-registry changes]
+      duplicate forms. CONFIRMED: `colexifiedAs` exists on Language but there's
+      NO `seedColexification` config hook — presets only activate the dynamic
+      `semantic:colexification` module. Needs a small additive config field +
+      wiring at language construction. One design question first (NEEDS
+      DECISION-lite): does a seeded colexification share ONE form, or link two
+      distinct-but-related forms?
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
