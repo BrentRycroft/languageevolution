@@ -65,14 +65,12 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       (drift × PROTECTED_MEANINGS inconsistency) — see NEEDS DECISION for the bug
       + two fix options. Pending your approach choice; needs determinism + drift
       tests + the property re-run to verify.
-- [ ] **FAST-TIER long pole: `historical.test.ts` is NOT gated** (not in the
-      exclude list, no `it.skipIf`) yet runs MULTIPLE 200-gen Romance+historical
-      sims (lines ~310/400/458/501/604) — one measured 443s under full-suite
-      load. Gate the multi-hundred-gen BEHAVIOURAL tests behind
-      `it.skipIf(!RUN_SLOW)`, keep the cheap unit tests (schedule/milestone/
-      validate registration) in the fast tier. Verify `npm test` drops. [HIGH
-      value for PR velocity; do AFTER the baseline run frees the CPU — don't edit
-      this file while the bg suite is still executing it.]
+- [x] **FAST-TIER long pole fixed: `historical.test.ts` was ungated** yet ran
+      multiple 200-gen Romance+historical sims (one ~443s under load). Gated
+      wholesale to nightly via the vite.config exclude (predominantly heavy).
+      Verified: fast-tier `vitest list` → 0 historical tests; RUN_SLOW → 36.
+- [ ] (follow-up, low priority) Split `historical.test.ts`'s cheap schedule/
+      voice config units into a light fast-tier file so they still run on PRs.
 - [ ] Sweep oversized `sim.step()` gen-counts in RUN_SLOW files; reduce where
       the assertion doesn't require them. **(Blocked on the RUN_SLOW timing data
       above. Once `runslow-baseline.log` completes, MINE it for the slowest
@@ -115,6 +113,9 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- Gated `historical.test.ts` to the nightly tier (vite.config exclude). It was
+  ungated yet ran multiple 200-gen Romance+historical sims, silently bloating
+  the fast PR suite. Verified via `vitest list` (0 in fast, 36 in nightly).
 - Trimmed the two PR long-pole tests under 60s (test-only): B7 runs a
   non-splitting lineage (intrinsic drift property — tree splitting was
   irrelevant cost+noise), 37.5s→20s; phase73d shares one 60-split sample across
