@@ -123,7 +123,6 @@ const LEXICON: Lexicon = {
   bone: ["ɔ", "s", "s", "u"],
   blood: ["s", "a", "n", "g", "w", "e"],
   skin: ["p", "e", "l", "l", "e"],
-  flesh: ["k", "a", "ɾ", "n", "e"],
   knee: ["g", "e", "n", "u", "k", "u", "l", "u"],
   leg: ["g", "a", "m", "b", "a"],
   foot: ["p", "e", "d", "e"],
@@ -131,7 +130,6 @@ const LEXICON: Lexicon = {
   man: ["o", "m", "i", "n", "e"],
   woman: ["m", "u", "l", "j", "e", "ɾ", "e"],
   child: ["i", "n", "f", "a", "n", "t", "e"],
-  baby: ["i", "n", "f", "a", "n", "t", "e"],
   mother: ["m", "a", "t", "ɾ", "e"],
   father: ["p", "a", "t", "ɾ", "e"],
   son: ["f", "i", "l", "j", "u"],
@@ -463,6 +461,10 @@ export function presetRomance(): SimulationConfig {
     seed: "romance",
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
+    // Phase 73e de-anglicization: Latin/Romance caro = flesh/meat (carne) and
+    // infante = child/baby. Declare these colexifications instead of duplicate
+    // forms.
+    seedColexification: { meat: ["flesh"], child: ["baby"] },
     seedMorphology: MORPHOLOGY,
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 2,

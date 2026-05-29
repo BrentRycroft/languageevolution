@@ -6,7 +6,7 @@ import { nearestMeanings, embed, cosine } from "./embeddings";
 import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS, isClosedClass, posOf } from "../lexicon/pos";
-import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
+import { setLexiconForm, deleteMeaning, PROTECTED_MEANINGS } from "../lexicon/mutate";
 /**
  * drift.ts
  *
@@ -174,10 +174,21 @@ export function driftOneMeaning(
       const form = lang.lexicon[m]!;
       if (!isFormLegal(target, form)) continue;
       const kind = classifyShift(m, target, rng, lang.registerOf?.[m]);
+      // Phase 73e: a PROTECTED source meaning (be/eat/go/…) cannot be dropped
+      // by deleteMeaning's Phase-71b guard. Pre-fix, drift still copied its
+      // form to `target` and reported polysemous:false while the guard silently
+      // kept `m` — leaving the form on BOTH meanings: an unrecorded
+      // colexification with m's freq/register wrongly purged. Treat a protected
+      // source as a polysemous (colexifying) drift so the bookkeeping matches
+      // reality: m is kept, its freq/register are preserved, and the m↔target
+      // colexification is recorded. The protected check is OR'd LAST so the rng
+      // draw order — and thus determinism / every other meaning's trajectory —
+      // is unchanged.
       const polysemous =
-        !targetOccupied &&
-        (kind === "metaphor" || kind === "metonymy") &&
-        rng.chance(0.3);
+        (!targetOccupied &&
+          (kind === "metaphor" || kind === "metonymy") &&
+          rng.chance(0.3)) ||
+        PROTECTED_MEANINGS.has(m);
       // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
       setLexiconForm(lang, target, form, { bornGeneration: 0, origin: lang.wordOrigin[m] ?? "drift" });
       const oldFreq = lang.wordFrequencyHints[m];

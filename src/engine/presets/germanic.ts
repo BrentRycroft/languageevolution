@@ -119,7 +119,6 @@ const LEXICON: Lexicon = {
   bone: ["b", "a", "i", "n", "a"],
   blood: ["b", "l", "oː", "θ", "a"],
   skin: ["s", "k", "i", "n", "θ", "a"],
-  flesh: ["f", "l", "a", "i", "s", "k", "a"],
   knee: ["k", "n", "i", "w", "a"],
   leg: ["l", "a", "g", "j", "a"],
   foot: ["f", "oː", "t", "s"],
@@ -376,6 +375,9 @@ export function presetGermanic(): SimulationConfig {
     seed: "germanic",
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
+    // Phase 73e de-anglicization: Proto-Germanic *flaiski = flesh/meat (cf.
+    // German Fleisch). Declare the colexification instead of a duplicate form.
+    seedColexification: { meat: ["flesh"] },
     seedMorphology: MORPHOLOGY,
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 1,

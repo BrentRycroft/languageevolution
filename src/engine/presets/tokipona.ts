@@ -19,7 +19,6 @@ const LEXICON: Lexicon = {
   moon: ["m", "u", "n"],
   star: ["m", "u", "n"],
   night: ["p", "i", "m", "e", "j", "a"],
-  day: ["s", "u", "n", "o"],
   sky: ["s", "e", "w", "i"],
   earth: ["m", "a"],
   sea: ["t", "e", "l", "o"],
@@ -50,7 +49,6 @@ const LEXICON: Lexicon = {
   see: ["l", "u", "k", "i", "n"],
   know: ["s", "o", "n", "a"],
   eat: ["m", "o", "k", "u"],
-  drink: ["m", "o", "k", "u"],
   sleep: ["l", "a", "p", "e"],
   die: ["m", "o", "l", "i"],
   speak: ["t", "o", "k", "i"],
@@ -105,17 +103,14 @@ const LEXICON: Lexicon = {
   many: ["m", "u", "t", "e"],
   few: ["l", "i", "l", "i"],
 
-  name: ["n", "i", "m", "i"],
   word: ["n", "i", "m", "i"],
   song: ["k", "a", "l", "a", "m", "a"],
   home: ["t", "o", "m", "o"],
   village: ["m", "a"],
   road: ["n", "a", "s", "i", "n"],
   love: ["o", "l", "i", "n"],
-  war: ["u", "t", "a", "l", "a"],
   free: ["k", "e", "n"],
   spirit: ["k", "o", "n"],
-  god: ["s", "e", "w", "i"],
   law: ["l", "a", "w", "a"],
   gift: ["p", "a", "n", "a"],
   story: ["t", "o", "k", "i"],
@@ -149,7 +144,7 @@ const FREQ: Record<Meaning, number> = {
   i: 0.98, you: 0.98, we: 0.95, this: 0.95, that: 0.95,
   not: 0.95, and: 0.95, or: 0.9,
   be: 0.95, have: 0.9, go: 0.95, come: 0.92, see: 0.9, say: 0.9,
-  know: 0.88, give: 0.85, take: 0.85, eat: 0.9, drink: 0.88,
+  know: 0.88, give: 0.85, take: 0.85, eat: 0.9,
   speak: 0.9, hear: 0.85, sleep: 0.82, walk: 0.8,
   good: 0.95, bad: 0.9, big: 0.85, small: 0.85, new: 0.78, old: 0.78,
   mother: 0.88, father: 0.88, child: 0.85,
@@ -157,7 +152,7 @@ const FREQ: Record<Meaning, number> = {
   one: 0.95, two: 0.92,
   water: 0.9, fire: 0.85, sun: 0.85, moon: 0.8,
   earth: 0.78, sky: 0.78, tree: 0.8, stone: 0.78,
-  day: 0.85, night: 0.85,
+  night: 0.85,
 };
 
 const MORPHOLOGY: Morphology = { paradigms: {} };
@@ -182,6 +177,19 @@ export function presetTokipona(): SimulationConfig {
     seed: "tokipona",
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
+    // Phase 73e de-anglicization: Toki Pona deliberately colexifies — one word
+    // spans concepts English separates. Declare the registry-attested pairs:
+    // suno = sun/day, sewi = sky/god, moku = eat/drink, utala = fight/war,
+    // nimi = word/name. Winners keep the form; absorbed meanings resolve via
+    // reverse-colex. (Toki Pona's other intrinsic colexifications aren't all in
+    // COLEX_PAIRS, so they're left as-is rather than guessed.)
+    seedColexification: {
+      sun: ["day"],
+      sky: ["god"],
+      eat: ["drink"],
+      fight: ["war"],
+      word: ["name"],
+    },
     seedMorphology: MORPHOLOGY,
     // Toki Pona is deliberately atavistic — small lexicon, no irregular
     // morphology, no writing tradition. Tier 0 keeps it that way.

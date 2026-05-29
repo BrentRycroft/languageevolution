@@ -76,10 +76,8 @@ const LEXICON: Lexicon = {
   mouth: ["m", "u", "l", "o˩", "m", "o"],
   tooth: ["i", "j", "i", "n", "o"],
   tongue: ["l", "u", "l", "i", "m", "i"],
-  lip: ["m", "u", "l", "o˩", "m", "o"],
   neck: ["i", "ⁿg", "o", "s", "i"],
   shoulder: ["i", "p", "e", "g", "a"],
-  arm: ["m", "u", "k", "o˩", "n", "o"],
   hand: ["m", "u", "k", "o˩", "n", "o"],
   finger: ["i", "j", "a˩", "a˩"],
   nail: ["m", "u", "k", "u", "l", "a"],
@@ -92,7 +90,6 @@ const LEXICON: Lexicon = {
   bone: ["i", "k", "u", "p", "a"],
   blood: ["m", "u", "g", "a", "z", "i"],
   skin: ["ⁿg", "o", "p", "i"],
-  flesh: ["ɲ", "a˩", "m", "a"],
   knee: ["i", "g", "o", "t", "i"],
   leg: ["m", "u", "a˩", "g", "u", "l", "u"],
   foot: ["m", "u", "g", "u", "l", "u"],
@@ -103,7 +100,6 @@ const LEXICON: Lexicon = {
   baby: ["m", "u", "o˥", "t", "o"],
   mother: ["m", "a˩", "m", "a˩"],
   father: ["b", "a˩", "b", "a˩"],
-  son: ["m", "w", "a˩", "n", "a"],
   daughter: ["m", "w", "a˩", "n", "a", "m", "k", "e"],
   brother: ["k", "a˩", "k", "a"],
   sister: ["k", "a˩", "i", "k", "a"],
@@ -136,7 +132,6 @@ const LEXICON: Lexicon = {
   run: ["k", "i", "m", "b", "i", "a"],
   stand: ["s", "i", "m", "a"],
   sit: ["k", "a˩", "a˩"],
-  lie: ["l", "a˩", "l", "a"],
   fall: ["a", "ⁿg", "u", "k", "a"],
   fly: ["p", "a˩", "a˩"],
   swim: ["o", "g", "e", "l", "e", "a"],
@@ -381,6 +376,13 @@ export function presetBantu(): SimulationConfig {
     // class-prefix realiser and verb-agreement pathway.
     seedNounClassSystem: true,
     seedBoundMorphemes: BANTU_BOUND_MORPHEMES,
+    // Phase 73e de-anglicization: proto-Bantu colexifies several concept pairs
+    // that English separates — ARM=HAND (*-kono → mukono), MOUTH=LIP (mulomo),
+    // FLESH=MEAT (ɲama). All three are registry-attested (concepts.ts
+    // COLEX_PAIRS) and were stored as duplicate forms; declare them instead so
+    // the concept space reflects Bantu's carving. The winner keeps the form;
+    // the absorbed meaning resolves to it via reverse-colex.
+    seedColexification: { hand: ["arm"], mouth: ["lip"], meat: ["flesh"], child: ["son"], sleep: ["lie"] },
     seedPhonemeTarget: 32,
     // Phase 46a-migration: proto-Bantu — SVO, post-head modifiers,
     // tonal, rich noun-class agreement, mood marking, honorific

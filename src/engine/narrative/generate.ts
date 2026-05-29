@@ -468,10 +468,22 @@ function realizeSkeleton(
   if (shape.copular && adjective) {
     const adjForm = lang.lexicon[adjective]!;
     const A = render(adjForm);
-    // Copular: render as S (be) A. The realiser already handles
-    // zero-copula via deep routing; here we just emit subject + adj
-    // because synthesisIndex-based simple-render path lacks copula
-    // logic.
+    // Overt copula vs zero-copula is a typological parameter. A language
+    // that has lexicalised "be" places the copula like a verb (per
+    // wordOrder, with the predicate adjective in the complement slot);
+    // a zero-copula language (no lexicalised "be" — e.g. Russian present
+    // tense, Arabic nominal sentences) juxtaposes subject + predicate
+    // with no copula. (Deep routing handles richer copula morphology;
+    // this is the light path.)
+    const beForm = lang.lexicon["be"];
+    if (beForm && beForm.length > 0) {
+      const COP = render(beForm);
+      const arranged = arrange(lang.grammar.wordOrder, S, COP, A);
+      return {
+        text: `${arranged.first} ${arranged.second} ${arranged.third}`,
+        gloss: `[${subjectNoun}—be—${adjective}]`,
+      };
+    }
     return {
       text: `${S} ${A}`,
       gloss: `[${subjectNoun}—${adjective}]`,

@@ -101,6 +101,14 @@ export default defineConfig(({ command }) => ({
             "**/stagnation.test.ts",
             "**/soft_cap.test.ts",
             "**/phase73d_historical_preserved.test.ts",
+            // historical.test.ts is predominantly heavy: many tests run
+            // multi-hundred-generation Romance+historical simulations (several
+            // 200-gen, one ~440s under full-suite load), so it was silently
+            // bloating the fast PR tier. A handful of cheap schedule/voice
+            // config units also live here; if fast-tier coverage of those is
+            // wanted later, split them into a light file. Gated wholesale for
+            // now to keep `npm test` fast.
+            "**/historical.test.ts",
             "**/achievements.test.ts",
             "**/procedural_integration.test.ts",
             "**/targeted_derivation_integration.test.ts",

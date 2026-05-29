@@ -114,6 +114,23 @@ export function lookupFormWithResolution(
       };
     }
   }
+  // Rung 2b (Phase 73e): an explicitly recorded colexification (this language
+  // has MERGED the absorbed meaning into `winner` — via seedColexification or
+  // evolved drift/merge) resolves to the winner's form BEFORE synthesis. The
+  // language has declared these concepts share one lexeme, so don't coin a
+  // novel form for the absorbed sense. (The registry colexWith *tendency*
+  // stays a later, weaker fallback at rung 7b.)
+  if (lang.colexifiedAs) {
+    for (const [winner, losers] of Object.entries(lang.colexifiedAs)) {
+      if (losers.includes(meaning) && lang.lexicon[winner]) {
+        return {
+          form: lang.lexicon[winner]!.slice(),
+          resolution: "reverse-colex",
+          glossNote: `↔ ${winner}`,
+        };
+      }
+    }
+  }
   // Rung 3 (Phase 51 T2): abstract pivot — concept-cousin lookup
   // before synth. Lets a language with `mother` translate `mom` via
   // mother's form rather than coining a fresh one.
@@ -176,7 +193,8 @@ export function lookupFormWithResolution(
       glossNote: synthCluster.glossNote,
     };
   }
-  // Rung 7b: colex / reverse-colex.
+  // Rung 7b: colex (registry-attested colexification tendency). The explicit
+  // recorded colexification (lang.colexifiedAs) is handled earlier at rung 2b.
   if (isRegisteredConcept(meaning)) {
     for (const partner of colexWith(meaning)) {
       if (lang.lexicon[partner]) {
@@ -184,17 +202,6 @@ export function lookupFormWithResolution(
           form: lang.lexicon[partner]!.slice(),
           resolution: "colex",
           glossNote: `↔ ${partner}`,
-        };
-      }
-    }
-  }
-  if (lang.colexifiedAs) {
-    for (const [winner, losers] of Object.entries(lang.colexifiedAs)) {
-      if (losers.includes(meaning) && lang.lexicon[winner]) {
-        return {
-          form: lang.lexicon[winner]!.slice(),
-          resolution: "reverse-colex",
-          glossNote: `↔ ${winner}`,
         };
       }
     }

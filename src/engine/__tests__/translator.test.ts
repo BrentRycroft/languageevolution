@@ -68,4 +68,18 @@ describe("translator", () => {
     const r = translate(sampleLang(), "xyzzy");
     expect(r.source).toBe("missing");
   });
+
+  it("falls through to the shared cascade (reverse-colex) where the simple chain returned missing", () => {
+    const lang = sampleLang();
+    // `democracy` is not in the lexicon, not a semantic neighbor of
+    // water/fire, and not a compound — the simple exact/neighbor/compound
+    // chain returns missing. But colexifiedAs records it as absorbed into
+    // `water`, which the shared resolution cascade recovers via its
+    // reverse-colex rung. Pre-fix, word-level translate() never consulted
+    // the cascade and returned "missing" here.
+    lang.colexifiedAs = { water: ["democracy"] };
+    const r = translate(lang, "democracy");
+    expect(r.source).not.toBe("missing");
+    expect(r.form).toBe("water");
+  });
 });
