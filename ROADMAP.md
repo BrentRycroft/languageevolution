@@ -81,7 +81,15 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       typological_completion 1000, sampling 3000 — in the FAST tier; verify
       whether they break early / aren't sim.step before touching. Don't weaken
       statistical/long-run assertions.)**
-- [ ] Baseline GUI play session (Manual/GUI verification); log under UX findings.
+- [~] Baseline GUI play session — autonomous browser-driving is NOT available in
+      this environment (no Playwright/screenshot/click tool; WebFetch only does
+      public URLs as markdown — useless for a localhost JS SPA). Automatable
+      substitute DONE: production `npm run build` passes (1200 modules, PWA SW
+      generated) + tsc + unit suites green. LIVE behavioural play (click-through,
+      reading output) is deferred — see NEEDS DECISION ("GUI verification").
+- [ ] (perf, low priority) Main bundle chunk is 944 kB (Vite >500 kB warning).
+      Code-split (dynamic import / manualChunks) to cut initial load. Touches
+      app load time, not sim speed.
 - [x] Assess translator quality (code-level): feature-rich, but word-level
       `translate()` is weaker than the sentence path; realiser on legacy English
       IR; fallback compound-only. (Live-phrase check deferred to GUI play.)
@@ -157,7 +165,12 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## UX findings
 
-_(populated by GUI play sessions)_
+- 2026-05-29: production `npm run build` is green (1200 modules, PWA service
+  worker generated) after the drift/translator/narrative changes — app compiles
+  + bundles cleanly. Main JS chunk is 944 kB (logged as a perf follow-up).
+- Live behavioural GUI observations can't be gathered autonomously here (no
+  browser-driving tool) — this section will fill once a play session is possible
+  (user-run, or via a browser tool). See NEEDS DECISION.
 
 ## Assessment notes
 
@@ -212,3 +225,15 @@ _(populated by GUI play sessions)_
   article via `astToTokens`, so it's not pure relexified English;
   (b) incrementally move one realise-stage at a time behind the existing hooks;
   (c) full role-IR rewrite. Needs your call on appetite/scope before I touch it.
+
+- **GUI verification capability.** The loop prompt asks for periodic GUI play
+  sessions ("see the app the way the user does"), but this environment has NO
+  browser-driving tool (no Playwright/screenshot/click; WebFetch is public-URL
+  markdown only). So I can verify the app COMPILES/BUNDLES (npm run build),
+  TYPECHECKS, and passes unit/integration tests — but I cannot click through the
+  running UI or read rendered narrative/translator output live. Options:
+  (a) you run manual GUI play sessions and paste findings here;
+  (b) add a browser-driving MCP/tool so I can drive it headlessly;
+  (c) accept build + unit verification as the substitute and drop live GUI from
+  the loop. Until you choose, I treat `npm run build` + targeted unit tests as
+  the "it works" gate and defer live behavioural checks.
