@@ -46,9 +46,9 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
 | **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path) BUT: word-level `translate()` bypasses the shared 8-rung cascade (gives up early); realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete); graceful fallback compound-only. See backlog + NEEDS DECISION. |
 | **Narrative generation** | partial | Extensive code; output quality unverified by play. |
-| **Presets — coverage** | partial | 6 families: bantu/english/germanic/pie/romance/tokipona. |
-| **Presets — word count** | partial | Assess lexicon sizes; user wants many more words. |
-| **Presets — de-anglicization** | needs assessment | User wants less English-based encoding. |
+| **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
+| **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
+| **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). |
 | **Language-agnosticism** (cross-cutting) | needs assessment | Audit for baked-in English structure. |
 | **Performance** | partial | apply.ts hot path; known optimisation targets open. |
 | **UX / GUI** | needs assessment | No play session run yet. |
@@ -83,7 +83,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       relative-clause ordering + morphology aren't English-shaped; log fixes.
 - [ ] Assess narrative-generation output quality (play session) and
       language-agnosticism of its grammar assembly.
-- [ ] Audit presets for English-based encoding; scope de-anglicization.
+- [x] Audit presets for English-based encoding (code-level): forms are NOT
+      relexified English (Bantu authentic proto-Bantu; default lexicon is
+      PIE-flavored). Real anglocentrism = the shared English concept inventory.
+- [ ] De-anglicization: let presets declare genuine colexifications (e.g. Bantu
+      arm=hand) so the concept inventory differs per language instead of storing
+      duplicate forms. Check whether the concept registry / seedColexization
+      already supports this before adding. [may become NEEDS DECISION if it needs
+      concept-registry changes]
+- [ ] Presets "more words": quantify each preset's hand-authored vs filled
+      coverage and raise the ~240-concept ceiling (basic240) / add authentic
+      forms for new concepts. Scope before doing.
 
 ## Done log
 
@@ -113,6 +123,15 @@ _(populated by GUI play sessions)_
   up to "missing" instead of the 8-rung cascade; (2) realiser consumes the
   legacy English IR (role-IR migration incomplete) → see NEEDS DECISION;
   (3) `attemptGracefulFallback` is compound-only since Phase 58.5.
+- **Presets** (read index/bantu/default lexicon, 2026-05-29): NOT relexified
+  English. Bantu = authentic proto-Bantu (tone ˩˥, prenasalized ⁿg/mb/nd, 8
+  noun classes, verb agreement, CV/maxCoda-0, post-head modifiers, honorific,
+  subjunctive). Default CORE lexicon = PIE reconstructions (water/pur/mater/
+  pater/nokt/pod/kerd/kaput), unlisted concepts filled by `fillMissing` from a
+  neutral Latin-ish phoneme set. The anglocentrism that remains is the SHARED
+  English concept inventory (every preset lexicalizes the same English Swadesh
+  set and carves semantic space the same way) — that's the "English with
+  different words" risk at the concept level, not the form level.
 
 ## NEEDS DECISION
 
