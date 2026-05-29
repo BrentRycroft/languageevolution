@@ -337,9 +337,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   apply.ts cost is the `probabilityFor` closures + the candidate inner loop), and
   the per-pass `new Array(R)` allocation likely offsets it. REVERTED. Lesson for
   future iterations: micro-scalar hoists in apply.ts aren't worth it — a real
-  perf win must target a MACRO hot spot identified by `PROFILE_STEP=1 npx tsx
-  scripts/probes/phase69_perf_baseline.ts` (substep breakdown). `perfcheck.test.ts`
-  (untracked, repo root) is the byte-identical baseline harness for next time.
+  perf win must target a MACRO hot spot identified by substep profiling.
+  HARNESS RECIPE (throwaway — recreate as a repo-root `*.test.ts`, then DELETE
+  it: the default `npx vitest` collects repo-root test files and these are heavy):
+  (1) byte-identical — step romance/pie/bantu 80 gens (seeds perf-r/perf-p/perf-b),
+  concat each live leaf's sorted lexicon, `fnv1a`; baseline hashes romance
+  c2e431df / pie 524c8f2c / bantu e7b438a3. (2) substep profile — set
+  `process.env.PROFILE_STEP="1"`, step 100 gens, read `sim.getCumulativeTimings()`
+  (phonology 64-67%, inventoryMgmt ~18%, genesis ~15%). (3) interleaved A/B —
+  `changesForLang` (steps/helpers) + `applyChangesToLexicon` (apply), one process,
+  to cancel the ~±10% run-to-run machine drift.
 
 ## NEEDS DECISION
 
@@ -355,9 +362,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   deletion/insertion/stress have NO single trigger and must stay unfiltered).
   This is the "sizeable careful refactor" from before, now with data showing the
   per-rule payoff. Want me to take on the inline-rule audit (one careful pass,
-  byte-identical verified via perfcheck)? The harness + invariant test are in
-  place. NOTE: phonology is 64-67% of step time, so this is the highest-leverage
-  perf area; inventoryMgmt (~18%) + genesis (~15%) are the next macro targets.
+  byte-identical verified via a recreated perfcheck harness — see recipe above)?
+  The invariant test (apply.test) is committed and already guards every declared
+  `triggers`. NOTE: phonology is 64-67% of step time, so this is the highest-
+  leverage perf area; inventoryMgmt (~18%) + genesis (~15%) are the next macro
+  targets.
 
 - **Translator realiser refactor.** `realise.ts` is a ~766-line monolith
   hardcoding word-order/alignment/NP-VP realisation; the Phase 41c stage-hook +
