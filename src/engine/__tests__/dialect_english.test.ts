@@ -127,4 +127,19 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
     const conj = tokeniseEnglish("so the dog runs");
     expect(conj.some((t) => t.lemma === "so" && t.tag === "CONJ"), "'so' before a non-adjective stays a conjunction").toBe(true);
   });
+
+  it("Phase 75: periphrastic 'more'/'most' + adjective set comparative/superlative degree", () => {
+    // "more big" → comparative, "most big" → superlative (the degree word is
+    // absorbed); "more dogs" keeps "more" (quantifier) via the look-ahead guard.
+    const more = tokeniseEnglish("the man is more big");
+    const cmp = more.find((t) => t.tag === "ADJ" && t.lemma === "big");
+    expect(cmp?.features.degree, "'more big' → comparative").toBe("comparative");
+    expect(more.some((t) => t.lemma === "more"), "'more' absorbed before an adjective").toBe(false);
+
+    const most = tokeniseEnglish("the man is most big");
+    expect(most.find((t) => t.tag === "ADJ" && t.lemma === "big")?.features.degree, "'most big' → superlative").toBe("superlative");
+
+    const quant = tokeniseEnglish("the man sees more dogs");
+    expect(quant.some((t) => t.lemma === "more"), "'more dogs' keeps 'more' (quantifier)").toBe(true);
+  });
 });

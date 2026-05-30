@@ -322,6 +322,20 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: periphrastic comparative/superlative "more/most + adj".** Play
+  session: "the man is more big than the dog" → "be more than dog" — the analytic
+  "more big" DROPPED the adjective (the N-tagged "more" hit the copular complement
+  sweep and broke it, exactly like the old "very big" bug). Generalised the
+  tokenizer's pending-intensifier into a pending-DEGREE mechanism: a degree word
+  before an adjective ("very"→intensive, "more"→comparative, "most"→superlative)
+  is absorbed and sets the adjective's `features.degree`. Now "more big" parses
+  identically to synthetic "bigger" (comparative + "than" standard captured), and
+  "most big" → superlative; the look-ahead guard keeps "more dogs" a quantifier.
+  Reuses the existing degree realiser (cmp/sup paradigm). Tokenizer-data only; no
+  engine/rng change. + dialect_english regression test. Verified: tsc + 127 + 26
+  parser/degree/agnosticism/dialect/narrative tests green. (Same session: a broad
+  sweep of contractions won't/doesn't/hasn't/isn't/shouldn't/mustn't, numerals,
+  demonstratives, reflexives, VP-coordination all parse correctly — clean.)
 - **Translator: "cannot" splits to "can" + negation (was dropping the subject).**
   Play session: "the man cannot see the dog" → "cannot see dog" — "cannot" (the
   one-word spelling of "can not", no apostrophe so the "X't" contraction path

@@ -90,6 +90,12 @@ const DETERMINERS = new Set([
 const INTENSIFIERS = new Set([
   "very", "extremely", "really", "truly", "so", "too", "quite",
 ]);
+// Periphrastic (analytic) degree markers: "more big" → comparative, "most big"
+// → superlative. Like intensifiers they're dropped and raise the following
+// adjective's degree; the look-ahead guard keeps "more dogs" a quantifier.
+const DEGREE_MARKERS: Readonly<Record<string, "comparative" | "superlative">> = {
+  more: "comparative", most: "superlative",
+};
 const PREPOSITIONS = new Set([
   "in", "on", "at", "to", "from", "by", "with", "for", "of",
   "under", "over", "through", "near", "after", "before", "across",
@@ -279,13 +285,13 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
 
   let pendingTense: "past" | "present" | "future" | undefined;
   let lastWasVerb = false;
-  // Degree intensifier ("very big"): when "very" immediately precedes an
-  // adjective, drop the "very" token and raise that adjective to degree
-  // "intensive". Handling it here (not as a stray noun/adverb) fixes both
-  // attributive ("the very big dog") and predicate ("the dog is very big")
-  // uniformly, since both adjective-collection paths already read
-  // `features.degree`.
-  let pendingIntensifier = false;
+  // A degree word ("very"/"more"/"most") immediately before an adjective is
+  // dropped as a token and instead raises that adjective's degree feature.
+  // Handling it here (not as a stray noun/adverb) fixes attributive ("the very
+  // big dog") and predicate ("the dog is very big") uniformly, since both
+  // adjective-collection paths already read `features.degree`. "more big" /
+  // "most big" are the periphrastic comparative/superlative.
+  let pendingDegree: "intensive" | "comparative" | "superlative" | undefined;
 
   for (let i = 0; i < raw.length; i++) {
     let w = raw[i]!;
@@ -293,12 +299,17 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
     }
-    if (INTENSIFIERS.has(w)) {
-      const nx = raw[i + 1];
-      const nxCanon = nx ? (ENGLISH_SYNONYM_CONCEPT[nx] ?? nx) : undefined;
-      if (nxCanon && (isBareAdjective(nx!) || isBareAdjective(nxCanon))) {
-        pendingIntensifier = true;
-        continue; // absorb "very"; the adjective carries degree=intensive
+    {
+      // "very"/"more"/"most" + adjective → absorb the degree word and tag the
+      // adjective's degree (look-ahead guards "more dogs" / "so the dog ran").
+      const degree = INTENSIFIERS.has(w) ? "intensive" : DEGREE_MARKERS[w];
+      if (degree) {
+        const nx = raw[i + 1];
+        const nxCanon = nx ? (ENGLISH_SYNONYM_CONCEPT[nx] ?? nx) : undefined;
+        if (nxCanon && (isBareAdjective(nx!) || isBareAdjective(nxCanon))) {
+          pendingDegree = degree;
+          continue;
+        }
       }
     }
     if (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w)) {
@@ -362,8 +373,8 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
       continue;
     }
     if (isBareAdjective(w)) {
-      const features = pendingIntensifier ? { degree: "intensive" as const } : {};
-      pendingIntensifier = false;
+      const features = pendingDegree ? { degree: pendingDegree } : {};
+      pendingDegree = undefined;
       tokens.push({ surface: w, lemma: w, tag: "ADJ", features });
       continue;
     }
