@@ -274,6 +274,18 @@ describe("Phase 73c Phase 3 — parseSyntaxAllAsClauses (multi-clause)", () => {
     expect(subj1.features?.synthesized ?? false, "inherited subject is not the synthesised 'you'").toBe(false);
   });
 
+  it("'very' raises the following adjective to degree=intensive", () => {
+    // "very big" → the adjective modifier on the head carries degree
+    // "intensive" (pre-fix "very" mis-tagged as a noun and was dropped).
+    const all = parseAll("the very big dog runs");
+    const dog = findP(all[0]!, "dog")!;
+    const adjMod = dog.modifiers?.find((m) => m.kind === "adjective" && m.lemma === "big");
+    expect(adjMod, "'big' adjective modifier present").toBeDefined();
+    if (adjMod && adjMod.kind === "adjective") {
+      expect(adjMod.degree, "degree is intensive").toBe("intensive");
+    }
+  });
+
   it("relative clause (who) attaches as a modifier on the antecedent", () => {
     const all = parseAll("the king who sees the wolf walks");
     const matrix = all[0]!;

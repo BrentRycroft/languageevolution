@@ -515,6 +515,12 @@ function realiseNP(
     } else if (a.degree === "superlative") {
       const p = lang.morphology.paradigms["adj.degree.sup"];
       if (p) af = inflect(af, p, lang, a.lemma);
+    } else if (a.degree === "intensive" && af.length > 0) {
+      // Intensification ("very big") → FULL reduplication, the iconic and
+      // cross-linguistically dominant intensifier (more form = more degree;
+      // Indonesian "besar-besar"). Emergent + lexeme-free — no "very" word
+      // needed in the target language.
+      af = reduplicate(af, "full");
     }
     return {
       surface: a.baseForm.length === 0 ? `“${a.lemma}”` : af.join(""),

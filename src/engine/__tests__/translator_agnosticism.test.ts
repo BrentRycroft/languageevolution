@@ -131,6 +131,17 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(idxOf(dat, "i"), `nominative 'i' must NOT surface for the recipient ("${surface(dat)}")`).toBe(-1);
   });
 
+  it("intensified adjective ('very big') is realised by full reduplication", () => {
+    // No "very" lexeme exists in the target; intensification surfaces as iconic
+    // full reduplication of the adjective (big → big-big). Lexeme-free, emergent.
+    const lang = protoOf(presetEnglish, "agn-intens");
+    const base = (lang.lexicon["big"] ?? []).join("");
+    const toks = translateSentence(lang, "the very big dog runs").targetTokens;
+    const adj = toks.find((t) => t.englishLemma === "big");
+    expect(base.length, "'big' is lexicalised").toBeGreaterThan(0);
+    expect(adj?.targetSurface, `adjective is reduplicated ("${surface(toks)}")`).toBe(base + base);
+  });
+
   it("plural pronouns are not re-pluralised by the regular noun-plural affix", () => {
     // "we"/"they"/"us" are suppletive — they lexically encode plural and must
     // not take the noun plural affix ("us" + -s → "ʌss" was the bug). Regular
