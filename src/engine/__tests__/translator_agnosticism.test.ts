@@ -140,6 +140,12 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     const adj = toks.find((t) => t.englishLemma === "big");
     expect(base.length, "'big' is lexicalised").toBeGreaterThan(0);
     expect(adj?.targetSurface, `adjective is reduplicated ("${surface(toks)}")`).toBe(base + base);
+
+    // Predicate position too ("the dog is very big") — the copular complement
+    // path was dropping "very" + the adjective before the tokenizer fix.
+    const pred = translateSentence(lang, "the dog is very big").targetTokens;
+    const padj = pred.find((t) => t.englishLemma === "big");
+    expect(padj?.targetSurface, `predicate adjective reduplicated ("${surface(pred)}")`).toBe(base + base);
   });
 
   it("plural pronouns are not re-pluralised by the regular noun-plural affix", () => {

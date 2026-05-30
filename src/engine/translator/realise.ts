@@ -185,6 +185,8 @@ export function realiseSentence(
     } else if (af.length > 0 && a.degree === "superlative") {
       const p = lang.morphology.paradigms["adj.degree.sup"];
       if (p) af = inflect(af, p, lang, a.lemma);
+    } else if (af.length > 0 && a.degree === "intensive") {
+      af = reduplicate(af, "full"); // "the dog is very big" → big-big
     }
     return {
       surface: af.length > 0 ? af.join("") : `“${a.lemma}”`,

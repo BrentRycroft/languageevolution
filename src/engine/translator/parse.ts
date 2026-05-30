@@ -65,13 +65,6 @@ function prepToRole(lemma: string): SemanticRole {
   return PREP_ROLE_TABLE[lemma] ?? "location";
 }
 
-// Degree intensifiers — "very big" raises the adjective to degree "intensive".
-// They modify an adjective, not the verb, so they're handled in the NP
-// adjective walk rather than as manner adverbs. (Only non-"-ly" intensifiers
-// reach this walk; "-ly" forms like "extremely"/"really" tokenise to ADV and
-// would need separate degree-adverb handling — see backlog.)
-const INTENSIFIERS = new Set(["very"]);
-
 // ─────────────────────────────────────────────────────────────────────
 // Participant collection. Mirrors the legacy collectNP's structural
 // decisions (head detection, possessor, determiner, adjectives,
@@ -189,16 +182,6 @@ function collectParticipant(
         ...(deg && deg !== "positive" ? { degree: deg } : {}),
       });
       leftMostAdjective = i;
-      leftEdge = i;
-      claim(i);
-      continue;
-    }
-    // Degree intensifier preceding the just-collected adjective ("very big"):
-    // raise that adjective to degree "intensive" and absorb the intensifier
-    // (it isn't mis-tagged as a noun and dropped). The walk is right-to-left,
-    // so adjectives[0] is the adjective immediately to this token's right.
-    if (INTENSIFIERS.has(t.lemma) && adjectives.length > 0 && i + 1 === leftMostAdjective) {
-      adjectives[0]!.degree = "intensive";
       leftEdge = i;
       claim(i);
       continue;

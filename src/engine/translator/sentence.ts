@@ -80,6 +80,11 @@ const DETERMINERS = new Set([
   "many", "few", "much", "several", "both",
   "my", "your", "his", "her", "its", "our", "their",
 ]);
+// Degree intensifiers that raise a following adjective to degree "intensive".
+// Only the non-"-ly" forms reach this path (the tokenizer drops the intensifier
+// and marks the adjective). "-ly" forms (extremely/really) tag as ADV — a
+// separate degree-adverb hook is backlog.
+const INTENSIFIERS = new Set(["very"]);
 const PREPOSITIONS = new Set([
   "in", "on", "at", "to", "from", "by", "with", "for", "of",
   "under", "over", "through", "near", "after", "before", "across",
@@ -260,12 +265,27 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
 
   let pendingTense: "past" | "present" | "future" | undefined;
   let lastWasVerb = false;
+  // Degree intensifier ("very big"): when "very" immediately precedes an
+  // adjective, drop the "very" token and raise that adjective to degree
+  // "intensive". Handling it here (not as a stray noun/adverb) fixes both
+  // attributive ("the very big dog") and predicate ("the dog is very big")
+  // uniformly, since both adjective-collection paths already read
+  // `features.degree`.
+  let pendingIntensifier = false;
 
   for (let i = 0; i < raw.length; i++) {
     let w = raw[i]!;
     if (PUNCT.test(w)) {
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
+    }
+    if (INTENSIFIERS.has(w)) {
+      const nx = raw[i + 1];
+      const nxCanon = nx ? (ENGLISH_SYNONYM_CONCEPT[nx] ?? nx) : undefined;
+      if (nxCanon && (isBareAdjective(nx!) || isBareAdjective(nxCanon))) {
+        pendingIntensifier = true;
+        continue; // absorb "very"; the adjective carries degree=intensive
+      }
     }
     if (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w)) {
       const PRONOUN_LEMMA: Record<string, string> = {
@@ -328,7 +348,9 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
       continue;
     }
     if (isBareAdjective(w)) {
-      tokens.push({ surface: w, lemma: w, tag: "ADJ", features: {} });
+      const features = pendingIntensifier ? { degree: "intensive" as const } : {};
+      pendingIntensifier = false;
+      tokens.push({ surface: w, lemma: w, tag: "ADJ", features });
       continue;
     }
     // Phase 74: "do" is both a main verb AND the do-support auxiliary. Unlike
