@@ -94,6 +94,22 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(man!.adjunct, "recipient surfaces as a dative adjunct").toBe(true);
   });
 
+  it("do-support negation 'do not VERB' keeps the real verb + object", () => {
+    // "do" is both a main verb and the do-support auxiliary; pre-fix bare "do"
+    // (unlike "does"/"did", already AUX) was tagged a main verb, so "the dogs do
+    // not see the birds" picked "do" as the predicate and dropped "see"/"birds".
+    const rc = parse("the dogs do not see the birds");
+    expect(rc.predicate.lemma).toBe("see");
+    expect(rc.negated).toBe(true);
+    expect(findP(rc, "dog"), "subject 'dog' kept").toBeDefined();
+    expect(findP(rc, "bird"), "object 'bird' not dropped").toBeDefined();
+  });
+
+  it("'do' stays a main verb when it isn't do-support ('I do my work')", () => {
+    const rc = parse("i do my work");
+    expect(rc.predicate.lemma).toBe("do");
+  });
+
   it("synonym adjectives ('large'/'tiny') tag as ADJ, not as the noun head", () => {
     // Pre-fix the tokenizer didn't recognise large/tiny as adjectives → they
     // were tagged N, so the SECOND noun became the head and the real head

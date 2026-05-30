@@ -229,6 +229,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: do-support negation "do not VERB" no longer drops the verb.**
+  "the dogs do not see the birds" rendered "dog not do" — bare "do" (unlike
+  "does"/"did", already AUX) is also a bare verb, so the tokenizer tagged it a
+  main verb; the parser then picked "do" as the predicate and dropped the real
+  verb "see" + object "birds". Fix: in tokeniseEnglish, when "do" is followed by
+  "not" (do-support), skip the bare-verb branch so it falls through to AUX (which
+  carries negation). "I do my work" still treats "do" as a main verb. + 2
+  parser_role_ir regression tests. tsc + targeted tests green (parser_role_ir,
+  narrative_snapshot, typological_routing, grammar_audit — 91). Translator-only,
+  sim-non-rippling. Principle: do-support "do" is an auxiliary, not the predicate.
 - **Translator: synonym adjectives now POS-tag correctly (object-head-drop fix).**
   "the large dog sees the tiny bird" rendered "dog see tiny" — large/tiny aren't
   in the adjective lexicon so the tokenizer tagged them N; the second N became the

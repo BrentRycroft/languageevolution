@@ -320,7 +320,12 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
       tokens.push({ surface: w, lemma: w, tag: "ADJ", features: {} });
       continue;
     }
-    if (isBareVerb(w)) {
+    // Phase 74: "do" is both a main verb AND the do-support auxiliary. Unlike
+    // "does"/"did" (already AUX), bare "do" is a bare verb, so "the dogs do not
+    // see ..." mis-tagged "do" as the predicate and dropped the real verb.
+    // When "do" is followed by "not" it's do-support → fall through to the AUX
+    // branch (which carries negation correctly).
+    if (isBareVerb(w) && !(w === "do" && raw[i + 1] === "not")) {
       const tense: "past" | "present" | "future" | undefined =
         pendingTense ?? "present";
       tokens.push({ surface: w, lemma: w, tag: "V", features: { tense } });
