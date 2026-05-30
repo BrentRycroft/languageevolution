@@ -245,6 +245,20 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Translator: noun-ambiguous verbs ("the dog runs and barks") dropped in
+      verb position.** Play session (2026-05-30): "the dog runs and barks loudly"
+      → "dog run bark loud" (Romance) / "the dog run bark" (Germanic) — "bark"
+      tags N (posOf="noun" — it's also a common noun) so verbCount=1, the
+      S-coordination split never fires, and "and barks loudly" is mangled
+      (contrast "runs and swims" which works — swim is posOf="verb"). AMBIGUOUS
+      (V vs N): the clean-verb path (add to BARE_VERBS) is pre-empted by
+      isBareNoun (posOf="noun" wins); fixing needs an `isBareNoun(w) &&
+      !BARE_VERBS.has(w)` precedence guard + adding the word, which would mis-tag
+      genuine noun uses ("the bark is brown" → verb). Low value/narrow; only worth
+      it with a curated set of high-frequency verb>noun words. NOTE: the
+      posOf="other" action verbs (shout/smile/whisper/yell/crawl/leap…) ARE clean
+      to add to BARE_VERBS like jump/climb (no ambiguity) if a play session
+      surfaces them.
 - [x] **Translator: flat/zero-derived manner adverbs ("runs fast") dropped.**
       DONE (see Done log). collectMannerParticipants now also claims a leftover
       unconsumed ADJ as a flat manner adverb (attributive + predicate adjectives
