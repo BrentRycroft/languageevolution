@@ -249,6 +249,22 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       DONE (see Done log). collectMannerParticipants now also claims a leftover
       unconsumed ADJ as a flat manner adverb (attributive + predicate adjectives
       are already consumed by the time it runs, so a leftover is adverbial).
+- [ ] **Translator: copular/linking verbs + predicate -ed adjectives.** Play
+      session (2026-05-30): "the man seems tired" → "seem tir" (subject dropped) —
+      TWO intertwined issues: (a) the linking verbs seem/look/feel/appear/sound/
+      smell/taste/remain/stay are NOT recognised as verbs (tag N), so for "the man
+      seems X" the linking verb becomes the subject head and the real subject is
+      dropped ("become" already works — it's recognised); (b) predicate -ed
+      adjectives/participles ("tired", "bored", "scared") mis-tokenise as past-tense
+      verbs ("tired"→"tir"/V via the -ed strip), so even "the man is tired"
+      mis-parses (copula dropped, treated as the verb). NON-TRIVIAL + AMBIGUOUS
+      (predicate adjective vs passive participle — "is tired" could be passive of
+      "tire"), so not a surgical one-liner. Candidate scope: (1) add the linking
+      verbs to BARE_VERBS AND make them take an adjectival complement like "be"
+      (copular-complement sweep keyed on a LINKING_VERBS set, not just "be"); (2) a
+      curated -ed-adjective set OR a "Xed after a copula/linking verb → predicate
+      adjective" rule. Translator (tokenizer + parser); scope the V/ADJ ambiguity
+      before doing.
 - [ ] **Translator: partitive "some of the X" drops the quantifier.** "some of the
       dogs run" → "the dog run" ("some" + "of" lost). Partitive "Q of the N" isn't
       modelled; low priority. Also: correlatives "either…or" drops "either",
