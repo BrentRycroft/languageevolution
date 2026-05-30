@@ -250,11 +250,10 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       suppletive oblique form (he→him, we→us, i→me, they→them, she→her, who→whom)
       via PRONOUN_OBLIQUE, using the language's own oblique form when it has one
       (English suppletion) and otherwise leaving case morphology to mark it. Drives
-      both the surface form and the gloss caption. FOLLOW-UP (minor, pre-existing):
-      plural pronouns (we/us, they/them) still pick up the regular noun plural
-      suffix ("us" → "ʌss") because realiseNP applies noun.num.pl to a pl-number
-      head — pronouns are suppletive and shouldn't take regular plural marking;
-      guard the plural branch with `!np.head.isPronoun`.
+      both the surface form and the gloss caption. FOLLOW-UP: DONE — plural
+      pronouns no longer take the regular noun-plural affix (realiseNP plural
+      branch guarded with `!np.head.isPronoun`; "us" → "ʌs", not "ʌss"). See Done
+      log.
 - [ ] **Derivation: malformed concept-ids leak into narrative glosses.** Discourse
       play session (2026-05-29) surfaced lemmas like `take--tér.agt` (double dash +
       agentive `-tér` + a `.agt` suffix in the ID) and `coffee-prae-.tbef` (a
@@ -290,6 +289,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: plural pronouns no longer re-pluralised by the noun-plural
+  affix.** Follow-up to the oblique-pronoun fix: "the man sees us" surfaced
+  "ʌss" — realiseNP applied the regular `noun.num.pl` affix to the plural-number
+  pronoun head. Personal pronouns are suppletive (we/us/they lexically encode
+  plural; no language re-pluralises an inherently-plural pronoun stem), so guarded
+  the plural branch with `!np.head.isPronoun`. Now "us"→"ʌs", "we"→"wiː",
+  "they"→"ðej"; regular nouns still pluralise (man→men). One-line realiser guard;
+  no engine/rng change. + translator_agnosticism regression test (plural pronoun
+  surface == bare lexical form). Verified: tsc + 64 agnosticism/grammar_audit/
+  narrative tests green.
 - **Translator: object/oblique pronouns take their suppletive case form.** Play
   session: "the man sees him" → "...see he" (hiː); "give me the stone" → "...to i"
   (aj); "the man sees us" → "...see we". The parser canonicalises an object

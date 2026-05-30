@@ -130,4 +130,15 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(idxOf(dat, "me"), `dative 'me' surfaces ("${surface(dat)}")`).toBeGreaterThanOrEqual(0);
     expect(idxOf(dat, "i"), `nominative 'i' must NOT surface for the recipient ("${surface(dat)}")`).toBe(-1);
   });
+
+  it("plural pronouns are not re-pluralised by the regular noun-plural affix", () => {
+    // "we"/"they"/"us" are suppletive — they lexically encode plural and must
+    // not take the noun plural affix ("us" + -s → "ʌss" was the bug). Regular
+    // nouns still pluralise — that path is unchanged.
+    const lang = protoOf(presetEnglish, "agn-plpron");
+    const tok = translateSentence(lang, "we see the dog").targetTokens.find((t) => t.englishLemma === "we");
+    expect(tok, "subject pronoun 'we' resolves").toBeDefined();
+    expect(tok!.targetSurface, "plural pronoun 'we' is the bare lexical form, not affixed")
+      .toBe((lang.lexicon["we"] ?? []).join(""));
+  });
 });

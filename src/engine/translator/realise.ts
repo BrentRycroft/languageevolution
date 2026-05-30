@@ -424,7 +424,11 @@ function realiseNP(
     const p = lang.morphology.paradigms[cat];
     if (p) headForm = inflect(headForm, p, lang, meaning);
   }
-  if (np.head.number === "pl" &&
+  // Personal pronouns are suppletive — "we"/"they"/"us" lexically encode plural
+  // already, so they do NOT take the regular noun plural affix/reduplication
+  // (no language re-pluralises an inherently-plural pronoun stem). Guard the
+  // plural branch with !isPronoun ("us" + -s → "ʌss" was the bug).
+  if (np.head.number === "pl" && !np.head.isPronoun &&
       isFeatureActive(lang, "grammatical:number-system",
         l => !!l.grammar.numberSystem || (!!l.grammar.pluralMarking && l.grammar.pluralMarking !== "none"))) {
     if (lang.grammar.pluralMarking === "affix") {
