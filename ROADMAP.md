@@ -1077,6 +1077,25 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## NEEDS DECISION
 
+- **Translator anglocentrism — universal English-style pronoun suppletion.**
+  `realiseNP` (realise.ts ~405-413) maps object/oblique pronouns through a hard-
+  coded `PRONOUN_OBLIQUE` table (he→him, they→them, i→me, we→us, she→her) and
+  overrides the surface form with `lang.lexicon[oblique] ?? closedClassForm(lang,
+  oblique)`. Because `closedClassForm` ALWAYS synthesises a form, EVERY language
+  gets a distinct suppletive object-pronoun form — even languages with no pronoun
+  case suppletion (most), where "him" should be the "he" stem + a regular case
+  affix (or identical to "he"). The code comment claims it "otherwise keep[s] the
+  citation form and let[s] case morphology mark it", but that branch is unreachable
+  (closedClassForm never returns empty). Current tests ENCODE this behavior
+  (translator_agnosticism "object/oblique pronouns take their suppletive case form
+  him/me/us", narrative_composer "oblique caption he→him"), so changing it ripples.
+  DECISION NEEDED: gate suppletion on a typology flag (e.g. only when the language
+  has lexicalised oblique pronoun entries / a "pronominalCaseSuppletion" axis),
+  vs. keep the English-style default. Found 2026-05-30 while fixing a stale test
+  (fb9f69d) that had left the fast tier red. (Also: the fast tier was red and the
+  targeted-test loop discipline missed it — periodically run the FULL fast `npx
+  vitest run` to catch reds outside the touched files; it is green again as of
+  a24f37b: 1711 pass / 4 skip.)
 - **Engine realism — runaway word length (degenerate 20+ syllable words).**
   HIGH PRIORITY, found via narrative play session (Bantu, 60 gens, seed
   narr-bantu). The LEXICON itself accumulates absurdly long base forms — e.g.
