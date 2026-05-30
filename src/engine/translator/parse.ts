@@ -552,6 +552,33 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
     }
   }
 
+  // Equative comparison: "X is as big as Y" — a similative/equative construction
+  // (Stassen: typologically distinct from the comparative; equal degree, marked
+  // by a 'like/same' marker, not the comparative 'than'). The English bracket is
+  // "as ADJ as STANDARD"; both "as" tokenise as CONJ. Capture the ADJ as an
+  // equative-degree complement and STANDARD as a standard-of-comparison oblique
+  // marked with an equative particle. Run BEFORE object collection so the
+  // collector (which doesn't break on CONJ) can't grab STANDARD as a patient.
+  let equativeAdjective: { lemma: string; degree: "equative" } | undefined;
+  let equativeStandard: Participant | undefined;
+  if (LINKING_VERBS.has(verbTok.lemma)) {
+    const as1 = tokens.findIndex(
+      (t, i) => i > verbIdx && t.tag === "CONJ" && t.lemma === "as" && !consumed.has(i),
+    );
+    if (as1 >= 0 && tokens[as1 + 1]?.tag === "ADJ") {
+      const adjIdx = as1 + 1;
+      const as2 = adjIdx + 1;
+      if (tokens[as2]?.tag === "CONJ" && tokens[as2]!.lemma === "as") {
+        consumed.add(as1);
+        consumed.add(adjIdx);
+        consumed.add(as2);
+        equativeAdjective = { lemma: tokens[adjIdx]!.lemma, degree: "equative" };
+        const std = collectParticipant(tokens, as2, "right", consumed, "stimulus") ?? undefined;
+        if (std) equativeStandard = { ...std, adjunct: true, preposition: "as" };
+      }
+    }
+  }
+
   // Object collection (right of verb).
   let object = collectParticipant(tokens, verbIdx, "right", consumed, objectRole) ?? undefined;
 
@@ -580,6 +607,7 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   if (LINKING_VERBS.has(verbTok.lemma) && !object) {
     for (let i = verbIdx + 1; i < tokens.length; i++) {
       const t = tokens[i]!;
+      if (consumed.has(i)) continue;
       if (t.tag === "ADJ") {
         const deg = t.features.degree;
         complement.push({
@@ -593,6 +621,9 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
       break;
     }
   }
+  // The equative adjective ("as big as Y") is the predicate property; surface it
+  // as an equative-degree complement so the realiser marks equal-degree.
+  if (equativeAdjective) complement.push(equativeAdjective);
 
   // Comparative standard: "X is bigger than Y" — capture "than Y" as a
   // standard-of-comparison oblique (a "than"-PP) so it surfaces rather than
@@ -654,6 +685,7 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   if (object) participants.push(object);
   if (recipient) participants.push(recipient);
   if (comparativeStandard) participants.push(comparativeStandard);
+  if (equativeStandard) participants.push(equativeStandard);
   participants.push(...ppAdjuncts);
   participants.push(...adverbs);
 

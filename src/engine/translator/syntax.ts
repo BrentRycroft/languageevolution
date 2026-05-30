@@ -60,7 +60,7 @@ export type Mood =
   | "dubitative"  // speaker uncertainty
   | "hortative";  // 1pl directive ("let us go")
 export type Voice = "active" | "passive";
-export type Degree = "positive" | "comparative" | "superlative" | "intensive";
+export type Degree = "positive" | "comparative" | "superlative" | "intensive" | "equative";
 export type Evidential = "direct" | "reportative" | "inferred";
 
 export interface VerbRef {

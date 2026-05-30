@@ -119,6 +119,38 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(idxOf(loc, "in"), `plain oblique 'in' still dropped ("${surface(loc)}")`).toBe(-1);
   });
 
+  it("equative 'as ADJ as X' keeps the adjective, the standard, and an equative marker (PIE + English)", () => {
+    // Equatives ("the dog is as big as the cat") are typologically distinct from
+    // comparatives (Stassen): equal degree, marked by a similative/'like' marker,
+    // not the comparative 'than'. The construction must survive translation
+    // language-agnostically — the parameter adjective ("big"), the standard
+    // ("cat"), AND an equative marker ("as") all surface, in any word order.
+    // The pre-fix bug mis-parsed "big" as a stray manner adverb and grabbed "cat"
+    // as the object ("the dog is the cat big"), garbling the comparison.
+    for (const [name, build] of [["pie", presetPIE], ["english", presetEnglish]] as const) {
+      const lang = protoOf(build, `agn-equative-${name}`);
+      const eq = translateSentence(lang, "the dog is as big as the cat").targetTokens;
+      expect(idxOf(eq, "big"), `${name}: equative adjective 'big' kept ("${surface(eq)}")`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(eq, "cat"), `${name}: equative standard 'cat' kept ("${surface(eq)}")`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(eq, "as"), `${name}: equative marker 'as' kept ("${surface(eq)}")`).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("equative does NOT break the standard 'bigger than' comparative (PIE + English)", () => {
+    // Regression guard: the equative path mirrors — but must not disturb — the
+    // existing comparative. "the dog is bigger than the cat" still keeps the
+    // comparative adjective 'big', the standard 'cat', and the 'than' marker.
+    for (const [name, build] of [["pie", presetPIE], ["english", presetEnglish]] as const) {
+      const lang = protoOf(build, `agn-comparative-still-${name}`);
+      const cmp = translateSentence(lang, "the dog is bigger than the cat").targetTokens;
+      expect(idxOf(cmp, "big"), `${name}: comparative adjective 'big' kept ("${surface(cmp)}")`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(cmp, "cat"), `${name}: comparative standard 'cat' kept ("${surface(cmp)}")`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(cmp, "than"), `${name}: comparative marker 'than' kept ("${surface(cmp)}")`).toBeGreaterThanOrEqual(0);
+      // The equative marker must NOT leak into the comparative output.
+      expect(idxOf(cmp, "as"), `${name}: comparative has no equative 'as' ("${surface(cmp)}")`).toBe(-1);
+    }
+  });
+
   it("case-strategy languages keep meaning-critical adpositions (privative 'without', comitative 'with')", () => {
     // Abessive/comitative are rare as morphological cases and none is applied to
     // the PP-NP, so dropping "without"/"with" erases meaning ("man without the

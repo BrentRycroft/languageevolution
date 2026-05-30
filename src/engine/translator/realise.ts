@@ -743,12 +743,14 @@ function realiseSentenceInner(
 
 // Adpositions whose role a core case affix does NOT recover, so a case-strategy
 // language must keep them as particles rather than dropping them: comparative
-// "than", privative/abessive "without", comitative "with". Abessive and
-// comitative are rare as morphological cases (WALS) and none is applied to the
-// PP-NP here, so dropping these erases the meaning — "man without the dog runs"
-// collapsed to "man run dog" (a transitive reading). Spatial/role adpositions
-// (in/on/to/from/of) stay droppable: their role IS recoverable from case.
-const RETAINED_ADPOSITIONS = new Set(["than", "without", "with"]);
+// "than", privative/abessive "without", comitative "with", equative/similative
+// "as". Abessive and comitative are rare as morphological cases (WALS) and none
+// is applied to the PP-NP here, so dropping these erases the meaning — "man
+// without the dog runs" collapsed to "man run dog" (a transitive reading).
+// Equatives (Stassen) likewise carry a dedicated similative marker, not a case,
+// so the "as" particle patterns with "than" and is retained. Spatial/role
+// adpositions (in/on/to/from/of) stay droppable: their role IS recoverable from case.
+const RETAINED_ADPOSITIONS = new Set(["than", "without", "with", "as"]);
 
 function realisePP(pp: PP, lang: Language, ctx: NPCtx): RealisedToken[] {
   const npTokens = realiseNP(pp.np, lang, ctx, "PP-NP");
