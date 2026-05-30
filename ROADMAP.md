@@ -129,7 +129,10 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       realiser wiring + per-preset values). NEEDS DECISION on default + drift
       behaviour before building — don't guess.
 - [ ] **Translator: register "man"/"woman" (and audit other basic unregistered
-      concepts) so they coin instead of marking** (CORRECTED DIAGNOSIS, 2026-05-29
+      concepts) so they coin instead of marking** (Toki Pona handled directly via
+      its preset lexicon — see Done log; this item is the GENERAL fix for any
+      minimal language. LOWER priority: ripples genesis, narrow benefit.)
+      (CORRECTED DIAGNOSIS, 2026-05-29
       — supersedes the earlier "sentence-path doesn't coin" claim, which was
       WRONG). The sentence path ALREADY gracefully coins: `realiseSentence` →
       `populateForms` → the `resolveOpen` dep → `lookupFormWithResolution` (full
@@ -210,6 +213,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Content/translator: Toki Pona now has man/woman** (mije/meli). The
+  translator emitted a `«man»`/`«woman»` marker for Toki Pona because it lacked
+  those words AND they aren't registered concepts (so the cascade couldn't coin
+  them either). Added `man: mije`, `woman: meli` to the preset lexicon — the
+  authentic Toki Pona forms (homophonous with husband/wife, the real colexification,
+  cf. water/blood/sea = telo). Direct rung-1 hits now; no marker. Principle:
+  presets should lexicalise basic human concepts with authentic vocabulary. tsc +
+  full fast suite (211 files / 1675) green — tokipona trajectory change broke
+  nothing. (The GENERAL fix — registering man/woman so ANY minimal language coins
+  them — still open but ripples genesis; see backlog.)
 - **Realism: added the OV ⟹ GenN soft universal** (grammar/universals.ts).
   `enforceTypologicalUniversals` already nudged SOV languages toward
   postpositions + pre-noun adjective/numeral; it was missing the possessor
