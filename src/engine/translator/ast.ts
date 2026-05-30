@@ -550,6 +550,10 @@ function roleClauseToRelativeClause(
       ...(objectP ? { object: participantToNP(objectP, "acc") } : {}),
     },
     subjectGap,
+    // Phase 74: for an OBJECT relative ("the dog that the king sees") the head
+    // is the gapped object, so the RC has its own overt subject (cores[0] =
+    // king). Carry it so the realiser doesn't force the head as the subject.
+    ...(!subjectGap && cores[0] ? { subject: participantToNP(cores[0], "nom") } : {}),
   };
 }
 

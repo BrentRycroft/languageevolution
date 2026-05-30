@@ -88,6 +88,22 @@ describe("Phase 13 — relative clauses, serial verbs, narrative routing", () =>
         expect(seeIdx, "rel verb follows head in relativizer strategy (postnominal)").toBeGreaterThan(headIdx);
       }
     });
+
+    it("object relative 'the dog that the king sees' keeps the RC subject (king)", () => {
+      // Pre-fix the RC IR dropped its own subject, so an OBJECT relative forced
+      // the head as the RC subject → "dog that dog see" (king lost). The head
+      // is the gapped object; the RC subject (king) must surface.
+      const lang = makeLang({}, {
+        king: ["k", "i"],
+        dog: ["d", "o", "g"],
+        see: ["s", "e"],
+        run: ["r", "u"],
+      });
+      const out = translateSentence(lang, "the dog that the king sees runs");
+      const lemmas = out.targetTokens.map((t) => t.englishLemma);
+      expect(lemmas, `RC subject 'king' must surface ("${lemmas.join(" ")}")`).toContain("king");
+      expect(lemmas.filter((l) => l === "dog").length, "head 'dog' once, not duplicated as RC subject").toBe(1);
+    });
   });
 
   describe("serial-verb construction", () => {
