@@ -90,6 +90,12 @@ const DETERMINERS = new Set([
 const INTENSIFIERS = new Set([
   "very", "extremely", "really", "truly", "so", "too", "quite",
 ]);
+// Deictic locative/temporal adverbs that the wordlist mis-classifies (here/there
+// = "pronoun", yesterday/today = "other"), so they'd drop. Tag them ADV.
+const DEICTIC_ADVERBS = new Set([
+  "here", "there", "yesterday", "today", "tomorrow", "then", "away",
+  "everywhere", "nowhere", "somewhere", "anywhere",
+]);
 // Periphrastic (analytic) degree markers: "more big" → comparative, "most big"
 // → superlative. Like intensifiers they're dropped and raise the following
 // adjective's degree; the look-ahead guard keeps "more dogs" a quantifier.
@@ -428,6 +434,15 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
     }
     if (BARE_NUMERALS.has(w)) {
       tokens.push({ surface: w, lemma: w, tag: "NUM", features: {} });
+      continue;
+    }
+    // Deictic locative/temporal adverbs (here/there/yesterday/today…) and any
+    // wordlist-adverb (now/then…) tag ADV — otherwise they hit the default-N
+    // fallback and get dropped or mis-collected as an object ("yesterday the man
+    // ran" → "the man ran"; "...the dog there" → "...the dog"). Surfaced as a
+    // manner/locative adjunct via collectMannerParticipants.
+    if (DEICTIC_ADVERBS.has(w) || posOf(w) === "adverb") {
+      tokens.push({ surface: w, lemma: w, tag: "ADV", features: {} });
       continue;
     }
     if (w.length >= 3 && w.endsWith("ly")) {

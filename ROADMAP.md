@@ -356,6 +356,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: deictic locative/temporal adverbs (here/there/yesterday/now) no
+  longer dropped.** Play session: "yesterday the man ran" → "the man run"
+  (yesterday lost); "the man sees the dog there" → "...the dog" (there lost). The
+  wordlist mis-classifies them (here/there posOf="pronoun", yesterday/today
+  "other"), so they hit the default-N fallback and were dropped or mis-collected
+  as an object (whereas now/then posOf="adverb" but there's no isBareAdverb check,
+  so they dropped too). Added a DEICTIC_ADVERBS set + a `posOf==="adverb"` catch
+  in the tokenizer → tag ADV, so collectMannerParticipants keeps them as adjuncts.
+  Now "yesterday the man ran" → "the man run yesterday"; "...the dog there"
+  surfaces "there"; existential "there is a dog" unaffected. Tokenizer-data only;
+  no engine/rng change. + dialect_english regression test. Verified: tsc + 128 +
+  27 parser/dialect/routing/agnosticism/typology/narrative tests green.
 - **Translator: copular/linking verbs take a predicate-adjective complement.**
   "the man seems/looks/feels big" dropped the subject because seem/look/feel/
   appear/remain/stay/sound aren't recognised as verbs (posOf="other" → default-N

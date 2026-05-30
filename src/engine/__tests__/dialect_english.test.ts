@@ -142,4 +142,14 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
     const quant = tokeniseEnglish("the man sees more dogs");
     expect(quant.some((t) => t.lemma === "more"), "'more dogs' keeps 'more' (quantifier)").toBe(true);
   });
+
+  it("Phase 76: deictic locative/temporal adverbs tag ADV (here/there/yesterday/now)", () => {
+    // The wordlist mis-classifies these (here/there="pronoun", yesterday="other"),
+    // so they hit the default-N fallback and were dropped/mis-collected. They must
+    // tag ADV so collectMannerParticipants keeps them as adjuncts.
+    for (const a of ["here", "there", "yesterday", "today", "now", "then"]) {
+      const tok = tokeniseEnglish(`the man runs ${a}`).find((t) => t.lemma === a);
+      expect(tok?.tag, `"${a}" tags ADV`).toBe("ADV");
+    }
+  });
 });
