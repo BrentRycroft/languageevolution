@@ -561,6 +561,18 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
     }
   }
 
+  // Comparative standard: "X is bigger than Y" — capture "than Y" as a
+  // standard-of-comparison oblique (a "than"-PP) so it surfaces rather than
+  // being dropped. The comparative adjective is the complement above;
+  // collectParticipant breaks at "than", so Y wasn't grabbed as an object.
+  let comparativeStandard: Participant | undefined;
+  const thanIdx = tokens.findIndex((t, i) => i > verbIdx && t.lemma === "than" && !consumed.has(i));
+  if (thanIdx >= 0) {
+    consumed.add(thanIdx);
+    const std = collectParticipant(tokens, thanIdx, "right", consumed, "stimulus") ?? undefined;
+    if (std) comparativeStandard = { ...std, adjunct: true, preposition: "than" };
+  }
+
   // PP adjuncts.
   const ppAdjuncts = collectAdjunctParticipants(tokens, consumed);
   // Adverb manner participants.
@@ -596,6 +608,7 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   const participants: Participant[] = [subject];
   if (object) participants.push(object);
   if (recipient) participants.push(recipient);
+  if (comparativeStandard) participants.push(comparativeStandard);
   participants.push(...ppAdjuncts);
   participants.push(...adverbs);
 

@@ -227,13 +227,13 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       romance/tokipona for the right value). Ripples sim (grammar drift/areal) →
       milestone-level, verify with the full suite. (The realiser now respects
       numeralPosition correctly — see Done log — so this is purely the preset value.)
-- [ ] **Translator: full comparative construction** (the "than NP" standard is
-      currently dropped; only the comparative adjective surfaces). Capture
-      "than NP" as a standard-of-comparison oblique and render per the target
-      language's comparative strategy (particle / conjoined / exceed / locational —
-      a typological axis). Also: modal "can/may/must" auxiliaries are currently
-      dropped ("the man can see X" → "see X") — render them per the lang's mood/
-      modal system. Both translator-only (sim-non-rippling), found via play session.
+- [ ] **Translator: comparative polish + modals** (standard capture + ordering
+      DONE — see Done log). Remaining: (a) render the comparative DEGREE (the
+      adjective carries degree="comparative" but no -er/comparative marker surfaces
+      — needs a comparative paradigm or particle); (b) per-typology comparative
+      STRATEGY (particle / conjoined / exceed / locational axis) + V-final standard
+      ordering; (c) modal "can/may/must" auxiliaries are dropped ("the man can see
+      X" → "see X") — render per the lang's mood/modal system. All translator-only.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -243,6 +243,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: comparative standard captured + ordered.** Building on the
+  collapse fix: "than NP" is now captured as a standard-of-comparison oblique (a
+  "than"-PP) instead of being dropped, AND the copular complement (predicate
+  adjective) is now emitted BEFORE predicate obliques in realiseNP so it renders
+  "X is big[ger] than Y" not "X is Y big" (which could misread as "X is a big Y").
+  "the king is bigger than the dog" → "king is big dog" (Romance drops "than" as a
+  case lang; prep langs keep it). + strengthened parser_role_ir test. tsc +
+  targeted tests green (parser_role_ir, grammar_audit, copula, typological_routing,
+  narrative_snapshot — 103). Translator-only. Remaining (logged): comparative
+  DEGREE morphology (render -er/comparative marker), per-typology comparative
+  STRATEGY, V-final standard ordering, and modal auxiliaries.
 - **Translator: comparatives no longer collapse to nonsense.** "the king is
   bigger than the dog" rendered "king is dog" — "than" wasn't a participant
   boundary, so the parser grabbed the standard "dog" as a patient object, which

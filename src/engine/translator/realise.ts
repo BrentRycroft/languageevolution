@@ -260,6 +260,7 @@ export function realiseSentence(
     out.push(...verbTokens);
     out.push(...subjectFinal);
     out.push(...objectTokens);
+    out.push(...complementTokens);
     out.push(...predPpTokens);
   } else {
     for (const k of order) {
@@ -268,9 +269,12 @@ export function realiseSentence(
       }
       out.push(...slot[k]);
     }
+    // Phase 74: the copular complement (predicate adjective) precedes predicate
+    // obliques so a comparative renders "X is big[ger] than Y", not "X is Y big"
+    // (which could misread as "X is a big Y").
+    out.push(...complementTokens);
     if (!isVFinal) out.push(...predPpTokens);
   }
-  out.push(...complementTokens);
   out.push(...advTokens);
 
   if (isQuestion && interStrategy === "particle") {

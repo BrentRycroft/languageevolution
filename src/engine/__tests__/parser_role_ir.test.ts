@@ -103,6 +103,10 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc.predicate.complement?.[0]?.lemma).toBe("big");
     expect(rc.predicate.complement?.[0]?.degree).toBe("comparative");
     expect(rc.participants.find((p) => p.lemma === "dog" && !p.adjunct), "'dog' must not be a spurious object").toBeUndefined();
+    // The standard "than the dog" is captured as a comparison oblique.
+    const dogStd = rc.participants.find((p) => p.lemma === "dog" && p.adjunct);
+    expect(dogStd, "comparison standard 'dog' captured as an oblique").toBeDefined();
+    expect(dogStd!.preposition).toBe("than");
   });
 
   it("do-support negation 'do not VERB' keeps the real verb + object", () => {
