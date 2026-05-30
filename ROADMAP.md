@@ -205,6 +205,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       to the winner via the cascade (precedence fixed at rung 2b). default +
       English have no attested duplicate pairs. A general test in
       seed_colexification verifies every preset's declared colexifications.
+- [ ] **(MILESTONE — ripples genesis, needs full suite) Concept-registry +
+      coinage gaps surfaced by play sessions.** Some basic words a language lacks
+      surface as `«lemma»` markers (core args, which the manner-adverb drop above
+      doesn't cover): (a) "quick" is UNREGISTERED though its synonym "fast" is in
+      the quality cluster — register it (colex with fast) or add a small
+      English-synonym normalization map (quick→fast) in the translator (the latter
+      is sim-non-rippling — preferred); (b) "wolf" IS registered (basic240 animals)
+      but `attemptGracefulFallback` returns null for some langs (Bantu/PIE) → marks
+      — investigate why coinage fails for a registered concept (isGrounded?). NB:
+      registering concepts ripples genesis (need.ts checks raw `lex[m]`), so that
+      path is milestone-level; the synonym-map path is the fast one.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -214,6 +225,13 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: drop unresolvable manner adverbs instead of marking.** A manner
+  adverb is an optional adjunct; when the target can't resolve its lemma (empty
+  baseForm) the realiser was surfacing an ugly `«quick»` marker. Now it omits the
+  adverb — the clause stays grammatical ("the small dog runs quickly" → "small dog
+  run" in langs lacking quick). Core args are never dropped (they coin). Surgical,
+  translator-only (no sim ripple); targeted translator/narrative tests green (65).
+  Principle: optional modifiers may be omitted when untranslatable; markers are bad UX.
 - **Translator: ditransitive double-object now keeps both args.** "give you the
   big stone" was parsed as one object (recipient "you", mislabelled theme) and
   the real theme silently dropped. Fix (parse.ts): skip already-consumed heads in

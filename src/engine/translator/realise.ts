@@ -155,8 +155,14 @@ export function realiseSentence(
     realisePP(pp, lang, { articlePresence, caseStrategy, adjPos, possPos, numPos, subjectCaseSlot, objectCaseSlot }),
   );
   const advTokens: RealisedToken[] = s.predicate.adverbs.flatMap((a) => {
+    // A manner adverb is an OPTIONAL adjunct. When the target language can't
+    // resolve it (unregistered/uncoinable lemma → empty baseForm), drop it —
+    // the clause is still grammatical without it — rather than surfacing an
+    // ugly «lemma» fallback marker. Core arguments are never dropped (they
+    // coin via the cascade).
+    if (a.baseForm.length === 0) return [];
     return [{
-      surface: a.baseForm.length > 0 ? a.baseForm.join("") : `“${a.lemma}”`,
+      surface: a.baseForm.join(""),
       form: a.baseForm,
       english: a.lemma,
       role: "ADV" as const,
