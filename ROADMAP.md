@@ -245,17 +245,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
-- [ ] **Translator: object/oblique pronouns surface in NOMINATIVE form.** Play
-      session (2026-05-29): "the man sees him" → gloss "...see he"; "the man sees
-      us" → "...see we"; "give me the stone" → "...to i". The object pronoun is
-      lemmatised to its citation/nominative form (him→he, us→we, me→i) for concept
-      lookup, and that nominative lemma is what surfaces in the gloss caption (and
-      drives form resolution). For English output this is wrong (needs suppletive
-      him/us/me); for case languages the pronoun should also take object case.
-      The parser DOES tag object pronouns with role=object (PRONOUN_FEATURES) — the
-      gap is downstream (the gloss/realiser uses the nominative lemma). Investigate
-      the pronoun realisation path; likely a per-pronoun case-form table
-      (he/him/his, we/us/our) keyed on the participant's case. Translator-only.
+- [x] **Translator: object/oblique pronouns surface in NOMINATIVE form.** DONE
+      (see Done log). realiseNP now maps a pronoun in O/PP-NP role to its
+      suppletive oblique form (he→him, we→us, i→me, they→them, she→her, who→whom)
+      via PRONOUN_OBLIQUE, using the language's own oblique form when it has one
+      (English suppletion) and otherwise leaving case morphology to mark it. Drives
+      both the surface form and the gloss caption. FOLLOW-UP (minor, pre-existing):
+      plural pronouns (we/us, they/them) still pick up the regular noun plural
+      suffix ("us" → "ʌss") because realiseNP applies noun.num.pl to a pl-number
+      head — pronouns are suppletive and shouldn't take regular plural marking;
+      guard the plural branch with `!np.head.isPronoun`.
 - [ ] **Derivation: malformed concept-ids leak into narrative glosses.** Discourse
       play session (2026-05-29) surfaced lemmas like `take--tér.agt` (double dash +
       agentive `-tér` + a `.agt` suffix in the ID) and `coffee-prae-.tbef` (a
@@ -291,6 +290,20 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: object/oblique pronouns take their suppletive case form.** Play
+  session: "the man sees him" → "...see he" (hiː); "give me the stone" → "...to i"
+  (aj); "the man sees us" → "...see we". The parser canonicalises an object
+  pronoun to its citation/nominative lemma for concept lookup (him→he, us→we,
+  me→i), so for languages with suppletive pronoun case (English: he/him, we/us,
+  i/me) the wrong nominative form surfaced. realiseNP now recovers the case form
+  from the role: a pronoun in O or PP-NP role maps via PRONOUN_OBLIQUE → him/me/
+  us/them/her/whom, using the language's own oblique lexeme when present
+  (else case morphology marks it), driving both the surface form and the gloss
+  caption. Now "...sees him" (hɪm), "...to me" (miː). Translator/realiser-only;
+  no engine/rng change. + translator_agnosticism regression test (object 'him'/
+  'me' surface, not 'he'/'i'). Verified: tsc + 93 parser/routing/agnosticism/
+  realise/narrative/tree tests green. (Logged a minor follow-up: plural pronouns
+  still pick up the regular noun-plural suffix.)
 - **Translator: "do not VERB" negative imperative no longer mis-parsed as a
   question.** Play session: Bantu "do not see the dog" rendered "you not see dog
   ?" — a spurious intonation "?". The parser flagged interrogative whenever a

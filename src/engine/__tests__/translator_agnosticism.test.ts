@@ -115,4 +115,19 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     const loc = translateSentence(lang, "the man sees the dog in the house").targetTokens;
     expect(idxOf(loc, "in"), `plain oblique 'in' still dropped ("${surface(loc)}")`).toBe(-1);
   });
+
+  it("object/oblique pronouns take their suppletive case form (him/me/us, not he/i/we)", () => {
+    // The parser canonicalises an object pronoun to its nominative lemma for
+    // concept lookup (him→he); in object (O) / oblique (PP-NP) role the realiser
+    // must recover the case form so it surfaces correctly (English suppletion;
+    // case morphology elsewhere). English has distinct he/him, we/us, i/me.
+    const lang = protoOf(presetEnglish, "agn-pron");
+    const obj = translateSentence(lang, "the man sees him").targetTokens;
+    expect(idxOf(obj, "him"), `object 'him' surfaces ("${surface(obj)}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(obj, "he"), `nominative 'he' must NOT surface for the object ("${surface(obj)}")`).toBe(-1);
+
+    const dat = translateSentence(lang, "give me the stone").targetTokens;
+    expect(idxOf(dat, "me"), `dative 'me' surfaces ("${surface(dat)}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(dat, "i"), `nominative 'i' must NOT surface for the recipient ("${surface(dat)}")`).toBe(-1);
+  });
 });

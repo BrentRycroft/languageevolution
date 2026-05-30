@@ -363,6 +363,17 @@ function alignmentObjectCase(
   }
 }
 
+/**
+ * Suppletive object/oblique forms of the personal pronouns. The parser
+ * canonicalises an object pronoun to its citation (nominative) lemma for
+ * concept lookup (him→he, us→we, me→i), which — for languages with
+ * suppletive pronoun case like English — wrongly surfaces the nominative
+ * form. In an object (O) or oblique (PP-NP) role we recover the case form.
+ */
+const PRONOUN_OBLIQUE: Readonly<Record<string, string>> = {
+  he: "him", she: "her", i: "me", we: "us", they: "them", who: "whom",
+};
+
 function realiseNP(
   np: NP,
   lang: Language,
@@ -383,6 +394,19 @@ function realiseNP(
     if (picked && picked.length > 0) {
       headForm = picked;
       if (ctx.recentSynonymKeys) ctx.recentSynonymKeys.add(formKeyOf(picked));
+    }
+  }
+  // Object/oblique pronoun → its suppletive case form (he→him in O/PP-NP role).
+  // Use the language's own oblique form when it has one (English-style
+  // suppletion); otherwise keep the citation form and let case morphology
+  // mark it. Drives both the surface form and the English gloss caption.
+  let captionLemma = np.head.lemma;
+  if (np.head.isPronoun && (role === "O" || role === "PP-NP")) {
+    const oblique = PRONOUN_OBLIQUE[np.head.lemma.toLowerCase()];
+    if (oblique) {
+      captionLemma = oblique;
+      const obForm = lang.lexicon[oblique] ?? closedClassForm(lang, oblique);
+      if (obForm && obForm.length > 0) headForm = obForm;
     }
   }
   // Phase 36 Tranche 36b: Bantu-style noun-class prefix. Resolve the
@@ -439,7 +463,7 @@ function realiseNP(
       ? `“${np.head.lemma}”`
       : headForm.join(""),
     form: np.head.baseForm.length === 0 ? [] : headForm,
-    english: np.head.lemma,
+    english: captionLemma,
     role,
     resolution: np.head.resolution,
   };
