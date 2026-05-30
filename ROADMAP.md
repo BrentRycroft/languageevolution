@@ -1152,6 +1152,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   then the flag should still say so. All ripple sim (lexicon/morphology
   trajectories) → milestone-level, full suite + snapshot updates. NB: not clearly
   a bug under (c), so needs a realism call before any fix. Want me to take it on?
+  - **USER REPORT 2026-05-30: "translator on Modern English preset, plural nouns
+    do not work."** Raises priority/visibility — English is the canonical reference
+    preset where plurals should unambiguously work, so this is the most user-facing
+    face of the affixal-plural problem. NOT yet investigated (logged, not pivoted to
+    per user's working-style direction). TBD when taken on: is the English-preset
+    case the same paradigm-drop-vs-grammar-flag desync as the Romance leaf above, or
+    a distinct English-specific issue (e.g. plurals failing even at gen 0 / proto)?
+    Confirm whether it reproduces on the unstepped proto vs only after evolution.
 
 - **Engine performance — extend the trigger pre-filter to inline rules.**
   The factory subset is DONE (see Done log): factory rules expose `triggers`,
