@@ -274,19 +274,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       adjective vs passive participle — "is tired" could be passive of "tire").
       Candidate: a curated -ed-adjective set, OR "Xed after a copula/linking verb →
       predicate adjective". Scope the V/ADJ ambiguity before doing.
-- [ ] **Translator: multiple manner adverbs — only one surfaces.** Play session
-      (2026-05-30): "the man runs there quickly" → "...run there" (quickly dropped);
-      "the man sees the dog quickly and quietly" → "...quiet" (only the last kept).
-      collectMannerParticipants captures all the ADV/ADJ adjuncts, so the loss is
-      downstream (realiser renders one manner adjunct, or coordinated adverbs
-      collapse). Investigate the manner-adjunct realisation/ordering. (NB:
-      "the man comes here today" keeps BOTH — so it's specific to multiple *manner*
-      adverbs, not adjuncts generally.) Also: "please give me the stone" → "give i
-      the stone" (the politeness opener "please" perturbs the recipient so it loses
-      its oblique/"to" handling — "me"→nominative "i", no "to"); and clause-final
-      "away" ("the dog runs away") tags ADV correctly but is dropped as an
-      unregistered concept (graceful-drop, deliberate). Translator-only; scope the
-      manner-adjunct multiplicity first.
+- [x] **Translator: "please give me" perturbs the recipient.** DONE (see Done log):
+      a leading PUNCT opener ("please") left the verb at index 1, failing imperative
+      detection (verbIdx===0) → no subject → word-by-word fallback. Now the verb is
+      "effectively initial" once leading PUNCT is skipped.
+      (CORRECTED 2026-05-30 — the earlier "multiple manner adverbs — only one
+      surfaces" item was a MISDIAGNOSIS: VP.adverbs correctly holds BOTH adverbs
+      ([there,quickly], [quickly,quiet]); the dropped one is just an UNRESOLVABLE
+      adverb in that leaf — "quick" has no form in the probed Germanic leaf, so the
+      deliberate graceful-drop fires, while resolvable here/today/there/quiet are
+      kept. NOT an adverb-count bug; same family as clause-final "away" dropping as
+      an unregistered concept.)
 - [ ] **Translator: partitive "some of the X" drops the quantifier.** "some of the
       dogs run" → "the dog run" ("some" + "of" lost). Partitive "Q of the N" isn't
       modelled; low priority. Also: correlatives "either…or" drops "either",
@@ -369,6 +367,19 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: a leading politeness/interjection opener ("please give me…") no
+  longer breaks the imperative parse.** A leading "please" (PUNCT) put the verb at
+  index 1, so imperative detection (`verbIdx===0`) failed, no subject was found,
+  and the whole clause fell back to word-by-word ("give i the stone" — recipient
+  lost its dative). Compute "effectively initial": verb is imperative when
+  everything before it is PUNCT, and the synthesised "you" subject is allowed when
+  everything before it is PUNCT-or-AUX. Now "please give me the stone" → imperative
+  "...give the stone to me" (matches bare "give me the stone"); plain imperatives,
+  AUX questions, and declaratives unaffected. Parser-only; no engine/rng change. +
+  parser_role_ir regression test. Verified: tsc + 86 + 39 parser/routing/tree/
+  narrative tests green. (Same iteration corrected a stale ROADMAP misdiagnosis:
+  "multiple manner adverbs only one surfaces" was actually resolution-dependent
+  graceful-drop, not an adverb-count bug — VP.adverbs correctly holds both.)
 - **Translator: "her" disambiguated — possessive determiner vs object pronoun.**
   "her dog sees the cat" → "dog see the cat" (the possessor "her" dropped) because
   "her" is BOTH the object pronoun ("see her") and the possessive determiner ("her

@@ -185,6 +185,19 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc2.participants.some((p) => p.role === "manner"), "'big' stays attributive, not manner").toBe(false);
   });
 
+  it("a politeness opener ('please give me…') still parses as an imperative", () => {
+    // Pre-fix a leading "please" (PUNCT) left the verb at index 1, so imperative
+    // detection (verbIdx===0) failed, no subject was found, and the clause fell
+    // back to word-by-word (losing the recipient's dative handling). The verb is
+    // "effectively initial" once the leading PUNCT is skipped.
+    const rc = parse("please give me the stone");
+    expect(rc.predicate.lemma, "verb is 'give'").toBe("give");
+    expect(rc.participants[0]?.lemma, "synthesised imperative subject 'you'").toBe("you");
+    expect(rc.predicate.features?.mood, "mood is imperative").toBe("imperative");
+    // The recipient 'me' is captured (as a dative adjunct), not dropped.
+    expect(rc.participants.some((p) => p.lemma === "i" && p.adjunct), "recipient 'me' kept as a to-dative").toBe(true);
+  });
+
   it("'cannot' splits to 'can' + negation and keeps the subject", () => {
     // "cannot" is the one-word spelling of "can not"; pre-fix it tagged as a
     // noun and BECAME the subject, dropping the real subject ("the king cannot

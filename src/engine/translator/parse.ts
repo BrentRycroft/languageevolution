@@ -501,7 +501,16 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
       voice = "passive";
     }
   }
-  if (verbIdx === 0) {
+  // A verb is "effectively initial" when everything before it is a skippable
+  // opener: PUNCT only (a politeness/interjection opener like "please give me…")
+  // → imperative; PUNCT-or-AUX (also do-support/aux questions) → still allows the
+  // synthesised "you" subject. Without this, "please give me the stone" left the
+  // verb at index 1, failed imperative detection, found no subject, and the whole
+  // clause fell back to word-by-word (dropping the recipient's dative handling).
+  const beforeVerb = tokens.slice(0, verbIdx);
+  const verbInitialModuloPunct = beforeVerb.every((t) => t.tag === "PUNCT");
+  const verbInitialModuloAux = beforeVerb.every((t) => t.tag === "PUNCT" || t.tag === "AUX");
+  if (verbInitialModuloPunct) {
     mood = "imperative";
   }
 
@@ -531,7 +540,7 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
         features: { number: "sg", person: "3", isPronoun: true, synthesized: true },
       };
       leadingWh = undefined;
-    } else if (verbIdx === 0 || (verbIdx > 0 && tokens[0]!.tag === "AUX")) {
+    } else if (verbInitialModuloAux) {
       subject = {
         lemma: "you",
         pos: "PRON",
