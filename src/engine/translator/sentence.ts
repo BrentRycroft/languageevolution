@@ -322,7 +322,22 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
         }
       }
     }
-    if (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w)) {
+    // "her" is BOTH the object pronoun ("see her") and the possessive determiner
+    // ("her dog") — and the pronoun branch below would always win, dropping the
+    // possessive. It is possessive when directly followed by the start of its NP
+    // (a noun/adjective/numeral), NOT a verb/determiner/conjunction/prep/end (the
+    // recipient "give her the stone" is followed by "the"). Let those fall to the
+    // DETERMINERS branch.
+    const herPossessive =
+      w === "her" &&
+      raw[i + 1] !== undefined &&
+      !PUNCT.test(raw[i + 1]!) &&
+      !isBareVerb(raw[i + 1]!) &&
+      !DETERMINERS.has(raw[i + 1]!) &&
+      !CONJUNCTIONS.has(raw[i + 1]!) &&
+      !PREPOSITIONS.has(raw[i + 1]!) &&
+      !AUX_VERBS.has(raw[i + 1]!);
+    if (!herPossessive && (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w))) {
       const PRONOUN_LEMMA: Record<string, string> = {
         me: "i", him: "he", her: "she", us: "we", them: "they",
       };

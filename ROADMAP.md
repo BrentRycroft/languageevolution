@@ -274,6 +274,19 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       adjective vs passive participle — "is tired" could be passive of "tire").
       Candidate: a curated -ed-adjective set, OR "Xed after a copula/linking verb →
       predicate adjective". Scope the V/ADJ ambiguity before doing.
+- [ ] **Translator: multiple manner adverbs — only one surfaces.** Play session
+      (2026-05-30): "the man runs there quickly" → "...run there" (quickly dropped);
+      "the man sees the dog quickly and quietly" → "...quiet" (only the last kept).
+      collectMannerParticipants captures all the ADV/ADJ adjuncts, so the loss is
+      downstream (realiser renders one manner adjunct, or coordinated adverbs
+      collapse). Investigate the manner-adjunct realisation/ordering. (NB:
+      "the man comes here today" keeps BOTH — so it's specific to multiple *manner*
+      adverbs, not adjuncts generally.) Also: "please give me the stone" → "give i
+      the stone" (the politeness opener "please" perturbs the recipient so it loses
+      its oblique/"to" handling — "me"→nominative "i", no "to"); and clause-final
+      "away" ("the dog runs away") tags ADV correctly but is dropped as an
+      unregistered concept (graceful-drop, deliberate). Translator-only; scope the
+      manner-adjunct multiplicity first.
 - [ ] **Translator: partitive "some of the X" drops the quantifier.** "some of the
       dogs run" → "the dog run" ("some" + "of" lost). Partitive "Q of the N" isn't
       modelled; low priority. Also: correlatives "either…or" drops "either",
@@ -356,6 +369,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: "her" disambiguated — possessive determiner vs object pronoun.**
+  "her dog sees the cat" → "dog see the cat" (the possessor "her" dropped) because
+  "her" is BOTH the object pronoun ("see her") and the possessive determiner ("her
+  dog"), and the tokenizer's pronoun branch always won (tagging it PRON "she"),
+  while his/its are determiner-only and worked. Now "her" tags DET when directly
+  followed by the start of its NP (noun/adjective/numeral — not a verb/determiner/
+  conjunction/prep/end), else stays the object pronoun. So "her dog"/"her big dog"
+  → DET (possessor kept); "sees her" / dative "gives her the stone" (followed by
+  "the") → oblique pronoun "her". Tokenizer-data only; no engine/rng change. +
+  dialect_english regression test. Verified: tsc + 108 + 28 parser/agnosticism/
+  dialect/narrative tests green.
 - **Translator: deictic locative/temporal adverbs (here/there/yesterday/now) no
   longer dropped.** Play session: "yesterday the man ran" → "the man run"
   (yesterday lost); "the man sees the dog there" → "...the dog" (there lost). The

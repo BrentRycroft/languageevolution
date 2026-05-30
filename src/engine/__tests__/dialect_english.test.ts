@@ -152,4 +152,17 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
       expect(tok?.tag, `"${a}" tags ADV`).toBe("ADV");
     }
   });
+
+  it("Phase 76: 'her' is a possessive determiner before a noun, object pronoun elsewhere", () => {
+    // "her" is both the possessive determiner ("her dog") and the object pronoun
+    // ("see her"); the pronoun branch used to always win, dropping the possessive.
+    const poss = tokeniseEnglish("her dog runs")[0]!;
+    expect(poss.tag, "'her dog' → DET").toBe("DET");
+    expect(poss.lemma, "possessive lemma stays 'her'").toBe("her");
+    const possAdj = tokeniseEnglish("her big dog runs")[0]!;
+    expect(possAdj.tag, "'her big dog' → DET").toBe("DET");
+    // Object pronoun: followed by nothing, a conjunction, or a determiner (dative).
+    expect(tokeniseEnglish("the man sees her")[3]!.tag, "'sees her' → PRON").toBe("PRON");
+    expect(tokeniseEnglish("the man gives her the stone")[3]!.tag, "dative 'her the stone' → PRON").toBe("PRON");
+  });
 });
