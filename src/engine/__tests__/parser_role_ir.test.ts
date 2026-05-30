@@ -251,6 +251,19 @@ describe("Phase 73c Phase 3 — parseSyntaxAllAsClauses (multi-clause)", () => {
     expect(queen).toBeDefined();
   });
 
+  it("S-coordination: a gapped 2nd-clause subject inherits the 1st subject even when the clause has an object", () => {
+    // "the king walks and sees the wolf" → clause[1] has a gapped subject
+    // (no overt nominal before its verb) + an object 'wolf'. Pre-fix the
+    // object nominal wrongly blocked subject inheritance, so clause[1]
+    // defaulted to a synthesised "you" ("...and YOU see the wolf"). The
+    // gapped subject must inherit 'king'.
+    const chain = parseAll("the king walks and sees the wolf");
+    expect(chain.length).toBe(2);
+    const subj1 = chain[1]!.participants[0]!;
+    expect(subj1.lemma, `2nd clause subject inherits 'king' (got '${subj1.lemma}')`).toBe("king");
+    expect(subj1.features?.synthesized ?? false, "inherited subject is not the synthesised 'you'").toBe(false);
+  });
+
   it("relative clause (who) attaches as a modifier on the antecedent", () => {
     const all = parseAll("the king who sees the wolf walks");
     const matrix = all[0]!;

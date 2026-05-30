@@ -800,10 +800,17 @@ export function parseSyntaxAllAsClauses(tokens: EnglishToken[]): RoleClause[] {
     if (seg.leadingConj && !c.leadingConj) c.leadingConj = seg.leadingConj;
     // S-coordination subject inheritance: when a follow-up clause's
     // subject is synthesised (no real token), inherit from the prior
-    // clause IFF the segment has no nominal at all.
+    // clause IFF the segment has no SUBJECT of its own. Only a nominal in
+    // subject position (before the verb) counts — an OBJECT nominal after
+    // the verb must not block inheritance ("the man walks and sees the dog"
+    // → the 2nd clause has a gapped subject + object 'dog'; it should inherit
+    // 'man', not default to 'you').
     if (k > 0 && out.length > 0 && c.participants[0]?.features?.synthesized) {
-      const segHasNominal = seg.tokens.some((t) => t.tag === "N" || t.tag === "PRON");
-      if (!segHasNominal) {
+      const segVerbIdx = seg.tokens.findIndex((t) => t.tag === "V");
+      const segHasSubjectNominal = seg.tokens.some(
+        (t, ti) => (t.tag === "N" || t.tag === "PRON") && (segVerbIdx < 0 || ti < segVerbIdx),
+      );
+      if (!segHasSubjectNominal) {
         const prevSubject = out[out.length - 1]!.participants[0];
         if (prevSubject) c.participants[0] = prevSubject;
       }

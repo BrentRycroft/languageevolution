@@ -242,12 +242,42 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Translator: sentential complement clauses are DROPPED** (play session
+      2026-05-29). "the man knows that the dog runs" → "man know that" (the whole
+      embedded clause "the dog runs" vanishes); "the man wants to run" → "man
+      want" (the infinitival complement "to run" vanishes). The parser models a
+      single matrix clause; clausal arguments ("that S", control "to VP") aren't
+      parsed as arguments, so the embedded material is lost. This is the
+      `embeddedIn` placeholder on RoleClause (roleFrame.ts) — a real parser
+      FEATURE (recursive clause parsing + IR + realiser support + per-typology
+      complementizer/infinitive strategy), milestone-scale, tied to the
+      "Translator realiser refactor" NEEDS DECISION. Not a small surgical fix.
+- [ ] **Translator: English verb-coverage gap — common verbs mis-tagged as
+      nouns.** "jump" (and likely others) aren't in `dialects/english.ts`
+      BARE_VERBS nor flagged verb by `posOf`, so "the man runs and jumps" tags
+      "jump" as N → verbCount=1 → S-coordination doesn't fire → "and" dropped,
+      "jump" absorbed ("man run jump"). Low-risk fix: extend BARE_VERBS with the
+      missing high-frequency verbs (jump/climb/sing/dance/…). Audit against a
+      Swadesh/common-verb list. Sim-non-rippling (translator dialect data only).
 
 ## Done log
 
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: S-coordination subject inheritance no longer blocked by an
+  object.** Play session: "the man walks and sees the dog" → "the man walk and
+  YOU see the dog" — the 2nd coordinated clause's gapped subject defaulted to a
+  synthesised imperative "you" instead of inheriting "man". Root cause
+  (parse.ts parseSyntaxAllAsClauses): the inheritance guard skipped whenever the
+  follow-up segment held ANY nominal, but that nominal was the OBJECT ('dog'),
+  not a subject. Narrowed the guard to count only a nominal in SUBJECT position
+  (before the segment's verb) → gapped subject correctly inherits "king"/"man".
+  Parser-only; no engine/rng change. + parser_role_ir regression test (gapped
+  2nd-clause subject inherits the 1st even with an object). Verified: tsc + 77
+  parser/routing/agnosticism/narrative tests green. (Same session logged two
+  backlog items: sentential complement clauses dropped, and a verb-coverage gap
+  mis-tagging "jump" as a noun.)
 - **Translator: case-strategy languages keep the comparative "than" particle.**
   Play session (Romance leaf): "the king is bigger than the dog" → "king big dog"
   — the comparison was unmarked. `realisePP` dropped EVERY adposition for
