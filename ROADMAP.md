@@ -181,13 +181,10 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Narrative live-quality check — fold into the baseline GUI play session:
       read whether multi-line output reads like a real (non-English-shaped)
       language across SOV / ergative / tonal presets.
-- [ ] **Translator: object head may drop in a two-NP sentence with adjectives.**
-      Observed (play session, romance@40g): "the large dog sees the tiny bird" →
-      "dog see tiny" — the object head "bird" (and the subject adj) didn't surface
-      though everything resolved (MISS empty). Pre-existing (NOT the synonym map —
-      that's resolution-only). Re-diagnose with a throwaway probe printing the
-      parsed participants + realised tokens; likely a parse/realise issue with
-      adj+head object NPs. Translator-only, sim-non-rippling.
+- [x] **Translator: object head dropped in a two-NP sentence with adjectives** —
+      FIXED (see Done log). Root cause was synonym adjectives (large/tiny)
+      mis-tagged as N by the tokenizer; normalized them to big/small before
+      POS-tagging. + parser_role_ir regression test.
 - [x] Audit presets for English-based encoding (code-level): forms are NOT
       relexified English (Bantu authentic proto-Bantu; default lexicon is
       PIE-flavored). Real anglocentrism = the shared English concept inventory.
@@ -232,6 +229,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: synonym adjectives now POS-tag correctly (object-head-drop fix).**
+  "the large dog sees the tiny bird" rendered "dog see tiny" — large/tiny aren't
+  in the adjective lexicon so the tokenizer tagged them N; the second N became the
+  NP head and the real head ("bird") was dropped. Fix: apply the synonym map
+  (large→big, tiny→small, …) in `tokeniseEnglish` BEFORE POS-tagging (only when the
+  word isn't already a recognised noun/adj/verb), so they tag as ADJ via their
+  canonical. Now parses identically to "the big dog sees the small bird". + a
+  parser_role_ir regression test. tsc + targeted tests green (parser_role_ir,
+  narrative_snapshot, typological_routing, translator_agnosticism, composer_role_ir
+  — 83). Translator-only, sim-non-rippling. Principle: unknown adjectives must not
+  default to N and scramble NP structure.
 - **Translator: English-synonym normalization map** (sentence.ts resolveLemma).
   Common English synonyms now resolve to their canonical REGISTERED concept
   before the cascade — quick/swift/rapid/speedy→fast, large/huge/enormous/giant→

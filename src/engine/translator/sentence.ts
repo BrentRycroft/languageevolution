@@ -251,7 +251,7 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
   let lastWasVerb = false;
 
   for (let i = 0; i < raw.length; i++) {
-    const w = raw[i]!;
+    let w = raw[i]!;
     if (PUNCT.test(w)) {
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
@@ -295,6 +295,16 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
     if (INTERJECTIONS.has(w)) {
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
+    }
+    // Phase 74: normalize a known English synonym to its canonical concept
+    // BEFORE POS-tagging, so e.g. "large"/"tiny" (absent from the adjective
+    // lexicon, otherwise mis-tagged as N and scrambling the NP parse) tag as
+    // ADJ via "big"/"small". The canonical is a real registered word the
+    // tagger recognises. (resolveLemma applies the same map for paths that
+    // bypass tokenisation.)
+    {
+      const canon = ENGLISH_SYNONYM_CONCEPT[w];
+      if (canon && !isBareNoun(w) && !isBareAdjective(w) && !isBareVerb(w)) w = canon;
     }
     if (isBareNoun(w)) {
       tokens.push({

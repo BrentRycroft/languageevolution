@@ -94,6 +94,20 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(man!.adjunct, "recipient surfaces as a dative adjunct").toBe(true);
   });
 
+  it("synonym adjectives ('large'/'tiny') tag as ADJ, not as the noun head", () => {
+    // Pre-fix the tokenizer didn't recognise large/tiny as adjectives → they
+    // were tagged N, so the SECOND noun became the head and the real head
+    // ("bird") was dropped. Normalizing large→big / tiny→small BEFORE
+    // POS-tagging fixes the NP parse.
+    const rc = parse("the large dog sees the tiny bird");
+    const dog = findP(rc, "dog");
+    const bird = findP(rc, "bird");
+    expect(dog, "subject head 'dog' kept").toBeDefined();
+    expect(bird, "object head 'bird' not dropped").toBeDefined();
+    expect(dog!.modifiers?.some((m) => m.kind === "adjective"), "'large' is an adjective on dog").toBe(true);
+    expect(bird!.modifiers?.some((m) => m.kind === "adjective"), "'tiny' is an adjective on bird").toBe(true);
+  });
+
   it("prepositional dative 'give THEME to RECIPIENT' still parses (no double-object misfire)", () => {
     // Only ONE bare post-verbal NP (the theme); the recipient is a "to"-PP.
     // collectParticipant breaks at PREP, so the double-object path must not fire.
