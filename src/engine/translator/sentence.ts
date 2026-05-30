@@ -80,6 +80,22 @@ const DETERMINERS = new Set([
   "many", "few", "much", "several", "both",
   "my", "your", "his", "her", "its", "our", "their",
 ]);
+// Degree intensifiers that raise a following adjective to degree "intensive".
+// Checked BEFORE POS-tagging, so even "-ly" forms (extremely/really/truly) and
+// the conjunction-/noun-ambiguous ones (so/too/quite) are caught — but only when
+// the next token is an adjective (look-ahead guard), so "so the dog ran" / "me
+// too" still parse normally. (too=excessive and quite=downtoner-in-some-dialects
+// are simplified to plain intensification — better than dropping the adjective,
+// which is what happened before in predicate position.)
+const INTENSIFIERS = new Set([
+  "very", "extremely", "really", "truly", "so", "too", "quite",
+]);
+// Periphrastic (analytic) degree markers: "more big" → comparative, "most big"
+// → superlative. Like intensifiers they're dropped and raise the following
+// adjective's degree; the look-ahead guard keeps "more dogs" a quantifier.
+const DEGREE_MARKERS: Readonly<Record<string, "comparative" | "superlative">> = {
+  more: "comparative", most: "superlative",
+};
 const PREPOSITIONS = new Set([
   "in", "on", "at", "to", "from", "by", "with", "for", "of",
   "under", "over", "through", "near", "after", "before", "across",
@@ -243,6 +259,15 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
     const w = rawSplit[i]!;
     const next = rawSplit[i + 1];
     const after = rawSplit[i + 2];
+    // "cannot" is the fixed one-word spelling of "can not" (no apostrophe, so
+    // the "X't" contraction path below misses it). Split it like "can't": host
+    // "can" (AUX) + a negator. Pre-fix "cannot" tagged as a noun and became the
+    // subject, dropping the real subject ("the man cannot see" → "cannot see").
+    if (w === "cannot") {
+      raw.push("can");
+      negatorIndices.add(raw.length - 1);
+      continue;
+    }
     if (next === "'" && after === "s") {
       raw.push(w);
       possessorIndices.add(raw.length - 1);
@@ -260,12 +285,32 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
 
   let pendingTense: "past" | "present" | "future" | undefined;
   let lastWasVerb = false;
+  // A degree word ("very"/"more"/"most") immediately before an adjective is
+  // dropped as a token and instead raises that adjective's degree feature.
+  // Handling it here (not as a stray noun/adverb) fixes attributive ("the very
+  // big dog") and predicate ("the dog is very big") uniformly, since both
+  // adjective-collection paths already read `features.degree`. "more big" /
+  // "most big" are the periphrastic comparative/superlative.
+  let pendingDegree: "intensive" | "comparative" | "superlative" | undefined;
 
   for (let i = 0; i < raw.length; i++) {
     let w = raw[i]!;
     if (PUNCT.test(w)) {
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
+    }
+    {
+      // "very"/"more"/"most" + adjective → absorb the degree word and tag the
+      // adjective's degree (look-ahead guards "more dogs" / "so the dog ran").
+      const degree = INTENSIFIERS.has(w) ? "intensive" : DEGREE_MARKERS[w];
+      if (degree) {
+        const nx = raw[i + 1];
+        const nxCanon = nx ? (ENGLISH_SYNONYM_CONCEPT[nx] ?? nx) : undefined;
+        if (nxCanon && (isBareAdjective(nx!) || isBareAdjective(nxCanon))) {
+          pendingDegree = degree;
+          continue;
+        }
+      }
     }
     if (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w)) {
       const PRONOUN_LEMMA: Record<string, string> = {
@@ -328,7 +373,9 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
       continue;
     }
     if (isBareAdjective(w)) {
-      tokens.push({ surface: w, lemma: w, tag: "ADJ", features: {} });
+      const features = pendingDegree ? { degree: pendingDegree } : {};
+      pendingDegree = undefined;
+      tokens.push({ surface: w, lemma: w, tag: "ADJ", features });
       continue;
     }
     // Phase 74: "do" is both a main verb AND the do-support auxiliary. Unlike

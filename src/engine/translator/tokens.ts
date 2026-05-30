@@ -20,7 +20,7 @@ export interface EnglishToken {
     number?: "sg" | "pl";
     person?: "1" | "2" | "3";
     role?: "subject" | "object";
-    degree?: "positive" | "comparative" | "superlative";
+    degree?: "positive" | "comparative" | "superlative" | "intensive";
     possessor?: boolean;
   };
 }

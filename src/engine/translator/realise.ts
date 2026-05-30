@@ -185,6 +185,8 @@ export function realiseSentence(
     } else if (af.length > 0 && a.degree === "superlative") {
       const p = lang.morphology.paradigms["adj.degree.sup"];
       if (p) af = inflect(af, p, lang, a.lemma);
+    } else if (af.length > 0 && a.degree === "intensive") {
+      af = reduplicate(af, "full"); // "the dog is very big" → big-big
     }
     return {
       surface: af.length > 0 ? af.join("") : `“${a.lemma}”`,
@@ -515,6 +517,12 @@ function realiseNP(
     } else if (a.degree === "superlative") {
       const p = lang.morphology.paradigms["adj.degree.sup"];
       if (p) af = inflect(af, p, lang, a.lemma);
+    } else if (a.degree === "intensive" && af.length > 0) {
+      // Intensification ("very big") → FULL reduplication, the iconic and
+      // cross-linguistically dominant intensifier (more form = more degree;
+      // Indonesian "besar-besar"). Emergent + lexeme-free — no "very" word
+      // needed in the target language.
+      af = reduplicate(af, "full");
     }
     return {
       surface: a.baseForm.length === 0 ? `“${a.lemma}”` : af.join(""),
@@ -727,14 +735,18 @@ function realiseSentenceInner(
   });
 }
 
+// Adpositions whose role a core case affix does NOT recover, so a case-strategy
+// language must keep them as particles rather than dropping them: comparative
+// "than", privative/abessive "without", comitative "with". Abessive and
+// comitative are rare as morphological cases (WALS) and none is applied to the
+// PP-NP here, so dropping these erases the meaning — "man without the dog runs"
+// collapsed to "man run dog" (a transitive reading). Spatial/role adpositions
+// (in/on/to/from/of) stay droppable: their role IS recoverable from case.
+const RETAINED_ADPOSITIONS = new Set(["than", "without", "with"]);
+
 function realisePP(pp: PP, lang: Language, ctx: NPCtx): RealisedToken[] {
   const npTokens = realiseNP(pp.np, lang, ctx, "PP-NP");
-  // Case-strategy languages drop oblique adpositions because the case affix on
-  // the NP recovers the role. The comparative "than" is NOT such an adposition:
-  // no comparative case is applied to the standard, so dropping it leaves the
-  // comparison unmarked ("king big dog"). Retain it — the particle-comparative
-  // is an attested strategy (Stassen) and matches what non-case langs do here.
-  if (ctx.caseStrategy === "case" && pp.prep.lemma !== "than") return npTokens;
+  if (ctx.caseStrategy === "case" && !RETAINED_ADPOSITIONS.has(pp.prep.lemma)) return npTokens;
   const pf = closedClassForm(lang, pp.prep.lemma) ?? [];
   if (pf.length === 0) return npTokens;
   // Phase 29 Tranche 4h: realise the "mixed" caseStrategy. Per

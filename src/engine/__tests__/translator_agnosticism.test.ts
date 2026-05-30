@@ -116,6 +116,20 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(idxOf(loc, "in"), `plain oblique 'in' still dropped ("${surface(loc)}")`).toBe(-1);
   });
 
+  it("case-strategy languages keep meaning-critical adpositions (privative 'without', comitative 'with')", () => {
+    // Abessive/comitative are rare as morphological cases and none is applied to
+    // the PP-NP, so dropping "without"/"with" erases meaning ("man without the
+    // dog" had collapsed to "man run dog" — a transitive reading). They are
+    // retained as particles; spatial obliques (on) still drop.
+    const lang = protoOf(presetRomance, "agn-privative");
+    const wo = translateSentence(lang, "the man without the dog runs").targetTokens;
+    expect(idxOf(wo, "without"), `privative 'without' retained ("${surface(wo)}")`).toBeGreaterThanOrEqual(0);
+    const wi = translateSentence(lang, "the man with the dog runs").targetTokens;
+    expect(idxOf(wi, "with"), `comitative 'with' retained ("${surface(wi)}")`).toBeGreaterThanOrEqual(0);
+    const on = translateSentence(lang, "the dog runs on the mountain").targetTokens;
+    expect(idxOf(on, "on"), `spatial 'on' still dropped ("${surface(on)}")`).toBe(-1);
+  });
+
   it("object/oblique pronouns take their suppletive case form (him/me/us, not he/i/we)", () => {
     // The parser canonicalises an object pronoun to its nominative lemma for
     // concept lookup (him→he); in object (O) / oblique (PP-NP) role the realiser
@@ -129,6 +143,23 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     const dat = translateSentence(lang, "give me the stone").targetTokens;
     expect(idxOf(dat, "me"), `dative 'me' surfaces ("${surface(dat)}")`).toBeGreaterThanOrEqual(0);
     expect(idxOf(dat, "i"), `nominative 'i' must NOT surface for the recipient ("${surface(dat)}")`).toBe(-1);
+  });
+
+  it("intensified adjective ('very big') is realised by full reduplication", () => {
+    // No "very" lexeme exists in the target; intensification surfaces as iconic
+    // full reduplication of the adjective (big → big-big). Lexeme-free, emergent.
+    const lang = protoOf(presetEnglish, "agn-intens");
+    const base = (lang.lexicon["big"] ?? []).join("");
+    const toks = translateSentence(lang, "the very big dog runs").targetTokens;
+    const adj = toks.find((t) => t.englishLemma === "big");
+    expect(base.length, "'big' is lexicalised").toBeGreaterThan(0);
+    expect(adj?.targetSurface, `adjective is reduplicated ("${surface(toks)}")`).toBe(base + base);
+
+    // Predicate position too ("the dog is very big") — the copular complement
+    // path was dropping "very" + the adjective before the tokenizer fix.
+    const pred = translateSentence(lang, "the dog is very big").targetTokens;
+    const padj = pred.find((t) => t.englishLemma === "big");
+    expect(padj?.targetSurface, `predicate adjective reduplicated ("${surface(pred)}")`).toBe(base + base);
   });
 
   it("plural pronouns are not re-pluralised by the regular noun-plural affix", () => {

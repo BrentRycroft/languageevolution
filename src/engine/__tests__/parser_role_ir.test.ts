@@ -159,6 +159,16 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc.negated).toBe(true);
   });
 
+  it("'cannot' splits to 'can' + negation and keeps the subject", () => {
+    // "cannot" is the one-word spelling of "can not"; pre-fix it tagged as a
+    // noun and BECAME the subject, dropping the real subject ("the king cannot
+    // see" → "cannot see"). It must parse like "can not": subject "king",
+    // negated=true.
+    const rc = parse("the king cannot see the wolf");
+    expect(rc.participants[0]?.lemma, "subject is 'king', not 'cannot'").toBe("king");
+    expect(rc.negated, "clause is negated").toBe(true);
+  });
+
   it("yes-no interrogative (initial AUX): clause.interrogative=true", () => {
     const rc = parse("does the king see the wolf");
     expect(rc.interrogative).toBe(true);
@@ -272,6 +282,35 @@ describe("Phase 73c Phase 3 — parseSyntaxAllAsClauses (multi-clause)", () => {
     const subj1 = chain[1]!.participants[0]!;
     expect(subj1.lemma, `2nd clause subject inherits 'king' (got '${subj1.lemma}')`).toBe("king");
     expect(subj1.features?.synthesized ?? false, "inherited subject is not the synthesised 'you'").toBe(false);
+  });
+
+  it("'very' raises the following adjective to degree=intensive", () => {
+    // "very big" → the adjective modifier on the head carries degree
+    // "intensive" (pre-fix "very" mis-tagged as a noun and was dropped).
+    const all = parseAll("the very big dog runs");
+    const dog = findP(all[0]!, "dog")!;
+    const adjMod = dog.modifiers?.find((m) => m.kind === "adjective" && m.lemma === "big");
+    expect(adjMod, "'big' adjective modifier present").toBeDefined();
+    if (adjMod && adjMod.kind === "adjective") {
+      expect(adjMod.degree, "degree is intensive").toBe("intensive");
+    }
+  });
+
+  it("subject relative clause + COPULAR matrix ('the dog that runs is big')", () => {
+    // The matrix predicate is a copula ("is big") — the AUX "is" is tagged AUX,
+    // not V, so the relative-clause extractor found no matrix verb and the whole
+    // sentence mis-parsed to verb=run / subject="that". Treating a copular AUX as
+    // a predicate head splits it correctly: matrix = copular "be" + complement
+    // "big", subject "dog" carrying the relative-clause modifier.
+    const all = parseAll("the dog that runs is big");
+    expect(all.length).toBe(1);
+    const matrix = all[0]!;
+    expect(matrix.predicate.lemma, "matrix verb is the copula").toBe("be");
+    expect(matrix.predicate.complement?.[0]?.lemma, "complement adjective 'big'").toBe("big");
+    const dog = findP(matrix, "dog");
+    expect(dog, "subject 'dog' present").toBeDefined();
+    expect(dog!.modifiers?.some((m) => m.kind === "relative"), "'dog' carries a relative modifier").toBe(true);
+    expect(findP(matrix, "that"), "relativiser 'that' is NOT a participant").toBeUndefined();
   });
 
   it("relative clause (who) attaches as a modifier on the antecedent", () => {
