@@ -4,6 +4,7 @@ import { presetBantu } from "../presets/bantu";
 import { presetEnglish } from "../presets/english";
 import { presetRomance } from "../presets/romance";
 import { presetTokipona } from "../presets/tokipona";
+import { presetPIE } from "../presets/pie";
 import { translateSentence, type TranslatedToken } from "../translator/sentence";
 import { isFeatureActive } from "../modules/legacyGate";
 import type { Language } from "../types";
@@ -185,6 +186,40 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(tok, "subject pronoun 'we' resolves").toBeDefined();
     expect(tok!.targetSurface, "plural pronoun 'we' is the bare lexical form, not affixed")
       .toBe((lang.lexicon["we"] ?? []).join(""));
+  });
+
+  it("interrogative strategy follows grammar.interrogativeStrategy (particle/inversion/intonation)", () => {
+    // No bundled preset uses particle/inversion, so the translator_stress matrix
+    // only checks these don't crash / aren't empty — it does NOT lock the actual
+    // realisation. Lock all three here so the agnostic interrogative paths can't
+    // silently regress (cf. the stale-test drift that left the fast tier red).
+    const base = () => protoOf(presetPIE, "agn-interrog");
+
+    const inton = base();
+    inton.grammar.interrogativeStrategy = "intonation";
+    const ti = translateSentence(inton, "does the king see the wolf").targetTokens;
+    expect(ti[ti.length - 1]?.englishLemma, "intonation appends a final '?'").toBe("?");
+
+    const part = base();
+    part.grammar.interrogativeStrategy = "particle";
+    part.grammar.interrogativeParticle = "final";
+    const tp = translateSentence(part, "does the king see the wolf").targetTokens;
+    expect(tp.some((t) => t.englishLemma === "Q"), "particle strategy emits a Q particle").toBe(true);
+    expect(tp[tp.length - 1]?.englishLemma, "final placement puts Q last").toBe("Q");
+    expect(tp.some((t) => t.englishLemma === "?"), "particle strategy does NOT also append '?'").toBe(false);
+
+    part.grammar.interrogativeParticle = "initial";
+    const tpi = translateSentence(part, "does the king see the wolf").targetTokens;
+    expect(tpi[0]?.englishLemma, "initial placement puts Q first").toBe("Q");
+
+    const inv = base();
+    inv.grammar.interrogativeStrategy = "inversion";
+    const tv = translateSentence(inv, "does the king see the wolf").targetTokens;
+    const vIdx = tv.findIndex((t) => t.englishTag === "V");
+    const sIdx = tv.findIndex((t) => t.englishLemma === "king");
+    expect(vIdx, "inversion fronts the verb").toBeGreaterThanOrEqual(0);
+    expect(sIdx, "subject 'king' present").toBeGreaterThanOrEqual(0);
+    expect(vIdx, "inversion: verb precedes the subject (V-S-O)").toBeLessThan(sIdx);
   });
 
   it("a relativiser-less language juxtaposes the clause (parataxis), not deletes it", () => {
