@@ -118,6 +118,10 @@ interface RoleToken {
 }
 
 const TIME_LEMMAS = new Set(["morning", "evening", "night", "winter", "summer"]);
+// Deictic temporal adverbs are inherently adverbial — they take NO adposition
+// or article ("yesterday she went", not "in (the) yesterday"), unlike temporal
+// nouns ("in summer", "in the morning"). Universal across languages.
+const DEICTIC_TIME = new Set(["today", "yesterday", "tomorrow", "now"]);
 
 function fallbackForm(lang: Language, candidates: Meaning[]): { meaning: Meaning; form: WordForm } | null {
   for (const m of candidates) {
@@ -527,8 +531,11 @@ function timePrefixRoleTokens(
   script: DisplayScript,
 ): RoleToken[] {
   const out: RoleToken[] = [];
+  // Deictic adverbs (today/yesterday/tomorrow) surface bare — no adposition,
+  // no article. Temporal nouns take "in" (+ optional article).
+  const isDeictic = DEICTIC_TIME.has(meaning);
   const prepForm = lang.lexicon["in"] ?? lang.lexicon["at"];
-  if (prepForm) {
+  if (!isDeictic && prepForm) {
     out.push({
       role: "PREP",
       token: makeToken({
@@ -540,7 +547,7 @@ function timePrefixRoleTokens(
       }),
     });
   }
-  const detTok = articleRoleToken(lang, script);
+  const detTok = isDeictic ? null : articleRoleToken(lang, script);
   if (detTok) out.push(detTok);
   const timeForm = lang.lexicon[meaning];
   if (timeForm) {

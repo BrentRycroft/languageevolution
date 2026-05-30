@@ -289,6 +289,21 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Narrative: deictic time adverbs surface bare (no spurious "in").** Discourse
+  play session: "in yesterday she goes", "in today it came" — the time-adjunct
+  builder (`timePrefixRoleTokens`) prepended "in"/"at" + article to EVERY temporal
+  word, but deictic adverbs (today/yesterday/tomorrow/now) are inherently
+  adverbial and take no adposition or article ("yesterday she went"), unlike
+  temporal nouns ("in summer", "in the morning"). Added a DEICTIC_TIME set and
+  skip the prep+article for those. Now "yesterday she goes"; temporal nouns
+  (summer/night/day) still take "in". Narrative-composer display only; no
+  engine/rng change. + narrative_composer regression test. Verified: tsc + 63
+  composer/discourse/snapshot/genre/negation tests green. (Same session noted: the
+  discourse English CAPTION still shows nominative object pronouns "he" where the
+  morphological gloss already marks "-ACC" — the composer pronoun caption needs
+  the same oblique mapping the translator's realiseNP got in bafd0c4; minor since
+  the interlinear gloss carries the case. Also "in day" lacks an article — temporal
+  nouns outside TIME_LEMMAS render article-less; low priority.)
 - **Translator: plural pronouns no longer re-pluralised by the noun-plural
   affix.** Follow-up to the oblique-pronoun fix: "the man sees us" surfaced
   "ʌss" — realiseNP applied the regular `noun.num.pl` affix to the plural-number

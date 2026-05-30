@@ -40,6 +40,38 @@ describe("Narrative composer — target-side composition", () => {
     expect(out.english.toLowerCase()).toContain("saw");
   });
 
+  it("deictic time adverbs surface bare; temporal nouns keep the 'in' adposition", () => {
+    const lang = englishLang();
+    const mk = (time: string) =>
+      composeTargetSentence(
+        lang,
+        {
+          shape: "time_prefix_intrans",
+          tense: "present",
+          needs: { subject: true, object: false, adjective: false, time: true, place: false },
+          introducesEntity: true,
+        },
+        { verb: "run", subject: "dog", time },
+        makeDiscourse("myth"),
+        "ipa",
+      );
+
+    const deictic = mk("yesterday");
+    const dLemmas = deictic.tokens.map((t) => t.englishLemma);
+    expect(dLemmas.includes("yesterday"), `"yesterday" surfaces ("${deictic.english}")`).toBe(true);
+    expect(
+      dLemmas.includes("in") || dLemmas.includes("at"),
+      `deictic adverb takes NO adposition ("${deictic.english}")`,
+    ).toBe(false);
+
+    const noun = mk("summer");
+    const nLemmas = noun.tokens.map((t) => t.englishLemma);
+    // Only assert the positive when the temporal noun actually resolved.
+    if (nLemmas.includes("summer")) {
+      expect(nLemmas.includes("in"), `temporal noun keeps "in" ("${noun.english}")`).toBe(true);
+    }
+  });
+
   it("respects SOV word order: target surface puts V last while English caption stays SVO", () => {
     const base = englishLang();
     const sovLang: Language = {
