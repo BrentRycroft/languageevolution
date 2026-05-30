@@ -102,4 +102,14 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
       expect(tok.lemma, `${surface} lemmatizes to ${lemma}`).toBe(lemma);
     }
   });
+
+  it("Phase 75: quantificational determiners tag DET (many/few/much/several/both)", () => {
+    // These pattern prenominally like all/some/every; previously absent from
+    // DETERMINERS so they mis-tagged as nouns and the quantifier was dropped
+    // ("many men" → "man").
+    for (const q of ["many", "few", "much", "several", "both"]) {
+      const tok = tokeniseEnglish(`${q} men run`)[0]!;
+      expect(tok.tag, `"${q}" tags as DET`).toBe("DET");
+    }
+  });
 });

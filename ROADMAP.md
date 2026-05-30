@@ -245,6 +245,22 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Translator: degree adverb "very" (and intensifiers) dropped.** Play
+      session (2026-05-29): "the very big dog" → "big dog". "very" mis-tags as a
+      NOUN (not in any closed-class set) so it's dropped. It's a degree
+      INTENSIFIER on adjectives, not a determiner — tag it ADV/degree and surface
+      it as an adjective-degree modifier (or the language's intensification
+      strategy: reduplication, a particle, or a degree affix — typologically
+      varied). Same class likely affects "too"/"so"/"quite"/"rather". Translator;
+      needs a small degree-modifier path (where to attach + how to realise).
+- [ ] **Translator: passive "by"-agent dropped in case languages, reversing
+      meaning.** "the dog is seen by the man" → Romance "dog see man" (reads as
+      "dog sees man" — agent/patient reversed; the passive voice + the "by"-agent
+      both vanish). Like the comparative "than" and dative "to", the agentive "by"
+      is dropped by the case-strategy oblique-adposition drop, but no passive
+      voice marking or agent case replaces it. Retain a passive marker and/or the
+      agent's adposition/case so the demotion is recoverable. Ties to passive-voice
+      morphology (needs a voice paradigm) — partly milestone-level.
 - [x] **Translator: object/oblique pronouns surface in NOMINATIVE form.** DONE
       (see Done log). realiseNP now maps a pronoun in O/PP-NP role to its
       suppletive oblique form (he→him, we→us, i→me, they→them, she→her, who→whom)
@@ -289,6 +305,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: quantificational determiners (many/few/much/several/both) now
+  recognised.** Play session: "many men see the dog" → "man see dog" — the
+  quantifier was DROPPED while "all"/"some" surfaced. Cause: the tokenizer's
+  DETERMINERS set had all/some/every/each but not many/few/much/several/both, so
+  those mis-tagged as nouns and were dropped. Added them (they pattern prenominally
+  like the others). Now "many men…" → "many man…", "few dog", "both king", "much
+  water". Tokenizer-data only; no engine/rng change. + dialect_english regression
+  test (5 quantifiers tag DET). Verified: tsc + 117 parser/routing/agnosticism/
+  typology/dialect/narrative tests green. (Same session noted: "very" degree adverb
+  is dropped — see backlog; and passive "by"-agent drops in case langs reversing
+  "dog is seen by man" → "dog see man".)
 - **Narrative: object pronouns get their oblique caption in the discourse gloss.**
   Follow-up to the translator's realiseNP oblique-pronoun fix (bafd0c4): when a
   pronoun filled an object slot the discourse English caption showed the

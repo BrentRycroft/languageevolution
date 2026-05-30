@@ -74,6 +74,10 @@ const DETERMINERS = new Set([
   "the", "a", "an",
   "this", "that", "these", "those", "yonder", "yon",
   "some", "any", "all", "no", "every", "each",
+  // Phase 75: quantificational determiners that pattern prenominally like
+  // all/some/every. Previously absent, so "many"/"few" mis-tagged as nouns
+  // and the quantifier was dropped ("many men" → "man").
+  "many", "few", "much", "several", "both",
   "my", "your", "his", "her", "its", "our", "their",
 ]);
 const PREPOSITIONS = new Set([
