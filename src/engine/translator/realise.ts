@@ -604,9 +604,13 @@ function attachRelativeClause(
   const strategy = lang.grammar.relativeClauseStrategy ?? "relativizer";
 
   const stripped: NP = { ...np, relative: undefined };
+  // Phase 74: an OBJECT relative ("the dog that the king sees") carries its
+  // own subject — use it, so the RC realises "king sees" (object gapped to the
+  // head) rather than forcing the head as the subject ("dog that dog see").
+  // Subject relatives (subjectGap=true) keep the head as the subject.
   const fakeS: Sentence = {
     kind: "S",
-    subject: stripped,
+    subject: rc.subject ?? stripped,
     predicate: rc.predicate,
     negated: false,
   };

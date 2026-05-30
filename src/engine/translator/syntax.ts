@@ -105,6 +105,12 @@ export interface RelativeClause {
   relativizer: "who" | "that" | "which";
   predicate: VP;
   subjectGap: boolean;
+  /**
+   * Phase 74: the relative clause's own subject, for OBJECT relatives
+   * ("the dog that THE KING sees" — subjectGap=false). When omitted
+   * (subject relatives, subjectGap=true) the head NP is the subject.
+   */
+  subject?: NP;
 }
 
 export interface PP {
