@@ -1062,7 +1062,7 @@ function translateFragment(
  *   verb-initial (no subject)     → mood=imperative
  */
 const SUBJUNCTIVE_AUX = new Set([
-  "should", "would", "could", "may", "might", "ought", "must",
+  "can", "should", "would", "could", "may", "might", "ought", "must",
 ]);
 const PROGRESSIVE_AUX = new Set(["am", "is", "are", "was", "were", "be", "been", "being"]);
 const PERFECT_AUX = new Set(["have", "has", "had"]);

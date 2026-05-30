@@ -175,6 +175,18 @@ describe("§gap-7 — aspect/mood/voice cues from auxiliaries", () => {
     expect(v?.targetSurface).toContain("et");
   });
 
+  it("'can X' triggers verb.mood.subj (modal = irrealis, like may/must/should)", () => {
+    // English modal auxiliaries are all irrealis markers (Palmer's
+    // realis/irrealis split); the translator collapses them to the target's
+    // subjunctive mood. "can" was the lone modal omitted from SUBJUNCTIVE_AUX.
+    const lang = freshLang("can");
+    lang.grammar.synthesisIndex = 4;
+    lang.morphology.paradigms["verb.mood.subj"] = p("verb.mood.subj", ["e", "t"]);
+    const out = translateSentence(lang, "the king can see");
+    const v = out.targetTokens.find((t) => t.englishLemma === "see");
+    expect(v?.targetSurface).toContain("et");
+  });
+
   it("verb-initial input (imperative) triggers verb.mood.imp", () => {
     const lang = freshLang("imp");
     lang.grammar.synthesisIndex = 4;

@@ -232,8 +232,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       adjective carries degree="comparative" but no -er/comparative marker surfaces
       — needs a comparative paradigm or particle); (b) per-typology comparative
       STRATEGY (particle / conjoined / exceed / locational axis) + V-final standard
-      ordering; (c) modal "can/may/must" auxiliaries are dropped ("the man can see
-      X" → "see X") — render per the lang's mood/modal system. All translator-only.
+      ordering. (Modals (c): DONE — see Done log. CORRECTED DIAGNOSIS: only "can"
+      was dropped; may/might/could/must/should/would already mapped to subjunctive
+      via SUBJUNCTIVE_AUX. Future refinement: the mood enum lacks distinct
+      potential/necessitative moods, so ability (can) and obligation (must) both
+      collapse to subjunctive — a milestone if separate modal moods are wanted.)
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -243,6 +246,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: the modal "can" now carries irrealis (subjunctive) mood.** A play
+  session showed "the man can see the dog" dropping the modal entirely. Diagnosed
+  (throwaway probe): the ROADMAP's "can/may/must dropped" was stale — may/might/
+  could/must/should/would already map to subjunctive via `SUBJUNCTIVE_AUX`
+  (applyAuxiliaryCues, sentence.ts); "can" was the LONE modal omitted from that
+  set. Added it. Now "can VERB" surfaces the verb.mood.subj affix wherever the
+  target grammar expresses mood (and stays bare where it doesn't), matching the
+  other modals. Principle: realis/irrealis modality (Palmer) — English modal
+  auxiliaries are all irrealis markers, collapsed to the target's subjunctive.
+  Translator-only constant; no engine/rng change. + `grammar_audit` "'can X'
+  triggers verb.mood.subj" regression test. Verified: tsc + 93 grammar_audit/
+  parser_role_ir/narrative_snapshot/grammatical_modules tests green.
 - **Translator: object relative clauses keep their own subject.** "the dog that
   the king sees runs" rendered "dog that DOG see run" — the relative-clause IR
   (`roleClauseToRelativeClause`) stored only the predicate, so for an OBJECT
