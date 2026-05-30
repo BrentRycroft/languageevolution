@@ -175,6 +175,12 @@ const BARE_VERBS = new Set([
   // fallback and dropped the subject in "the man seems big"). They take an
   // adjectival complement like "be" — see LINKING_VERBS in parse.ts.
   "seem", "appear", "become", "remain", "stay", "look", "feel", "sound",
+  // Phase 76 (cont.): more posOf="other" intransitive/activity verbs that mis-
+  // tagged N in verb position. The tokenizer is purely lexical, so a word added
+  // here also reads V in noun slots — only OVERWHELMINGLY verb-dominant words
+  // (essentially never nouns) are added, where that trade is clearly positive.
+  // (Noun-ambiguous smile/shout/watch/march/drop/touch/sink/tie/rise excluded.)
+  "bleed", "heal", "mend", "bury", "seek", "kneel", "fill", "wander", "crouch", "chew", "pray",
 ]);
 const BARE_ADJECTIVES = new Set([
   "big", "small", "tall", "short", "fast", "slow", "new", "old",

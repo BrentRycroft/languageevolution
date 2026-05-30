@@ -103,6 +103,22 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
     }
   });
 
+  it("Phase 76: verb-dominant intransitives tag V (bleed/heal/kneel/wander…)", () => {
+    // More posOf="other" activity verbs that mis-tagged N in verb position,
+    // breaking clause/coordination structure. Only OVERWHELMINGLY verb-dominant
+    // words (essentially never nouns) were added, since the tokenizer is purely
+    // lexical (a bare verb also reads V in noun slots).
+    const verbs = ["bleed", "heal", "mend", "bury", "seek", "kneel", "fill", "wander", "crouch", "chew", "pray"];
+    for (const v of verbs) {
+      const tok = tokeniseEnglish(`the man ${v}s the dog`)[2]!;
+      expect(tok.tag, `${v} tags as V`).toBe("V");
+      expect(tok.lemma, `${v} lemmatizes to itself`).toBe(v);
+    }
+    // The verb mis-tag broke S-coordination (verbCount=1 → "and" dropped).
+    const toks = tokeniseEnglish("the wolf bleeds and dies");
+    expect(toks.map((t) => `${t.lemma}/${t.tag}`).join(" ")).toBe("the/DET wolf/N bleed/V and/CONJ die/V");
+  });
+
   it("Phase 75: quantificational determiners tag DET (many/few/much/several/both)", () => {
     // These pattern prenominally like all/some/every; previously absent from
     // DETERMINERS so they mis-tagged as nouns and the quantifier was dropped
