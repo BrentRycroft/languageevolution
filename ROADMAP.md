@@ -249,9 +249,10 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       now raises the following NP-adjective to degree="intensive" (parser walk),
       realised by full reduplication (big→big-big). FOLLOW-UPS (logged, not done):
       (a) "-ly" intensifiers (extremely/really) tokenise to ADV ("extreme"/"real")
-      and go through the manner path — they need a degree-adverb-before-adjective
-      hook, separate from the NP walk; (b) "too"/"so"/"quite"/"rather" likewise
-      (extend the tokenizer INTENSIFIERS set, but mind "so"/"too" ambiguity);
+      and go through the manner path — DONE (the tokenizer INTENSIFIERS check runs
+      BEFORE -ly/conjunction tagging, so extremely/really/truly are caught too —
+      see Done log); (b) "too"/"so"/"quite" — DONE (added; look-ahead guard keeps
+      "so the dog ran" a conjunction); "rather" still excluded (downtoner-ambiguous);
       (c) PREDICATE intensification ("the dog is very big") — DONE (tokenizer
       handles both attributive + predicate now; see Done log);
       (d) intensive degree morphology (an `adj.degree.intens` paradigm) isn't
@@ -335,6 +336,19 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   object/synonym cases unchanged. Translator only; no engine/rng change. +
   translator_agnosticism predicate assertion. Verified: tsc + 110 + 8 parser/
   agnosticism/degree/narrative/copula tests green.
+- **Translator: more intensifiers — extremely/really/truly/so/too/quite.** The
+  tokenizer INTENSIFIERS check runs before POS-tagging, so adding these to the set
+  catches the "-ly" forms (which otherwise tag ADV) AND the conjunction-/noun-
+  ambiguous ones (so/too/quite) — but only when the next token is an adjective
+  (look-ahead guard), so "so the dog ran" / "me too" still parse normally. Fixes
+  cases that were not just dropping the intensifier but BREAKING the parse in
+  predicate position ("the dog is so big" → adj was dropped entirely). Now all
+  → full reduplication (gɾandegɾande). (too=excessive, quite=downtoner-in-some-
+  dialects are simplified to intensification — better than dropping; "rather"
+  excluded as more clearly a downtoner.) Tokenizer-data only; no engine/rng change.
+  + dialect_english regression test (7 intensifiers absorbed→intensive; "so"+non-
+  adjective stays CONJ). Verified: tsc + 106 + 25 parser/agnosticism/dialect/
+  routing/narrative tests green.
 - **Translator: quantificational determiners (many/few/much/several/both) now
   recognised.** Play session: "many men see the dog" → "man see dog" — the
   quantifier was DROPPED while "all"/"some" surfaced. Cause: the tokenizer's

@@ -112,4 +112,19 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
       expect(tok.tag, `"${q}" tags as DET`).toBe("DET");
     }
   });
+
+  it("Phase 75: an intensifier before an adjective is absorbed (degree=intensive), else parses normally", () => {
+    // very/extremely/really/truly/so/too/quite raise a FOLLOWING adjective to
+    // degree=intensive and are dropped as tokens; but only before an adjective —
+    // "so the dog runs" keeps "so" as a conjunction (look-ahead guard).
+    for (const intq of ["very", "extremely", "really", "truly", "so", "too", "quite"]) {
+      const toks = tokeniseEnglish(`the ${intq} big dog runs`);
+      expect(toks.some((t) => t.lemma === intq), `"${intq}" is absorbed, not a stray token`).toBe(false);
+      const adj = toks.find((t) => t.tag === "ADJ" && t.lemma === "big");
+      expect(adj?.features.degree, `adjective after "${intq}" is intensive`).toBe("intensive");
+    }
+    // Not before an adjective → unchanged.
+    const conj = tokeniseEnglish("so the dog runs");
+    expect(conj.some((t) => t.lemma === "so" && t.tag === "CONJ"), "'so' before a non-adjective stays a conjunction").toBe(true);
+  });
 });

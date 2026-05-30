@@ -81,10 +81,15 @@ const DETERMINERS = new Set([
   "my", "your", "his", "her", "its", "our", "their",
 ]);
 // Degree intensifiers that raise a following adjective to degree "intensive".
-// Only the non-"-ly" forms reach this path (the tokenizer drops the intensifier
-// and marks the adjective). "-ly" forms (extremely/really) tag as ADV — a
-// separate degree-adverb hook is backlog.
-const INTENSIFIERS = new Set(["very"]);
+// Checked BEFORE POS-tagging, so even "-ly" forms (extremely/really/truly) and
+// the conjunction-/noun-ambiguous ones (so/too/quite) are caught — but only when
+// the next token is an adjective (look-ahead guard), so "so the dog ran" / "me
+// too" still parse normally. (too=excessive and quite=downtoner-in-some-dialects
+// are simplified to plain intensification — better than dropping the adjective,
+// which is what happened before in predicate position.)
+const INTENSIFIERS = new Set([
+  "very", "extremely", "really", "truly", "so", "too", "quite",
+]);
 const PREPOSITIONS = new Set([
   "in", "on", "at", "to", "from", "by", "with", "for", "of",
   "under", "over", "through", "near", "after", "before", "across",
