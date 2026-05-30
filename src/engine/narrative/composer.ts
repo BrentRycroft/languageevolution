@@ -123,6 +123,14 @@ const TIME_LEMMAS = new Set(["morning", "evening", "night", "winter", "summer"])
 // nouns ("in summer", "in the morning"). Universal across languages.
 const DEICTIC_TIME = new Set(["today", "yesterday", "tomorrow", "now"]);
 
+// Suppletive object/oblique forms of the personal pronouns, for the English
+// gloss CAPTION when a pronoun fills an object slot ("king speaks he" → "him").
+// The target form itself is case-marked via the objectCase inflection; this
+// only corrects the English-side caption. Mirrors realise.ts PRONOUN_OBLIQUE.
+const PRONOUN_OBLIQUE: Readonly<Record<string, string>> = {
+  he: "him", she: "her", i: "me", we: "us", they: "them", who: "whom",
+};
+
 function fallbackForm(lang: Language, candidates: Meaning[]): { meaning: Meaning; form: WordForm } | null {
   for (const m of candidates) {
     const f = lang.lexicon[m];
@@ -434,10 +442,13 @@ function nounRoleToken(
   }
   if (!base) return null;
   const { form, glossNote } = inflectNoun(lang, meaning, base, opts, composeOptions);
+  // Object pronoun → suppletive oblique caption ("he"→"him") so the English
+  // gloss reads naturally; the target form is already case-marked above.
+  const captionLemma = role === "O" ? (PRONOUN_OBLIQUE[meaning] ?? meaning) : meaning;
   return {
     role,
     token: makeToken({
-      englishLemma: meaning,
+      englishLemma: captionLemma,
       englishTag: "N",
       glossNote,
       targetForm: form,

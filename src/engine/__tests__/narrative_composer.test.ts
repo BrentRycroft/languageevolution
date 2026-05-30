@@ -40,6 +40,23 @@ describe("Narrative composer — target-side composition", () => {
     expect(out.english.toLowerCase()).toContain("saw");
   });
 
+  it("an object pronoun gets its oblique caption ('he' → 'him')", () => {
+    // When a pronoun fills the object slot, the English gloss caption must show
+    // the oblique form ("king speaks him", not "...he"). The target form is
+    // case-marked separately; this only corrects the caption.
+    const lang = englishLang();
+    const tpl: AbstractTemplate = {
+      shape: "transitive",
+      tense: "present",
+      needs: { subject: true, object: true, adjective: false, time: false, place: false },
+      introducesEntity: true,
+    };
+    const slots: SlotAssignment = { verb: "speak", subject: "king", object: "he" };
+    const out = composeTargetSentence(lang, tpl, slots, makeDiscourse("myth"), "ipa");
+    const objTok = out.tokens.find((t) => t.englishTag === "N" && (t.englishLemma === "him" || t.englishLemma === "he"));
+    expect(objTok?.englishLemma, `object pronoun caption is oblique ("${out.english}")`).toBe("him");
+  });
+
   it("deictic time adverbs surface bare; temporal nouns keep the 'in' adposition", () => {
     const lang = englishLang();
     const mk = (time: string) =>

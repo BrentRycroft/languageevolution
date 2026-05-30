@@ -289,6 +289,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Narrative: object pronouns get their oblique caption in the discourse gloss.**
+  Follow-up to the translator's realiseNP oblique-pronoun fix (bafd0c4): when a
+  pronoun filled an object slot the discourse English caption showed the
+  nominative form ("king speaks he", "daughter speaks she") even though the
+  morphological gloss already marked "-ACC". nounRoleToken now maps an object-role
+  pronoun caption via PRONOUN_OBLIQUE (he→him, she→her, i→me, we→us, they→them,
+  who→whom). Caption-only — the target form is case-marked by the existing
+  objectCase inflection, so determinism is unaffected. Now "king speaks him".
+  + narrative_composer regression test. Verified: tsc + 58 composer/discourse/
+  snapshot/logophoric tests green.
 - **Narrative: deictic time adverbs surface bare (no spurious "in").** Discourse
   play session: "in yesterday she goes", "in today it came" — the time-adjunct
   builder (`timePrefixRoleTokens`) prepended "in"/"at" + article to EVERY temporal
