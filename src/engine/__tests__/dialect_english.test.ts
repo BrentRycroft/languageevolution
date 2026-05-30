@@ -103,6 +103,22 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
     }
   });
 
+  it("Phase 76: verb-dominant intransitives tag V (bleed/heal/kneel/wander…)", () => {
+    // More posOf="other" activity verbs that mis-tagged N in verb position,
+    // breaking clause/coordination structure. Only OVERWHELMINGLY verb-dominant
+    // words (essentially never nouns) were added, since the tokenizer is purely
+    // lexical (a bare verb also reads V in noun slots).
+    const verbs = ["bleed", "heal", "mend", "bury", "seek", "kneel", "fill", "wander", "crouch", "chew", "pray"];
+    for (const v of verbs) {
+      const tok = tokeniseEnglish(`the man ${v}s the dog`)[2]!;
+      expect(tok.tag, `${v} tags as V`).toBe("V");
+      expect(tok.lemma, `${v} lemmatizes to itself`).toBe(v);
+    }
+    // The verb mis-tag broke S-coordination (verbCount=1 → "and" dropped).
+    const toks = tokeniseEnglish("the wolf bleeds and dies");
+    expect(toks.map((t) => `${t.lemma}/${t.tag}`).join(" ")).toBe("the/DET wolf/N bleed/V and/CONJ die/V");
+  });
+
   it("Phase 75: quantificational determiners tag DET (many/few/much/several/both)", () => {
     // These pattern prenominally like all/some/every; previously absent from
     // DETERMINERS so they mis-tagged as nouns and the quantifier was dropped
@@ -141,5 +157,28 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
 
     const quant = tokeniseEnglish("the man sees more dogs");
     expect(quant.some((t) => t.lemma === "more"), "'more dogs' keeps 'more' (quantifier)").toBe(true);
+  });
+
+  it("Phase 76: deictic locative/temporal adverbs tag ADV (here/there/yesterday/now)", () => {
+    // The wordlist mis-classifies these (here/there="pronoun", yesterday="other"),
+    // so they hit the default-N fallback and were dropped/mis-collected. They must
+    // tag ADV so collectMannerParticipants keeps them as adjuncts.
+    for (const a of ["here", "there", "yesterday", "today", "now", "then"]) {
+      const tok = tokeniseEnglish(`the man runs ${a}`).find((t) => t.lemma === a);
+      expect(tok?.tag, `"${a}" tags ADV`).toBe("ADV");
+    }
+  });
+
+  it("Phase 76: 'her' is a possessive determiner before a noun, object pronoun elsewhere", () => {
+    // "her" is both the possessive determiner ("her dog") and the object pronoun
+    // ("see her"); the pronoun branch used to always win, dropping the possessive.
+    const poss = tokeniseEnglish("her dog runs")[0]!;
+    expect(poss.tag, "'her dog' → DET").toBe("DET");
+    expect(poss.lemma, "possessive lemma stays 'her'").toBe("her");
+    const possAdj = tokeniseEnglish("her big dog runs")[0]!;
+    expect(possAdj.tag, "'her big dog' → DET").toBe("DET");
+    // Object pronoun: followed by nothing, a conjunction, or a determiner (dative).
+    expect(tokeniseEnglish("the man sees her")[3]!.tag, "'sees her' → PRON").toBe("PRON");
+    expect(tokeniseEnglish("the man gives her the stone")[3]!.tag, "dative 'her the stone' → PRON").toBe("PRON");
   });
 });

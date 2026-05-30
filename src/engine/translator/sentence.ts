@@ -90,6 +90,12 @@ const DETERMINERS = new Set([
 const INTENSIFIERS = new Set([
   "very", "extremely", "really", "truly", "so", "too", "quite",
 ]);
+// Deictic locative/temporal adverbs that the wordlist mis-classifies (here/there
+// = "pronoun", yesterday/today = "other"), so they'd drop. Tag them ADV.
+const DEICTIC_ADVERBS = new Set([
+  "here", "there", "yesterday", "today", "tomorrow", "then", "away",
+  "everywhere", "nowhere", "somewhere", "anywhere",
+]);
 // Periphrastic (analytic) degree markers: "more big" → comparative, "most big"
 // → superlative. Like intensifiers they're dropped and raise the following
 // adjective's degree; the look-ahead guard keeps "more dogs" a quantifier.
@@ -169,6 +175,12 @@ const BARE_VERBS = new Set([
   // fallback and dropped the subject in "the man seems big"). They take an
   // adjectival complement like "be" — see LINKING_VERBS in parse.ts.
   "seem", "appear", "become", "remain", "stay", "look", "feel", "sound",
+  // Phase 76 (cont.): more posOf="other" intransitive/activity verbs that mis-
+  // tagged N in verb position. The tokenizer is purely lexical, so a word added
+  // here also reads V in noun slots — only OVERWHELMINGLY verb-dominant words
+  // (essentially never nouns) are added, where that trade is clearly positive.
+  // (Noun-ambiguous smile/shout/watch/march/drop/touch/sink/tie/rise excluded.)
+  "bleed", "heal", "mend", "bury", "seek", "kneel", "fill", "wander", "crouch", "chew", "pray",
 ]);
 const BARE_ADJECTIVES = new Set([
   "big", "small", "tall", "short", "fast", "slow", "new", "old",
@@ -178,6 +190,19 @@ const BARE_ADJECTIVES = new Set([
   "red", "blue", "green", "yellow", "black", "white",
   "wet", "dry", "full", "empty", "round", "straight", "sharp",
   "wise", "foolish", "brave", "kind", "cruel", "true", "false",
+  // Phase 76: common adjectives the wordlist leaves as posOf="other", so they
+  // hit the default-N fallback and an adjective+noun NP dropped the head ("the
+  // dark forest" → "the dark"). Adjective-only forms (verb-ambiguous open/close/
+  // clean/free excluded). Synonym-normalised ones (large/tiny…) are separate.
+  "dark", "soft", "warm", "cool", "dirty", "bright", "loud", "quiet",
+  "flat", "sour", "fresh", "broad", "sick", "dead", "alive", "ready",
+  "whole", "tight", "loose", "fat", "tame", "wild",
+  // Phase 76 (cont.): more posOf="other" adjectives mis-tagging N (psych/
+  // physical-state + quality adjectives). Adjective-primary, no common verb
+  // homonym (verb-ambiguous tired/blunt/blind excluded; -ed "tired" is the
+  // separate predicate-participle issue).
+  "angry", "hungry", "thirsty", "afraid", "ill", "gentle", "ancient", "modern",
+  "lazy", "busy", "clever", "stupid", "salty", "deaf", "lame",
 ]);
 
 const COMPARATIVE_BASES = new Set([
@@ -316,7 +341,22 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
         }
       }
     }
-    if (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w)) {
+    // "her" is BOTH the object pronoun ("see her") and the possessive determiner
+    // ("her dog") — and the pronoun branch below would always win, dropping the
+    // possessive. It is possessive when directly followed by the start of its NP
+    // (a noun/adjective/numeral), NOT a verb/determiner/conjunction/prep/end (the
+    // recipient "give her the stone" is followed by "the"). Let those fall to the
+    // DETERMINERS branch.
+    const herPossessive =
+      w === "her" &&
+      raw[i + 1] !== undefined &&
+      !PUNCT.test(raw[i + 1]!) &&
+      !isBareVerb(raw[i + 1]!) &&
+      !DETERMINERS.has(raw[i + 1]!) &&
+      !CONJUNCTIONS.has(raw[i + 1]!) &&
+      !PREPOSITIONS.has(raw[i + 1]!) &&
+      !AUX_VERBS.has(raw[i + 1]!);
+    if (!herPossessive && (PRONOUNS_OBJ.has(w) || PRONOUNS_SUBJ.has(w) || PRONOUNS_BOTH.has(w))) {
       const PRONOUN_LEMMA: Record<string, string> = {
         me: "i", him: "he", her: "she", us: "we", them: "they",
       };
@@ -428,6 +468,15 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
     }
     if (BARE_NUMERALS.has(w)) {
       tokens.push({ surface: w, lemma: w, tag: "NUM", features: {} });
+      continue;
+    }
+    // Deictic locative/temporal adverbs (here/there/yesterday/today…) and any
+    // wordlist-adverb (now/then…) tag ADV — otherwise they hit the default-N
+    // fallback and get dropped or mis-collected as an object ("yesterday the man
+    // ran" → "the man ran"; "...the dog there" → "...the dog"). Surfaced as a
+    // manner/locative adjunct via collectMannerParticipants.
+    if (DEICTIC_ADVERBS.has(w) || posOf(w) === "adverb") {
+      tokens.push({ surface: w, lemma: w, tag: "ADV", features: {} });
       continue;
     }
     if (w.length >= 3 && w.endsWith("ly")) {

@@ -55,6 +55,24 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## Backlog (top = next)
 
+- [ ] **Translator coinage rethink (USER REQUEST 2026-05-30): a coined term should
+      ALWAYS be a transparent compound of two EXISTING, semantically-related
+      lexemes — "firewater" = fire + water — never a random mash.** Today
+      `MECHANISM_COMPOUND.tryCoin` (`genesis/mechanisms/compound.ts`) is already
+      A+B, but when the related-meaning pool (`relatedMeanings` / `neighborsOf`)
+      is empty it falls back to a RANDOM lexicon word for partA and/or partB
+      (compound.ts:28-30) — that random concatenation of unrelated concepts is the
+      "very weird" coinage the user is seeing. Desired: (1) only compound when
+      there ARE ≥2 semantically-coherent existing parts that plausibly evoke the
+      target (kenning / calque style); (2) DROP the random-lexeme fallback;
+      (3) if no coherent pair exists, leave the term untranslated (literal-quote
+      fallback) rather than coin garbage. Principle: lexical gaps are filled by
+      transparent compounding/calque from native material — the cross-linguistic
+      default productive strategy. CAUTION: `MECHANISM_COMPOUND` is shared with the
+      genesis/sim coinage path, so this RIPPLES beyond the translator → treat as a
+      MILESTONE (verify determinism + simulation.test, byte-identity), not a
+      surgical fix. NEEDS DECISION: should the random fallback be removed globally
+      (genesis too) or only in the translator's `attemptGracefulFallback`?
 - [x] Trim PR long-pole tests `phase72_code_review_batch_b` and
       `phase73d_direction_vector` to <60s without weakening assertions.
 - [x] Ran the end-to-end `RUN_SLOW=1` pass (35.6 min wall; **1873 pass / 1 FAIL
@@ -245,6 +263,20 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Translator: noun-ambiguous verbs ("the dog runs and barks") dropped in
+      verb position.** Play session (2026-05-30): "the dog runs and barks loudly"
+      → "dog run bark loud" (Romance) / "the dog run bark" (Germanic) — "bark"
+      tags N (posOf="noun" — it's also a common noun) so verbCount=1, the
+      S-coordination split never fires, and "and barks loudly" is mangled
+      (contrast "runs and swims" which works — swim is posOf="verb"). AMBIGUOUS
+      (V vs N): the clean-verb path (add to BARE_VERBS) is pre-empted by
+      isBareNoun (posOf="noun" wins); fixing needs an `isBareNoun(w) &&
+      !BARE_VERBS.has(w)` precedence guard + adding the word, which would mis-tag
+      genuine noun uses ("the bark is brown" → verb). Low value/narrow; only worth
+      it with a curated set of high-frequency verb>noun words. NOTE: the
+      posOf="other" action verbs (shout/smile/whisper/yell/crawl/leap…) ARE clean
+      to add to BARE_VERBS like jump/climb (no ambiguity) if a play session
+      surfaces them.
 - [x] **Translator: flat/zero-derived manner adverbs ("runs fast") dropped.**
       DONE (see Done log). collectMannerParticipants now also claims a leftover
       unconsumed ADJ as a flat manner adverb (attributive + predicate adjectives
@@ -260,6 +292,26 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       adjective vs passive participle — "is tired" could be passive of "tire").
       Candidate: a curated -ed-adjective set, OR "Xed after a copula/linking verb →
       predicate adjective". Scope the V/ADJ ambiguity before doing.
+- [x] **Translator: "please give me" perturbs the recipient.** DONE (see Done log):
+      a leading PUNCT opener ("please") left the verb at index 1, failing imperative
+      detection (verbIdx===0) → no subject → word-by-word fallback. Now the verb is
+      "effectively initial" once leading PUNCT is skipped.
+      (CORRECTED 2026-05-30 — the earlier "multiple manner adverbs — only one
+      surfaces" item was a MISDIAGNOSIS: VP.adverbs correctly holds BOTH adverbs
+      ([there,quickly], [quickly,quiet]); the dropped one is just an UNRESOLVABLE
+      adverb in that leaf — "quick" has no form in the probed Germanic leaf, so the
+      deliberate graceful-drop fires, while resolvable here/today/there/quiet are
+      kept. NOT an adverb-count bug; same family as clause-final "away" dropping as
+      an unregistered concept.)
+- [ ] **Translator: equality/equative comparison "X is as ADJ as Y" garbled.**
+      Play session (2026-05-30): "the dog is as big as the man" → "the dog be the
+      man big" (the two "as" markers dropped, standard "the man" and "big"
+      mis-ordered). Parallels the comparative "X is bigger than Y" (handled) but the
+      "as…as" correlative degree frame isn't recognised. NON-TRIVIAL (mirror the
+      comparative path: a new degree value "equative"; capture "as ADJ as NP" → the
+      adjective + an equality standard like the "than"-standard; realise per the
+      target's equative strategy — particle/similative/reduplication). Scope before
+      doing; not a surgical one-liner.
 - [ ] **Translator: partitive "some of the X" drops the quantifier.** "some of the
       dogs run" → "the dog run" ("some" + "of" lost). Partitive "Q of the N" isn't
       modelled; low priority. Also: correlatives "either…or" drops "either",
@@ -342,6 +394,64 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: 15 more posOf="other" adjectives added to BARE_ADJECTIVES (cont.
+  of the dark/loud/dead fix).** Play session: "the angry dog bites the thief" →
+  "dog thief bite" ("angry" dropped). Probed posOf across ~44 candidate adjectives:
+  angry/hungry/thirsty/afraid/ill/gentle/ancient/modern/lazy/busy/clever/stupid/
+  salty/deaf/lame were posOf="other" and tagged N (verb-ambiguous tired/blunt/blind
+  excluded — tired is the separate -ed predicate-participle issue). Added to
+  BARE_ADJECTIVES so the adjective tags ADJ and the head noun is unambiguous (now
+  "the angry dog…" → "angry dog … bite", both kept). Tokenizer-data only; no engine/
+  rng change. + parser_role_ir regression test. Verified: tsc + 79 parser/dialect/
+  agnosticism tests green. (Also noted this session: ordinal "first" and -ly manner
+  adverb "slowly" drop — separate, non-trivial; left for later.)
+- **Translator: 22 common adjectives added to BARE_ADJECTIVES (adjective+noun NP
+  no longer drops the head).** Play session: "the man sees the dark forest" → "the
+  dark" ("forest" dropped) — "forest" resolves fine alone, but "dark" was missing
+  from BARE_ADJECTIVES (posOf="other"), so it tagged N, making "dark forest" two
+  nouns → "dark" became the head and "forest" was dropped (same class as the old
+  large/tiny synonym bug). Added the adjective-only posOf="other" forms (dark/soft/
+  warm/cool/dirty/bright/loud/quiet/flat/sour/fresh/broad/sick/dead/alive/ready/
+  whole/tight/loose/fat/tame/wild; verb-ambiguous open/close/clean/free excluded).
+  Now "the dark forest"/"loud dog"/"dead bird"/"warm house" keep the head.
+  Tokenizer-data only; no engine/rng change. + parser_role_ir regression test.
+  Verified: tsc + 110 + 40 parser/dialect/agnosticism/narrative tests green.
+- **Translator: a leading politeness/interjection opener ("please give me…") no
+  longer breaks the imperative parse.** A leading "please" (PUNCT) put the verb at
+  index 1, so imperative detection (`verbIdx===0`) failed, no subject was found,
+  and the whole clause fell back to word-by-word ("give i the stone" — recipient
+  lost its dative). Compute "effectively initial": verb is imperative when
+  everything before it is PUNCT, and the synthesised "you" subject is allowed when
+  everything before it is PUNCT-or-AUX. Now "please give me the stone" → imperative
+  "...give the stone to me" (matches bare "give me the stone"); plain imperatives,
+  AUX questions, and declaratives unaffected. Parser-only; no engine/rng change. +
+  parser_role_ir regression test. Verified: tsc + 86 + 39 parser/routing/tree/
+  narrative tests green. (Same iteration corrected a stale ROADMAP misdiagnosis:
+  "multiple manner adverbs only one surfaces" was actually resolution-dependent
+  graceful-drop, not an adverb-count bug — VP.adverbs correctly holds both.)
+- **Translator: "her" disambiguated — possessive determiner vs object pronoun.**
+  "her dog sees the cat" → "dog see the cat" (the possessor "her" dropped) because
+  "her" is BOTH the object pronoun ("see her") and the possessive determiner ("her
+  dog"), and the tokenizer's pronoun branch always won (tagging it PRON "she"),
+  while his/its are determiner-only and worked. Now "her" tags DET when directly
+  followed by the start of its NP (noun/adjective/numeral — not a verb/determiner/
+  conjunction/prep/end), else stays the object pronoun. So "her dog"/"her big dog"
+  → DET (possessor kept); "sees her" / dative "gives her the stone" (followed by
+  "the") → oblique pronoun "her". Tokenizer-data only; no engine/rng change. +
+  dialect_english regression test. Verified: tsc + 108 + 28 parser/agnosticism/
+  dialect/narrative tests green.
+- **Translator: deictic locative/temporal adverbs (here/there/yesterday/now) no
+  longer dropped.** Play session: "yesterday the man ran" → "the man run"
+  (yesterday lost); "the man sees the dog there" → "...the dog" (there lost). The
+  wordlist mis-classifies them (here/there posOf="pronoun", yesterday/today
+  "other"), so they hit the default-N fallback and were dropped or mis-collected
+  as an object (whereas now/then posOf="adverb" but there's no isBareAdverb check,
+  so they dropped too). Added a DEICTIC_ADVERBS set + a `posOf==="adverb"` catch
+  in the tokenizer → tag ADV, so collectMannerParticipants keeps them as adjuncts.
+  Now "yesterday the man ran" → "the man run yesterday"; "...the dog there"
+  surfaces "there"; existential "there is a dog" unaffected. Tokenizer-data only;
+  no engine/rng change. + dialect_english regression test. Verified: tsc + 128 +
+  27 parser/dialect/routing/agnosticism/typology/narrative tests green.
 - **Translator: copular/linking verbs take a predicate-adjective complement.**
   "the man seems/looks/feels big" dropped the subject because seem/look/feel/
   appear/remain/stay/sound aren't recognised as verbs (posOf="other" → default-N
@@ -967,6 +1077,25 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## NEEDS DECISION
 
+- **Translator anglocentrism — universal English-style pronoun suppletion.**
+  `realiseNP` (realise.ts ~405-413) maps object/oblique pronouns through a hard-
+  coded `PRONOUN_OBLIQUE` table (he→him, they→them, i→me, we→us, she→her) and
+  overrides the surface form with `lang.lexicon[oblique] ?? closedClassForm(lang,
+  oblique)`. Because `closedClassForm` ALWAYS synthesises a form, EVERY language
+  gets a distinct suppletive object-pronoun form — even languages with no pronoun
+  case suppletion (most), where "him" should be the "he" stem + a regular case
+  affix (or identical to "he"). The code comment claims it "otherwise keep[s] the
+  citation form and let[s] case morphology mark it", but that branch is unreachable
+  (closedClassForm never returns empty). Current tests ENCODE this behavior
+  (translator_agnosticism "object/oblique pronouns take their suppletive case form
+  him/me/us", narrative_composer "oblique caption he→him"), so changing it ripples.
+  DECISION NEEDED: gate suppletion on a typology flag (e.g. only when the language
+  has lexicalised oblique pronoun entries / a "pronominalCaseSuppletion" axis),
+  vs. keep the English-style default. Found 2026-05-30 while fixing a stale test
+  (fb9f69d) that had left the fast tier red. (Also: the fast tier was red and the
+  targeted-test loop discipline missed it — periodically run the FULL fast `npx
+  vitest run` to catch reds outside the touched files; it is green again as of
+  a24f37b: 1711 pass / 4 skip.)
 - **Engine realism — runaway word length (degenerate 20+ syllable words).**
   HIGH PRIORITY, found via narrative play session (Bantu, 60 gens, seed
   narr-bantu). The LEXICON itself accumulates absurdly long base forms — e.g.
