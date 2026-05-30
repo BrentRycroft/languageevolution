@@ -228,11 +228,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       milestone-level, verify with the full suite. (The realiser now respects
       numeralPosition correctly — see Done log — so this is purely the preset value.)
 - [ ] **Translator: comparative polish + modals** (standard capture + ordering
-      DONE — see Done log). Remaining: (a) render the comparative DEGREE (the
-      adjective carries degree="comparative" but no -er/comparative marker surfaces
-      — needs a comparative paradigm or particle); (b) per-typology comparative
-      STRATEGY (particle / conjoined / exceed / locational axis) + V-final standard
-      ordering. (Standard-marker "than" RETENTION in case langs: DONE — see Done
+      DONE — see Done log). Remaining: (a) DONE — the predicate adjective now
+      receives the comparative/superlative DEGREE paradigm (adj.degree.cmp/.sup),
+      matching the attributive path; surfaces wherever the language has the
+      paradigm (see Done log). NOTE: like all morphology, a language WITHOUT a
+      degree paradigm shows bare "big" (zero-marked comparative — attested, but if
+      we want a default particle strategy that's item (b)); (b) per-typology
+      comparative STRATEGY (particle / conjoined / exceed / locational axis) +
+      V-final standard ordering. (Standard-marker "than" RETENTION in case langs: DONE — see Done
       log; the richer per-typology strategy below remains, e.g. ablative-of-
       comparison for case langs instead of a particle.) (Modals (c): DONE — see Done log. CORRECTED DIAGNOSIS: only "can"
       was dropped; may/might/could/must/should/would already mapped to subjunctive
@@ -266,6 +269,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: predicate adjectives now get the comparative/superlative degree
+  marker.** "the king is bigger than the dog" surfaced bare "big" even when the
+  language had an `adj.degree.cmp` paradigm — the realiser applied degree
+  morphology to ATTRIBUTIVE adjectives (in the NP) but the copular-complement
+  (predicate) adjective path only did plural agreement, never degree. Mirrored
+  the degree-paradigm logic onto complementTokens (adj.degree.cmp/.sup), guarded
+  on a non-empty form. Now "...is bigger than..." → "big"+cmp affix where the
+  language has the paradigm (bare otherwise). Principle: degree morphology
+  attaches to the adjective independent of attributive-vs-predicative position.
+  Realiser-only; no engine/rng change. + grammar_audit predicate-comparative
+  regression test. Verified: tsc + 94 grammar_audit/parser/agnosticism/narrative
+  tests green.
 - **Translator: added 12 high-frequency action verbs the tokenizer didn't know.**
   jump/climb/sing/dance/read/write/ride/draw/wear/cook/drive/kick were unknown to
   the wordlist (`posOf`="other"), so they fell through every bare check to the

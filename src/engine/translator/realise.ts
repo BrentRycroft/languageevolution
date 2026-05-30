@@ -175,6 +175,17 @@ export function realiseSentence(
       const p = lang.morphology.paradigms["adj.num.pl"];
       if (p) af = inflect(af, p, lang, a.lemma);
     }
+    // Comparative/superlative degree on a PREDICATE adjective ("X is bigger
+    // than Y"). Mirrors the attributive path in realiseNP — degree morphology
+    // attaches to the adjective regardless of attributive-vs-predicative
+    // position. Surfaces only where the language has the paradigm.
+    if (af.length > 0 && a.degree === "comparative") {
+      const p = lang.morphology.paradigms["adj.degree.cmp"];
+      if (p) af = inflect(af, p, lang, a.lemma);
+    } else if (af.length > 0 && a.degree === "superlative") {
+      const p = lang.morphology.paradigms["adj.degree.sup"];
+      if (p) af = inflect(af, p, lang, a.lemma);
+    }
     return {
       surface: af.length > 0 ? af.join("") : `“${a.lemma}”`,
       form: af,

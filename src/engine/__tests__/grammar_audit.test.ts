@@ -80,6 +80,18 @@ describe("§gap-3 — comparative + superlative degree", () => {
     const adj = out.targetTokens.find((t) => t.englishLemma === "big");
     expect(adj?.targetSurface).toMatch(/est$/);
   });
+
+  it("comparative '-er' applies to a PREDICATE adjective ('X is bigger than Y')", () => {
+    // Pre-fix the degree paradigm was applied to attributive adjectives (in the
+    // NP) but NOT to a predicate/copular-complement adjective, so "the king is
+    // bigger than the dog" surfaced bare "big". Degree morphology attaches to
+    // the adjective regardless of attributive-vs-predicative position.
+    const lang = freshLang("predcmp");
+    lang.morphology.paradigms["adj.degree.cmp"] = p("adj.degree.cmp", ["e", "r"]);
+    const out = translateSentence(lang, "the king is bigger than the dog");
+    const adj = out.targetTokens.find((t) => t.englishLemma === "big");
+    expect(adj?.targetSurface, `predicate 'big' carries the comparative marker ("${out.targetTokens.map((t) => t.targetSurface).join(" ")}")`).toMatch(/er$/);
+  });
 });
 
 describe("§gap-4 — classifier system", () => {
