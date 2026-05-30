@@ -45,7 +45,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
 | **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. PLAY-SESSION FINDINGS (2026-05-29): the sentence path DOES gracefully coin missing words (populateForms→resolveOpen→cascade); `«lemma»` markers appear ONLY for lemmas not in the CONCEPTS registry (cascade's anti-gibberish guard) — e.g. "man"/"woman" are unregistered → markers (backlog: register them). Ditransitive double-object drops the theme (backlog, fix written, re-diagnose marker). |
-| **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
+| **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Discourse narrative interlinear gloss now uses **Leipzig abbreviations** (walk-PST.IPFV.DIR, friend-ACC, speak-3SG) instead of verbose lowercase category paths. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); some derivation concept-ids leak malformed lemmas into glosses (e.g. `take--tér.agt`, `coffee-prae-.tbef` — see backlog). |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; all presets de-anglicized — Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep), Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name), PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby); default/English have no attested duplicate pairs. |
@@ -245,6 +245,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Derivation: malformed concept-ids leak into narrative glosses.** Discourse
+      play session (2026-05-29) surfaced lemmas like `take--tér.agt` (double dash +
+      agentive `-tér` + a `.agt` suffix in the ID) and `coffee-prae-.tbef` (a
+      `prae-` prefix fragment + `.tbef` in the ID). These are derived/borrowed
+      concept ids whose raw morphological scaffolding (agentive nominaliser, the
+      `prae-` preverb, a temporal `tbef` tag) is being emitted as part of the
+      ENGLISH lemma rather than resolved to a clean gloss. Investigate the
+      derivation/grammaticalisation concept-id construction (semantics/
+      grammaticalization.ts, derivation) — the id should carry a clean gloss label
+      separate from its internal build recipe. Engine-side (derivation data) →
+      likely sim-rippling; scope before touching.
 - [ ] **Translator: sentential complement clauses are DROPPED** (play session
       2026-05-29). "the man knows that the dog runs" → "man know that" (the whole
       embedded clause "the dog runs" vanishes); "the man wants to run" → "man
@@ -269,6 +280,21 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Narrative: interlinear gloss now uses Leipzig Glossing Rules abbreviations.**
+  Discourse play session showed the morphological gloss as verbose lowercase
+  category paths — "walk.tense.past.aspect.ipfv.evid.dir", "friend.case.acc",
+  "speak.person.3sg". Rewrote `morphologicalGloss` (discourse_generate.ts) with a
+  Leipzig abbreviation map → "walk-PST.IPFV.DIR", "friend-ACC", "speak-3SG",
+  "snow-ACC", "make-PFV", "fish-GEN", "not-NEG". Stem and feature-block joined
+  with "-", stacked features with "."; free-form notes (compound:/compose:/colex
+  ↔) pass through untouched; unknown categories uppercase as a safe fallback.
+  Serves the immersive goal (a user can actually READ the morphology the engine
+  grew). Display-only — no engine/sim/rng change; the simple-narrative path and
+  per-token glossNotes are untouched. + narrative_discourse regression test
+  (Leipzig tags present, no verbose category path leaks). Verified: tsc + 50
+  discourse/composer/copula/poetry/logophoric/negation + 13 discourse tests
+  green. (Logged a derivation backlog: malformed concept-ids like `take--tér.agt`
+  leaking into glosses.)
 - **Translator: predicate adjectives now get the comparative/superlative degree
   marker.** "the king is bigger than the dog" surfaced bare "big" even when the
   language had an `adj.degree.cmp` paradigm — the realiser applied degree

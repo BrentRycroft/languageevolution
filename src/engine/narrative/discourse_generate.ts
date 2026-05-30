@@ -253,9 +253,51 @@ function genreRegisterFor(genre: DiscourseGenre): "high" | "low" | "neutral" {
   }
 }
 
+/**
+ * Leipzig Glossing Rules abbreviations for the grammatical categories the
+ * composer emits as glossNotes. Display-only: makes the interlinear gloss
+ * read like standard linguistics ("walk-PST.IPFV.DIR", "friend-ACC",
+ * "speak-3SG") instead of verbose lowercase category paths
+ * ("walk.tense.past.aspect.ipfv.evid.dir"). Serves the immersive goal of
+ * letting a user actually READ the morphology the engine grew.
+ */
+const LEIPZIG_GLOSS: Readonly<Record<string, string>> = {
+  past: "PST", pres: "PRS", present: "PRS", fut: "FUT", future: "FUT",
+  ipfv: "IPFV", pfv: "PFV", perf: "PRF", prf: "PRF", prog: "PROG", hab: "HAB",
+  nom: "NOM", acc: "ACC", gen: "GEN", dat: "DAT", abl: "ABL",
+  erg: "ERG", abs: "ABS", inst: "INS", loc: "LOC",
+  pl: "PL", sg: "SG", du: "DU",
+  dir: "DIR", rep: "REP", inf: "INFR",
+  subj: "SBJV", subjunctive: "SBJV", imp: "IMP", cond: "COND", opt: "OPT",
+  jus: "JUS", irr: "IRR", dub: "DUB", hort: "HORT",
+  pass: "PASS", act: "ACT",
+  negation: "NEG", neg: "NEG", logophoric: "LOG",
+};
+
+function abbreviateGlossNote(note: string): string {
+  // Free-form annotations (compound:/compose:/colex ↔) pass through untouched.
+  if (note.includes(":") || note.includes("↔") || note.includes(" ")) return note;
+  if (LEIPZIG_GLOSS[note]) return LEIPZIG_GLOSS[note]!;
+  // "category.value" → abbreviate the value (case.acc → ACC, person.3sg → 3SG).
+  const dot = note.lastIndexOf(".");
+  if (dot > 0) {
+    const val = note.slice(dot + 1);
+    return LEIPZIG_GLOSS[val] ?? val.toUpperCase();
+  }
+  return note.toUpperCase();
+}
+
 function morphologicalGloss(tokens: { englishLemma: string; glossNote: string }[]): string {
   return tokens
-    .map((t) => (t.glossNote ? `${t.englishLemma}.${t.glossNote.replace(/,/g, ".")}` : t.englishLemma))
+    .map((t) => {
+      if (!t.glossNote) return t.englishLemma;
+      const feats = t.glossNote
+        .split(",")
+        .map((n) => n.trim())
+        .filter(Boolean)
+        .map(abbreviateGlossNote);
+      return feats.length > 0 ? `${t.englishLemma}-${feats.join(".")}` : t.englishLemma;
+    })
     .filter((s) => s !== "?")
     .join("—");
 }
