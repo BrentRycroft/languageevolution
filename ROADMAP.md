@@ -38,19 +38,19 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Phonology (sound change) | solid | Mature; also the perf hot path (apply.ts). |
 | Phonotactics & prosody | partial | Drift + stress exist; assess depth when touched. |
 | Morphology (infl/deriv/fusion/ablaut) | partial | Broad coverage; assess realism per-axis. |
-| Syntax (order/alignment/agreement) | partial | Typology axes exist; check agnosticism. |
+| Syntax (order/alignment/agreement) | partial | Typology axes exist; check agnosticism. Soft Greenberg universals (grammar/universals.ts) enforce SOV↔postposition + SOV↔pre-adj/num/possessor (OV⟹GenN). Adposition order is caseStrategy-driven (realiser); case langs drop oblique adpositions (deliberate — possible realism gap, not yet a decision). |
 | Semantics (drift/colex/metaphor) | partial | Colexification + recarve exist; metaphor? assess. |
 | Lexicon (coin/borrow/compound/loss) | partial | Strong; compounding depth unassessed. |
 | Sociolinguistics (register/prestige/endangerment) | partial | Phase 72 added prestige/endangerment/bilingual. |
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
-| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. |
+| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. PLAY-SESSION FINDINGS (2026-05-29): (1) sentence-path NP/verb resolution is shallow (`lang.lexicon[lemma]`), so untranslatable words emit `«lemma»` markers instead of coining (backlog); (2) ditransitive double-object drops the theme (backlog, fix ready). |
 | **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; all presets de-anglicized — Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep), Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name), PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby); default/English have no attested duplicate pairs. |
 | **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
-| **Performance** | partial | apply.ts hot loop already early-continues (zero weight/prob) + caches the priority sort. CONFIRMED: rules are opaque `probabilityFor(w)` closures (catalog.ts, via `countSites`) with NO declarative phoneme targets — so safe inventory-based rule pre-filtering needs catalog-wide target metadata FIRST (a real refactor → NEEDS DECISION). Bundle: 944 kB main chunk (load-time). |
+| **Performance** | partial | Profiled (PROFILE_STEP via vitest, 2026-05-29): phonology = **64-67%** of step time, inventoryMgmt ~18%, genesis ~15%, all else <1%. So apply.ts IS the macro hot spot; its dominant cost is the per-word×rule `probabilityFor` (countSites scan + Math.pow). **DONE: trigger pre-filter (factory subset)** — factory rules (simpleSub/contextSub/mappingSub) now expose `triggers` (the `from`/mapping phonemes); the hot loop skips a rule via an O(1) `includes` check when none are present (provably probability 0). Byte-identical (perfcheck hashes c2e431df/524c8f2c/e7b438a3 unchanged); skips **26-30%** of probabilityFor calls → **0.8-1.7% faster phonology pass** (interleaved drift-cancelled A/B). NEGATIVE/reverted earlier: word-invariant scalar hoist (no win, allocation offset it — see Assessment notes; don't re-attempt). NEXT (bigger win, NEEDS DECISION): extend `triggers` to the ~43 inline catalog rules — would multiply the skip rate, but needs per-rule byte-identical auditing. Bundle: 944 kB main chunk (load-time). |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
 ## Backlog (top = next)
@@ -77,10 +77,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       above. Once `runslow-baseline.log` completes, MINE it for the slowest
       tests across ALL files — the verbose log has per-test ms — to find every
       mis-gated heavy file like historical.test.ts, not just the RUN_SLOW set.
-      NOTE: grep shows big loops — cluster_expansion 500, tone_sandhi 1000,
-      typological_completion 1000, sampling 3000 — in the FAST tier; verify
-      whether they break early / aren't sim.step before touching. Don't weaken
-      statistical/long-run assertions.)**
+      Don't weaken statistical/long-run assertions.) CHECKED 2026-05-29: the
+      previously-suspected fast-tier loops (cluster_expansion, tone_sandhi,
+      typological_completion, sampling) are actually CHEAP — 5/37/17/237ms — the
+      big loop bounds break early / aren't sim.step. NOT the long pole; lead
+      closed. The real fast-tier signal: full `npx vitest run` wall ≈ 149s with
+      cumulative collect ≈ 162s (across workers) — the COLLECT/transform cost
+      (module graph), not any single sim loop, is the thing worth a separate
+      look. Per-file fast-tier timing not yet captured.)**
 - [~] Baseline GUI play session — autonomous browser-driving is NOT available in
       this environment (no Playwright/screenshot/click tool; WebFetch only does
       public URLs as markdown — useless for a localhost JS SPA). Automatable
@@ -124,6 +128,33 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       correlation, likely with adjectivePosition / Greenbergian consistency +
       realiser wiring + per-preset values). NEEDS DECISION on default + drift
       behaviour before building — don't guess.
+- [ ] **Translator: sentence-path NP/verb resolution doesn't gracefully coin**
+      (HIGH value; prerequisite for the ditransitive fix below). The AST→Sentence
+      adapters resolve heads with a SHALLOW `lang.lexicon[lemma]` lookup
+      (ast.ts:205 `lookupForm`, used at 211/224/237; also `participantToNP`
+      ~443), NOT the 8-rung `lookupFormWithResolution` cascade. So any word a
+      language lacks (e.g. "bread" in Toki Pona) surfaces as an ugly `«bread»`
+      fallback marker (realise.ts wraps empty baseForm in « »), instead of
+      synthesising/colexifying/coining like the word-level `translate()` path
+      already does (routed last session). This is a concrete "translator is weak"
+      symptom. Fix: route those head resolutions through the cascade (graceful
+      coinage on). Broad-ish (several resolution points) + changes output for
+      currently-unresolved words only → full-suite-verify. Found via a play-session
+      inspector; `narrative_snapshot` asserts no `«»` markers, so this is testable.
+- [ ] **Translator: ditransitive double-object drops the theme** (READY fix,
+      blocked on the coinage item above). The parser (`parse.ts` collectParticipant)
+      collects only ONE post-verbal NP, so "give you the big stone" keeps the
+      recipient ("you", mislabelled theme) and SILENTLY DROPS the theme ("the big
+      stone"). The argframe already has `give:[agent,theme,recipient]` and the
+      `recipient` role surfaces downstream. WORKING fix (verified, then reverted):
+      skip consumed heads in collectParticipant's scan (no-op for single-object
+      calls) + for recipient-frame verbs collect a 2nd object and mark the first
+      as a dative `to`-PP adjunct → "give [theme] to [recipient]", placed per the
+      target's adposition typology (verified: Romance "I give big stone you",
+      Bantu "I give stone big to you", PIE SOV "I big stone you to give"). REVERTED
+      because it unmasks the `«bread»` marker on the snapshot sentence "i give you
+      the bread" (Toki Pona lacks bread) — do the coinage fix FIRST, then re-apply
+      (the 2 parser_role_ir regression tests are written; re-add them).
 - [x] Assess narrative generation (code-level): genuinely grammar-driven
       (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
       `synthesisIndex`-gated morphology; complex typology via the translator.
@@ -168,11 +199,48 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Realism: added the OV ⟹ GenN soft universal** (grammar/universals.ts).
+  `enforceTypologicalUniversals` already nudged SOV languages toward
+  postpositions + pre-noun adjective/numeral; it was missing the possessor
+  correlate. Greenberg's Universal 2/4: OV/postpositional languages
+  overwhelmingly place the genitive BEFORE the noun (GenN) — one of the
+  strongest word-order correlations. Added an SOV + possessor-"post" → "pre"
+  soft repair (same 1.5%/gen rate, so real exceptions persist), appended AFTER
+  the adjective/numeral rng draws so their outcomes stay byte-identical. Fires
+  during sims when a language drifts to SOV while areal spread/drift left
+  possessor-post (incoherent OV+NounGen). + 2 tests (positive repair + fully-
+  consistent-SOV no-op now incl. possessor). tsc + determinism (simulation.test)
+  + full fast suite (211 files / 1675) green — no trajectory regressions.
+- **Fixed a RED fast tier** (regression from `82a94a6`): the RC-ordering fix made
+  the relativizer strategy postnominal, but a pre-existing test
+  (`typological_routing.test.ts` "relativizer strategy: rel clause precedes
+  head") asserted the OLD prenominal order on an SVO language and was never
+  updated (I'd only added a new test elsewhere + run targeted tests, not this
+  file). A full `npx vitest run` caught it (1 failed / 1673 passed). Corrected the
+  stale test to assert POSTnominal (VO ⟹ NRel, Greenberg U24 / Dryer), matching
+  the realiser. Test-only; tsc + RC/agnosticism tests green. LESSON: after an
+  engine-behaviour change, grep the WHOLE test suite for assertions of the old
+  behaviour, not just the area's obvious tests.
+- **Perf: trigger pre-filter (factory subset).** Profiling (PROFILE_STEP via
+  vitest) showed phonology is 64-67% of step time, dominated by the per-word×rule
+  `probabilityFor` (countSites word-scan + Math.pow). The factory rules
+  (simpleSub/contextSub/mappingSub) have a provable necessary trigger (their
+  `from`/mapping phoneme — absent ⇒ probability 0), so added an optional
+  `triggers` field (types.ts) set by the 3 factories (catalog.ts) and an O(1)
+  allocation-free `includes` pre-check in the hot loop (apply.ts) that skips a
+  rule before paying for `probabilityFor` when no trigger is present. Byte-
+  identical (perfcheck hashes unchanged); skips 26-30% of probabilityFor calls →
+  0.8-1.7% faster phonology pass (interleaved drift-cancelled A/B). + invariant
+  test (apply.test) locking that any declared `triggers` truly forces 0. Principle:
+  inventory-based pre-filtering of inapplicable rules + O(1) phoneme-presence.
+  Earlier same-session NEGATIVE result: word-invariant scalar hoist showed no win
+  (allocation offset) → reverted (see below).
 - Perf-feasibility investigation: confirmed sound-change rules are opaque
   `probabilityFor(w)` closures (catalog.ts, via countSites) with no declarative
   phoneme targets — so the safe inventory-based rule pre-filter needs
   catalog-wide target metadata first (a real refactor). Logged under NEEDS
-  DECISION; not guessed.
+  DECISION; not guessed. (PARTIALLY SUPERSEDED: factory rules now expose
+  `triggers`; only the ~43 inline rules still lack declarative targets.)
 - De-anglicization COMPLETE across presets: added PIE (tree=wood, eye=face,
   flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby) — all
   registry-attested COLEX_PAIRS, duplicate forms removed, no new stale-freq. + a
@@ -260,6 +328,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## UX findings
 
+- 2026-05-29 (programmatic play session via a throwaway inspector — drove real
+  narrative + translateSentence output for romance/bantu/pie after 40 gens, read
+  it for quality). Narrative + most translations read plausibly and respect
+  per-language typology (SVO/SOV order, adj/poss/num placement, adposition
+  pre/post). TWO concrete issues found → backlog items: (a) `«lemma»` fallback
+  markers for words a language lacks (shallow sentence-path resolution); (b)
+  ditransitive theme silently dropped. Also confirmed (not a bug): case languages
+  (Romance) drop oblique adpositions ("over"/"with") while preposition/postposition
+  langs keep+place them per typology — the deliberate case-strategy behaviour. The
+  inspector approach works well as a GUI substitute; recreate it when driving output.
 - 2026-05-29: production `npm run build` is green (1200 modules, PWA service
   worker generated) after the drift/translator/narrative changes — app compiles
   + bundles cleanly. Main JS chunk is 944 kB (logged as a perf follow-up).
@@ -309,17 +387,49 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   the deep path's English round-trip inherits the translator-realiser limits
   (NEEDS DECISION); simple-render copular path lacks copula logic.
 
+- **Perf experiment — apply.ts scalar hoist (NEGATIVE result, 2026-05-29).**
+  Hypothesis: the per-word×rule hot loop recomputes 4 word-INVARIANT scalars
+  (stressBias [P67], naturalBias [P28c/39g], freqTier, catMomentum [P38e]) that
+  depend only on (rule, language); precomputing them once per lexicon pass
+  (indexed parallel to `_orderedChanges`, length-guarded fallback) should save
+  work. Implemented byte-identically (perfcheck hashes UNCHANGED: romance
+  c2e431df / pie 524c8f2c / bantu e7b438a3). Measured min-of-5 back-to-back vs a
+  stashed baseline: romance 6485→6582, pie 4328→4339, bantu 8167→8287 minMs —
+  i.e. WITHIN NOISE / marginally slower. Conclusion: the saving is below the
+  end-to-end noise floor (phonology is a fraction of sim.step; the dominant
+  apply.ts cost is the `probabilityFor` closures + the candidate inner loop), and
+  the per-pass `new Array(R)` allocation likely offsets it. REVERTED. Lesson for
+  future iterations: micro-scalar hoists in apply.ts aren't worth it — a real
+  perf win must target a MACRO hot spot identified by substep profiling.
+  HARNESS RECIPE (throwaway — recreate as a repo-root `*.test.ts`, then DELETE
+  it: the default `npx vitest` collects repo-root test files and these are heavy):
+  (1) byte-identical — step romance/pie/bantu 80 gens (seeds perf-r/perf-p/perf-b),
+  concat each live leaf's sorted lexicon, `fnv1a`; baseline hashes romance
+  c2e431df / pie 524c8f2c / bantu e7b438a3. (2) substep profile — set
+  `process.env.PROFILE_STEP="1"`, step 100 gens, read `sim.getCumulativeTimings()`
+  (phonology 64-67%, inventoryMgmt ~18%, genesis ~15%). (3) interleaved A/B —
+  `changesForLang` (steps/helpers) + `applyChangesToLexicon` (apply), one process,
+  to cancel the ~±10% run-to-run machine drift.
+
 ## NEEDS DECISION
 
-- **Engine performance — rule pre-filtering (sim speed).** The per-step hot
-  path (apply.ts) evaluates every active sound-change rule against every word;
-  many are inapplicable to a given language (target phonemes absent) yet still
-  evaluated. Safe win: pre-filter inapplicable rules once per language/step.
-  BLOCKED: rules are opaque `probabilityFor(w)` closures (catalog.ts) with no
-  declarative target metadata, so "this rule can't apply here" isn't statically
-  knowable. To enable: add a declarative `targets` field (phonemes/features each
-  rule needs) across catalog.ts + filter on it, with byte-identical
-  verification. A sizeable, careful refactor — want me to take it on?
+- **Engine performance — extend the trigger pre-filter to inline rules.**
+  The factory subset is DONE (see Done log): factory rules expose `triggers`,
+  the hot loop skips them via O(1) presence check, skipping 26-30% of
+  probabilityFor calls / 0.8-1.7% faster phonology pass, byte-identical. The
+  REMAINING win: the ~43 inline catalog.ts rules (deletion/insertion/stress/
+  tone/harmony/metathesis + many substitutions) still lack `triggers`, so they're
+  always evaluated. Many of them DO have a provable necessary phoneme (a single
+  `from`), and adding `triggers` to those would multiply the skip rate — but each
+  needs individual auditing to confirm absence-⇒-probability-0 (rules like
+  deletion/insertion/stress have NO single trigger and must stay unfiltered).
+  This is the "sizeable careful refactor" from before, now with data showing the
+  per-rule payoff. Want me to take on the inline-rule audit (one careful pass,
+  byte-identical verified via a recreated perfcheck harness — see recipe above)?
+  The invariant test (apply.test) is committed and already guards every declared
+  `triggers`. NOTE: phonology is 64-67% of step time, so this is the highest-
+  leverage perf area; inventoryMgmt (~18%) + genesis (~15%) are the next macro
+  targets.
 
 - **Translator realiser refactor.** `realise.ts` is a ~766-line monolith
   hardcoding word-order/alignment/NP-VP realisation; the Phase 41c stage-hook +

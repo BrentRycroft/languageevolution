@@ -59,6 +59,18 @@ export interface SoundChange {
   positionBias?: PositionBias;
   stressFilter?: "stressed" | "unstressed" | "pretonic" | "any";
   probabilityFor: (word: WordForm) => number;
+  /**
+   * Phase 74 (perf): necessary-trigger phonemes. If set, `probabilityFor`
+   * is GUARANTEED to return 0 for any word containing NONE of these
+   * phonemes (e.g. a substitution `from→to` can't fire without `from`
+   * present). The hot loop uses an O(1) phoneme-presence check to skip
+   * such rules before paying for the `probabilityFor` word-scan — a
+   * byte-identical fast path for the existing `base <= 0` early-out.
+   * Omit it for rules whose probability can be non-zero regardless of
+   * any specific phoneme (deletion/insertion/stress/tone): those are
+   * always evaluated. Set ONLY when absence provably forces probability 0.
+   */
+  triggers?: readonly Phoneme[];
   apply: (word: WordForm, rng: Rng) => WordForm;
   enabledByDefault: boolean;
   baseWeight: number;

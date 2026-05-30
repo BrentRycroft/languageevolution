@@ -64,6 +64,8 @@ function simpleSub(
     category,
     description,
     probabilityFor: (w) => 1 - Math.pow(1 - perSiteProb, countSites(w, (p) => p === from)),
+    // Phase 74 (perf): `from` must be present for this rule to fire.
+    triggers: [from],
     apply: (word, rng) => {
       const idx = pickSite(word, (p) => p === from, rng);
       if (idx < 0) return word;
@@ -93,6 +95,9 @@ function contextSub(
     category,
     description,
     probabilityFor: (w) => 1 - Math.pow(1 - perSiteProb, countSites(w, pred)),
+    // Phase 74 (perf): `from` is a necessary (not sufficient) condition;
+    // absent `from` ⇒ pred never matches ⇒ probability 0.
+    triggers: [from],
     apply: (word, rng) => {
       const idx = pickSite(word, pred, rng);
       if (idx < 0) return word;
@@ -121,6 +126,8 @@ function mappingSub(
     category,
     description,
     probabilityFor: (w) => 1 - Math.pow(1 - perSiteProb, countSites(w, pred)),
+    // Phase 74 (perf): only the mapping's source phonemes can trigger it.
+    triggers: [...m.keys()],
     apply: (word, rng) => {
       const idx = pickSite(word, pred, rng);
       if (idx < 0) return word;
