@@ -245,14 +245,10 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
-- [ ] **Translator: flat/zero-derived manner adverbs ("runs fast") dropped.**
-      Play session (2026-05-30): "the dog runs fast" → "the dog run" — "fast" tags
-      ADJ (it's in BARE_ADJECTIVES) so it's not collected as a manner adverb (the
-      manner collector only takes ADV tokens) and drops post-verbally. Affects the
-      flat adverbs that share an adjective form (fast/hard/well/late/early/high/
-      low/straight…). Candidate: post-verbal bare ADJ with no copula → treat as a
-      manner adverb. Translator (parser). Scope the ambiguity (predicate adjective
-      vs manner adverb) before doing.
+- [x] **Translator: flat/zero-derived manner adverbs ("runs fast") dropped.**
+      DONE (see Done log). collectMannerParticipants now also claims a leftover
+      unconsumed ADJ as a flat manner adverb (attributive + predicate adjectives
+      are already consumed by the time it runs, so a leftover is adverbial).
 - [ ] **Translator: partitive "some of the X" drops the quantifier.** "some of the
       dogs run" → "the dog run" ("some" + "of" lost). Partitive "Q of the N" isn't
       modelled; low priority. Also: correlatives "either…or" drops "either",
@@ -335,6 +331,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: flat manner adverbs ("the dog runs fast") no longer dropped.**
+  "fast"/"hard"/"well" etc. share an adjective form (in BARE_ADJECTIVES) so they
+  tag ADJ; the manner-adverb collector took only ADV tokens, so a post-verbal flat
+  adverb was dropped ("the dog runs fast" → "the dog run"). collectMannerParticipants
+  now ALSO claims a still-unconsumed ADJ as a manner adjunct — by the time it runs,
+  attributive (NP walk) and predicate (copular sweep) adjectives are already
+  consumed, so a leftover ADJ is functioning adverbially (zero-derived/flat adverb).
+  Now "the dog runs fast" → "the dog run fast", "the man works hard" → "...work
+  hard"; attributive "the big dog runs" and predicate "the dog is big" unchanged.
+  Parser-only; no engine/rng change. + parser_role_ir regression test ('fast'
+  captured as manner; 'big' stays attributive). Verified: tsc + 110 + 37 parser/
+  grammar/agnosticism/routing/narrative tests green.
 - **Translator: three-way+ NP coordination no longer drops the middle conjunct.**
   Play session: "the man and woman and child run" → "man and child run" (woman
   lost). The parser correctly stored two flat sibling coordination modifiers

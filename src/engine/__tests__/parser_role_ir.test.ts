@@ -159,6 +159,18 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc.negated).toBe(true);
   });
 
+  it("flat manner adverb ('runs fast') is captured, not dropped", () => {
+    // "fast" tags ADJ; pre-fix the manner collector took only ADV tokens, so a
+    // post-verbal flat adverb was dropped. A leftover ADJ (attributive +
+    // predicate ones already claimed) is a flat manner adverb.
+    const rc = parse("the dog runs fast");
+    const manner = rc.participants.find((p) => p.role === "manner" && p.lemma === "fast");
+    expect(manner, "'fast' captured as a manner adjunct").toBeDefined();
+    // An ATTRIBUTIVE adjective must NOT be mistaken for a manner adverb.
+    const rc2 = parse("the big dog runs");
+    expect(rc2.participants.some((p) => p.role === "manner"), "'big' stays attributive, not manner").toBe(false);
+  });
+
   it("'cannot' splits to 'can' + negation and keeps the subject", () => {
     // "cannot" is the one-word spelling of "can not"; pre-fix it tagged as a
     // noun and BECAME the subject, dropping the real subject ("the king cannot

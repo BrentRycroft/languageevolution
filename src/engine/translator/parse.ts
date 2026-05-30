@@ -330,13 +330,18 @@ function collectMannerParticipants(tokens: EnglishToken[], consumed: Set<number>
   const out: Participant[] = [];
   for (let i = 0; i < tokens.length; i++) {
     if (consumed.has(i)) continue;
-    if (tokens[i]!.tag !== "ADV") continue;
+    // ADV tokens are manner adverbs. A still-unconsumed ADJ at this point is a
+    // FLAT (zero-derived) manner adverb — "the dog runs fast" — because the NP
+    // walk and copular-complement sweep have already claimed attributive and
+    // predicate adjectives; a leftover adjective is functioning adverbially.
+    if (tokens[i]!.tag !== "ADV" && tokens[i]!.tag !== "ADJ") continue;
     out.push({
       lemma: tokens[i]!.lemma,
       pos: "N",
       role: "manner",
       adjunct: true,
     });
+    consumed.add(i);
   }
   return out;
 }
