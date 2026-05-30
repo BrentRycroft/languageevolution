@@ -1159,6 +1159,10 @@ function translateViaTree(
   const translated: TranslatedToken[] = realised.map((r) => ({
     englishLemma: r.english,
     englishTag:
+      // Phase 74: the intonation-question marker "?" is sentence-final
+      // PUNCTUATION, not a determiner word — classify it as such so it isn't
+      // glossed/surfaced as a DET.
+      r.english === "?" ? "PUNCT" :
       r.role === "V" ? "V" :
       r.role === "S" || r.role === "O" || r.role === "PP-NP" || r.role === "POSS" ? "N" :
       r.role === "ADJ" ? "ADJ" :
@@ -1171,6 +1175,7 @@ function translateViaTree(
     targetForm: r.form.length > 0 ? r.form : [r.surface],
     targetSurface: r.surface,
     glossNote:
+      r.english === "?" ? "" :
       r.role === "DET" ? "art/det" :
       r.role === "PREP" ? "prep" :
       r.role === "POSTP" ? "postp" :

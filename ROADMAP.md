@@ -236,6 +236,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: the intonation-question "?" marker is now PUNCT, not a DET word.**
+  Intonation-strategy yes/no questions append a "?" (realise.ts) as a textual
+  question cue; it was tagged role DET, so it surfaced as a determiner word
+  ("?(?/DET)") with glossNote "art/det". translateViaTree now classifies the "?"
+  marker as englishTag PUNCT with empty glossNote. The marker still appears
+  (grammar_audit "?" test passes); it's just correctly punctuation. Surgical,
+  translator-only. tsc + targeted tests green (grammar_audit, typological_routing,
+  translator_reverse — 34). Principle: "?" is sentence punctuation, not a lexeme.
 - **Translator realiser: prenominal numeral/possessor now placed BEFORE the head
   in post-adjective languages.** In the `adjectivePosition === "post"` branch of
   realiseNP, `numPos === "pre"` (and `possPos === "pre"`) tokens were pushed AFTER
