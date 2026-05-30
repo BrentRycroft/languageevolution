@@ -60,18 +60,22 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     }
   });
 
-  it("numeral placement follows the language's modifier order (Bantu post, English pre)", () => {
-    for (const [name, build] of [["bantu", presetBantu], ["english", presetEnglish]] as const) {
-      const lang = protoOf(build, `agn-num-${name}`);
+  it("numeral placement follows grammar.numeralPosition (pre vs post), independent of adjectivePosition", () => {
+    // numeralPosition is its OWN typological axis — it must NOT be conflated
+    // with adjectivePosition. Toggle it on one (post-adjective) language and
+    // verify the numeral moves accordingly.
+    const lang = protoOf(presetBantu, "agn-num");
+    for (const pos of ["pre", "post"] as const) {
+      lang.grammar.numeralPosition = pos;
       const { targetTokens: t } = translateSentence(lang, "the king sees two dogs");
       const num = idxOf(t, "two");
       const noun = idxOf(t, "dog");
-      expect(num, `${name}: 'two' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
-      expect(noun, `${name}: 'dog' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
-      if (lang.grammar.adjectivePosition === "post") {
-        expect(num, `${name}: post-modifier → numeral 'two' after noun 'dog' ("${surface(t)}")`).toBeGreaterThan(noun);
+      expect(num, `${pos}: 'two' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
+      expect(noun, `${pos}: 'dog' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
+      if (pos === "post") {
+        expect(num, `num=post → 'two' after 'dog' ("${surface(t)}")`).toBeGreaterThan(noun);
       } else {
-        expect(num, `${name}: pre-modifier → numeral 'two' before noun 'dog' ("${surface(t)}")`).toBeLessThan(noun);
+        expect(num, `num=pre → 'two' before 'dog' ("${surface(t)}")`).toBeLessThan(noun);
       }
     }
   });

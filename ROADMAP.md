@@ -220,6 +220,13 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       — investigate why coinage fails for a registered concept (isGrounded?). NB:
       registering concepts ripples genesis (need.ts checks raw `lex[m]`), so that
       path is milestone-level; the synonym-map path is the fast one.
+- [ ] **(preset, ripples sim) Bantu numeralPosition should be "post" (authentic).**
+      Bantu doesn't set `numeralPosition` → defaults to "pre", so Bantu numerals
+      render prenominally. Real Bantu is postnominal ("imbwa zibiri" = dogs two).
+      Set `seedGrammar.numeralPosition: "post"` in bantu.ts (+ check germanic/pie/
+      romance/tokipona for the right value). Ripples sim (grammar drift/areal) →
+      milestone-level, verify with the full suite. (The realiser now respects
+      numeralPosition correctly — see Done log — so this is purely the preset value.)
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -229,6 +236,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator realiser: prenominal numeral/possessor now placed BEFORE the head
+  in post-adjective languages.** In the `adjectivePosition === "post"` branch of
+  realiseNP, `numPos === "pre"` (and `possPos === "pre"`) tokens were pushed AFTER
+  the head+adjectives, so a num=pre language rendered "dog big three" instead of
+  "three dog big" — numeralPosition was effectively conflated with
+  adjectivePosition. Fixed to mirror the pre-adjective branch (pre→before head,
+  post→after). + rewrote the numeral-placement agnosticism test to verify it
+  follows `numeralPosition` (toggled pre/post), NOT adjectivePosition — they're
+  independent axes (the old test asserted the conflation). tsc + targeted tests
+  green (translator_agnosticism, typological_routing, narrative_snapshot,
+  grammar_audit — 65). Translator-only, sim-non-rippling. Principle: numeral &
+  genitive order are typological axes independent of adjective order.
 - **Translator: do-support negation "do not VERB" no longer drops the verb.**
   "the dogs do not see the birds" rendered "dog not do" — bare "do" (unlike
   "does"/"did", already AUX) is also a bare verb, so the tokenizer tagged it a

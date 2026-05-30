@@ -537,12 +537,17 @@ function realiseNP(
     if (ctx.possPos === "post") out.push(...possTokens);
   } else {
     out.push(...detTokens);
+    // Phase 74: prenominal numerals/possessors belong BEFORE the head even in
+    // post-adjective languages — numeralPosition/possessorPosition are
+    // independent of adjectivePosition. Pre-fix these were pushed AFTER the
+    // head+adjectives, so a num=pre language (e.g. Bantu drifted to pre)
+    // rendered "dog big three" instead of "three dog big".
+    if (ctx.numPos === "pre") out.push(...numTokens);
+    if (ctx.possPos === "pre") out.push(...possTokens);
     out.push(head);
     out.push(...adjTokens);
     if (ctx.numPos === "post") out.push(...numTokens);
     if (ctx.possPos === "post") out.push(...possTokens);
-    if (ctx.numPos === "pre") out.push(...numTokens);
-    if (ctx.possPos === "pre") out.push(...possTokens);
   }
   out.push(...ppTokens);
   if (np.coord) {
