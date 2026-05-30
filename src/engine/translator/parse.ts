@@ -678,16 +678,23 @@ function extractRelativeClause(tokens: EnglishToken[]): RelExtraction | null {
     if (!isWhRel && !isThatRel) continue;
     const prev = tokens[i - 1]!;
     if (prev.tag !== "N" && prev.tag !== "PRON") continue;
-    // Find the relative-clause verb (first V after the relativiser).
+    // A predicate head is a lexical verb OR a copular AUX ("is/are/was…",
+    // lemmatised to "be"). Treating the copula as a verb here lets a copular
+    // matrix ("the dog that runs IS big") or a copular RC ("the dog that IS
+    // big runs") be split correctly — otherwise no matrix verb was found and
+    // the whole sentence mis-parsed as a single clause ("that run").
+    const isPredHead = (t2: EnglishToken) =>
+      t2.tag === "V" || (t2.tag === "AUX" && t2.lemma === "be");
+    // Find the relative-clause predicate head (first after the relativiser).
     let relVIdx = -1;
     for (let j = i + 1; j < tokens.length; j++) {
-      if (tokens[j]!.tag === "V") { relVIdx = j; break; }
+      if (isPredHead(tokens[j]!)) { relVIdx = j; break; }
     }
     if (relVIdx < 0) continue;
-    // Matrix verb AFTER the RC verb (typical for subject-RC).
+    // Matrix predicate head AFTER the RC verb (typical for subject-RC).
     let matrixVAfter = -1;
     for (let j = relVIdx + 1; j < tokens.length; j++) {
-      if (tokens[j]!.tag === "V") { matrixVAfter = j; break; }
+      if (isPredHead(tokens[j]!)) { matrixVAfter = j; break; }
     }
     if (matrixVAfter >= 0) {
       return {
@@ -697,10 +704,10 @@ function extractRelativeClause(tokens: EnglishToken[]): RelExtraction | null {
         relLemma: t.lemma,
       };
     }
-    // Matrix verb BEFORE the RC (post-modifier on object).
+    // Matrix predicate head BEFORE the RC (post-modifier on object).
     let matrixVBefore = -1;
     for (let j = i - 1; j >= 0; j--) {
-      if (tokens[j]!.tag === "V") { matrixVBefore = j; break; }
+      if (isPredHead(tokens[j]!)) { matrixVBefore = j; break; }
     }
     if (matrixVBefore >= 0) {
       return {

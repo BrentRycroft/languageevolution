@@ -245,6 +245,21 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Translator: conditional / adverbial-subordinate clauses drop the main
+      verb.** Play session (2026-05-30): "if the dog runs the man walks" → "if dog
+      run man" (main-clause verb "walks" lost). "if/when/because/while/though" +
+      two clauses isn't split into matrix + subordinate; like sentential complement
+      clauses, this needs recursive clause parsing (the `embeddedIn`/two-clause
+      path). Milestone-ish — log, don't rush. (S-coordination and relative clauses
+      ARE handled; this is the remaining multi-clause gap alongside complements.)
+- [ ] **Translator: "without" (privative) dropped in case langs, reversing
+      meaning.** "the man without the dog runs" → Romance "man run dog" (reads as
+      "man runs dog" — transitive). Same family as comparative "than" (fixed) and
+      passive "by": a meaning-critical non-spatial adposition dropped by the
+      case-strategy oblique-adposition drop. Candidate fix: extend the realisePP
+      "than"-style exemption to privative "without" (and maybe "with"), OR apply a
+      dedicated case. Translator (realiser); scope which adpositions are
+      meaning-critical vs role-recoverable-from-case before doing.
 - [x] **Translator: degree adverb "very" dropped.** DONE (see Done log). "very"
       now raises the following NP-adjective to degree="intensive" (parser walk),
       realised by full reduplication (big→big-big). FOLLOW-UPS (logged, not done):
@@ -310,6 +325,19 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: relative clause + COPULAR matrix no longer collapses.** Play
+  session: "the dog that runs is big" → "that run" (subject "dog", copula "is",
+  complement "big" ALL dropped; the relativiser "that" became the subject and the
+  RC verb "run" the matrix). Cause: `extractRelativeClause` searched for the matrix
+  verb by tag==="V" only, but a copular matrix's head is the AUX "is/are/was…"
+  (lemma "be"), so no matrix verb was found, extraction bailed, and the sentence
+  mis-parsed as one clause. Added an `isPredHead` helper (V OR copular AUX "be")
+  used for the RC-verb and both matrix-verb searches → "the dog [that runs] is
+  big" splits into matrix "the dog is big" (copula + complement "big") + RC "runs"
+  on "dog"; also fixes copular RCs ("the dog that is big runs"). Subject/object
+  relatives + verbal matrices unchanged. Parser-only; no engine/rng change. +
+  parser_role_ir regression test. Verified: tsc + 86 + 35 parser/routing/RC/
+  agnosticism/narrative tests green.
 - **Translator: "very" intensifies the adjective (via reduplication) instead of
   being dropped.** Play session: "the very big dog" → "big dog" — "very" mis-tagged
   as a noun and vanished. Added an INTENSIFIERS set; in the NP adjective left-walk

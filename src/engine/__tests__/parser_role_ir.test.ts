@@ -286,6 +286,23 @@ describe("Phase 73c Phase 3 — parseSyntaxAllAsClauses (multi-clause)", () => {
     }
   });
 
+  it("subject relative clause + COPULAR matrix ('the dog that runs is big')", () => {
+    // The matrix predicate is a copula ("is big") — the AUX "is" is tagged AUX,
+    // not V, so the relative-clause extractor found no matrix verb and the whole
+    // sentence mis-parsed to verb=run / subject="that". Treating a copular AUX as
+    // a predicate head splits it correctly: matrix = copular "be" + complement
+    // "big", subject "dog" carrying the relative-clause modifier.
+    const all = parseAll("the dog that runs is big");
+    expect(all.length).toBe(1);
+    const matrix = all[0]!;
+    expect(matrix.predicate.lemma, "matrix verb is the copula").toBe("be");
+    expect(matrix.predicate.complement?.[0]?.lemma, "complement adjective 'big'").toBe("big");
+    const dog = findP(matrix, "dog");
+    expect(dog, "subject 'dog' present").toBeDefined();
+    expect(dog!.modifiers?.some((m) => m.kind === "relative"), "'dog' carries a relative modifier").toBe(true);
+    expect(findP(matrix, "that"), "relativiser 'that' is NOT a participant").toBeUndefined();
+  });
+
   it("relative clause (who) attaches as a modifier on the antecedent", () => {
     const all = parseAll("the king who sees the wolf walks");
     const matrix = all[0]!;
