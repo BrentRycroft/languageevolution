@@ -532,6 +532,27 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## NEEDS DECISION
 
+- **Engine realism — runaway word length (degenerate 20+ syllable words).**
+  HIGH PRIORITY, found via narrative play session (Bantu, 60 gens, seed
+  narr-bantu). The LEXICON itself accumulates absurdly long base forms — e.g.
+  `arm` = 19 phonemes, `coconut-kin` = 23, `ship`/`coconut` = 21, `kettle`/
+  `mortar-bowl`/`narrow` = 20 — shaped as a long RUN of identical `aː˧` syllables
+  with an ILLEGAL final coda (k/t) despite Bantu's strict CV (maxCoda 0). No
+  language has 20-syllable basic nouns; this is a major realism hole (garbage
+  output) and likely a phonotactics/repair non-convergence: medial/paragogic
+  vowel epenthesis (catalog.ts insertion.* + phonotactics.ts medial repair)
+  inserts vowels that consonant-erosion then strips back to bare vowels, with NO
+  upper length ceiling, so the form grows unboundedly over generations.
+  Root not pinned (multi-process: epenthesis × lenition/deletion × repair).
+  Options: (a) add a GROWTH guard — reject a sound-change/repair that lengthens a
+  word already past a sane ceiling (~16 phonemes / ~8 syllables), symmetric to the
+  existing length FLOOR in isFormLegal/applyChangesToWord; (b) make the
+  phonotactic repair converge + actually fix final codas (it's leaving them);
+  (c) cap epenthesis when the word is already long. ALL ripple sim (change
+  lexicons) → milestone-level, verify with the FULL suite + expect to update
+  hash/snapshot tests for affected languages. Diagnose the dominant growth source
+  first (instrument which rule/repair adds the `aː` runs). Want me to take it on?
+
 - **Engine performance — extend the trigger pre-filter to inline rules.**
   The factory subset is DONE (see Done log): factory rules expose `triggers`,
   the hot loop skips them via O(1) presence check, skipping 26-30% of
