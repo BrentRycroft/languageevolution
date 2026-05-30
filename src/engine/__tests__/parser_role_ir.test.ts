@@ -77,6 +77,78 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc.participants.filter((p) => !p.adjunct)).toHaveLength(1);
   });
 
+  it("ditransitive double-object 'give RECIPIENT THEME': both kept (theme not dropped)", () => {
+    // Pre-fix the parser kept only the first post-verbal NP (the recipient,
+    // mislabelled theme) and silently dropped the actual theme. English
+    // double-object: "give [the man] [the stone]" → recipient=man, theme=stone.
+    // The recipient becomes a dative adjunct so it surfaces per the target's
+    // adposition typology.
+    const rc = parse("the woman gives the man the stone");
+    expect(findP(rc, "woman")!.role).toBe("agent");
+    const man = findP(rc, "man");
+    const stone = findP(rc, "stone");
+    expect(stone, "theme 'stone' must not be dropped").toBeDefined();
+    expect(man, "recipient 'man' must be kept").toBeDefined();
+    expect(stone!.role).toBe("theme");
+    expect(man!.role).toBe("recipient");
+    expect(man!.adjunct, "recipient surfaces as a dative adjunct").toBe(true);
+  });
+
+  it("comparative 'X is bigger than Y' keeps the adjective complement (not 'X is Y')", () => {
+    // "than" introduces a comparison standard, not an object; pre-fix the parser
+    // grabbed Y as a patient, which suppressed the copular complement sweep so
+    // the comparative adjective was dropped, yielding nonsense ("king is dog").
+    const rc = parse("the king is bigger than the dog");
+    expect(rc.predicate.lemma).toBe("be");
+    expect(rc.predicate.complement?.[0]?.lemma).toBe("big");
+    expect(rc.predicate.complement?.[0]?.degree).toBe("comparative");
+    expect(rc.participants.find((p) => p.lemma === "dog" && !p.adjunct), "'dog' must not be a spurious object").toBeUndefined();
+    // The standard "than the dog" is captured as a comparison oblique.
+    const dogStd = rc.participants.find((p) => p.lemma === "dog" && p.adjunct);
+    expect(dogStd, "comparison standard 'dog' captured as an oblique").toBeDefined();
+    expect(dogStd!.preposition).toBe("than");
+  });
+
+  it("do-support negation 'do not VERB' keeps the real verb + object", () => {
+    // "do" is both a main verb and the do-support auxiliary; pre-fix bare "do"
+    // (unlike "does"/"did", already AUX) was tagged a main verb, so "the dogs do
+    // not see the birds" picked "do" as the predicate and dropped "see"/"birds".
+    const rc = parse("the dogs do not see the birds");
+    expect(rc.predicate.lemma).toBe("see");
+    expect(rc.negated).toBe(true);
+    expect(findP(rc, "dog"), "subject 'dog' kept").toBeDefined();
+    expect(findP(rc, "bird"), "object 'bird' not dropped").toBeDefined();
+  });
+
+  it("'do' stays a main verb when it isn't do-support ('I do my work')", () => {
+    const rc = parse("i do my work");
+    expect(rc.predicate.lemma).toBe("do");
+  });
+
+  it("synonym adjectives ('large'/'tiny') tag as ADJ, not as the noun head", () => {
+    // Pre-fix the tokenizer didn't recognise large/tiny as adjectives → they
+    // were tagged N, so the SECOND noun became the head and the real head
+    // ("bird") was dropped. Normalizing large→big / tiny→small BEFORE
+    // POS-tagging fixes the NP parse.
+    const rc = parse("the large dog sees the tiny bird");
+    const dog = findP(rc, "dog");
+    const bird = findP(rc, "bird");
+    expect(dog, "subject head 'dog' kept").toBeDefined();
+    expect(bird, "object head 'bird' not dropped").toBeDefined();
+    expect(dog!.modifiers?.some((m) => m.kind === "adjective"), "'large' is an adjective on dog").toBe(true);
+    expect(bird!.modifiers?.some((m) => m.kind === "adjective"), "'tiny' is an adjective on bird").toBe(true);
+  });
+
+  it("prepositional dative 'give THEME to RECIPIENT' still parses (no double-object misfire)", () => {
+    // Only ONE bare post-verbal NP (the theme); the recipient is a "to"-PP.
+    // collectParticipant breaks at PREP, so the double-object path must not fire.
+    const rc = parse("the woman gives the stone to the man");
+    expect(findP(rc, "stone")!.role).toBe("theme");
+    const man = findP(rc, "man");
+    expect(man, "recipient still present via the to-PP").toBeDefined();
+    expect(man!.adjunct).toBe(true);
+  });
+
   it("past tense: predicate.features.tense=past", () => {
     const rc = parse("the king saw the wolf");
     expect(rc.predicate.features?.tense).toBe("past");

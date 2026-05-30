@@ -155,8 +155,14 @@ export function realiseSentence(
     realisePP(pp, lang, { articlePresence, caseStrategy, adjPos, possPos, numPos, subjectCaseSlot, objectCaseSlot }),
   );
   const advTokens: RealisedToken[] = s.predicate.adverbs.flatMap((a) => {
+    // A manner adverb is an OPTIONAL adjunct. When the target language can't
+    // resolve it (unregistered/uncoinable lemma → empty baseForm), drop it —
+    // the clause is still grammatical without it — rather than surfacing an
+    // ugly «lemma» fallback marker. Core arguments are never dropped (they
+    // coin via the cascade).
+    if (a.baseForm.length === 0) return [];
     return [{
-      surface: a.baseForm.length > 0 ? a.baseForm.join("") : `“${a.lemma}”`,
+      surface: a.baseForm.join(""),
       form: a.baseForm,
       english: a.lemma,
       role: "ADV" as const,
@@ -254,6 +260,7 @@ export function realiseSentence(
     out.push(...verbTokens);
     out.push(...subjectFinal);
     out.push(...objectTokens);
+    out.push(...complementTokens);
     out.push(...predPpTokens);
   } else {
     for (const k of order) {
@@ -262,9 +269,12 @@ export function realiseSentence(
       }
       out.push(...slot[k]);
     }
+    // Phase 74: the copular complement (predicate adjective) precedes predicate
+    // obliques so a comparative renders "X is big[ger] than Y", not "X is Y big"
+    // (which could misread as "X is a big Y").
+    out.push(...complementTokens);
     if (!isVFinal) out.push(...predPpTokens);
   }
-  out.push(...complementTokens);
   out.push(...advTokens);
 
   if (isQuestion && interStrategy === "particle") {
@@ -531,12 +541,17 @@ function realiseNP(
     if (ctx.possPos === "post") out.push(...possTokens);
   } else {
     out.push(...detTokens);
+    // Phase 74: prenominal numerals/possessors belong BEFORE the head even in
+    // post-adjective languages — numeralPosition/possessorPosition are
+    // independent of adjectivePosition. Pre-fix these were pushed AFTER the
+    // head+adjectives, so a num=pre language (e.g. Bantu drifted to pre)
+    // rendered "dog big three" instead of "three dog big".
+    if (ctx.numPos === "pre") out.push(...numTokens);
+    if (ctx.possPos === "pre") out.push(...possTokens);
     out.push(head);
     out.push(...adjTokens);
     if (ctx.numPos === "post") out.push(...numTokens);
     if (ctx.possPos === "post") out.push(...possTokens);
-    if (ctx.numPos === "pre") out.push(...numTokens);
-    if (ctx.possPos === "pre") out.push(...possTokens);
   }
   out.push(...ppTokens);
   if (np.coord) {

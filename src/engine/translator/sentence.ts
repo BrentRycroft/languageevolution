@@ -251,7 +251,7 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
   let lastWasVerb = false;
 
   for (let i = 0; i < raw.length; i++) {
-    const w = raw[i]!;
+    let w = raw[i]!;
     if (PUNCT.test(w)) {
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
@@ -296,6 +296,16 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
       tokens.push({ surface: w, lemma: w, tag: "PUNCT", features: {} });
       continue;
     }
+    // Phase 74: normalize a known English synonym to its canonical concept
+    // BEFORE POS-tagging, so e.g. "large"/"tiny" (absent from the adjective
+    // lexicon, otherwise mis-tagged as N and scrambling the NP parse) tag as
+    // ADJ via "big"/"small". The canonical is a real registered word the
+    // tagger recognises. (resolveLemma applies the same map for paths that
+    // bypass tokenisation.)
+    {
+      const canon = ENGLISH_SYNONYM_CONCEPT[w];
+      if (canon && !isBareNoun(w) && !isBareAdjective(w) && !isBareVerb(w)) w = canon;
+    }
     if (isBareNoun(w)) {
       tokens.push({
         surface: w,
@@ -310,7 +320,12 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
       tokens.push({ surface: w, lemma: w, tag: "ADJ", features: {} });
       continue;
     }
-    if (isBareVerb(w)) {
+    // Phase 74: "do" is both a main verb AND the do-support auxiliary. Unlike
+    // "does"/"did" (already AUX), bare "do" is a bare verb, so "the dogs do not
+    // see ..." mis-tagged "do" as the predicate and dropped the real verb.
+    // When "do" is followed by "not" it's do-support → fall through to the AUX
+    // branch (which carries negation correctly).
+    if (isBareVerb(w) && !(w === "do" && raw[i + 1] === "not")) {
       const tense: "past" | "present" | "future" | undefined =
         pendingTense ?? "present";
       tokens.push({ surface: w, lemma: w, tag: "V", features: { tense } });
@@ -491,6 +506,22 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
   return tokens;
 }
 
+/**
+ * Phase 74: common English synonyms → their canonical REGISTERED concept,
+ * so user-typed variants resolve instead of surfacing a «lemma» marker
+ * ("quickly" → quick → fast). Sim-non-rippling: this only normalises
+ * translator INPUT lemmas; the cascade, genesis and lexicon all key off
+ * concept ids, never these English variants. Every value is a registered
+ * concept. Applied only when the language doesn't lexicalise the variant
+ * itself.
+ */
+const ENGLISH_SYNONYM_CONCEPT: Record<string, string> = {
+  quick: "fast", swift: "fast", rapid: "fast", speedy: "fast",
+  large: "big", huge: "big", enormous: "big", giant: "big",
+  tiny: "small", little: "small",
+  kid: "child",
+};
+
 function resolveLemma(
   lang: Language,
   lemma: string,
@@ -504,7 +535,8 @@ function resolveLemma(
   // abstraction. resolveLemma is a thin adapter that preserves the
   // legacy signature for in-file callers.
   void posOf;
-  return lookupFormWithResolution(lang, lemma);
+  const canonical = lang.lexicon[lemma] ? lemma : (ENGLISH_SYNONYM_CONCEPT[lemma] ?? lemma);
+  return lookupFormWithResolution(lang, canonical);
 }
 
 /**
@@ -1127,6 +1159,10 @@ function translateViaTree(
   const translated: TranslatedToken[] = realised.map((r) => ({
     englishLemma: r.english,
     englishTag:
+      // Phase 74: the intonation-question marker "?" is sentence-final
+      // PUNCTUATION, not a determiner word — classify it as such so it isn't
+      // glossed/surfaced as a DET.
+      r.english === "?" ? "PUNCT" :
       r.role === "V" ? "V" :
       r.role === "S" || r.role === "O" || r.role === "PP-NP" || r.role === "POSS" ? "N" :
       r.role === "ADJ" ? "ADJ" :
@@ -1139,6 +1175,7 @@ function translateViaTree(
     targetForm: r.form.length > 0 ? r.form : [r.surface],
     targetSurface: r.surface,
     glossNote:
+      r.english === "?" ? "" :
       r.role === "DET" ? "art/det" :
       r.role === "PREP" ? "prep" :
       r.role === "POSTP" ? "postp" :

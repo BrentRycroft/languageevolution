@@ -44,7 +44,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Sociolinguistics (register/prestige/endangerment) | partial | Phase 72 added prestige/endangerment/bilingual. |
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
-| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. PLAY-SESSION FINDINGS (2026-05-29): (1) sentence-path NP/verb resolution is shallow (`lang.lexicon[lemma]`), so untranslatable words emit `«lemma»` markers instead of coining (backlog); (2) ditransitive double-object drops the theme (backlog, fix ready). |
+| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. PLAY-SESSION FINDINGS (2026-05-29): the sentence path DOES gracefully coin missing words (populateForms→resolveOpen→cascade); `«lemma»` markers appear ONLY for lemmas not in the CONCEPTS registry (cascade's anti-gibberish guard) — e.g. "man"/"woman" are unregistered → markers (backlog: register them). Ditransitive double-object drops the theme (backlog, fix written, re-diagnose marker). |
 | **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
@@ -128,33 +128,48 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       correlation, likely with adjectivePosition / Greenbergian consistency +
       realiser wiring + per-preset values). NEEDS DECISION on default + drift
       behaviour before building — don't guess.
-- [ ] **Translator: sentence-path NP/verb resolution doesn't gracefully coin**
-      (HIGH value; prerequisite for the ditransitive fix below). The AST→Sentence
-      adapters resolve heads with a SHALLOW `lang.lexicon[lemma]` lookup
-      (ast.ts:205 `lookupForm`, used at 211/224/237; also `participantToNP`
-      ~443), NOT the 8-rung `lookupFormWithResolution` cascade. So any word a
-      language lacks (e.g. "bread" in Toki Pona) surfaces as an ugly `«bread»`
-      fallback marker (realise.ts wraps empty baseForm in « »), instead of
-      synthesising/colexifying/coining like the word-level `translate()` path
-      already does (routed last session). This is a concrete "translator is weak"
-      symptom. Fix: route those head resolutions through the cascade (graceful
-      coinage on). Broad-ish (several resolution points) + changes output for
-      currently-unresolved words only → full-suite-verify. Found via a play-session
-      inspector; `narrative_snapshot` asserts no `«»` markers, so this is testable.
-- [ ] **Translator: ditransitive double-object drops the theme** (READY fix,
-      blocked on the coinage item above). The parser (`parse.ts` collectParticipant)
-      collects only ONE post-verbal NP, so "give you the big stone" keeps the
-      recipient ("you", mislabelled theme) and SILENTLY DROPS the theme ("the big
-      stone"). The argframe already has `give:[agent,theme,recipient]` and the
-      `recipient` role surfaces downstream. WORKING fix (verified, then reverted):
+- [ ] **Translator: register "man"/"woman" (and audit other basic unregistered
+      concepts) so they coin instead of marking** (Toki Pona handled directly via
+      its preset lexicon — see Done log; this item is the GENERAL fix for any
+      minimal language. LOWER priority: ripples genesis, narrow benefit.)
+      (CORRECTED DIAGNOSIS, 2026-05-29
+      — supersedes the earlier "sentence-path doesn't coin" claim, which was
+      WRONG). The sentence path ALREADY gracefully coins: `realiseSentence` →
+      `populateForms` → the `resolveOpen` dep → `lookupFormWithResolution` (full
+      8-rung cascade, coinage on). Verified: "the king eats the bread" / "...the
+      computer" in Toki Pona COIN (synth-fallback), no marker. The `«lemma»`
+      marker appears ONLY when rung-8 coinage is REFUSED, gated by
+      `isValidEnglishLemma` (englishWordlist.ts) → `isAcceptedStem` →
+      `isRegisteredConcept(id) = id in CONCEPTS`. Root cause: **"man" and "woman"
+      are not registered concepts** (absent from `basic240.ts` CLUSTERS AND
+      `expanded_concepts.ts`), so the cascade treats them as gibberish and won't
+      coin → `«woman»`. (NB: "person", "child" ARE registered.) FIX: add man/woman
+      (+ sweep for other missing basics) to `EXPANDED_CONCEPTS` (lower ripple than
+      BASIC_240 — registers them as coinable WITHOUT forcing birth-lexicalization;
+      pos:noun, cluster:"kinship", a tier that doesn't auto-lexicalise). RISK: a
+      registry change ripples into genesis/CONCEPT_IDS → sim trajectories →
+      verify-first with a FULL `npx vitest run` (basic240/concept/preset_coverage +
+      determinism). DEAD END (don't repeat): adding a cascade fallback inside
+      `realiseNP` is a NO-OP — resolution happens in `populateForms` before
+      `realiseNP` runs.
+- [x] **Translator: ditransitive double-object now keeps both args** (DONE — see
+      Done log; the «marker» that blocked it earlier no longer occurs: bread coins
+      and all args resolve). The parser (`parse.ts`
+      collectParticipant) collects only ONE post-verbal NP, so "give you the big
+      stone" keeps the recipient ("you", mislabelled theme) and SILENTLY DROPS the
+      theme. The argframe already has `give:[agent,theme,recipient]`; the recipient
+      role surfaces downstream. WORKING fix (verified end-to-end, then reverted):
       skip consumed heads in collectParticipant's scan (no-op for single-object
-      calls) + for recipient-frame verbs collect a 2nd object and mark the first
-      as a dative `to`-PP adjunct → "give [theme] to [recipient]", placed per the
-      target's adposition typology (verified: Romance "I give big stone you",
-      Bantu "I give stone big to you", PIE SOV "I big stone you to give"). REVERTED
-      because it unmasks the `«bread»` marker on the snapshot sentence "i give you
-      the bread" (Toki Pona lacks bread) — do the coinage fix FIRST, then re-apply
-      (the 2 parser_role_ir regression tests are written; re-add them).
+      calls) + for recipient-frame verbs collect a 2nd object and mark the first as
+      a dative `to`-PP adjunct → "give [theme] to [recipient]" per the target's
+      adposition typology (Romance "I give big stone you", Bantu "I give stone big
+      to you", PIE SOV "I big stone you to give"). + 2 parser_role_ir regression
+      tests (re-add them). It tripped `narrative_snapshot`'s «»-marker assertion on
+      "i give you the bread" — I ASSUMED the marked word was "bread", but bread
+      coins fine standalone, so the real culprit is unconfirmed (maybe the dative
+      "you" PRON, or a participant NP not walked by populateForms). RE-DIAGNOSE by
+      printing the exact «marked» token (throwaway inspector) before re-applying;
+      the man/woman registry item may or may not be related.
 - [x] Assess narrative generation (code-level): genuinely grammar-driven
       (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
       `synthesisIndex`-gated morphology; complex typology via the translator.
@@ -166,6 +181,10 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Narrative live-quality check — fold into the baseline GUI play session:
       read whether multi-line output reads like a real (non-English-shaped)
       language across SOV / ergative / tonal presets.
+- [x] **Translator: object head dropped in a two-NP sentence with adjectives** —
+      FIXED (see Done log). Root cause was synonym adjectives (large/tiny)
+      mis-tagged as N by the tokenizer; normalized them to big/small before
+      POS-tagging. + parser_role_ir regression test.
 - [x] Audit presets for English-based encoding (code-level): forms are NOT
       relexified English (Bantu authentic proto-Bantu; default lexicon is
       PIE-flavored). Real anglocentrism = the shared English concept inventory.
@@ -190,6 +209,31 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       to the winner via the cascade (precedence fixed at rung 2b). default +
       English have no attested duplicate pairs. A general test in
       seed_colexification verifies every preset's declared colexifications.
+- [ ] **(MILESTONE — ripples genesis, needs full suite) Concept-registry +
+      coinage gaps surfaced by play sessions.** Some basic words a language lacks
+      surface as `«lemma»` markers (core args, which the manner-adverb drop above
+      doesn't cover): (a) "quick" is UNREGISTERED though its synonym "fast" is in
+      the quality cluster — register it (colex with fast) or add a small
+      English-synonym normalization map (quick→fast) in the translator (the latter
+      is sim-non-rippling — preferred); (b) "wolf" IS registered (basic240 animals)
+      but `attemptGracefulFallback` returns null for some langs (Bantu/PIE) → marks
+      — investigate why coinage fails for a registered concept (isGrounded?). NB:
+      registering concepts ripples genesis (need.ts checks raw `lex[m]`), so that
+      path is milestone-level; the synonym-map path is the fast one.
+- [ ] **(preset, ripples sim) Bantu numeralPosition should be "post" (authentic).**
+      Bantu doesn't set `numeralPosition` → defaults to "pre", so Bantu numerals
+      render prenominally. Real Bantu is postnominal ("imbwa zibiri" = dogs two).
+      Set `seedGrammar.numeralPosition: "post"` in bantu.ts (+ check germanic/pie/
+      romance/tokipona for the right value). Ripples sim (grammar drift/areal) →
+      milestone-level, verify with the full suite. (The realiser now respects
+      numeralPosition correctly — see Done log — so this is purely the preset value.)
+- [ ] **Translator: comparative polish + modals** (standard capture + ordering
+      DONE — see Done log). Remaining: (a) render the comparative DEGREE (the
+      adjective carries degree="comparative" but no -er/comparative marker surfaces
+      — needs a comparative paradigm or particle); (b) per-typology comparative
+      STRATEGY (particle / conjoined / exceed / locational axis) + V-final standard
+      ordering; (c) modal "can/may/must" auxiliaries are dropped ("the man can see
+      X" → "see X") — render per the lang's mood/modal system. All translator-only.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -199,6 +243,111 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: comparative standard captured + ordered.** Building on the
+  collapse fix: "than NP" is now captured as a standard-of-comparison oblique (a
+  "than"-PP) instead of being dropped, AND the copular complement (predicate
+  adjective) is now emitted BEFORE predicate obliques in realiseNP so it renders
+  "X is big[ger] than Y" not "X is Y big" (which could misread as "X is a big Y").
+  "the king is bigger than the dog" → "king is big dog" (Romance drops "than" as a
+  case lang; prep langs keep it). + strengthened parser_role_ir test. tsc +
+  targeted tests green (parser_role_ir, grammar_audit, copula, typological_routing,
+  narrative_snapshot — 103). Translator-only. Remaining (logged): comparative
+  DEGREE morphology (render -er/comparative marker), per-typology comparative
+  STRATEGY, V-final standard ordering, and modal auxiliaries.
+- **Translator: comparatives no longer collapse to nonsense.** "the king is
+  bigger than the dog" rendered "king is dog" — "than" wasn't a participant
+  boundary, so the parser grabbed the standard "dog" as a patient object, which
+  suppressed the copular complement sweep (`be && !object`) and DROPPED the
+  comparative adjective. Fix: collectParticipant now breaks at "than" (it only
+  occurs in comparatives), so the standard isn't a spurious object → the
+  comparative adjective is captured as the complement with degree="comparative"
+  → renders "king is big[comparative]". + parser_role_ir regression test. tsc +
+  targeted tests green (parser_role_ir, typological_routing, narrative_snapshot,
+  grammar_audit — 91). Translator-only. Follow-up logged: the "than NP" standard
+  is still dropped (full comparative-construction support is a feature).
+  Principle: "than" marks a standard of comparison, not a verbal argument.
+- **Translator: the intonation-question "?" marker is now PUNCT, not a DET word.**
+  Intonation-strategy yes/no questions append a "?" (realise.ts) as a textual
+  question cue; it was tagged role DET, so it surfaced as a determiner word
+  ("?(?/DET)") with glossNote "art/det". translateViaTree now classifies the "?"
+  marker as englishTag PUNCT with empty glossNote. The marker still appears
+  (grammar_audit "?" test passes); it's just correctly punctuation. Surgical,
+  translator-only. tsc + targeted tests green (grammar_audit, typological_routing,
+  translator_reverse — 34). Principle: "?" is sentence punctuation, not a lexeme.
+- **Translator realiser: prenominal numeral/possessor now placed BEFORE the head
+  in post-adjective languages.** In the `adjectivePosition === "post"` branch of
+  realiseNP, `numPos === "pre"` (and `possPos === "pre"`) tokens were pushed AFTER
+  the head+adjectives, so a num=pre language rendered "dog big three" instead of
+  "three dog big" — numeralPosition was effectively conflated with
+  adjectivePosition. Fixed to mirror the pre-adjective branch (pre→before head,
+  post→after). + rewrote the numeral-placement agnosticism test to verify it
+  follows `numeralPosition` (toggled pre/post), NOT adjectivePosition — they're
+  independent axes (the old test asserted the conflation). tsc + targeted tests
+  green (translator_agnosticism, typological_routing, narrative_snapshot,
+  grammar_audit — 65). Translator-only, sim-non-rippling. Principle: numeral &
+  genitive order are typological axes independent of adjective order.
+- **Translator: do-support negation "do not VERB" no longer drops the verb.**
+  "the dogs do not see the birds" rendered "dog not do" — bare "do" (unlike
+  "does"/"did", already AUX) is also a bare verb, so the tokenizer tagged it a
+  main verb; the parser then picked "do" as the predicate and dropped the real
+  verb "see" + object "birds". Fix: in tokeniseEnglish, when "do" is followed by
+  "not" (do-support), skip the bare-verb branch so it falls through to AUX (which
+  carries negation). "I do my work" still treats "do" as a main verb. + 2
+  parser_role_ir regression tests. tsc + targeted tests green (parser_role_ir,
+  narrative_snapshot, typological_routing, grammar_audit — 91). Translator-only,
+  sim-non-rippling. Principle: do-support "do" is an auxiliary, not the predicate.
+- **Translator: synonym adjectives now POS-tag correctly (object-head-drop fix).**
+  "the large dog sees the tiny bird" rendered "dog see tiny" — large/tiny aren't
+  in the adjective lexicon so the tokenizer tagged them N; the second N became the
+  NP head and the real head ("bird") was dropped. Fix: apply the synonym map
+  (large→big, tiny→small, …) in `tokeniseEnglish` BEFORE POS-tagging (only when the
+  word isn't already a recognised noun/adj/verb), so they tag as ADJ via their
+  canonical. Now parses identically to "the big dog sees the small bird". + a
+  parser_role_ir regression test. tsc + targeted tests green (parser_role_ir,
+  narrative_snapshot, typological_routing, translator_agnosticism, composer_role_ir
+  — 83). Translator-only, sim-non-rippling. Principle: unknown adjectives must not
+  default to N and scramble NP structure.
+- **Translator: English-synonym normalization map** (sentence.ts resolveLemma).
+  Common English synonyms now resolve to their canonical REGISTERED concept
+  before the cascade — quick/swift/rapid/speedy→fast, large/huge/enormous/giant→
+  big, tiny/little→small, kid→child — so user-typed variants render the real form
+  ("the dog runs quickly" → fast's form) instead of a «marker» (or being dropped).
+  Sim-non-rippling: only normalises translator INPUT lemmas; cascade/genesis/
+  lexicon key off concept ids. Applied only when the language doesn't lexicalise
+  the variant itself. tsc + targeted tests green (narrative_snapshot, typological_
+  routing, abstract_pivot, graceful_fallback — 48). Principle: synonyms map to one
+  concept; the user shouldn't hit a marker for a word the language CAN express.
+- **Translator: drop unresolvable manner adverbs instead of marking.** A manner
+  adverb is an optional adjunct; when the target can't resolve its lemma (empty
+  baseForm) the realiser was surfacing an ugly `«quick»` marker. Now it omits the
+  adverb — the clause stays grammatical ("the small dog runs quickly" → "small dog
+  run" in langs lacking quick). Core args are never dropped (they coin). Surgical,
+  translator-only (no sim ripple); targeted translator/narrative tests green (65).
+  Principle: optional modifiers may be omitted when untranslatable; markers are bad UX.
+- **Translator: ditransitive double-object now keeps both args.** "give you the
+  big stone" was parsed as one object (recipient "you", mislabelled theme) and
+  the real theme silently dropped. Fix (parse.ts): skip already-consumed heads in
+  collectParticipant's scan (no-op for single-object calls), and for
+  recipient-frame verbs (`give/send/tell/...`) collect a 2nd post-verbal NP —
+  first = recipient (surfaced as a dative `to`-PP adjunct, placed per the target's
+  adposition typology), second = theme. The PREP-break keeps the prepositional
+  dative ("give X to Y") mono-transitive. Verified end-to-end (Romance "I give
+  bread you", tokipona "give bread to you" — both args present, no «marker») + 2
+  parser_role_ir regression tests. Precise tests green (parser_role_ir,
+  narrative_snapshot [the earlier blocker now passes — bread coins], typological_
+  routing, translator_agnosticism, composer_role_ir, lexical_frames; 90 tests).
+  Principle: ditransitive predicates have 3 core args; recipient realised as a
+  dative adposition per typology.
+- **Content/translator: Toki Pona now has man/woman** (mije/meli). The
+  translator emitted a `«man»`/`«woman»` marker for Toki Pona because it lacked
+  those words AND they aren't registered concepts (so the cascade couldn't coin
+  them either). Added `man: mije`, `woman: meli` to the preset lexicon — the
+  authentic Toki Pona forms (homophonous with husband/wife, the real colexification,
+  cf. water/blood/sea = telo). Direct rung-1 hits now; no marker. Principle:
+  presets should lexicalise basic human concepts with authentic vocabulary. tsc +
+  full fast suite (211 files / 1675) green — tokipona trajectory change broke
+  nothing. (The GENERAL fix — registering man/woman so ANY minimal language coins
+  them — still open but ripples genesis; see backlog.)
 - **Realism: added the OV ⟹ GenN soft universal** (grammar/universals.ts).
   `enforceTypologicalUniversals` already nudged SOV languages toward
   postpositions + pre-noun adjective/numeral; it was missing the possessor
@@ -412,6 +561,27 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   to cancel the ~±10% run-to-run machine drift.
 
 ## NEEDS DECISION
+
+- **Engine realism — runaway word length (degenerate 20+ syllable words).**
+  HIGH PRIORITY, found via narrative play session (Bantu, 60 gens, seed
+  narr-bantu). The LEXICON itself accumulates absurdly long base forms — e.g.
+  `arm` = 19 phonemes, `coconut-kin` = 23, `ship`/`coconut` = 21, `kettle`/
+  `mortar-bowl`/`narrow` = 20 — shaped as a long RUN of identical `aː˧` syllables
+  with an ILLEGAL final coda (k/t) despite Bantu's strict CV (maxCoda 0). No
+  language has 20-syllable basic nouns; this is a major realism hole (garbage
+  output) and likely a phonotactics/repair non-convergence: medial/paragogic
+  vowel epenthesis (catalog.ts insertion.* + phonotactics.ts medial repair)
+  inserts vowels that consonant-erosion then strips back to bare vowels, with NO
+  upper length ceiling, so the form grows unboundedly over generations.
+  Root not pinned (multi-process: epenthesis × lenition/deletion × repair).
+  Options: (a) add a GROWTH guard — reject a sound-change/repair that lengthens a
+  word already past a sane ceiling (~16 phonemes / ~8 syllables), symmetric to the
+  existing length FLOOR in isFormLegal/applyChangesToWord; (b) make the
+  phonotactic repair converge + actually fix final codas (it's leaving them);
+  (c) cap epenthesis when the word is already long. ALL ripple sim (change
+  lexicons) → milestone-level, verify with the FULL suite + expect to update
+  hash/snapshot tests for affected languages. Diagnose the dominant growth source
+  first (instrument which rule/repair adds the `aː` runs). Want me to take it on?
 
 - **Engine performance — extend the trigger pre-filter to inline rules.**
   The factory subset is DONE (see Done log): factory rules expose `triggers`,

@@ -43,6 +43,13 @@ const LEXICON: Lexicon = {
   friend: ["j", "a", "n"],
   wife: ["m", "e", "l", "i"],
   husband: ["m", "i", "j", "e"],
+  // Toki Pona: mije = man/male (= husband), meli = woman/female (= wife).
+  // Without these the translator can't render "man"/"woman" into Toki Pona
+  // and emits a «man» fallback marker (they're also not registered concepts,
+  // so the cascade can't coin them either). The shared form with husband/wife
+  // is the authentic Toki Pona colexification (cf. water/blood/sea = telo).
+  man: ["m", "i", "j", "e"],
+  woman: ["m", "e", "l", "i"],
 
   go: ["t", "a", "w", "a"],
   come: ["t", "a", "w", "a"],
