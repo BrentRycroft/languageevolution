@@ -642,12 +642,8 @@ function attachRelativeClause(
   const rc = np.relative;
   if (!rc) return npTokens;
   // Phase 46a-migration: relative-clause attachment gated on the
-  // relativiser module. Legacy fallback: always attach (the
-  // pre-migration default strategy was "relativizer" if undefined,
-  // so the previous code path always emitted a relative clause).
-  if (!isFeatureActive(lang, "syntactical:relativiser", () => true)) {
-    return npTokens;
-  }
+  // relativiser module.
+  const relativiserActive = isFeatureActive(lang, "syntactical:relativiser", () => true);
   const strategy = lang.grammar.relativeClauseStrategy ?? "relativizer";
 
   const stripped: NP = { ...np, relative: undefined };
@@ -662,6 +658,16 @@ function attachRelativeClause(
     negated: false,
   };
   const relRaw = realiseSentenceInner(fakeS, lang, ctx);
+  // Phase 76: a language whose relativiser module is INACTIVE (e.g. Toki Pona)
+  // has no relative-clause morphosyntax. Pre-fix this DELETED the clause
+  // entirely ("the king who sees the wolf runs" → "king run"), losing the whole
+  // proposition. The cross-linguistic fallback for relativiser-less languages is
+  // PARATAXIS — juxtapose the clause bare (no relativiser word), gapping the
+  // shared subject (Greenberg/typology; Toki Pona itself juxtaposes).
+  if (!relativiserActive) {
+    const para = rc.subjectGap ? relRaw.filter((t) => t.role !== "S") : relRaw;
+    return [...npTokens, ...para];
+  }
   const relTokens = rc.subjectGap && (strategy === "gap" || strategy === "relativizer")
     ? relRaw.filter((t) => t.role !== "S")
     : relRaw;

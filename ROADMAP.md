@@ -394,6 +394,21 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: a relativiser-less language now JUXTAPOSES the relative clause
+  (parataxis) instead of DELETING it.** Cross-preset play session (PIE/Bantu/
+  Romance/Toki/Germanic on the same 6 sentences) found Toki Pona rendered "the
+  king who sees the wolf runs" → "king run" — the entire RC ("sees the wolf") was
+  silently dropped, losing the proposition. Root cause: `attachRelativeClause`
+  (realise.ts) early-returned the bare head NP when the `syntactical:relativiser`
+  module is inactive. No language deletes a clause's meaning — the universal
+  fallback for relativiser-less languages is parataxis (juxtaposition; Toki Pona
+  itself juxtaposes). Fix: when the module is inactive, append the realised clause
+  bare (no relativiser word), gapping the shared subject → "king see wolf run".
+  Translator-only (engine/determinism untouched). + parataxis regression test
+  (translator_agnosticism, presetTokipona). Verified: tsc + 109 RC/translator/
+  agnosticism/typological/narrative tests green. (Also noted this session, not
+  fixed: Germanic shows a stray article in the RC subject-gap — "who the see"; and
+  Bantu flags "bread" missing — a lexical-coverage gap. Both minor/separate.)
 - **Translator: 15 more posOf="other" adjectives added to BARE_ADJECTIVES (cont.
   of the dark/loud/dead fix).** Play session: "the angry dog bites the thief" →
   "dog thief bite" ("angry" dropped). Probed posOf across ~44 candidate adjectives:

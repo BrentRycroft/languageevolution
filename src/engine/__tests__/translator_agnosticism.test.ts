@@ -3,7 +3,9 @@ import { createSimulation } from "../simulation";
 import { presetBantu } from "../presets/bantu";
 import { presetEnglish } from "../presets/english";
 import { presetRomance } from "../presets/romance";
+import { presetTokipona } from "../presets/tokipona";
 import { translateSentence, type TranslatedToken } from "../translator/sentence";
+import { isFeatureActive } from "../modules/legacyGate";
 import type { Language } from "../types";
 
 /**
@@ -183,5 +185,22 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(tok, "subject pronoun 'we' resolves").toBeDefined();
     expect(tok!.targetSurface, "plural pronoun 'we' is the bare lexical form, not affixed")
       .toBe((lang.lexicon["we"] ?? []).join(""));
+  });
+
+  it("a relativiser-less language juxtaposes the clause (parataxis), not deletes it", () => {
+    // Toki Pona has no relativiser morphosyntax (syntactical:relativiser inactive).
+    // Pre-fix the realiser DELETED the whole relative clause ("the king who sees
+    // the wolf runs" → "king run"), losing the proposition. The cross-linguistic
+    // fallback is parataxis: juxtapose the clause bare (no relativiser word).
+    const lang = protoOf(presetTokipona, "agn-rc-toki");
+    expect(isFeatureActive(lang, "syntactical:relativiser", () => true),
+      "precondition: Toki Pona has no active relativiser module").toBe(false);
+    const { targetTokens: t } = translateSentence(lang, "the king who sees the wolf runs");
+    const out = surface(t);
+    expect(idxOf(t, "king"), `head 'king' present ("${out}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(t, "see"), `RC verb 'see' survives ("${out}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(t, "wolf"), `RC object 'wolf' survives ("${out}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(t, "run"), `matrix verb 'run' survives ("${out}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(t, "who"), `no relativiser word — parataxis ("${out}")`).toBe(-1);
   });
 });
