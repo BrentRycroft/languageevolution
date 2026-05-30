@@ -447,6 +447,11 @@ function participantToNP(p: Participant, defaultCase: Case): NP {
   let numeral: { lemma: string } | undefined;
   const pps: PP[] = [];
   let coord: { lemma: string; np: NP } | undefined;
+  // A participant may carry MULTIPLE flat coordination modifiers ("man and
+  // woman and child" → man[coord(woman), coord(child)]), but the legacy NP has
+  // a single `coord` field. Collect them and build a nested chain below so all
+  // conjuncts survive (the realiser already walks nested coord).
+  const coordMods: { conjunction: string; participant: Participant }[] = [];
   let relative: RelativeClause | undefined;
   for (const mod of p.modifiers ?? []) {
     switch (mod.kind) {
@@ -476,15 +481,22 @@ function participantToNP(p: Participant, defaultCase: Case): NP {
         break;
       }
       case "coordination":
-        coord = {
-          lemma: mod.conjunction,
-          np: participantToNP(mod.participant, defaultCase),
-        };
+        coordMods.push({ conjunction: mod.conjunction, participant: mod.participant });
         break;
       case "relative":
         relative = roleClauseToRelativeClause(mod.clause, mod.relativiser, mod.subjectGap);
         break;
     }
+  }
+  // Build the coordination chain from the end so flat siblings nest:
+  // [woman, child] → {and, woman + {coord:{and, child}}}.
+  for (let k = coordMods.length - 1; k >= 0; k--) {
+    const m = coordMods[k]!;
+    const conjNp = participantToNP(m.participant, defaultCase);
+    coord = {
+      lemma: m.conjunction,
+      np: coord ? { ...conjNp, coord } : conjNp,
+    };
   }
   return {
     kind: "NP",

@@ -245,6 +245,26 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [x] **Translator: flat/zero-derived manner adverbs ("runs fast") dropped.**
+      DONE (see Done log). collectMannerParticipants now also claims a leftover
+      unconsumed ADJ as a flat manner adverb (attributive + predicate adjectives
+      are already consumed by the time it runs, so a leftover is adverbial).
+- [~] **Translator: copular/linking verbs + predicate -ed adjectives.** PART (a)
+      DONE (see Done log): linking verbs seem/look/feel/appear/become/remain/stay/
+      sound now tag V (added to BARE_VERBS — posOf="other", no precedence issue)
+      and route through the copular-complement sweep via a LINKING_VERBS set; the
+      `!object` guard keeps transitive feel/look transitive. "the man seems/looks/
+      feels big" works. REMAINING (b, still open): predicate -ed adjectives/
+      participles ("tired", "bored") mis-tokenise as past-tense verbs ("tired"→
+      "tir"/V), so "the man seems/is tired" still mis-parses. AMBIGUOUS (predicate
+      adjective vs passive participle — "is tired" could be passive of "tire").
+      Candidate: a curated -ed-adjective set, OR "Xed after a copula/linking verb →
+      predicate adjective". Scope the V/ADJ ambiguity before doing.
+- [ ] **Translator: partitive "some of the X" drops the quantifier.** "some of the
+      dogs run" → "the dog run" ("some" + "of" lost). Partitive "Q of the N" isn't
+      modelled; low priority. Also: correlatives "either…or" drops "either",
+      "neither…nor" breaks (drops subject) — correlative coordination unmodelled
+      (milestone-ish, like other multi-clause/coordination gaps).
 - [ ] **Translator: conditional / adverbial-subordinate clauses drop the main
       verb.** Play session (2026-05-30): "if the dog runs the man walks" → "if dog
       run man" (main-clause verb "walks" lost). "if/when/because/while/though" +
@@ -322,6 +342,44 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: copular/linking verbs take a predicate-adjective complement.**
+  "the man seems/looks/feels big" dropped the subject because seem/look/feel/
+  appear/remain/stay/sound aren't recognised as verbs (posOf="other" → default-N
+  fallback), so the linking verb became the subject head. Added them to BARE_VERBS
+  (tokenizer + dialect, so "becomes"→become restores) and introduced a
+  LINKING_VERBS set that drives the copular-complement sweep (parse.ts, was keyed
+  on lemma==="be"). The `!object` guard keeps transitive uses on the normal path.
+  Now "the man seems big"→"man seem big" (complement "big"); "the man feels the
+  dog" stays transitive; "is big"/"sees the dog" unchanged. Linguistic basis:
+  copula support / linking-verb class. Translator only; no engine/rng change. +
+  parser_role_ir regression test (5 linking verbs keep subject+complement;
+  transitive has no complement). Verified: tsc + 141 + 38 parser/copula/grammar/
+  dialect/agnosticism/narrative tests green. (Residual -ed predicate-adjective
+  ambiguity — "seems tired" — stays logged.)
+- **Translator: flat manner adverbs ("the dog runs fast") no longer dropped.**
+  "fast"/"hard"/"well" etc. share an adjective form (in BARE_ADJECTIVES) so they
+  tag ADJ; the manner-adverb collector took only ADV tokens, so a post-verbal flat
+  adverb was dropped ("the dog runs fast" → "the dog run"). collectMannerParticipants
+  now ALSO claims a still-unconsumed ADJ as a manner adjunct — by the time it runs,
+  attributive (NP walk) and predicate (copular sweep) adjectives are already
+  consumed, so a leftover ADJ is functioning adverbially (zero-derived/flat adverb).
+  Now "the dog runs fast" → "the dog run fast", "the man works hard" → "...work
+  hard"; attributive "the big dog runs" and predicate "the dog is big" unchanged.
+  Parser-only; no engine/rng change. + parser_role_ir regression test ('fast'
+  captured as manner; 'big' stays attributive). Verified: tsc + 110 + 37 parser/
+  grammar/agnosticism/routing/narrative tests green.
+- **Translator: three-way+ NP coordination no longer drops the middle conjunct.**
+  Play session: "the man and woman and child run" → "man and child run" (woman
+  lost). The parser correctly stored two flat sibling coordination modifiers
+  (man[coord(woman), coord(child)]), but the legacy NP has a single `coord` field
+  and `participantToNP` (ast.ts) REASSIGNED it per modifier, so only the last
+  survived. (Object coordination used a nested structure, so it worked — only the
+  subject's flat siblings broke.) Now collect all coordination modifiers and build
+  a NESTED coord chain ([woman, child] → woman + {coord: child}); the realiser
+  already walks nested coord. "X and Y and Z" / 4-way all keep every conjunct.
+  Parser→AST bridge only; no engine/rng change. + translator_agnosticism
+  regression test (man/woman/child all surface). Verified: tsc + 96 + 10 parser/
+  routing/composer/tree/narrative/agnosticism tests green.
 - **Translator: periphrastic comparative/superlative "more/most + adj".** Play
   session: "the man is more big than the dog" → "be more than dog" — the analytic
   "more big" DROPPED the adjective (the N-tagged "more" hit the copular complement

@@ -110,6 +110,9 @@ const BARE_VERBS = new Set([
   // (dances→dance, not danc; rides→ride; drives→drive).
   "jump", "climb", "sing", "dance", "read", "write", "ride", "draw",
   "wear", "cook", "drive", "kick",
+  // Phase 76: linking verbs — kept in sync so stripVerbSuffix restores
+  // silent-e ("becomes" → become).
+  "seem", "appear", "become", "remain", "stay", "look", "feel", "sound",
 ]);
 
 function stripVerbSuffix(s: string): string {

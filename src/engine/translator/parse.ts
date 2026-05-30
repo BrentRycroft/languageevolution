@@ -65,6 +65,14 @@ function prepToRole(lemma: string): SemanticRole {
   return PREP_ROLE_TABLE[lemma] ?? "location";
 }
 
+// Copular + linking verbs that take a predicate-adjective complement like "be"
+// ("the man seems/looks/feels/becomes big"). Cross-linguistically a natural
+// class (copula support); the simulator routes them through the copular
+// complement path. Transitive uses are excluded by the `!object` guard.
+const LINKING_VERBS = new Set([
+  "be", "seem", "appear", "become", "remain", "stay", "look", "feel", "sound", "grow",
+]);
+
 // ─────────────────────────────────────────────────────────────────────
 // Participant collection. Mirrors the legacy collectNP's structural
 // decisions (head detection, possessor, determiner, adjectives,
@@ -330,13 +338,18 @@ function collectMannerParticipants(tokens: EnglishToken[], consumed: Set<number>
   const out: Participant[] = [];
   for (let i = 0; i < tokens.length; i++) {
     if (consumed.has(i)) continue;
-    if (tokens[i]!.tag !== "ADV") continue;
+    // ADV tokens are manner adverbs. A still-unconsumed ADJ at this point is a
+    // FLAT (zero-derived) manner adverb — "the dog runs fast" — because the NP
+    // walk and copular-complement sweep have already claimed attributive and
+    // predicate adjectives; a leftover adjective is functioning adverbially.
+    if (tokens[i]!.tag !== "ADV" && tokens[i]!.tag !== "ADJ") continue;
     out.push({
       lemma: tokens[i]!.lemma,
       pos: "N",
       role: "manner",
       adjunct: true,
     });
+    consumed.add(i);
   }
   return out;
 }
@@ -551,9 +564,11 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
     }
   }
 
-  // Copular complement: when verb is "be" and no object, sweep adjectives.
+  // Copular complement: a copula/LINKING verb with no direct object takes a
+  // predicate adjective ("the man is/seems/looks/feels big"). The !object guard
+  // keeps the transitive uses ("the man feels the dog") on the normal path.
   const complement: { lemma: string; degree?: import("./syntax").Degree }[] = [];
-  if (verbTok.lemma === "be" && !object) {
+  if (LINKING_VERBS.has(verbTok.lemma) && !object) {
     for (let i = verbIdx + 1; i < tokens.length; i++) {
       const t = tokens[i]!;
       if (t.tag === "ADJ") {

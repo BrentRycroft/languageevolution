@@ -139,6 +139,20 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(bird!.modifiers?.some((m) => m.kind === "adjective"), "'tiny' is an adjective on bird").toBe(true);
   });
 
+  it("linking verbs take a predicate-adjective complement ('the man seems big')", () => {
+    // seem/look/feel/become/remain/stay are linking verbs (posOf="other", so
+    // they'd hit the default-N fallback and drop the subject). They now tag V
+    // and route through the copular-complement sweep like "be".
+    for (const v of ["seems", "looks", "feels", "becomes", "stays"]) {
+      const rc = parse(`the man ${v} big`);
+      expect(rc.participants[0]?.lemma, `"${v}": subject 'man' kept`).toBe("man");
+      expect(rc.predicate.complement?.[0]?.lemma, `"${v}": complement 'big'`).toBe("big");
+    }
+    // Transitive use must NOT be swept as a complement (object stays).
+    const tr = parse("the man feels the dog");
+    expect(tr.predicate.complement ?? [], "'feels the dog' has no complement").toEqual([]);
+  });
+
   it("prepositional dative 'give THEME to RECIPIENT' still parses (no double-object misfire)", () => {
     // Only ONE bare post-verbal NP (the theme); the recipient is a "to"-PP.
     // collectParticipant breaks at PREP, so the double-object path must not fire.
@@ -157,6 +171,18 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
   it("negation: clause.negated=true", () => {
     const rc = parse("the king does not see the wolf");
     expect(rc.negated).toBe(true);
+  });
+
+  it("flat manner adverb ('runs fast') is captured, not dropped", () => {
+    // "fast" tags ADJ; pre-fix the manner collector took only ADV tokens, so a
+    // post-verbal flat adverb was dropped. A leftover ADJ (attributive +
+    // predicate ones already claimed) is a flat manner adverb.
+    const rc = parse("the dog runs fast");
+    const manner = rc.participants.find((p) => p.role === "manner" && p.lemma === "fast");
+    expect(manner, "'fast' captured as a manner adjunct").toBeDefined();
+    // An ATTRIBUTIVE adjective must NOT be mistaken for a manner adverb.
+    const rc2 = parse("the big dog runs");
+    expect(rc2.participants.some((p) => p.role === "manner"), "'big' stays attributive, not manner").toBe(false);
   });
 
   it("'cannot' splits to 'can' + negation and keeps the subject", () => {
