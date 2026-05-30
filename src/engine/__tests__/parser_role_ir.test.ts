@@ -77,6 +77,33 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc.participants.filter((p) => !p.adjunct)).toHaveLength(1);
   });
 
+  it("ditransitive double-object 'give RECIPIENT THEME': both kept (theme not dropped)", () => {
+    // Pre-fix the parser kept only the first post-verbal NP (the recipient,
+    // mislabelled theme) and silently dropped the actual theme. English
+    // double-object: "give [the man] [the stone]" → recipient=man, theme=stone.
+    // The recipient becomes a dative adjunct so it surfaces per the target's
+    // adposition typology.
+    const rc = parse("the woman gives the man the stone");
+    expect(findP(rc, "woman")!.role).toBe("agent");
+    const man = findP(rc, "man");
+    const stone = findP(rc, "stone");
+    expect(stone, "theme 'stone' must not be dropped").toBeDefined();
+    expect(man, "recipient 'man' must be kept").toBeDefined();
+    expect(stone!.role).toBe("theme");
+    expect(man!.role).toBe("recipient");
+    expect(man!.adjunct, "recipient surfaces as a dative adjunct").toBe(true);
+  });
+
+  it("prepositional dative 'give THEME to RECIPIENT' still parses (no double-object misfire)", () => {
+    // Only ONE bare post-verbal NP (the theme); the recipient is a "to"-PP.
+    // collectParticipant breaks at PREP, so the double-object path must not fire.
+    const rc = parse("the woman gives the stone to the man");
+    expect(findP(rc, "stone")!.role).toBe("theme");
+    const man = findP(rc, "man");
+    expect(man, "recipient still present via the to-PP").toBeDefined();
+    expect(man!.adjunct).toBe(true);
+  });
+
   it("past tense: predicate.features.tense=past", () => {
     const rc = parse("the king saw the wolf");
     expect(rc.predicate.features?.tense).toBe("past");

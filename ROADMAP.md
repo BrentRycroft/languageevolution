@@ -152,8 +152,9 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       determinism). DEAD END (don't repeat): adding a cascade fallback inside
       `realiseNP` is a NO-OP — resolution happens in `populateForms` before
       `realiseNP` runs.
-- [ ] **Translator: ditransitive double-object drops the theme** (fix written,
-      RE-DIAGNOSE the marker before re-applying). The parser (`parse.ts`
+- [x] **Translator: ditransitive double-object now keeps both args** (DONE — see
+      Done log; the «marker» that blocked it earlier no longer occurs: bread coins
+      and all args resolve). The parser (`parse.ts`
       collectParticipant) collects only ONE post-verbal NP, so "give you the big
       stone" keeps the recipient ("you", mislabelled theme) and SILENTLY DROPS the
       theme. The argframe already has `give:[agent,theme,recipient]`; the recipient
@@ -213,6 +214,20 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: ditransitive double-object now keeps both args.** "give you the
+  big stone" was parsed as one object (recipient "you", mislabelled theme) and
+  the real theme silently dropped. Fix (parse.ts): skip already-consumed heads in
+  collectParticipant's scan (no-op for single-object calls), and for
+  recipient-frame verbs (`give/send/tell/...`) collect a 2nd post-verbal NP —
+  first = recipient (surfaced as a dative `to`-PP adjunct, placed per the target's
+  adposition typology), second = theme. The PREP-break keeps the prepositional
+  dative ("give X to Y") mono-transitive. Verified end-to-end (Romance "I give
+  bread you", tokipona "give bread to you" — both args present, no «marker») + 2
+  parser_role_ir regression tests. Precise tests green (parser_role_ir,
+  narrative_snapshot [the earlier blocker now passes — bread coins], typological_
+  routing, translator_agnosticism, composer_role_ir, lexical_frames; 90 tests).
+  Principle: ditransitive predicates have 3 core args; recipient realised as a
+  dative adposition per typology.
 - **Content/translator: Toki Pona now has man/woman** (mije/meli). The
   translator emitted a `«man»`/`«woman»` marker for Toki Pona because it lacked
   those words AND they aren't registered concepts (so the cascade couldn't coin

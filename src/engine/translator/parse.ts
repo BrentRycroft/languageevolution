@@ -9,7 +9,7 @@ import type {
   SemanticRole,
 } from "./roleFrame";
 import { roleClauseToSentence } from "./ast";
-import { subjectRoleOf, objectRoleOf } from "../lexicon/argFrames";
+import { subjectRoleOf, objectRoleOf, argFrameFor } from "../lexicon/argFrames";
 
 /**
  * parse.ts — Phase 73c Tier C Phase 3.
@@ -90,6 +90,11 @@ function collectParticipant(
     i += range.step
   ) {
     const t = tokens[i]!;
+    // Skip heads already claimed by an earlier participant (lets the
+    // ditransitive pass collect the theme after the recipient is consumed).
+    // No-op for the existing single-object calls — nothing in their scan path
+    // is pre-consumed.
+    if (consumed.has(i)) continue;
     if (t.tag === "N" || t.tag === "PRON") {
       headIdx = i;
       if (direction === "left") {
@@ -512,7 +517,25 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   }
 
   // Object collection (right of verb).
-  const object = collectParticipant(tokens, verbIdx, "right", consumed, objectRole) ?? undefined;
+  let object = collectParticipant(tokens, verbIdx, "right", consumed, objectRole) ?? undefined;
+
+  // English double-object ditransitive: "give RECIPIENT THEME" (two bare NPs,
+  // e.g. "give you the big stone"). The argframe marks a recipient; the FIRST
+  // post-verbal NP is the recipient and the SECOND is the theme. Pre-fix the
+  // parser kept only the first NP (mislabelled theme) and silently dropped the
+  // real theme. collectParticipant breaks at PREP, so the prepositional dative
+  // ("give the stone to you") has no second bare NP and stays mono-transitive
+  // (the recipient is picked up as a PP adjunct). The recipient surfaces as a
+  // dative "to"-PP, placed per the target language's adposition typology.
+  let recipient: Participant | undefined;
+  const vframe = argFrameFor(verbTok.lemma);
+  if (object && vframe && vframe.includes("recipient")) {
+    const theme = collectParticipant(tokens, verbIdx, "right", consumed, "theme") ?? undefined;
+    if (theme) {
+      recipient = { ...object, role: "recipient", adjunct: true, preposition: "to" };
+      object = theme;
+    }
+  }
 
   // Copular complement: when verb is "be" and no object, sweep adjectives.
   const complement: { lemma: string; degree?: import("./syntax").Degree }[] = [];
@@ -567,6 +590,7 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
 
   const participants: Participant[] = [subject];
   if (object) participants.push(object);
+  if (recipient) participants.push(recipient);
   participants.push(...ppAdjuncts);
   participants.push(...adverbs);
 
