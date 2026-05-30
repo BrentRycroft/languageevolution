@@ -49,7 +49,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; all presets de-anglicized — Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep), Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name), PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby); default/English have no attested duplicate pairs. |
-| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
+| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). Narrative negation now language-agnostic: English-style do-support ("did not see") gated on the new `grammar.doSupport` flag (default off) — other languages negate inline at their `negationPosition` (WALS ch.112). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
 | **Performance** | partial | Profiled (PROFILE_STEP via vitest, 2026-05-29): phonology = **64-67%** of step time, inventoryMgmt ~18%, genesis ~15%, all else <1%. So apply.ts IS the macro hot spot; its dominant cost is the per-word×rule `probabilityFor` (countSites scan + Math.pow). **DONE: trigger pre-filter (factory subset)** — factory rules (simpleSub/contextSub/mappingSub) now expose `triggers` (the `from`/mapping phonemes); the hot loop skips a rule via an O(1) `includes` check when none are present (provably probability 0). Byte-identical (perfcheck hashes c2e431df/524c8f2c/e7b438a3 unchanged); skips **26-30%** of probabilityFor calls → **0.8-1.7% faster phonology pass** (interleaved drift-cancelled A/B). NEGATIVE/reverted earlier: word-invariant scalar hoist (no win, allocation offset it — see Assessment notes; don't re-attempt). NEXT (bigger win, NEEDS DECISION): extend `triggers` to the ~43 inline catalog rules — would multiply the skip rate, but needs per-rule byte-identical auditing. Bundle: 944 kB main chunk (load-time). |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
@@ -280,6 +280,23 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Narrative: English do-support negation gated behind a typology flag
+  (language-agnosticism fix).** A discourse play session showed Bantu/PIE/Romance
+  generating "did/does not VERB" — the composer applied English-style do-support
+  to ANY language that happened to have "do" + "not" in its lexicon (no
+  typological gate), emitting a spurious English auxiliary. Do-support negation
+  is cross-linguistically rare, essentially English-specific (WALS ch.112-113;
+  most languages use a negative particle/affix). Added an optional
+  `grammar.doSupport` flag (types.ts; default off), gated the composer's
+  do-support on it, and set it true only in the English preset. Non-English
+  languages now negate INLINE at their own `negationPosition` ("dog not see" /
+  SOV "dog bread not see") with no spurious "did". Verified sim-non-rippling:
+  the field is read only by the narrative composer (not sim code), determinism is
+  run-to-run (simulation.test green), and serializeLeafLexicons/RuleState exclude
+  grammar. + narrative_negation_coord regression test (non-do-support lang has no
+  did/does/do). Verified: tsc + 69 negation/snapshot/discourse/simulation/
+  typology tests green. Principle: negation strategy is typologically determined
+  (Dryer/WALS) — the simulator must not default to the English strategy.
 - **Narrative: interlinear gloss now uses Leipzig Glossing Rules abbreviations.**
   Discourse play session showed the morphological gloss as verbose lowercase
   category paths — "walk.tense.past.aspect.ipfv.evid.dir", "friend.case.acc",

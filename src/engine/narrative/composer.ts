@@ -803,16 +803,17 @@ export function projectRoleClauseToTokens(
 
   const verbTokens: RoleToken[] = [];
 
-  // Do-support for past/present negation: when the template is negated
-  // and the language has both "do" and "not" in its lexicon, prefer
-  // "did/do + not + bare verb" over inline NEG. We inflect "do" via
-  // verbRoleToken so suppletion fires → past tense produces "did",
-  // present 3sg produces "does".
+  // Do-support for past/present negation: "did/do + not + bare verb". This is
+  // a cross-linguistically RARE strategy (essentially English-specific —
+  // WALS ch.112), so it is GATED on the `grammar.doSupport` typology flag.
+  // Languages without it (the default) fall through to inline NEG below, which
+  // emits the negator at the language's own `negationPosition`. We inflect
+  // "do" via verbRoleToken so suppletion fires → past "did", present 3sg "does".
   const negated = !!template.negated;
   const auxNot = lang.lexicon["not"];
   const doForm = lang.lexicon["do"];
   let didDoSupport = false;
-  if (negated && auxNot && doForm) {
+  if (negated && auxNot && doForm && lang.grammar.doSupport) {
     const auxTok = verbRoleToken(
       lang,
       "do",
