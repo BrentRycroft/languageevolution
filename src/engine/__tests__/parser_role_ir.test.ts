@@ -185,6 +185,18 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc2.participants.some((p) => p.role === "manner"), "'big' stays attributive, not manner").toBe(false);
   });
 
+  it("common adjectives (dark/loud/dead) tag ADJ so the head noun survives", () => {
+    // "dark"/"loud"/etc. were missing from BARE_ADJECTIVES (posOf="other"), so
+    // they tagged N and "the dark forest" became two nouns → "forest" (the real
+    // head) was dropped. They must be adjective modifiers on the noun.
+    for (const [adj, noun] of [["dark", "forest"], ["loud", "dog"], ["dead", "bird"]] as const) {
+      const rc = parse(`the man sees the ${adj} ${noun}`);
+      const head = findP(rc, noun);
+      expect(head, `head '${noun}' kept after '${adj}'`).toBeDefined();
+      expect(head!.modifiers?.some((m) => m.kind === "adjective" && m.lemma === adj), `'${adj}' is an adjective on '${noun}'`).toBe(true);
+    }
+  });
+
   it("a politeness opener ('please give me…') still parses as an imperative", () => {
     // Pre-fix a leading "please" (PUNCT) left the verb at index 1, so imperative
     // detection (verbIdx===0) failed, no subject was found, and the clause fell

@@ -184,6 +184,13 @@ const BARE_ADJECTIVES = new Set([
   "red", "blue", "green", "yellow", "black", "white",
   "wet", "dry", "full", "empty", "round", "straight", "sharp",
   "wise", "foolish", "brave", "kind", "cruel", "true", "false",
+  // Phase 76: common adjectives the wordlist leaves as posOf="other", so they
+  // hit the default-N fallback and an adjective+noun NP dropped the head ("the
+  // dark forest" → "the dark"). Adjective-only forms (verb-ambiguous open/close/
+  // clean/free excluded). Synonym-normalised ones (large/tiny…) are separate.
+  "dark", "soft", "warm", "cool", "dirty", "bright", "loud", "quiet",
+  "flat", "sour", "fresh", "broad", "sick", "dead", "alive", "ready",
+  "whole", "tight", "loose", "fat", "tame", "wild",
 ]);
 
 const COMPARATIVE_BASES = new Set([

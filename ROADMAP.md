@@ -376,6 +376,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: 22 common adjectives added to BARE_ADJECTIVES (adjective+noun NP
+  no longer drops the head).** Play session: "the man sees the dark forest" → "the
+  dark" ("forest" dropped) — "forest" resolves fine alone, but "dark" was missing
+  from BARE_ADJECTIVES (posOf="other"), so it tagged N, making "dark forest" two
+  nouns → "dark" became the head and "forest" was dropped (same class as the old
+  large/tiny synonym bug). Added the adjective-only posOf="other" forms (dark/soft/
+  warm/cool/dirty/bright/loud/quiet/flat/sour/fresh/broad/sick/dead/alive/ready/
+  whole/tight/loose/fat/tame/wild; verb-ambiguous open/close/clean/free excluded).
+  Now "the dark forest"/"loud dog"/"dead bird"/"warm house" keep the head.
+  Tokenizer-data only; no engine/rng change. + parser_role_ir regression test.
+  Verified: tsc + 110 + 40 parser/dialect/agnosticism/narrative tests green.
 - **Translator: a leading politeness/interjection opener ("please give me…") no
   longer breaks the imperative parse.** A leading "please" (PUNCT) put the verb at
   index 1, so imperative detection (`verbIdx===0`) failed, no subject was found,
