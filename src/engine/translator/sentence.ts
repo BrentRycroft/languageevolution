@@ -165,6 +165,10 @@ const BARE_VERBS = new Set([
   // (fish/dream are excluded — posOf classifies them noun, their dominant use.)
   "jump", "climb", "sing", "dance", "read", "write", "ride", "draw",
   "wear", "cook", "drive", "kick",
+  // Phase 76: copular/linking verbs (posOf="other", so they hit the default-N
+  // fallback and dropped the subject in "the man seems big"). They take an
+  // adjectival complement like "be" — see LINKING_VERBS in parse.ts.
+  "seem", "appear", "become", "remain", "stay", "look", "feel", "sound",
 ]);
 const BARE_ADJECTIVES = new Set([
   "big", "small", "tall", "short", "fast", "slow", "new", "old",
