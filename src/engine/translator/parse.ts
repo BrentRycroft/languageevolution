@@ -611,14 +611,26 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   // Adverb manner participants.
   const adverbs = collectMannerParticipants(tokens, consumed);
 
-  // Passive: "by"-PP gets instrumental case marking. In the
-  // Role-IR this is conveyed via the existing instrument role; the
-  // adapter re-maps to NP.head.case = "inst" when surfacing.
+  // Passive valency (language-agnostic). In an active clause the
+  // surface subject is the agent/experiencer and the direct object is
+  // the patient/stimulus. The passive REMAPS those grammatical
+  // relations: the underlying OBJECT is promoted to surface subject
+  // (Relational Grammar 2→1 advancement / patient promotion), and the
+  // underlying AGENT is demoted to an oblique chômeur — the English
+  // "by"-phrase. Positional slotting already puts the patient in
+  // subject position (it's the leftmost NP); here we correct the
+  // SEMANTIC role labels so downstream consumers (case/agreement,
+  // narrative) see the right argument structure regardless of the
+  // target language's voice morphology. Surface order is unchanged.
   if (voice === "passive") {
+    // Promote: the passive subject bears the verb's OBJECT role
+    // (patient/stimulus), not its active subject role (agent/experiencer).
+    subject = { ...subject, role: objectRoleOf(verbTok.lemma) };
+    // Demote: the agentive "by"-phrase is the underlying agent, not a
+    // plain instrument. True instrumentals ("with"), locatives, etc. are
+    // left untouched.
     for (const a of ppAdjuncts) {
-      // Mark the role explicitly so the adapter writes case = "inst".
-      // (The collector already does this via prepToRole("by") → "instrument".)
-      void a;
+      if (a.preposition === "by") a.role = "agent";
     }
   }
 
