@@ -55,6 +55,24 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## Backlog (top = next)
 
+- [ ] **Translator coinage rethink (USER REQUEST 2026-05-30): a coined term should
+      ALWAYS be a transparent compound of two EXISTING, semantically-related
+      lexemes — "firewater" = fire + water — never a random mash.** Today
+      `MECHANISM_COMPOUND.tryCoin` (`genesis/mechanisms/compound.ts`) is already
+      A+B, but when the related-meaning pool (`relatedMeanings` / `neighborsOf`)
+      is empty it falls back to a RANDOM lexicon word for partA and/or partB
+      (compound.ts:28-30) — that random concatenation of unrelated concepts is the
+      "very weird" coinage the user is seeing. Desired: (1) only compound when
+      there ARE ≥2 semantically-coherent existing parts that plausibly evoke the
+      target (kenning / calque style); (2) DROP the random-lexeme fallback;
+      (3) if no coherent pair exists, leave the term untranslated (literal-quote
+      fallback) rather than coin garbage. Principle: lexical gaps are filled by
+      transparent compounding/calque from native material — the cross-linguistic
+      default productive strategy. CAUTION: `MECHANISM_COMPOUND` is shared with the
+      genesis/sim coinage path, so this RIPPLES beyond the translator → treat as a
+      MILESTONE (verify determinism + simulation.test, byte-identity), not a
+      surgical fix. NEEDS DECISION: should the random fallback be removed globally
+      (genesis too) or only in the translator's `attemptGracefulFallback`?
 - [x] Trim PR long-pole tests `phase72_code_review_batch_b` and
       `phase73d_direction_vector` to <60s without weakening assertions.
 - [x] Ran the end-to-end `RUN_SLOW=1` pass (35.6 min wall; **1873 pass / 1 FAIL
