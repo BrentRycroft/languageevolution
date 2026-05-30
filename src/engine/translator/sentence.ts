@@ -253,6 +253,15 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
     const w = rawSplit[i]!;
     const next = rawSplit[i + 1];
     const after = rawSplit[i + 2];
+    // "cannot" is the fixed one-word spelling of "can not" (no apostrophe, so
+    // the "X't" contraction path below misses it). Split it like "can't": host
+    // "can" (AUX) + a negator. Pre-fix "cannot" tagged as a noun and became the
+    // subject, dropping the real subject ("the man cannot see" → "cannot see").
+    if (w === "cannot") {
+      raw.push("can");
+      negatorIndices.add(raw.length - 1);
+      continue;
+    }
     if (next === "'" && after === "s") {
       raw.push(w);
       possessorIndices.add(raw.length - 1);

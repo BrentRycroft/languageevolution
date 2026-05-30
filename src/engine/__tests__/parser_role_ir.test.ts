@@ -159,6 +159,16 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc.negated).toBe(true);
   });
 
+  it("'cannot' splits to 'can' + negation and keeps the subject", () => {
+    // "cannot" is the one-word spelling of "can not"; pre-fix it tagged as a
+    // noun and BECAME the subject, dropping the real subject ("the king cannot
+    // see" → "cannot see"). It must parse like "can not": subject "king",
+    // negated=true.
+    const rc = parse("the king cannot see the wolf");
+    expect(rc.participants[0]?.lemma, "subject is 'king', not 'cannot'").toBe("king");
+    expect(rc.negated, "clause is negated").toBe(true);
+  });
+
   it("yes-no interrogative (initial AUX): clause.interrogative=true", () => {
     const rc = parse("does the king see the wolf");
     expect(rc.interrogative).toBe(true);

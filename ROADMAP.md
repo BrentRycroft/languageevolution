@@ -322,6 +322,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: "cannot" splits to "can" + negation (was dropping the subject).**
+  Play session: "the man cannot see the dog" → "cannot see dog" — "cannot" (the
+  one-word spelling of "can not", no apostrophe so the "X't" contraction path
+  missed it) tagged as a NOUN and became the subject, dropping the real subject
+  "man". Added a tokenizer pre-split: "cannot" → host "can" (AUX) + a negator,
+  exactly mirroring "can't". Now "the man cannot see the dog" → "the man not see
+  the dog" (subject kept, negation present), identical to "can not". Tokenizer-
+  data only; no engine/rng change. + parser_role_ir regression test (subject
+  'king' not 'cannot', negated=true). Verified: tsc + 125 + 36 parser/dialect/
+  grammar/tree/narrative tests green.
 - **Translator: case-strategy languages keep meaning-critical adpositions
   (without/with), not just "than".** Play session: "the man without the dog runs"
   → "man run dog" (reads as transitive "man runs dog" — the privative "without"
