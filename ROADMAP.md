@@ -44,7 +44,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Sociolinguistics (register/prestige/endangerment) | partial | Phase 72 added prestige/endangerment/bilingual. |
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
-| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. PLAY-SESSION FINDINGS (2026-05-29): (1) sentence-path NP/verb resolution is shallow (`lang.lexicon[lemma]`), so untranslatable words emit `«lemma»` markers instead of coining (backlog); (2) ditransitive double-object drops the theme (backlog, fix ready). |
+| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. PLAY-SESSION FINDINGS (2026-05-29): the sentence path DOES gracefully coin missing words (populateForms→resolveOpen→cascade); `«lemma»` markers appear ONLY for lemmas not in the CONCEPTS registry (cascade's anti-gibberish guard) — e.g. "man"/"woman" are unregistered → markers (backlog: register them). Ditransitive double-object drops the theme (backlog, fix written, re-diagnose marker). |
 | **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
@@ -128,33 +128,44 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       correlation, likely with adjectivePosition / Greenbergian consistency +
       realiser wiring + per-preset values). NEEDS DECISION on default + drift
       behaviour before building — don't guess.
-- [ ] **Translator: sentence-path NP/verb resolution doesn't gracefully coin**
-      (HIGH value; prerequisite for the ditransitive fix below). The AST→Sentence
-      adapters resolve heads with a SHALLOW `lang.lexicon[lemma]` lookup
-      (ast.ts:205 `lookupForm`, used at 211/224/237; also `participantToNP`
-      ~443), NOT the 8-rung `lookupFormWithResolution` cascade. So any word a
-      language lacks (e.g. "bread" in Toki Pona) surfaces as an ugly `«bread»`
-      fallback marker (realise.ts wraps empty baseForm in « »), instead of
-      synthesising/colexifying/coining like the word-level `translate()` path
-      already does (routed last session). This is a concrete "translator is weak"
-      symptom. Fix: route those head resolutions through the cascade (graceful
-      coinage on). Broad-ish (several resolution points) + changes output for
-      currently-unresolved words only → full-suite-verify. Found via a play-session
-      inspector; `narrative_snapshot` asserts no `«»` markers, so this is testable.
-- [ ] **Translator: ditransitive double-object drops the theme** (READY fix,
-      blocked on the coinage item above). The parser (`parse.ts` collectParticipant)
-      collects only ONE post-verbal NP, so "give you the big stone" keeps the
-      recipient ("you", mislabelled theme) and SILENTLY DROPS the theme ("the big
-      stone"). The argframe already has `give:[agent,theme,recipient]` and the
-      `recipient` role surfaces downstream. WORKING fix (verified, then reverted):
+- [ ] **Translator: register "man"/"woman" (and audit other basic unregistered
+      concepts) so they coin instead of marking** (CORRECTED DIAGNOSIS, 2026-05-29
+      — supersedes the earlier "sentence-path doesn't coin" claim, which was
+      WRONG). The sentence path ALREADY gracefully coins: `realiseSentence` →
+      `populateForms` → the `resolveOpen` dep → `lookupFormWithResolution` (full
+      8-rung cascade, coinage on). Verified: "the king eats the bread" / "...the
+      computer" in Toki Pona COIN (synth-fallback), no marker. The `«lemma»`
+      marker appears ONLY when rung-8 coinage is REFUSED, gated by
+      `isValidEnglishLemma` (englishWordlist.ts) → `isAcceptedStem` →
+      `isRegisteredConcept(id) = id in CONCEPTS`. Root cause: **"man" and "woman"
+      are not registered concepts** (absent from `basic240.ts` CLUSTERS AND
+      `expanded_concepts.ts`), so the cascade treats them as gibberish and won't
+      coin → `«woman»`. (NB: "person", "child" ARE registered.) FIX: add man/woman
+      (+ sweep for other missing basics) to `EXPANDED_CONCEPTS` (lower ripple than
+      BASIC_240 — registers them as coinable WITHOUT forcing birth-lexicalization;
+      pos:noun, cluster:"kinship", a tier that doesn't auto-lexicalise). RISK: a
+      registry change ripples into genesis/CONCEPT_IDS → sim trajectories →
+      verify-first with a FULL `npx vitest run` (basic240/concept/preset_coverage +
+      determinism). DEAD END (don't repeat): adding a cascade fallback inside
+      `realiseNP` is a NO-OP — resolution happens in `populateForms` before
+      `realiseNP` runs.
+- [ ] **Translator: ditransitive double-object drops the theme** (fix written,
+      RE-DIAGNOSE the marker before re-applying). The parser (`parse.ts`
+      collectParticipant) collects only ONE post-verbal NP, so "give you the big
+      stone" keeps the recipient ("you", mislabelled theme) and SILENTLY DROPS the
+      theme. The argframe already has `give:[agent,theme,recipient]`; the recipient
+      role surfaces downstream. WORKING fix (verified end-to-end, then reverted):
       skip consumed heads in collectParticipant's scan (no-op for single-object
-      calls) + for recipient-frame verbs collect a 2nd object and mark the first
-      as a dative `to`-PP adjunct → "give [theme] to [recipient]", placed per the
-      target's adposition typology (verified: Romance "I give big stone you",
-      Bantu "I give stone big to you", PIE SOV "I big stone you to give"). REVERTED
-      because it unmasks the `«bread»` marker on the snapshot sentence "i give you
-      the bread" (Toki Pona lacks bread) — do the coinage fix FIRST, then re-apply
-      (the 2 parser_role_ir regression tests are written; re-add them).
+      calls) + for recipient-frame verbs collect a 2nd object and mark the first as
+      a dative `to`-PP adjunct → "give [theme] to [recipient]" per the target's
+      adposition typology (Romance "I give big stone you", Bantu "I give stone big
+      to you", PIE SOV "I big stone you to give"). + 2 parser_role_ir regression
+      tests (re-add them). It tripped `narrative_snapshot`'s «»-marker assertion on
+      "i give you the bread" — I ASSUMED the marked word was "bread", but bread
+      coins fine standalone, so the real culprit is unconfirmed (maybe the dative
+      "you" PRON, or a participant NP not walked by populateForms). RE-DIAGNOSE by
+      printing the exact «marked» token (throwaway inspector) before re-applying;
+      the man/woman registry item may or may not be related.
 - [x] Assess narrative generation (code-level): genuinely grammar-driven
       (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
       `synthesisIndex`-gated morphology; complex typology via the translator.
