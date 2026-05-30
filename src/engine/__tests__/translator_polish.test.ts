@@ -73,21 +73,29 @@ describe("translator polish — leading discourse coordinators", () => {
   });
 });
 
-describe("translator polish — object pronouns alias to subject lemmas", () => {
-  it("'she sees him' resolves him via the 'he' lexeme", () => {
+describe("translator polish — object pronouns surface via their oblique form", () => {
+  // The object pronoun's FORM resolves via the subject lexeme's stem (no separate
+  // "him"/"them" lexicon entry — nothing goes missing), and the English gloss
+  // caption is the oblique form ("him"/"them"), matching the realiser's
+  // PRONOUN_OBLIQUE captioning (see narrative_composer "oblique caption" test).
+  it("'she sees him' glosses the object as 'him' and resolves it (no missing)", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "she sees him");
     const lemmas = out.targetTokens.map((t) => t.englishLemma);
-    expect(lemmas).toContain("he");
+    expect(lemmas).toContain("him");
     expect(lemmas).toContain("she");
+    expect(out.missing).not.toContain("he");
+    expect(out.missing).not.toContain("him");
   });
 
-  it("'I see them' resolves them via the 'they' lexeme", () => {
+  it("'I see them' glosses the object as 'them' and resolves it (no missing)", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "i see them");
     const lemmas = out.targetTokens.map((t) => t.englishLemma);
     expect(lemmas).toContain("i");
-    expect(lemmas).toContain("they");
+    expect(lemmas).toContain("them");
+    expect(out.missing).not.toContain("they");
+    expect(out.missing).not.toContain("them");
   });
 });
 
