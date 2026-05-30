@@ -123,6 +123,11 @@ function collectParticipant(
     }
     if (t.tag === "V") break;
     if (t.tag === "PREP") break;
+    // Phase 74: "than" introduces a comparative standard, not an object. Don't
+    // grab the NP after it ("the king is bigger than the dog" must not collect
+    // "dog" as a patient — that suppressed the copular complement sweep and
+    // dropped the comparative adjective, yielding "king is dog").
+    if (t.lemma === "than") break;
   }
   if (headIdx < 0) return null;
   claim(headIdx);

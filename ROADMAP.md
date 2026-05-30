@@ -227,6 +227,13 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       romance/tokipona for the right value). Ripples sim (grammar drift/areal) →
       milestone-level, verify with the full suite. (The realiser now respects
       numeralPosition correctly — see Done log — so this is purely the preset value.)
+- [ ] **Translator: full comparative construction** (the "than NP" standard is
+      currently dropped; only the comparative adjective surfaces). Capture
+      "than NP" as a standard-of-comparison oblique and render per the target
+      language's comparative strategy (particle / conjoined / exceed / locational —
+      a typological axis). Also: modal "can/may/must" auxiliaries are currently
+      dropped ("the man can see X" → "see X") — render them per the lang's mood/
+      modal system. Both translator-only (sim-non-rippling), found via play session.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
@@ -236,6 +243,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: comparatives no longer collapse to nonsense.** "the king is
+  bigger than the dog" rendered "king is dog" — "than" wasn't a participant
+  boundary, so the parser grabbed the standard "dog" as a patient object, which
+  suppressed the copular complement sweep (`be && !object`) and DROPPED the
+  comparative adjective. Fix: collectParticipant now breaks at "than" (it only
+  occurs in comparatives), so the standard isn't a spurious object → the
+  comparative adjective is captured as the complement with degree="comparative"
+  → renders "king is big[comparative]". + parser_role_ir regression test. tsc +
+  targeted tests green (parser_role_ir, typological_routing, narrative_snapshot,
+  grammar_audit — 91). Translator-only. Follow-up logged: the "than NP" standard
+  is still dropped (full comparative-construction support is a feature).
+  Principle: "than" marks a standard of comparison, not a verbal argument.
 - **Translator: the intonation-question "?" marker is now PUNCT, not a DET word.**
   Intonation-strategy yes/no questions append a "?" (realise.ts) as a textual
   question cue; it was tagged role DET, so it surfaced as a determiner word

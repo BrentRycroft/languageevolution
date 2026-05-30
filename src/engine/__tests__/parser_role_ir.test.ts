@@ -94,6 +94,17 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(man!.adjunct, "recipient surfaces as a dative adjunct").toBe(true);
   });
 
+  it("comparative 'X is bigger than Y' keeps the adjective complement (not 'X is Y')", () => {
+    // "than" introduces a comparison standard, not an object; pre-fix the parser
+    // grabbed Y as a patient, which suppressed the copular complement sweep so
+    // the comparative adjective was dropped, yielding nonsense ("king is dog").
+    const rc = parse("the king is bigger than the dog");
+    expect(rc.predicate.lemma).toBe("be");
+    expect(rc.predicate.complement?.[0]?.lemma).toBe("big");
+    expect(rc.predicate.complement?.[0]?.degree).toBe("comparative");
+    expect(rc.participants.find((p) => p.lemma === "dog" && !p.adjunct), "'dog' must not be a spurious object").toBeUndefined();
+  });
+
   it("do-support negation 'do not VERB' keeps the real verb + object", () => {
     // "do" is both a main verb and the do-support auxiliary; pre-fix bare "do"
     // (unlike "does"/"did", already AUX) was tagged a main verb, so "the dogs do
