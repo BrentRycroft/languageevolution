@@ -451,8 +451,17 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   if (tokens.length > 0 && tokens[tokens.length - 1]!.lemma === "?") {
     interrogative = true;
   }
+  // A sentence-initial AUX signals a polar (yes-no) question via
+  // subject-auxiliary inversion ("does the man see…?"). But "do/does/did"
+  // immediately followed by "not" is do-support NEGATION, not inversion —
+  // "do not see the dog" is a negative imperative, not a question. Excluding
+  // it stops a spurious interrogative (e.g. an intonation "?" being appended).
   if (tokens.length > 0 && tokens[0]!.tag === "AUX") {
-    interrogative = true;
+    const first = tokens[0]!.lemma;
+    const isDoSupportNegation =
+      (first === "do" || first === "does" || first === "did") &&
+      tokens[1]?.lemma === "not";
+    if (!isDoSupportNegation) interrogative = true;
   }
 
   // Aspect / mood / voice cues from preceding AUX.

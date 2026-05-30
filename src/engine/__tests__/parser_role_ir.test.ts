@@ -164,6 +164,16 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc.interrogative).toBe(true);
   });
 
+  it("do-support negation imperative ('do not see') is NOT interrogative", () => {
+    // Initial AUX signals a polar question via subject-aux inversion, but
+    // "do/does/did + not" is do-support NEGATION ("do not see the wolf" = a
+    // negative imperative). Pre-fix it was mis-flagged interrogative, which
+    // appended a spurious intonation "?" in intonation-question languages.
+    const rc = parse("do not see the wolf");
+    expect(rc.interrogative ?? false, "negative imperative is not a question").toBe(false);
+    expect(rc.negated, "negation is still captured").toBe(true);
+  });
+
   it("imperative: subject participant is synthesised pronoun 'you'", () => {
     const rc = parse("see the wolf");
     const subj = rc.participants[0]!;

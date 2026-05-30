@@ -245,6 +245,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Translator: object/oblique pronouns surface in NOMINATIVE form.** Play
+      session (2026-05-29): "the man sees him" → gloss "...see he"; "the man sees
+      us" → "...see we"; "give me the stone" → "...to i". The object pronoun is
+      lemmatised to its citation/nominative form (him→he, us→we, me→i) for concept
+      lookup, and that nominative lemma is what surfaces in the gloss caption (and
+      drives form resolution). For English output this is wrong (needs suppletive
+      him/us/me); for case languages the pronoun should also take object case.
+      The parser DOES tag object pronouns with role=object (PRONOUN_FEATURES) — the
+      gap is downstream (the gloss/realiser uses the nominative lemma). Investigate
+      the pronoun realisation path; likely a per-pronoun case-form table
+      (he/him/his, we/us/our) keyed on the participant's case. Translator-only.
 - [ ] **Derivation: malformed concept-ids leak into narrative glosses.** Discourse
       play session (2026-05-29) surfaced lemmas like `take--tér.agt` (double dash +
       agentive `-tér` + a `.agt` suffix in the ID) and `coffee-prae-.tbef` (a
@@ -280,6 +291,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: "do not VERB" negative imperative no longer mis-parsed as a
+  question.** Play session: Bantu "do not see the dog" rendered "you not see dog
+  ?" — a spurious intonation "?". The parser flagged interrogative whenever a
+  sentence started with an AUX (polar-question subject-aux inversion), but
+  "do/does/did + not" is do-support NEGATION ("do not see…" = a negative
+  imperative), not inversion. Excluded that pattern from the initial-AUX
+  interrogative heuristic. Now the negative imperative is non-interrogative (no
+  "?"), while genuine yes-no questions ("does the man see…?") and wh-questions are
+  unaffected. Parser-only; no engine/rng change. + parser_role_ir regression test.
+  Verified: tsc + 95 parser/routing/tree/typology/narrative tests green. (Same
+  session logged a backlog item: object/oblique pronouns surface in nominative
+  form — him→he, us→we, me→i.)
 - **Narrative: English do-support negation gated behind a typology flag
   (language-agnosticism fix).** A discourse play session showed Bantu/PIE/Romance
   generating "did/does not VERB" — the composer applied English-style do-support
