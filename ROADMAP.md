@@ -44,7 +44,7 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Sociolinguistics (register/prestige/endangerment) | partial | Phase 72 added prestige/endangerment/bilingual. |
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
-| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. |
+| **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. PLAY-SESSION FINDINGS (2026-05-29): (1) sentence-path NP/verb resolution is shallow (`lang.lexicon[lemma]`), so untranslatable words emit `«lemma»` markers instead of coining (backlog); (2) ditransitive double-object drops the theme (backlog, fix ready). |
 | **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
@@ -128,6 +128,33 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       correlation, likely with adjectivePosition / Greenbergian consistency +
       realiser wiring + per-preset values). NEEDS DECISION on default + drift
       behaviour before building — don't guess.
+- [ ] **Translator: sentence-path NP/verb resolution doesn't gracefully coin**
+      (HIGH value; prerequisite for the ditransitive fix below). The AST→Sentence
+      adapters resolve heads with a SHALLOW `lang.lexicon[lemma]` lookup
+      (ast.ts:205 `lookupForm`, used at 211/224/237; also `participantToNP`
+      ~443), NOT the 8-rung `lookupFormWithResolution` cascade. So any word a
+      language lacks (e.g. "bread" in Toki Pona) surfaces as an ugly `«bread»`
+      fallback marker (realise.ts wraps empty baseForm in « »), instead of
+      synthesising/colexifying/coining like the word-level `translate()` path
+      already does (routed last session). This is a concrete "translator is weak"
+      symptom. Fix: route those head resolutions through the cascade (graceful
+      coinage on). Broad-ish (several resolution points) + changes output for
+      currently-unresolved words only → full-suite-verify. Found via a play-session
+      inspector; `narrative_snapshot` asserts no `«»` markers, so this is testable.
+- [ ] **Translator: ditransitive double-object drops the theme** (READY fix,
+      blocked on the coinage item above). The parser (`parse.ts` collectParticipant)
+      collects only ONE post-verbal NP, so "give you the big stone" keeps the
+      recipient ("you", mislabelled theme) and SILENTLY DROPS the theme ("the big
+      stone"). The argframe already has `give:[agent,theme,recipient]` and the
+      `recipient` role surfaces downstream. WORKING fix (verified, then reverted):
+      skip consumed heads in collectParticipant's scan (no-op for single-object
+      calls) + for recipient-frame verbs collect a 2nd object and mark the first
+      as a dative `to`-PP adjunct → "give [theme] to [recipient]", placed per the
+      target's adposition typology (verified: Romance "I give big stone you",
+      Bantu "I give stone big to you", PIE SOV "I big stone you to give"). REVERTED
+      because it unmasks the `«bread»` marker on the snapshot sentence "i give you
+      the bread" (Toki Pona lacks bread) — do the coinage fix FIRST, then re-apply
+      (the 2 parser_role_ir regression tests are written; re-add them).
 - [x] Assess narrative generation (code-level): genuinely grammar-driven
       (Phase 53 T6 de-anglicized it) — language's own lexicon + `wordOrder` +
       `synthesisIndex`-gated morphology; complex typology via the translator.
@@ -301,6 +328,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## UX findings
 
+- 2026-05-29 (programmatic play session via a throwaway inspector — drove real
+  narrative + translateSentence output for romance/bantu/pie after 40 gens, read
+  it for quality). Narrative + most translations read plausibly and respect
+  per-language typology (SVO/SOV order, adj/poss/num placement, adposition
+  pre/post). TWO concrete issues found → backlog items: (a) `«lemma»` fallback
+  markers for words a language lacks (shallow sentence-path resolution); (b)
+  ditransitive theme silently dropped. Also confirmed (not a bug): case languages
+  (Romance) drop oblique adpositions ("over"/"with") while preposition/postposition
+  langs keep+place them per typology — the deliberate case-strategy behaviour. The
+  inspector approach works well as a GUI substitute; recreate it when driving output.
 - 2026-05-29: production `npm run build` is green (1200 modules, PWA service
   worker generated) after the drift/translator/narrative changes — app compiles
   + bundles cleanly. Main JS chunk is 944 kB (logged as a perf follow-up).
