@@ -181,6 +181,13 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Narrative live-quality check — fold into the baseline GUI play session:
       read whether multi-line output reads like a real (non-English-shaped)
       language across SOV / ergative / tonal presets.
+- [ ] **Translator: object head may drop in a two-NP sentence with adjectives.**
+      Observed (play session, romance@40g): "the large dog sees the tiny bird" →
+      "dog see tiny" — the object head "bird" (and the subject adj) didn't surface
+      though everything resolved (MISS empty). Pre-existing (NOT the synonym map —
+      that's resolution-only). Re-diagnose with a throwaway probe printing the
+      parsed participants + realised tokens; likely a parse/realise issue with
+      adj+head object NPs. Translator-only, sim-non-rippling.
 - [x] Audit presets for English-based encoding (code-level): forms are NOT
       relexified English (Bantu authentic proto-Bantu; default lexicon is
       PIE-flavored). Real anglocentrism = the shared English concept inventory.
@@ -225,6 +232,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: English-synonym normalization map** (sentence.ts resolveLemma).
+  Common English synonyms now resolve to their canonical REGISTERED concept
+  before the cascade — quick/swift/rapid/speedy→fast, large/huge/enormous/giant→
+  big, tiny/little→small, kid→child — so user-typed variants render the real form
+  ("the dog runs quickly" → fast's form) instead of a «marker» (or being dropped).
+  Sim-non-rippling: only normalises translator INPUT lemmas; cascade/genesis/
+  lexicon key off concept ids. Applied only when the language doesn't lexicalise
+  the variant itself. tsc + targeted tests green (narrative_snapshot, typological_
+  routing, abstract_pivot, graceful_fallback — 48). Principle: synonyms map to one
+  concept; the user shouldn't hit a marker for a word the language CAN express.
 - **Translator: drop unresolvable manner adverbs instead of marking.** A manner
   adverb is an optional adjunct; when the target can't resolve its lemma (empty
   baseForm) the realiser was surfacing an ugly `«quick»` marker. Now it omits the

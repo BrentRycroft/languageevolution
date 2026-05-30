@@ -491,6 +491,22 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
   return tokens;
 }
 
+/**
+ * Phase 74: common English synonyms → their canonical REGISTERED concept,
+ * so user-typed variants resolve instead of surfacing a «lemma» marker
+ * ("quickly" → quick → fast). Sim-non-rippling: this only normalises
+ * translator INPUT lemmas; the cascade, genesis and lexicon all key off
+ * concept ids, never these English variants. Every value is a registered
+ * concept. Applied only when the language doesn't lexicalise the variant
+ * itself.
+ */
+const ENGLISH_SYNONYM_CONCEPT: Record<string, string> = {
+  quick: "fast", swift: "fast", rapid: "fast", speedy: "fast",
+  large: "big", huge: "big", enormous: "big", giant: "big",
+  tiny: "small", little: "small",
+  kid: "child",
+};
+
 function resolveLemma(
   lang: Language,
   lemma: string,
@@ -504,7 +520,8 @@ function resolveLemma(
   // abstraction. resolveLemma is a thin adapter that preserves the
   // legacy signature for in-file callers.
   void posOf;
-  return lookupFormWithResolution(lang, lemma);
+  const canonical = lang.lexicon[lemma] ? lemma : (ENGLISH_SYNONYM_CONCEPT[lemma] ?? lemma);
+  return lookupFormWithResolution(lang, canonical);
 }
 
 /**
