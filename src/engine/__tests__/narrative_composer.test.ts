@@ -146,6 +146,41 @@ describe("Narrative composer — target-side composition", () => {
     }
   });
 
+  it("a runtime-derived concept glosses with a Leipzig category, not a leaked '--affix'", () => {
+    // Regression: runtime-derived slot meanings are `${base}-${tag}` where
+    // `tag` already starts with "-" (e.g. "-ish"), so a naive caption
+    // produced non-words like "lake--ish" / gloss "lake--ish-ACC". The
+    // composer must instead render the base lemma in the caption and a
+    // Leipzig derivation gloss (ADJZ, AGT, DIM, …) in the interlinear.
+    const base = englishLang();
+    const lang: Language = {
+      ...base,
+      derivationalSuffixes: [
+        ...(base.derivationalSuffixes ?? []),
+        { affix: ["ɪ", "ʃ"], tag: "-ish", category: "adjectival", productive: true },
+      ],
+    };
+    const tpl: AbstractTemplate = {
+      shape: "transitive",
+      tense: "present",
+      needs: { subject: true, object: true, adjective: false, time: false, place: false },
+      introducesEntity: true,
+    };
+    const slots: SlotAssignment = { verb: "see", subject: "king", object: "lake--ish" };
+    const out = composeTargetSentence(lang, tpl, slots, makeDiscourse("legend"), "ipa");
+
+    const objTok = out.tokens.find((t) => t.englishTag === "N" && t.englishLemma.includes("lake"));
+    expect(objTok, "derived object token resolved").toBeDefined();
+    // Caption is the clean base lemma — no double hyphen, no raw affix.
+    expect(objTok!.englishLemma).toBe("lake");
+    // Interlinear gloss carries the Leipzig derivation category (ADJZ).
+    expect(objTok!.glossNote).toContain("ADJZ");
+    expect(objTok!.glossNote).not.toContain("-ish");
+    // Neither the free-translation caption nor any token leaks "--".
+    expect(out.english).not.toContain("--");
+    for (const t of out.tokens) expect(t.englishLemma).not.toContain("--");
+  });
+
   it("plural irregular survives: subject 'man' produces 'men' in English when pluralized", () => {
     const lang = englishLang();
     expect(lang.suppletion?.man?.["noun.num.pl"]).toBeDefined();

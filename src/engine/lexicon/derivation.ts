@@ -126,6 +126,42 @@ export function categoryLabel(category: DerivationCategory | undefined): string 
 }
 
 /**
+ * Leipzig-style interlinear gloss abbreviation per derivation category.
+ * Language-neutral (Leipzig Glossing Rules / standard derivation gloss
+ * abbreviations: NMLZ, ADJZ, VBLZ, AGT, DIM, PRIV …). Used by the
+ * narrative composer so a runtime-derived concept glosses as
+ * "base-AGT-ACC" rather than leaking the synthetic English affix
+ * ("base--er-ACC").
+ */
+const CATEGORY_GLOSS: Record<DerivationCategory, string> = {
+  agentive: "AGT",
+  abstractNoun: "NMLZ",
+  dominionAbstract: "NMLZ",
+  nominalisation: "NMLZ",
+  diminutive: "DIM",
+  adjectival: "ADJZ",
+  denominal: "VBLZ",
+  negative: "NEG",
+  repetitive: "ITER",
+  temporalBefore: "ANT",
+  temporalAfter: "POST",
+  intensifierExcess: "AUG",
+  intensifierInsufficient: "DIM",
+  mistaken: "MIS",
+  adverbial: "ADVZ",
+  privative: "PRIV",
+};
+
+/**
+ * Leipzig gloss abbreviation for a derivation category. Falls back to a
+ * generic "DERIV" when the category is unknown (legacy untyped suffixes).
+ */
+export function derivationGloss(category: DerivationCategory | undefined): string {
+  if (!category) return "DERIV";
+  return CATEGORY_GLOSS[category];
+}
+
+/**
  * Tag pool per category. Each is an English-flavoured affix label used for
  * UI display + wordOrigin chain info. The actual phonemic affix on a
  * language is synthesised below from the language's phoneme inventory.
