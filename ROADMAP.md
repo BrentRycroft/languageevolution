@@ -252,14 +252,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       clauses, this needs recursive clause parsing (the `embeddedIn`/two-clause
       path). Milestone-ish — log, don't rush. (S-coordination and relative clauses
       ARE handled; this is the remaining multi-clause gap alongside complements.)
-- [ ] **Translator: "without" (privative) dropped in case langs, reversing
-      meaning.** "the man without the dog runs" → Romance "man run dog" (reads as
-      "man runs dog" — transitive). Same family as comparative "than" (fixed) and
-      passive "by": a meaning-critical non-spatial adposition dropped by the
-      case-strategy oblique-adposition drop. Candidate fix: extend the realisePP
-      "than"-style exemption to privative "without" (and maybe "with"), OR apply a
-      dedicated case. Translator (realiser); scope which adpositions are
-      meaning-critical vs role-recoverable-from-case before doing.
+- [x] **Translator: "without" (privative) dropped in case langs, reversing
+      meaning.** DONE (see Done log). realisePP now retains a small set of
+      meaning-critical adpositions (RETAINED_ADPOSITIONS = than/without/with) in
+      case-strategy languages; spatial/role adpositions (in/on/to/from/of) still
+      drop. Passive "by"-agent NOT included (separate voice-paradigm milestone).
 - [x] **Translator: degree adverb "very" dropped.** DONE (see Done log). "very"
       now raises the following NP-adjective to degree="intensive" (parser walk),
       realised by full reduplication (big→big-big). FOLLOW-UPS (logged, not done):
@@ -325,6 +322,19 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: case-strategy languages keep meaning-critical adpositions
+  (without/with), not just "than".** Play session: "the man without the dog runs"
+  → "man run dog" (reads as transitive "man runs dog" — the privative "without"
+  was dropped by the case-strategy oblique-adposition drop, with no abessive case
+  to recover it). Generalised the earlier "than" exemption into a
+  RETAINED_ADPOSITIONS set (than/without/with): abessive (without) and comitative
+  (with) are rare as morphological cases (WALS) and none is applied to the PP-NP,
+  so they're retained as particles; spatial/role adpositions (in/on/to/from/of)
+  still drop (role recoverable from case). Now "man run without dog" / "man run
+  with dog"; "on the mountain" still drops to "mountain". Realiser-only; no
+  engine/rng change. + translator_agnosticism regression test (without/with
+  retained, on dropped). Verified: tsc + 83 + 9 agnosticism/parser/routing/
+  narrative tests green. (Passive "by"-agent left out — separate voice milestone.)
 - **Translator: relative clause + COPULAR matrix no longer collapses.** Play
   session: "the dog that runs is big" → "that run" (subject "dog", copula "is",
   complement "big" ALL dropped; the relativiser "that" became the subject and the
