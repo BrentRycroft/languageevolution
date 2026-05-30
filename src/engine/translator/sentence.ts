@@ -191,6 +191,12 @@ const BARE_ADJECTIVES = new Set([
   "dark", "soft", "warm", "cool", "dirty", "bright", "loud", "quiet",
   "flat", "sour", "fresh", "broad", "sick", "dead", "alive", "ready",
   "whole", "tight", "loose", "fat", "tame", "wild",
+  // Phase 76 (cont.): more posOf="other" adjectives mis-tagging N (psych/
+  // physical-state + quality adjectives). Adjective-primary, no common verb
+  // homonym (verb-ambiguous tired/blunt/blind excluded; -ed "tired" is the
+  // separate predicate-participle issue).
+  "angry", "hungry", "thirsty", "afraid", "ill", "gentle", "ancient", "modern",
+  "lazy", "busy", "clever", "stupid", "salty", "deaf", "lame",
 ]);
 
 const COMPARATIVE_BASES = new Set([

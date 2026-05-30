@@ -197,6 +197,18 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     }
   });
 
+  it("psych/state adjectives (angry/hungry/gentle) tag ADJ so the head noun survives", () => {
+    // Second batch of posOf="other" adjectives that mis-tagged N: "the angry dog"
+    // became two nouns, dropping the modifier or the head. Each must be an
+    // adjective modifier on the noun (verb-ambiguous tired/blunt/blind excluded).
+    for (const [adj, noun] of [["angry", "dog"], ["hungry", "wolf"], ["gentle", "king"]] as const) {
+      const rc = parse(`the man sees the ${adj} ${noun}`);
+      const head = findP(rc, noun);
+      expect(head, `head '${noun}' kept after '${adj}'`).toBeDefined();
+      expect(head!.modifiers?.some((m) => m.kind === "adjective" && m.lemma === adj), `'${adj}' is an adjective on '${noun}'`).toBe(true);
+    }
+  });
+
   it("a politeness opener ('please give me…') still parses as an imperative", () => {
     // Pre-fix a leading "please" (PUNCT) left the verb at index 1, so imperative
     // detection (verbIdx===0) failed, no subject was found, and the clause fell

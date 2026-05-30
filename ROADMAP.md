@@ -394,6 +394,17 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: 15 more posOf="other" adjectives added to BARE_ADJECTIVES (cont.
+  of the dark/loud/dead fix).** Play session: "the angry dog bites the thief" →
+  "dog thief bite" ("angry" dropped). Probed posOf across ~44 candidate adjectives:
+  angry/hungry/thirsty/afraid/ill/gentle/ancient/modern/lazy/busy/clever/stupid/
+  salty/deaf/lame were posOf="other" and tagged N (verb-ambiguous tired/blunt/blind
+  excluded — tired is the separate -ed predicate-participle issue). Added to
+  BARE_ADJECTIVES so the adjective tags ADJ and the head noun is unambiguous (now
+  "the angry dog…" → "angry dog … bite", both kept). Tokenizer-data only; no engine/
+  rng change. + parser_role_ir regression test. Verified: tsc + 79 parser/dialect/
+  agnosticism tests green. (Also noted this session: ordinal "first" and -ly manner
+  adverb "slowly" drop — separate, non-trivial; left for later.)
 - **Translator: 22 common adjectives added to BARE_ADJECTIVES (adjective+noun NP
   no longer drops the head).** Play session: "the man sees the dark forest" → "the
   dark" ("forest" dropped) — "forest" resolves fine alone, but "dark" was missing
