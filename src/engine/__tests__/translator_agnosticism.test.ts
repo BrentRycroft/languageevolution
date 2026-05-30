@@ -145,6 +145,18 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(idxOf(dat, "i"), `nominative 'i' must NOT surface for the recipient ("${surface(dat)}")`).toBe(-1);
   });
 
+  it("three-way+ NP coordination keeps every conjunct ('X and Y and Z')", () => {
+    // The parser stores flat sibling coordination modifiers (man[coord(woman),
+    // coord(child)]) but the legacy NP has a single `coord` field — pre-fix the
+    // middle conjunct was overwritten and dropped ("man and woman and child" →
+    // "man and child"). The role-IR now nests them so all survive.
+    const lang = protoOf(presetEnglish, "agn-coord3");
+    const t = translateSentence(lang, "the man and the woman and the child run").targetTokens;
+    for (const w of ["man", "woman", "child"]) {
+      expect(idxOf(t, w), `conjunct '${w}' surfaces ("${surface(t)}")`).toBeGreaterThanOrEqual(0);
+    }
+  });
+
   it("intensified adjective ('very big') is realised by full reduplication", () => {
     // No "very" lexeme exists in the target; intensification surfaces as iconic
     // full reduplication of the adjective (big → big-big). Lexeme-free, emergent.

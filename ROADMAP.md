@@ -245,6 +245,19 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Translator: flat/zero-derived manner adverbs ("runs fast") dropped.**
+      Play session (2026-05-30): "the dog runs fast" → "the dog run" — "fast" tags
+      ADJ (it's in BARE_ADJECTIVES) so it's not collected as a manner adverb (the
+      manner collector only takes ADV tokens) and drops post-verbally. Affects the
+      flat adverbs that share an adjective form (fast/hard/well/late/early/high/
+      low/straight…). Candidate: post-verbal bare ADJ with no copula → treat as a
+      manner adverb. Translator (parser). Scope the ambiguity (predicate adjective
+      vs manner adverb) before doing.
+- [ ] **Translator: partitive "some of the X" drops the quantifier.** "some of the
+      dogs run" → "the dog run" ("some" + "of" lost). Partitive "Q of the N" isn't
+      modelled; low priority. Also: correlatives "either…or" drops "either",
+      "neither…nor" breaks (drops subject) — correlative coordination unmodelled
+      (milestone-ish, like other multi-clause/coordination gaps).
 - [ ] **Translator: conditional / adverbial-subordinate clauses drop the main
       verb.** Play session (2026-05-30): "if the dog runs the man walks" → "if dog
       run man" (main-clause verb "walks" lost). "if/when/because/while/though" +
@@ -322,6 +335,18 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: three-way+ NP coordination no longer drops the middle conjunct.**
+  Play session: "the man and woman and child run" → "man and child run" (woman
+  lost). The parser correctly stored two flat sibling coordination modifiers
+  (man[coord(woman), coord(child)]), but the legacy NP has a single `coord` field
+  and `participantToNP` (ast.ts) REASSIGNED it per modifier, so only the last
+  survived. (Object coordination used a nested structure, so it worked — only the
+  subject's flat siblings broke.) Now collect all coordination modifiers and build
+  a NESTED coord chain ([woman, child] → woman + {coord: child}); the realiser
+  already walks nested coord. "X and Y and Z" / 4-way all keep every conjunct.
+  Parser→AST bridge only; no engine/rng change. + translator_agnosticism
+  regression test (man/woman/child all surface). Verified: tsc + 96 + 10 parser/
+  routing/composer/tree/narrative/agnosticism tests green.
 - **Translator: periphrastic comparative/superlative "more/most + adj".** Play
   session: "the man is more big than the dog" → "be more than dog" — the analytic
   "more big" DROPPED the adjective (the N-tagged "more" hit the copular complement
