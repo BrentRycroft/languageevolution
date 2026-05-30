@@ -451,8 +451,17 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   if (tokens.length > 0 && tokens[tokens.length - 1]!.lemma === "?") {
     interrogative = true;
   }
+  // A sentence-initial AUX signals a polar (yes-no) question via
+  // subject-auxiliary inversion ("does the man see…?"). But "do/does/did"
+  // immediately followed by "not" is do-support NEGATION, not inversion —
+  // "do not see the dog" is a negative imperative, not a question. Excluding
+  // it stops a spurious interrogative (e.g. an intonation "?" being appended).
   if (tokens.length > 0 && tokens[0]!.tag === "AUX") {
-    interrogative = true;
+    const first = tokens[0]!.lemma;
+    const isDoSupportNegation =
+      (first === "do" || first === "does" || first === "did") &&
+      tokens[1]?.lemma === "not";
+    if (!isDoSupportNegation) interrogative = true;
   }
 
   // Aspect / mood / voice cues from preceding AUX.
@@ -800,10 +809,17 @@ export function parseSyntaxAllAsClauses(tokens: EnglishToken[]): RoleClause[] {
     if (seg.leadingConj && !c.leadingConj) c.leadingConj = seg.leadingConj;
     // S-coordination subject inheritance: when a follow-up clause's
     // subject is synthesised (no real token), inherit from the prior
-    // clause IFF the segment has no nominal at all.
+    // clause IFF the segment has no SUBJECT of its own. Only a nominal in
+    // subject position (before the verb) counts — an OBJECT nominal after
+    // the verb must not block inheritance ("the man walks and sees the dog"
+    // → the 2nd clause has a gapped subject + object 'dog'; it should inherit
+    // 'man', not default to 'you').
     if (k > 0 && out.length > 0 && c.participants[0]?.features?.synthesized) {
-      const segHasNominal = seg.tokens.some((t) => t.tag === "N" || t.tag === "PRON");
-      if (!segHasNominal) {
+      const segVerbIdx = seg.tokens.findIndex((t) => t.tag === "V");
+      const segHasSubjectNominal = seg.tokens.some(
+        (t, ti) => (t.tag === "N" || t.tag === "PRON") && (segVerbIdx < 0 || ti < segVerbIdx),
+      );
+      if (!segHasSubjectNominal) {
         const prevSubject = out[out.length - 1]!.participants[0];
         if (prevSubject) c.participants[0] = prevSubject;
       }

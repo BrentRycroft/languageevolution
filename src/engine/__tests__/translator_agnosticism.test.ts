@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetBantu } from "../presets/bantu";
 import { presetEnglish } from "../presets/english";
+import { presetRomance } from "../presets/romance";
 import { translateSentence, type TranslatedToken } from "../translator/sentence";
 import type { Language } from "../types";
 
@@ -95,5 +96,49 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
       expect(rcVerb, `${name}: RC verb 'see' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
       expect(head, `${name}: postnominal RC → head 'king' before RC verb 'see' ("${surface(t)}")`).toBeLessThan(rcVerb);
     }
+  });
+
+  it("case-strategy languages keep the comparative 'than' particle but still drop plain obliques", () => {
+    // Case-strategy languages drop oblique adpositions because the NP's case
+    // affix recovers the role. The comparative 'than' is NOT such an adposition:
+    // no comparative case marks the standard, so dropping it leaves the
+    // comparison unmarked ("king big dog"). It must be retained (particle
+    // comparative — Stassen). A plain locative oblique ('in') must STILL drop,
+    // confirming the exemption is scoped to the comparative marker only.
+    const lang = protoOf(presetRomance, "agn-comparative");
+    const cs = lang.grammar.caseStrategy ?? (lang.grammar.hasCase ? "case" : "preposition");
+    expect(cs, "Romance proto is case-strategy").toBe("case");
+
+    const comp = translateSentence(lang, "the king is bigger than the dog").targetTokens;
+    expect(idxOf(comp, "than"), `comparative 'than' retained ("${surface(comp)}")`).toBeGreaterThanOrEqual(0);
+
+    const loc = translateSentence(lang, "the man sees the dog in the house").targetTokens;
+    expect(idxOf(loc, "in"), `plain oblique 'in' still dropped ("${surface(loc)}")`).toBe(-1);
+  });
+
+  it("object/oblique pronouns take their suppletive case form (him/me/us, not he/i/we)", () => {
+    // The parser canonicalises an object pronoun to its nominative lemma for
+    // concept lookup (him→he); in object (O) / oblique (PP-NP) role the realiser
+    // must recover the case form so it surfaces correctly (English suppletion;
+    // case morphology elsewhere). English has distinct he/him, we/us, i/me.
+    const lang = protoOf(presetEnglish, "agn-pron");
+    const obj = translateSentence(lang, "the man sees him").targetTokens;
+    expect(idxOf(obj, "him"), `object 'him' surfaces ("${surface(obj)}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(obj, "he"), `nominative 'he' must NOT surface for the object ("${surface(obj)}")`).toBe(-1);
+
+    const dat = translateSentence(lang, "give me the stone").targetTokens;
+    expect(idxOf(dat, "me"), `dative 'me' surfaces ("${surface(dat)}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(dat, "i"), `nominative 'i' must NOT surface for the recipient ("${surface(dat)}")`).toBe(-1);
+  });
+
+  it("plural pronouns are not re-pluralised by the regular noun-plural affix", () => {
+    // "we"/"they"/"us" are suppletive — they lexically encode plural and must
+    // not take the noun plural affix ("us" + -s → "ʌss" was the bug). Regular
+    // nouns still pluralise — that path is unchanged.
+    const lang = protoOf(presetEnglish, "agn-plpron");
+    const tok = translateSentence(lang, "we see the dog").targetTokens.find((t) => t.englishLemma === "we");
+    expect(tok, "subject pronoun 'we' resolves").toBeDefined();
+    expect(tok!.targetSurface, "plural pronoun 'we' is the bare lexical form, not affixed")
+      .toBe((lang.lexicon["we"] ?? []).join(""));
   });
 });

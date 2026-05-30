@@ -85,4 +85,31 @@ describe("Phase 73c Phase 5.5 — ENGLISH_DIALECT shape", () => {
     expect(ENGLISH_DIALECT.stripNounSuffix("men")).toBe("man");
     expect(ENGLISH_DIALECT.stripNounSuffix("geese")).toBe("goose");
   });
+
+  it("Phase 75: high-frequency action verbs tag V with the correct lemma", () => {
+    // These verbs were unknown to the wordlist (posOf="other") so they fell
+    // through to the default-N fallback and mis-tagged as nouns (e.g. "the man
+    // runs and jumps" → "jump" N → S-coordination didn't fire, "and" dropped).
+    // Silent-e verbs also need the dialect BARE_VERBS so stripVerbSuffix
+    // restores the "e" (dances→dance, not danc).
+    const cases: Record<string, string> = {
+      jumps: "jump", climbs: "climb", sings: "sing", dances: "dance",
+      rides: "ride", drives: "drive", kicks: "kick", draws: "draw",
+    };
+    for (const [surface, lemma] of Object.entries(cases)) {
+      const tok = tokeniseEnglish(`the man ${surface}`)[2]!;
+      expect(tok.tag, `${surface} tags as V`).toBe("V");
+      expect(tok.lemma, `${surface} lemmatizes to ${lemma}`).toBe(lemma);
+    }
+  });
+
+  it("Phase 75: quantificational determiners tag DET (many/few/much/several/both)", () => {
+    // These pattern prenominally like all/some/every; previously absent from
+    // DETERMINERS so they mis-tagged as nouns and the quantifier was dropped
+    // ("many men" → "man").
+    for (const q of ["many", "few", "much", "several", "both"]) {
+      const tok = tokeniseEnglish(`${q} men run`)[0]!;
+      expect(tok.tag, `"${q}" tags as DET`).toBe("DET");
+    }
+  });
 });

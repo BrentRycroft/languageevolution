@@ -175,6 +175,17 @@ export function realiseSentence(
       const p = lang.morphology.paradigms["adj.num.pl"];
       if (p) af = inflect(af, p, lang, a.lemma);
     }
+    // Comparative/superlative degree on a PREDICATE adjective ("X is bigger
+    // than Y"). Mirrors the attributive path in realiseNP — degree morphology
+    // attaches to the adjective regardless of attributive-vs-predicative
+    // position. Surfaces only where the language has the paradigm.
+    if (af.length > 0 && a.degree === "comparative") {
+      const p = lang.morphology.paradigms["adj.degree.cmp"];
+      if (p) af = inflect(af, p, lang, a.lemma);
+    } else if (af.length > 0 && a.degree === "superlative") {
+      const p = lang.morphology.paradigms["adj.degree.sup"];
+      if (p) af = inflect(af, p, lang, a.lemma);
+    }
     return {
       surface: af.length > 0 ? af.join("") : `“${a.lemma}”`,
       form: af,
@@ -352,6 +363,17 @@ function alignmentObjectCase(
   }
 }
 
+/**
+ * Suppletive object/oblique forms of the personal pronouns. The parser
+ * canonicalises an object pronoun to its citation (nominative) lemma for
+ * concept lookup (him→he, us→we, me→i), which — for languages with
+ * suppletive pronoun case like English — wrongly surfaces the nominative
+ * form. In an object (O) or oblique (PP-NP) role we recover the case form.
+ */
+const PRONOUN_OBLIQUE: Readonly<Record<string, string>> = {
+  he: "him", she: "her", i: "me", we: "us", they: "them", who: "whom",
+};
+
 function realiseNP(
   np: NP,
   lang: Language,
@@ -374,6 +396,19 @@ function realiseNP(
       if (ctx.recentSynonymKeys) ctx.recentSynonymKeys.add(formKeyOf(picked));
     }
   }
+  // Object/oblique pronoun → its suppletive case form (he→him in O/PP-NP role).
+  // Use the language's own oblique form when it has one (English-style
+  // suppletion); otherwise keep the citation form and let case morphology
+  // mark it. Drives both the surface form and the English gloss caption.
+  let captionLemma = np.head.lemma;
+  if (np.head.isPronoun && (role === "O" || role === "PP-NP")) {
+    const oblique = PRONOUN_OBLIQUE[np.head.lemma.toLowerCase()];
+    if (oblique) {
+      captionLemma = oblique;
+      const obForm = lang.lexicon[oblique] ?? closedClassForm(lang, oblique);
+      if (obForm && obForm.length > 0) headForm = obForm;
+    }
+  }
   // Phase 36 Tranche 36b: Bantu-style noun-class prefix. Resolve the
   // class for this meaning, swap to the plural class when number ===
   // "pl", and prefix the corresponding paradigm before number/case
@@ -389,7 +424,11 @@ function realiseNP(
     const p = lang.morphology.paradigms[cat];
     if (p) headForm = inflect(headForm, p, lang, meaning);
   }
-  if (np.head.number === "pl" &&
+  // Personal pronouns are suppletive — "we"/"they"/"us" lexically encode plural
+  // already, so they do NOT take the regular noun plural affix/reduplication
+  // (no language re-pluralises an inherently-plural pronoun stem). Guard the
+  // plural branch with !isPronoun ("us" + -s → "ʌss" was the bug).
+  if (np.head.number === "pl" && !np.head.isPronoun &&
       isFeatureActive(lang, "grammatical:number-system",
         l => !!l.grammar.numberSystem || (!!l.grammar.pluralMarking && l.grammar.pluralMarking !== "none"))) {
     if (lang.grammar.pluralMarking === "affix") {
@@ -428,7 +467,7 @@ function realiseNP(
       ? `“${np.head.lemma}”`
       : headForm.join(""),
     form: np.head.baseForm.length === 0 ? [] : headForm,
-    english: np.head.lemma,
+    english: captionLemma,
     role,
     resolution: np.head.resolution,
   };
@@ -690,7 +729,12 @@ function realiseSentenceInner(
 
 function realisePP(pp: PP, lang: Language, ctx: NPCtx): RealisedToken[] {
   const npTokens = realiseNP(pp.np, lang, ctx, "PP-NP");
-  if (ctx.caseStrategy === "case") return npTokens;
+  // Case-strategy languages drop oblique adpositions because the case affix on
+  // the NP recovers the role. The comparative "than" is NOT such an adposition:
+  // no comparative case is applied to the standard, so dropping it leaves the
+  // comparison unmarked ("king big dog"). Retain it — the particle-comparative
+  // is an attested strategy (Stassen) and matches what non-case langs do here.
+  if (ctx.caseStrategy === "case" && pp.prep.lemma !== "than") return npTokens;
   const pf = closedClassForm(lang, pp.prep.lemma) ?? [];
   if (pf.length === 0) return npTokens;
   // Phase 29 Tranche 4h: realise the "mixed" caseStrategy. Per

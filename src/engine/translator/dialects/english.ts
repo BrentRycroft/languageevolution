@@ -105,6 +105,11 @@ const BARE_VERBS = new Set([
   "start", "stop", "wait", "help",
   "chase", "follow", "attack", "meet", "leave", "send", "save",
   "catch", "reach", "join", "show", "tell",
+  // Phase 75: kept in sync with the tokenizer's BARE_VERBS (sentence.ts).
+  // stripVerbSuffix consults this set so silent-e verbs restore the "e"
+  // (dances→dance, not danc; rides→ride; drives→drive).
+  "jump", "climb", "sing", "dance", "read", "write", "ride", "draw",
+  "wear", "cook", "drive", "kick",
 ]);
 
 function stripVerbSuffix(s: string): string {

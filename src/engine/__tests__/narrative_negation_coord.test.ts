@@ -61,6 +61,34 @@ describe("Phase 20c: negation + coordination in narratives", () => {
     expect(english).toContain("see");
   });
 
+  it("a language without do-support negates inline (no spurious 'did/does'), per its negationPosition", () => {
+    // Do-support ("did not see") is cross-linguistically rare (WALS ch.112) and
+    // gated on grammar.doSupport. A language without the flag must use its own
+    // inline negator and NOT emit an English-style do auxiliary.
+    const lang = englishLang();
+    lang.grammar.doSupport = false; // simulate a typical (non-English) language
+    const ctx = makeDiscourse("legend");
+    const out = composeTargetSentence(
+      lang,
+      {
+        shape: "transitive",
+        tense: "past",
+        needs: { subject: true, object: true, adjective: false, time: false, place: false },
+        negated: true,
+        introducesEntity: true,
+      },
+      { verb: "see", subject: "dog", object: "bread" },
+      ctx,
+      "ipa",
+    );
+    const lemmas = out.tokens.map((t) => t.englishLemma);
+    expect(lemmas, `inline negator 'not' present ("${lemmas.join(" ")}")`).toContain("not");
+    expect(
+      lemmas.some((l) => l === "did" || l === "does" || l === "do"),
+      `no do-support auxiliary ("${lemmas.join(" ")}")`,
+    ).toBe(false);
+  });
+
   it("non-negated template doesn't emit any 'not' token", () => {
     const lang = englishLang();
     const ctx = makeDiscourse("myth");

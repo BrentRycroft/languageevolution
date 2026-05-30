@@ -118,6 +118,18 @@ interface RoleToken {
 }
 
 const TIME_LEMMAS = new Set(["morning", "evening", "night", "winter", "summer"]);
+// Deictic temporal adverbs are inherently adverbial — they take NO adposition
+// or article ("yesterday she went", not "in (the) yesterday"), unlike temporal
+// nouns ("in summer", "in the morning"). Universal across languages.
+const DEICTIC_TIME = new Set(["today", "yesterday", "tomorrow", "now"]);
+
+// Suppletive object/oblique forms of the personal pronouns, for the English
+// gloss CAPTION when a pronoun fills an object slot ("king speaks he" → "him").
+// The target form itself is case-marked via the objectCase inflection; this
+// only corrects the English-side caption. Mirrors realise.ts PRONOUN_OBLIQUE.
+const PRONOUN_OBLIQUE: Readonly<Record<string, string>> = {
+  he: "him", she: "her", i: "me", we: "us", they: "them", who: "whom",
+};
 
 function fallbackForm(lang: Language, candidates: Meaning[]): { meaning: Meaning; form: WordForm } | null {
   for (const m of candidates) {
@@ -430,10 +442,13 @@ function nounRoleToken(
   }
   if (!base) return null;
   const { form, glossNote } = inflectNoun(lang, meaning, base, opts, composeOptions);
+  // Object pronoun → suppletive oblique caption ("he"→"him") so the English
+  // gloss reads naturally; the target form is already case-marked above.
+  const captionLemma = role === "O" ? (PRONOUN_OBLIQUE[meaning] ?? meaning) : meaning;
   return {
     role,
     token: makeToken({
-      englishLemma: meaning,
+      englishLemma: captionLemma,
       englishTag: "N",
       glossNote,
       targetForm: form,
@@ -527,8 +542,11 @@ function timePrefixRoleTokens(
   script: DisplayScript,
 ): RoleToken[] {
   const out: RoleToken[] = [];
+  // Deictic adverbs (today/yesterday/tomorrow) surface bare — no adposition,
+  // no article. Temporal nouns take "in" (+ optional article).
+  const isDeictic = DEICTIC_TIME.has(meaning);
   const prepForm = lang.lexicon["in"] ?? lang.lexicon["at"];
-  if (prepForm) {
+  if (!isDeictic && prepForm) {
     out.push({
       role: "PREP",
       token: makeToken({
@@ -540,7 +558,7 @@ function timePrefixRoleTokens(
       }),
     });
   }
-  const detTok = articleRoleToken(lang, script);
+  const detTok = isDeictic ? null : articleRoleToken(lang, script);
   if (detTok) out.push(detTok);
   const timeForm = lang.lexicon[meaning];
   if (timeForm) {
@@ -803,16 +821,17 @@ export function projectRoleClauseToTokens(
 
   const verbTokens: RoleToken[] = [];
 
-  // Do-support for past/present negation: when the template is negated
-  // and the language has both "do" and "not" in its lexicon, prefer
-  // "did/do + not + bare verb" over inline NEG. We inflect "do" via
-  // verbRoleToken so suppletion fires → past tense produces "did",
-  // present 3sg produces "does".
+  // Do-support for past/present negation: "did/do + not + bare verb". This is
+  // a cross-linguistically RARE strategy (essentially English-specific —
+  // WALS ch.112), so it is GATED on the `grammar.doSupport` typology flag.
+  // Languages without it (the default) fall through to inline NEG below, which
+  // emits the negator at the language's own `negationPosition`. We inflect
+  // "do" via verbRoleToken so suppletion fires → past "did", present 3sg "does".
   const negated = !!template.negated;
   const auxNot = lang.lexicon["not"];
   const doForm = lang.lexicon["do"];
   let didDoSupport = false;
-  if (negated && auxNot && doForm) {
+  if (negated && auxNot && doForm && lang.grammar.doSupport) {
     const auxTok = verbRoleToken(
       lang,
       "do",

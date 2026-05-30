@@ -45,11 +45,11 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | Contact (borrow/creole/areal) | partial | Exists; realism of areal waves unassessed. |
 | Phylogenetics (splits/divergence/cognates) | solid | Phase 73 typological divergence. |
 | **Translator** | partial | Feature-rich (aspect/mood/voice/switch-ref/numerals/per-lang case+article/AST word-order path). Word-level `translate()` now uses the shared cascade (fixed). Remaining: realiser still on legacy English NP/VP/PP IR (role-IR migration incomplete — see NEEDS DECISION); graceful fallback compound-only. PLAY-SESSION FINDINGS (2026-05-29): the sentence path DOES gracefully coin missing words (populateForms→resolveOpen→cascade); `«lemma»` markers appear ONLY for lemmas not in the CONCEPTS registry (cascade's anti-gibberish guard) — e.g. "man"/"woman" are unregistered → markers (backlog: register them). Ditransitive double-object drops the theme (backlog, fix written, re-diagnose marker). |
-| **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); live output quality unverified. |
+| **Narrative generation** | partial | Phase-53 grammar-driven: words sampled from the lang's own lexicon (freq-weighted, not English pools); order via `grammar.wordOrder`; morphology stacked by `synthesisIndex` (gated on paradigms existing); copular predication now emits an overt copula (or zero-copula juxtaposition); complex typology routed through the translator. Discourse narrative interlinear gloss now uses **Leipzig abbreviations** (walk-PST.IPFV.DIR, friend-ACC, speak-3SG) instead of verbose lowercase category paths. Residual: deep-routing round-trips through an English string (inherits translator-realiser limits); some derivation concept-ids leak malformed lemmas into glosses (e.g. `take--tér.agt`, `coffee-prae-.tbef` — see backlog). |
 | **Presets — coverage** | partial | 7 (default Swadesh + pie/germanic/romance/bantu/tokipona/english); families typologically authentic. |
 | **Presets — word count** | partial | ~240-concept ceiling (basic240 fillMissing); Bantu ~220 hand-authored, default 44 core + filled. Expanding the concept registry is the lever for "more words". |
 | **Presets — de-anglicization** | partial | Forms are NOT relexified English (Bantu = real proto-Bantu w/ tone+noun-classes; default CORE = PIE reconstructions: water/pur/mater/pater/nokt/pod/kerd/kaput). REAL issue: the shared English concept inventory carves semantic space identically (arm≠hand; Bantu duplicates the form `mukono` instead of declaring colexification). → `seedColexification` hook lets presets declare colexifications; all presets de-anglicized — Bantu (arm=hand, mouth=lip, flesh=meat, child=son, lie=sleep), Toki Pona (sun=day, sky=god, eat=drink, fight=war, word=name), PIE (tree=wood, eye=face, flesh=meat), Germanic (flesh=meat), Romance (flesh=meat, child=baby); default/English have no attested duplicate pairs. |
-| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
+| **Language-agnosticism** (cross-cutting) | partial | Translator adj/possessor/numeral/relative-clause ordering verified language-driven (regression tests; RC fixed). Narrative negation now language-agnostic: English-style do-support ("did not see") gated on the new `grammar.doSupport` flag (default off) — other languages negate inline at their `negationPosition` (WALS ch.112). GAP: demonstratives hardcoded prenominal (no demonstrativePosition axis — logged, needs decision). Narrative grammar-driven; presets de-anglicized (Bantu + Toki Pona). |
 | **Performance** | partial | Profiled (PROFILE_STEP via vitest, 2026-05-29): phonology = **64-67%** of step time, inventoryMgmt ~18%, genesis ~15%, all else <1%. So apply.ts IS the macro hot spot; its dominant cost is the per-word×rule `probabilityFor` (countSites scan + Math.pow). **DONE: trigger pre-filter (factory subset)** — factory rules (simpleSub/contextSub/mappingSub) now expose `triggers` (the `from`/mapping phonemes); the hot loop skips a rule via an O(1) `includes` check when none are present (provably probability 0). Byte-identical (perfcheck hashes c2e431df/524c8f2c/e7b438a3 unchanged); skips **26-30%** of probabilityFor calls → **0.8-1.7% faster phonology pass** (interleaved drift-cancelled A/B). NEGATIVE/reverted earlier: word-invariant scalar hoist (no win, allocation offset it — see Assessment notes; don't re-attempt). NEXT (bigger win, NEEDS DECISION): extend `triggers` to the ~43 inline catalog rules — would multiply the skip rate, but needs per-rule byte-identical auditing. Bundle: 944 kB main chunk (load-time). |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
@@ -228,11 +228,16 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       milestone-level, verify with the full suite. (The realiser now respects
       numeralPosition correctly — see Done log — so this is purely the preset value.)
 - [ ] **Translator: comparative polish + modals** (standard capture + ordering
-      DONE — see Done log). Remaining: (a) render the comparative DEGREE (the
-      adjective carries degree="comparative" but no -er/comparative marker surfaces
-      — needs a comparative paradigm or particle); (b) per-typology comparative
-      STRATEGY (particle / conjoined / exceed / locational axis) + V-final standard
-      ordering. (Modals (c): DONE — see Done log. CORRECTED DIAGNOSIS: only "can"
+      DONE — see Done log). Remaining: (a) DONE — the predicate adjective now
+      receives the comparative/superlative DEGREE paradigm (adj.degree.cmp/.sup),
+      matching the attributive path; surfaces wherever the language has the
+      paradigm (see Done log). NOTE: like all morphology, a language WITHOUT a
+      degree paradigm shows bare "big" (zero-marked comparative — attested, but if
+      we want a default particle strategy that's item (b)); (b) per-typology
+      comparative STRATEGY (particle / conjoined / exceed / locational axis) +
+      V-final standard ordering. (Standard-marker "than" RETENTION in case langs: DONE — see Done
+      log; the richer per-typology strategy below remains, e.g. ablative-of-
+      comparison for case langs instead of a particle.) (Modals (c): DONE — see Done log. CORRECTED DIAGNOSIS: only "can"
       was dropped; may/might/could/must/should/would already mapped to subjunctive
       via SUBJUNCTIVE_AUX. Future refinement: the mood enum lacks distinct
       potential/necessitative moods, so ability (can) and obligation (must) both
@@ -240,12 +245,221 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - [ ] Presets "more words": quantify each preset's hand-authored vs filled
       coverage and raise the ~240-concept ceiling (basic240) / add authentic
       forms for new concepts. Scope before doing.
+- [ ] **Translator: degree adverb "very" (and intensifiers) dropped.** Play
+      session (2026-05-29): "the very big dog" → "big dog". "very" mis-tags as a
+      NOUN (not in any closed-class set) so it's dropped. It's a degree
+      INTENSIFIER on adjectives, not a determiner — tag it ADV/degree and surface
+      it as an adjective-degree modifier (or the language's intensification
+      strategy: reduplication, a particle, or a degree affix — typologically
+      varied). Same class likely affects "too"/"so"/"quite"/"rather". Translator;
+      needs a small degree-modifier path (where to attach + how to realise).
+- [ ] **Translator: passive "by"-agent dropped in case languages, reversing
+      meaning.** "the dog is seen by the man" → Romance "dog see man" (reads as
+      "dog sees man" — agent/patient reversed; the passive voice + the "by"-agent
+      both vanish). Like the comparative "than" and dative "to", the agentive "by"
+      is dropped by the case-strategy oblique-adposition drop, but no passive
+      voice marking or agent case replaces it. Retain a passive marker and/or the
+      agent's adposition/case so the demotion is recoverable. Ties to passive-voice
+      morphology (needs a voice paradigm) — partly milestone-level.
+- [x] **Translator: object/oblique pronouns surface in NOMINATIVE form.** DONE
+      (see Done log). realiseNP now maps a pronoun in O/PP-NP role to its
+      suppletive oblique form (he→him, we→us, i→me, they→them, she→her, who→whom)
+      via PRONOUN_OBLIQUE, using the language's own oblique form when it has one
+      (English suppletion) and otherwise leaving case morphology to mark it. Drives
+      both the surface form and the gloss caption. FOLLOW-UP: DONE — plural
+      pronouns no longer take the regular noun-plural affix (realiseNP plural
+      branch guarded with `!np.head.isPronoun`; "us" → "ʌs", not "ʌss"). See Done
+      log.
+- [ ] **Derivation: malformed concept-ids leak into narrative glosses.** Discourse
+      play session (2026-05-29) surfaced lemmas like `take--tér.agt` (double dash +
+      agentive `-tér` + a `.agt` suffix in the ID) and `coffee-prae-.tbef` (a
+      `prae-` prefix fragment + `.tbef` in the ID). These are derived/borrowed
+      concept ids whose raw morphological scaffolding (agentive nominaliser, the
+      `prae-` preverb, a temporal `tbef` tag) is being emitted as part of the
+      ENGLISH lemma rather than resolved to a clean gloss. Investigate the
+      derivation/grammaticalisation concept-id construction (semantics/
+      grammaticalization.ts, derivation) — the id should carry a clean gloss label
+      separate from its internal build recipe. Engine-side (derivation data) →
+      likely sim-rippling; scope before touching.
+- [ ] **Translator: sentential complement clauses are DROPPED** (play session
+      2026-05-29). "the man knows that the dog runs" → "man know that" (the whole
+      embedded clause "the dog runs" vanishes); "the man wants to run" → "man
+      want" (the infinitival complement "to run" vanishes). The parser models a
+      single matrix clause; clausal arguments ("that S", control "to VP") aren't
+      parsed as arguments, so the embedded material is lost. This is the
+      `embeddedIn` placeholder on RoleClause (roleFrame.ts) — a real parser
+      FEATURE (recursive clause parsing + IR + realiser support + per-typology
+      complementizer/infinitive strategy), milestone-scale, tied to the
+      "Translator realiser refactor" NEEDS DECISION. Not a small surgical fix.
+- [x] **Translator: English verb-coverage gap — common verbs mis-tagged as
+      nouns.** DONE (see Done log). Added jump/climb/sing/dance/read/write/ride/
+      draw/wear/cook/drive/kick to BOTH BARE_VERBS sets (tokenizer + dialect).
+      (CORRECTED DIAGNOSIS: posOf returns "other" for these, not "noun" — they
+      fell to the default-N fallback, not the noun branch; so adding to BARE_VERBS
+      directly fixes tagging. The dialect copy is needed so stripVerbSuffix
+      restores silent-e: dances→dance.) MORE verbs can be added later if play
+      sessions surface them; fish/dream excluded (posOf="noun", noun-dominant).
 
 ## Done log
 
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: quantificational determiners (many/few/much/several/both) now
+  recognised.** Play session: "many men see the dog" → "man see dog" — the
+  quantifier was DROPPED while "all"/"some" surfaced. Cause: the tokenizer's
+  DETERMINERS set had all/some/every/each but not many/few/much/several/both, so
+  those mis-tagged as nouns and were dropped. Added them (they pattern prenominally
+  like the others). Now "many men…" → "many man…", "few dog", "both king", "much
+  water". Tokenizer-data only; no engine/rng change. + dialect_english regression
+  test (5 quantifiers tag DET). Verified: tsc + 117 parser/routing/agnosticism/
+  typology/dialect/narrative tests green. (Same session noted: "very" degree adverb
+  is dropped — see backlog; and passive "by"-agent drops in case langs reversing
+  "dog is seen by man" → "dog see man".)
+- **Narrative: object pronouns get their oblique caption in the discourse gloss.**
+  Follow-up to the translator's realiseNP oblique-pronoun fix (bafd0c4): when a
+  pronoun filled an object slot the discourse English caption showed the
+  nominative form ("king speaks he", "daughter speaks she") even though the
+  morphological gloss already marked "-ACC". nounRoleToken now maps an object-role
+  pronoun caption via PRONOUN_OBLIQUE (he→him, she→her, i→me, we→us, they→them,
+  who→whom). Caption-only — the target form is case-marked by the existing
+  objectCase inflection, so determinism is unaffected. Now "king speaks him".
+  + narrative_composer regression test. Verified: tsc + 58 composer/discourse/
+  snapshot/logophoric tests green.
+- **Narrative: deictic time adverbs surface bare (no spurious "in").** Discourse
+  play session: "in yesterday she goes", "in today it came" — the time-adjunct
+  builder (`timePrefixRoleTokens`) prepended "in"/"at" + article to EVERY temporal
+  word, but deictic adverbs (today/yesterday/tomorrow/now) are inherently
+  adverbial and take no adposition or article ("yesterday she went"), unlike
+  temporal nouns ("in summer", "in the morning"). Added a DEICTIC_TIME set and
+  skip the prep+article for those. Now "yesterday she goes"; temporal nouns
+  (summer/night/day) still take "in". Narrative-composer display only; no
+  engine/rng change. + narrative_composer regression test. Verified: tsc + 63
+  composer/discourse/snapshot/genre/negation tests green. (Same session noted: the
+  discourse English CAPTION still shows nominative object pronouns "he" where the
+  morphological gloss already marks "-ACC" — the composer pronoun caption needs
+  the same oblique mapping the translator's realiseNP got in bafd0c4; minor since
+  the interlinear gloss carries the case. Also "in day" lacks an article — temporal
+  nouns outside TIME_LEMMAS render article-less; low priority.)
+- **Translator: plural pronouns no longer re-pluralised by the noun-plural
+  affix.** Follow-up to the oblique-pronoun fix: "the man sees us" surfaced
+  "ʌss" — realiseNP applied the regular `noun.num.pl` affix to the plural-number
+  pronoun head. Personal pronouns are suppletive (we/us/they lexically encode
+  plural; no language re-pluralises an inherently-plural pronoun stem), so guarded
+  the plural branch with `!np.head.isPronoun`. Now "us"→"ʌs", "we"→"wiː",
+  "they"→"ðej"; regular nouns still pluralise (man→men). One-line realiser guard;
+  no engine/rng change. + translator_agnosticism regression test (plural pronoun
+  surface == bare lexical form). Verified: tsc + 64 agnosticism/grammar_audit/
+  narrative tests green.
+- **Translator: object/oblique pronouns take their suppletive case form.** Play
+  session: "the man sees him" → "...see he" (hiː); "give me the stone" → "...to i"
+  (aj); "the man sees us" → "...see we". The parser canonicalises an object
+  pronoun to its citation/nominative lemma for concept lookup (him→he, us→we,
+  me→i), so for languages with suppletive pronoun case (English: he/him, we/us,
+  i/me) the wrong nominative form surfaced. realiseNP now recovers the case form
+  from the role: a pronoun in O or PP-NP role maps via PRONOUN_OBLIQUE → him/me/
+  us/them/her/whom, using the language's own oblique lexeme when present
+  (else case morphology marks it), driving both the surface form and the gloss
+  caption. Now "...sees him" (hɪm), "...to me" (miː). Translator/realiser-only;
+  no engine/rng change. + translator_agnosticism regression test (object 'him'/
+  'me' surface, not 'he'/'i'). Verified: tsc + 93 parser/routing/agnosticism/
+  realise/narrative/tree tests green. (Logged a minor follow-up: plural pronouns
+  still pick up the regular noun-plural suffix.)
+- **Translator: "do not VERB" negative imperative no longer mis-parsed as a
+  question.** Play session: Bantu "do not see the dog" rendered "you not see dog
+  ?" — a spurious intonation "?". The parser flagged interrogative whenever a
+  sentence started with an AUX (polar-question subject-aux inversion), but
+  "do/does/did + not" is do-support NEGATION ("do not see…" = a negative
+  imperative), not inversion. Excluded that pattern from the initial-AUX
+  interrogative heuristic. Now the negative imperative is non-interrogative (no
+  "?"), while genuine yes-no questions ("does the man see…?") and wh-questions are
+  unaffected. Parser-only; no engine/rng change. + parser_role_ir regression test.
+  Verified: tsc + 95 parser/routing/tree/typology/narrative tests green. (Same
+  session logged a backlog item: object/oblique pronouns surface in nominative
+  form — him→he, us→we, me→i.)
+- **Narrative: English do-support negation gated behind a typology flag
+  (language-agnosticism fix).** A discourse play session showed Bantu/PIE/Romance
+  generating "did/does not VERB" — the composer applied English-style do-support
+  to ANY language that happened to have "do" + "not" in its lexicon (no
+  typological gate), emitting a spurious English auxiliary. Do-support negation
+  is cross-linguistically rare, essentially English-specific (WALS ch.112-113;
+  most languages use a negative particle/affix). Added an optional
+  `grammar.doSupport` flag (types.ts; default off), gated the composer's
+  do-support on it, and set it true only in the English preset. Non-English
+  languages now negate INLINE at their own `negationPosition` ("dog not see" /
+  SOV "dog bread not see") with no spurious "did". Verified sim-non-rippling:
+  the field is read only by the narrative composer (not sim code), determinism is
+  run-to-run (simulation.test green), and serializeLeafLexicons/RuleState exclude
+  grammar. + narrative_negation_coord regression test (non-do-support lang has no
+  did/does/do). Verified: tsc + 69 negation/snapshot/discourse/simulation/
+  typology tests green. Principle: negation strategy is typologically determined
+  (Dryer/WALS) — the simulator must not default to the English strategy.
+- **Narrative: interlinear gloss now uses Leipzig Glossing Rules abbreviations.**
+  Discourse play session showed the morphological gloss as verbose lowercase
+  category paths — "walk.tense.past.aspect.ipfv.evid.dir", "friend.case.acc",
+  "speak.person.3sg". Rewrote `morphologicalGloss` (discourse_generate.ts) with a
+  Leipzig abbreviation map → "walk-PST.IPFV.DIR", "friend-ACC", "speak-3SG",
+  "snow-ACC", "make-PFV", "fish-GEN", "not-NEG". Stem and feature-block joined
+  with "-", stacked features with "."; free-form notes (compound:/compose:/colex
+  ↔) pass through untouched; unknown categories uppercase as a safe fallback.
+  Serves the immersive goal (a user can actually READ the morphology the engine
+  grew). Display-only — no engine/sim/rng change; the simple-narrative path and
+  per-token glossNotes are untouched. + narrative_discourse regression test
+  (Leipzig tags present, no verbose category path leaks). Verified: tsc + 50
+  discourse/composer/copula/poetry/logophoric/negation + 13 discourse tests
+  green. (Logged a derivation backlog: malformed concept-ids like `take--tér.agt`
+  leaking into glosses.)
+- **Translator: predicate adjectives now get the comparative/superlative degree
+  marker.** "the king is bigger than the dog" surfaced bare "big" even when the
+  language had an `adj.degree.cmp` paradigm — the realiser applied degree
+  morphology to ATTRIBUTIVE adjectives (in the NP) but the copular-complement
+  (predicate) adjective path only did plural agreement, never degree. Mirrored
+  the degree-paradigm logic onto complementTokens (adj.degree.cmp/.sup), guarded
+  on a non-empty form. Now "...is bigger than..." → "big"+cmp affix where the
+  language has the paradigm (bare otherwise). Principle: degree morphology
+  attaches to the adjective independent of attributive-vs-predicative position.
+  Realiser-only; no engine/rng change. + grammar_audit predicate-comparative
+  regression test. Verified: tsc + 94 grammar_audit/parser/agnosticism/narrative
+  tests green.
+- **Translator: added 12 high-frequency action verbs the tokenizer didn't know.**
+  jump/climb/sing/dance/read/write/ride/draw/wear/cook/drive/kick were unknown to
+  the wordlist (`posOf`="other"), so they fell through every bare check to the
+  default-N fallback and mis-tagged as nouns — e.g. "the man runs and jumps"
+  tagged "jump" N → verbCount=1 → S-coordination never fired → "and" dropped
+  ("man run jump"). Added them to the tokenizer BARE_VERBS (sentence.ts) AND the
+  dialect BARE_VERBS (english.ts, so stripVerbSuffix restores silent-e:
+  dances→dance, rides→ride, drives→drive). Now "the man runs and jumps" →
+  "the man run and the man jump". Translator dialect-data only; no engine/rng
+  change. + dialect_english regression test (tag=V + correct lemma for 8 forms).
+  Verified: tsc + 106 parser/dialect/routing/narrative/agnosticism/realise tests
+  green. (fish/dream excluded — posOf="noun", noun-dominant.)
+- **Translator: S-coordination subject inheritance no longer blocked by an
+  object.** Play session: "the man walks and sees the dog" → "the man walk and
+  YOU see the dog" — the 2nd coordinated clause's gapped subject defaulted to a
+  synthesised imperative "you" instead of inheriting "man". Root cause
+  (parse.ts parseSyntaxAllAsClauses): the inheritance guard skipped whenever the
+  follow-up segment held ANY nominal, but that nominal was the OBJECT ('dog'),
+  not a subject. Narrowed the guard to count only a nominal in SUBJECT position
+  (before the segment's verb) → gapped subject correctly inherits "king"/"man".
+  Parser-only; no engine/rng change. + parser_role_ir regression test (gapped
+  2nd-clause subject inherits the 1st even with an object). Verified: tsc + 77
+  parser/routing/agnosticism/narrative tests green. (Same session logged two
+  backlog items: sentential complement clauses dropped, and a verb-coverage gap
+  mis-tagging "jump" as a noun.)
+- **Translator: case-strategy languages keep the comparative "than" particle.**
+  Play session (Romance leaf): "the king is bigger than the dog" → "king big dog"
+  — the comparison was unmarked. `realisePP` dropped EVERY adposition for
+  case-strategy languages (the case affix recovers the role), but the comparative
+  "than" has no comparative case marking the standard, so dropping it erased the
+  comparison. Exempted "than" from the case-strategy drop (one guard in
+  realise.ts realisePP) → "king big than dog", matching what non-case langs (Bantu
+  "boːv") already produce. Principle: particle comparative (Stassen's comparative
+  typology). Scoped to the comparative marker only — plain obliques ("in", dative
+  "to") STILL drop in case langs (verified). Realiser-only; no engine/rng change.
+  + translator_agnosticism regression test (than retained, "in" still dropped).
+  Verified: tsc + 76 translator/parser/routing/narrative tests green. (Engine-side
+  finding from the same session — affixal plural paradigm lost during evolution
+  while the grammar flag persists — logged under NEEDS DECISION.)
 - **Translator: the modal "can" now carries irrealis (subjunctive) mood.** A play
   session showed "the man can see the dog" dropping the modal entirely. Diagnosed
   (throwaway probe): the ROADMAP's "can/may/must dropped" was stale — may/might/
@@ -609,6 +823,27 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   lexicons) → milestone-level, verify with the FULL suite + expect to update
   hash/snapshot tests for affected languages. Diagnose the dominant growth source
   first (instrument which rule/repair adds the `aː` runs). Want me to take it on?
+
+- **Engine realism — morphology evolution drops a paradigm without syncing the
+  grammar flag that depends on it.** Found via translator play session
+  (2026-05-29, Romance leaf, seed play-romance, 20 gens). The evolved language
+  declares `grammar.pluralMarking="affix"` + `numberSystem="sg-pl"` (inherited
+  from the preset) but its `noun.num.pl` paradigm — which the Romance preset
+  DOES seed (affix `["i"]`) — is GONE at the leaf (only `noun.case.*` paradigms
+  remain). So the translator correctly tries to mark plural, finds no paradigm,
+  and emits unmarked nouns: "the men see the dogs" → nouns identical to singular
+  (only the verb shows plural agreement). Bantu (plural via noun-class prefix
+  swap) is unaffected — this is specific to AFFIX-strategy plural. The coupling
+  bug: `morphology/evolve.ts` (or paradigm renewal) can delete `noun.num.pl`
+  while `grammar.pluralMarking`/`numberSystem` keep pointing at it. Options:
+  (a) when a paradigm is dropped, downgrade the dependent grammar flag (e.g.
+  `pluralMarking → "none"`, or mark number "optional/zero") so the language is
+  self-consistent; (b) treat the flag as authoritative and REGENERATE/renew a
+  replacement paradigm (paradigm renewal) instead of leaving the category
+  stranded; (c) accept zero-marked optional number as realistic (attested) but
+  then the flag should still say so. All ripple sim (lexicon/morphology
+  trajectories) → milestone-level, full suite + snapshot updates. NB: not clearly
+  a bug under (c), so needs a realism call before any fix. Want me to take it on?
 
 - **Engine performance — extend the trigger pre-filter to inline rules.**
   The factory subset is DONE (see Done log): factory rules expose `triggers`,

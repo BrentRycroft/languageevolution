@@ -1111,6 +1111,14 @@ export interface GrammarFeatures {
   possessorPosition?: "pre" | "post";
   numeralPosition?: "pre" | "post";
   negationPosition?: "pre-verb" | "post-verb" | "prefix" | "suffix";
+  /**
+   * Periphrastic do-support negation ("did not see", "does not run") — a
+   * cross-linguistically RARE strategy, essentially English-specific (WALS
+   * ch.112-113; most languages negate with a particle/affix). When unset
+   * (the default), narration uses the language's own inline negation at
+   * `negationPosition`. English-like presets opt in.
+   */
+  doSupport?: boolean;
   aspectMarking?: "none" | "perfective" | "imperfective" | "progressive";
   voice?: "active" | "mixed";
   moodMarking?: "declarative" | "subjunctive" | "imperative";

@@ -164,6 +164,16 @@ describe("Phase 73c Phase 3 — parseSyntaxToClause core shapes", () => {
     expect(rc.interrogative).toBe(true);
   });
 
+  it("do-support negation imperative ('do not see') is NOT interrogative", () => {
+    // Initial AUX signals a polar question via subject-aux inversion, but
+    // "do/does/did + not" is do-support NEGATION ("do not see the wolf" = a
+    // negative imperative). Pre-fix it was mis-flagged interrogative, which
+    // appended a spurious intonation "?" in intonation-question languages.
+    const rc = parse("do not see the wolf");
+    expect(rc.interrogative ?? false, "negative imperative is not a question").toBe(false);
+    expect(rc.negated, "negation is still captured").toBe(true);
+  });
+
   it("imperative: subject participant is synthesised pronoun 'you'", () => {
     const rc = parse("see the wolf");
     const subj = rc.participants[0]!;
@@ -249,6 +259,19 @@ describe("Phase 73c Phase 3 — parseSyntaxAllAsClauses (multi-clause)", () => {
     const queen = findP(chain[1]!, "queen");
     expect(king).toBeDefined();
     expect(queen).toBeDefined();
+  });
+
+  it("S-coordination: a gapped 2nd-clause subject inherits the 1st subject even when the clause has an object", () => {
+    // "the king walks and sees the wolf" → clause[1] has a gapped subject
+    // (no overt nominal before its verb) + an object 'wolf'. Pre-fix the
+    // object nominal wrongly blocked subject inheritance, so clause[1]
+    // defaulted to a synthesised "you" ("...and YOU see the wolf"). The
+    // gapped subject must inherit 'king'.
+    const chain = parseAll("the king walks and sees the wolf");
+    expect(chain.length).toBe(2);
+    const subj1 = chain[1]!.participants[0]!;
+    expect(subj1.lemma, `2nd clause subject inherits 'king' (got '${subj1.lemma}')`).toBe("king");
+    expect(subj1.features?.synthesized ?? false, "inherited subject is not the synthesised 'you'").toBe(false);
   });
 
   it("relative clause (who) attaches as a modifier on the antecedent", () => {

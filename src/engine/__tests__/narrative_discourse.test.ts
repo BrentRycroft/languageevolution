@@ -144,6 +144,28 @@ describe("§2.2 — generateDiscourseNarrative produces coherent multi-line outp
     expect(pastLines.length).toBeGreaterThan(myth.length / 2);
   });
 
+  it("morphological gloss uses Leipzig abbreviations, not verbose category paths", () => {
+    // The interlinear gloss should read like standard linguistics
+    // ("walk-PST", "friend-ACC") — uppercase Leipzig abbreviations — not the
+    // raw lowercase glossNote category paths ("walk.tense.past").
+    const lang = freshLang("disc-leipzig");
+    lang.morphology.paradigms["verb.tense.past"] = {
+      affix: ["e", "d"], position: "suffix", category: "verb.tense.past",
+    };
+    const myth = generateDiscourseNarrative(lang, "leipzig-x", { lines: 8, genre: "myth" });
+    // No line leaks a verbose lowercase category path.
+    for (const l of myth) {
+      expect(l.gloss, `verbose category path leaked: "${l.gloss}"`).not.toMatch(
+        /(?:case|tense|aspect|person|num|mood|voice|evid)\.[a-z]/,
+      );
+    }
+    // At least one line surfaces the abbreviated past-tense tag.
+    expect(
+      myth.some((l) => /-PST\b/.test(l.gloss)),
+      `expected a -PST Leipzig tag across myth glosses (${myth.map((l) => l.gloss).join(" | ")})`,
+    ).toBe(true);
+  });
+
   it("daily narratives default to present tense", () => {
     const lang = freshLang("disc-present");
     const daily = generateDiscourseNarrative(lang, "tense-y", { lines: 8, genre: "daily" });

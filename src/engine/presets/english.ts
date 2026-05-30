@@ -819,6 +819,7 @@ export function presetEnglish(): SimulationConfig {
       possessorPosition: "pre",
       numeralPosition: "pre",
       negationPosition: "pre-verb",
+      doSupport: true,
       aspectMarking: "progressive",
       voice: "active",
       moodMarking: "declarative",
