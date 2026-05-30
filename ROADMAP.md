@@ -252,19 +252,32 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       FEATURE (recursive clause parsing + IR + realiser support + per-typology
       complementizer/infinitive strategy), milestone-scale, tied to the
       "Translator realiser refactor" NEEDS DECISION. Not a small surgical fix.
-- [ ] **Translator: English verb-coverage gap — common verbs mis-tagged as
-      nouns.** "jump" (and likely others) aren't in `dialects/english.ts`
-      BARE_VERBS nor flagged verb by `posOf`, so "the man runs and jumps" tags
-      "jump" as N → verbCount=1 → S-coordination doesn't fire → "and" dropped,
-      "jump" absorbed ("man run jump"). Low-risk fix: extend BARE_VERBS with the
-      missing high-frequency verbs (jump/climb/sing/dance/…). Audit against a
-      Swadesh/common-verb list. Sim-non-rippling (translator dialect data only).
+- [x] **Translator: English verb-coverage gap — common verbs mis-tagged as
+      nouns.** DONE (see Done log). Added jump/climb/sing/dance/read/write/ride/
+      draw/wear/cook/drive/kick to BOTH BARE_VERBS sets (tokenizer + dialect).
+      (CORRECTED DIAGNOSIS: posOf returns "other" for these, not "noun" — they
+      fell to the default-N fallback, not the noun branch; so adding to BARE_VERBS
+      directly fixes tagging. The dialect copy is needed so stripVerbSuffix
+      restores silent-e: dances→dance.) MORE verbs can be added later if play
+      sessions surface them; fish/dream excluded (posOf="noun", noun-dominant).
 
 ## Done log
 
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: added 12 high-frequency action verbs the tokenizer didn't know.**
+  jump/climb/sing/dance/read/write/ride/draw/wear/cook/drive/kick were unknown to
+  the wordlist (`posOf`="other"), so they fell through every bare check to the
+  default-N fallback and mis-tagged as nouns — e.g. "the man runs and jumps"
+  tagged "jump" N → verbCount=1 → S-coordination never fired → "and" dropped
+  ("man run jump"). Added them to the tokenizer BARE_VERBS (sentence.ts) AND the
+  dialect BARE_VERBS (english.ts, so stripVerbSuffix restores silent-e:
+  dances→dance, rides→ride, drives→drive). Now "the man runs and jumps" →
+  "the man run and the man jump". Translator dialect-data only; no engine/rng
+  change. + dialect_english regression test (tag=V + correct lemma for 8 forms).
+  Verified: tsc + 106 parser/dialect/routing/narrative/agnosticism/realise tests
+  green. (fish/dream excluded — posOf="noun", noun-dominant.)
 - **Translator: S-coordination subject inheritance no longer blocked by an
   object.** Play session: "the man walks and sees the dog" → "the man walk and
   YOU see the dog" — the 2nd coordinated clause's gapped subject defaulted to a

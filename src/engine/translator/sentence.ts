@@ -138,6 +138,13 @@ const BARE_VERBS = new Set([
   "start", "stop", "wait", "help",
   "chase", "follow", "attack", "meet", "leave", "send", "save",
   "catch", "reach", "join", "show", "tell",
+  // Phase 75: high-frequency action verbs the wordlist's posOf doesn't know
+  // (returns "other"), so they fell through every bare check to the default-N
+  // fallback and mis-tagged as nouns — e.g. "the man runs and jumps" tagged
+  // "jump" N → verbCount=1 → S-coordination never fired, dropping "and".
+  // (fish/dream are excluded — posOf classifies them noun, their dominant use.)
+  "jump", "climb", "sing", "dance", "read", "write", "ride", "draw",
+  "wear", "cook", "drive", "kick",
 ]);
 const BARE_ADJECTIVES = new Set([
   "big", "small", "tall", "short", "fast", "slow", "new", "old",
