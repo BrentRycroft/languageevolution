@@ -690,7 +690,12 @@ function realiseSentenceInner(
 
 function realisePP(pp: PP, lang: Language, ctx: NPCtx): RealisedToken[] {
   const npTokens = realiseNP(pp.np, lang, ctx, "PP-NP");
-  if (ctx.caseStrategy === "case") return npTokens;
+  // Case-strategy languages drop oblique adpositions because the case affix on
+  // the NP recovers the role. The comparative "than" is NOT such an adposition:
+  // no comparative case is applied to the standard, so dropping it leaves the
+  // comparison unmarked ("king big dog"). Retain it — the particle-comparative
+  // is an attested strategy (Stassen) and matches what non-case langs do here.
+  if (ctx.caseStrategy === "case" && pp.prep.lemma !== "than") return npTokens;
   const pf = closedClassForm(lang, pp.prep.lemma) ?? [];
   if (pf.length === 0) return npTokens;
   // Phase 29 Tranche 4h: realise the "mixed" caseStrategy. Per

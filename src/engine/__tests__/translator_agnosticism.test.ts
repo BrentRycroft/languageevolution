@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetBantu } from "../presets/bantu";
 import { presetEnglish } from "../presets/english";
+import { presetRomance } from "../presets/romance";
 import { translateSentence, type TranslatedToken } from "../translator/sentence";
 import type { Language } from "../types";
 
@@ -95,5 +96,23 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
       expect(rcVerb, `${name}: RC verb 'see' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
       expect(head, `${name}: postnominal RC → head 'king' before RC verb 'see' ("${surface(t)}")`).toBeLessThan(rcVerb);
     }
+  });
+
+  it("case-strategy languages keep the comparative 'than' particle but still drop plain obliques", () => {
+    // Case-strategy languages drop oblique adpositions because the NP's case
+    // affix recovers the role. The comparative 'than' is NOT such an adposition:
+    // no comparative case marks the standard, so dropping it leaves the
+    // comparison unmarked ("king big dog"). It must be retained (particle
+    // comparative — Stassen). A plain locative oblique ('in') must STILL drop,
+    // confirming the exemption is scoped to the comparative marker only.
+    const lang = protoOf(presetRomance, "agn-comparative");
+    const cs = lang.grammar.caseStrategy ?? (lang.grammar.hasCase ? "case" : "preposition");
+    expect(cs, "Romance proto is case-strategy").toBe("case");
+
+    const comp = translateSentence(lang, "the king is bigger than the dog").targetTokens;
+    expect(idxOf(comp, "than"), `comparative 'than' retained ("${surface(comp)}")`).toBeGreaterThanOrEqual(0);
+
+    const loc = translateSentence(lang, "the man sees the dog in the house").targetTokens;
+    expect(idxOf(loc, "in"), `plain oblique 'in' still dropped ("${surface(loc)}")`).toBe(-1);
   });
 });

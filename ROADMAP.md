@@ -232,7 +232,9 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       adjective carries degree="comparative" but no -er/comparative marker surfaces
       — needs a comparative paradigm or particle); (b) per-typology comparative
       STRATEGY (particle / conjoined / exceed / locational axis) + V-final standard
-      ordering. (Modals (c): DONE — see Done log. CORRECTED DIAGNOSIS: only "can"
+      ordering. (Standard-marker "than" RETENTION in case langs: DONE — see Done
+      log; the richer per-typology strategy below remains, e.g. ablative-of-
+      comparison for case langs instead of a particle.) (Modals (c): DONE — see Done log. CORRECTED DIAGNOSIS: only "can"
       was dropped; may/might/could/must/should/would already mapped to subjunctive
       via SUBJUNCTIVE_AUX. Future refinement: the mood enum lacks distinct
       potential/necessitative moods, so ability (can) and obligation (must) both
@@ -246,6 +248,20 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: case-strategy languages keep the comparative "than" particle.**
+  Play session (Romance leaf): "the king is bigger than the dog" → "king big dog"
+  — the comparison was unmarked. `realisePP` dropped EVERY adposition for
+  case-strategy languages (the case affix recovers the role), but the comparative
+  "than" has no comparative case marking the standard, so dropping it erased the
+  comparison. Exempted "than" from the case-strategy drop (one guard in
+  realise.ts realisePP) → "king big than dog", matching what non-case langs (Bantu
+  "boːv") already produce. Principle: particle comparative (Stassen's comparative
+  typology). Scoped to the comparative marker only — plain obliques ("in", dative
+  "to") STILL drop in case langs (verified). Realiser-only; no engine/rng change.
+  + translator_agnosticism regression test (than retained, "in" still dropped).
+  Verified: tsc + 76 translator/parser/routing/narrative tests green. (Engine-side
+  finding from the same session — affixal plural paradigm lost during evolution
+  while the grammar flag persists — logged under NEEDS DECISION.)
 - **Translator: the modal "can" now carries irrealis (subjunctive) mood.** A play
   session showed "the man can see the dog" dropping the modal entirely. Diagnosed
   (throwaway probe): the ROADMAP's "can/may/must dropped" was stale — may/might/
@@ -609,6 +625,27 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   lexicons) → milestone-level, verify with the FULL suite + expect to update
   hash/snapshot tests for affected languages. Diagnose the dominant growth source
   first (instrument which rule/repair adds the `aː` runs). Want me to take it on?
+
+- **Engine realism — morphology evolution drops a paradigm without syncing the
+  grammar flag that depends on it.** Found via translator play session
+  (2026-05-29, Romance leaf, seed play-romance, 20 gens). The evolved language
+  declares `grammar.pluralMarking="affix"` + `numberSystem="sg-pl"` (inherited
+  from the preset) but its `noun.num.pl` paradigm — which the Romance preset
+  DOES seed (affix `["i"]`) — is GONE at the leaf (only `noun.case.*` paradigms
+  remain). So the translator correctly tries to mark plural, finds no paradigm,
+  and emits unmarked nouns: "the men see the dogs" → nouns identical to singular
+  (only the verb shows plural agreement). Bantu (plural via noun-class prefix
+  swap) is unaffected — this is specific to AFFIX-strategy plural. The coupling
+  bug: `morphology/evolve.ts` (or paradigm renewal) can delete `noun.num.pl`
+  while `grammar.pluralMarking`/`numberSystem` keep pointing at it. Options:
+  (a) when a paradigm is dropped, downgrade the dependent grammar flag (e.g.
+  `pluralMarking → "none"`, or mark number "optional/zero") so the language is
+  self-consistent; (b) treat the flag as authoritative and REGENERATE/renew a
+  replacement paradigm (paradigm renewal) instead of leaving the category
+  stranded; (c) accept zero-marked optional number as realistic (attested) but
+  then the flag should still say so. All ripple sim (lexicon/morphology
+  trajectories) → milestone-level, full suite + snapshot updates. NB: not clearly
+  a bug under (c), so needs a realism call before any fix. Want me to take it on?
 
 - **Engine performance — extend the trigger pre-filter to inline rules.**
   The factory subset is DONE (see Done log): factory rules expose `triggers`,
