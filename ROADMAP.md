@@ -285,6 +285,15 @@ Non-exhaustive; the user queues more ideas — fold them in here.
       deliberate graceful-drop fires, while resolvable here/today/there/quiet are
       kept. NOT an adverb-count bug; same family as clause-final "away" dropping as
       an unregistered concept.)
+- [ ] **Translator: equality/equative comparison "X is as ADJ as Y" garbled.**
+      Play session (2026-05-30): "the dog is as big as the man" → "the dog be the
+      man big" (the two "as" markers dropped, standard "the man" and "big"
+      mis-ordered). Parallels the comparative "X is bigger than Y" (handled) but the
+      "as…as" correlative degree frame isn't recognised. NON-TRIVIAL (mirror the
+      comparative path: a new degree value "equative"; capture "as ADJ as NP" → the
+      adjective + an equality standard like the "than"-standard; realise per the
+      target's equative strategy — particle/similative/reduplication). Scope before
+      doing; not a surgical one-liner.
 - [ ] **Translator: partitive "some of the X" drops the quantifier.** "some of the
       dogs run" → "the dog run" ("some" + "of" lost). Partitive "Q of the N" isn't
       modelled; low priority. Also: correlatives "either…or" drops "either",
