@@ -435,6 +435,20 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
 
 ## Done log
 
+- **PARALLEL-AGENT WAVE 2 (2026-05-30, tiered-trust AUTO-merge): three translator
+  milestones landed.** `c0d8441` ordinal numerals ("the first dog runs" keeps
+  "first" as a numeral-slot modifier, placed by `numeralPosition`; Greenberg).
+  `1442193` subject-gap RC stray article (an article-bearing language no longer
+  emits the gapped subject's determiner — "who the see" fixed; bare gapSubject in
+  `attachRelativeClause`). `143b9d5` intensive/adnominal reflexive ("the man himself
+  runs" keeps the subject via a new `emphatic` modifier; reflexive-OBJECT unchanged;
+  König & Siemund). All translator-side / non-rippling, both-review SOUND, cherry-
+  picked onto auto/realism (trivial test-import conflict kept both). Full `npx vitest
+  run` GREEN: 1732 pass / 4 skip / 0 fail; tsc clean; determinism intact. WORKFLOW
+  NOTE: OneDrive worktree-path aliasing surfaced — an agent's Edit/Read transiently
+  hit the SHARED checkout (self-reverted). SAFEGUARD (now standard): verify the main
+  tree is clean (`git status`) before integrating, and integrate only AFTER all
+  agents finish (no concurrent writers).
 - **PARALLEL-AGENT WAVE 1 (2026-05-30): three translator milestones landed
   concurrently** via worktree agents + independent review + cherry-pick onto
   auto/realism. (1) `16e6336` Passive voice — parser remaps grammatical relations
