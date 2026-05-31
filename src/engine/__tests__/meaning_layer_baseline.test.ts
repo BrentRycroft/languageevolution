@@ -77,7 +77,10 @@ const GENN: Record<string, string> = {
   bantu: "7ef8a95a",
   romance: "b517df8f",
   germanic: "25d3698b",
-  tokipona: "2f52aaed",
+  tokipona: "2eff6781", // re-baselined 2026-05-30: compound coinage no longer
+                        // falls back to a random-lexeme mash (firewater fix);
+                        // Toki Pona was the only preset coining such a garbage
+                        // compound within 30 gens. Other 5 presets byte-identical.
   english: "d5b13c47",
 };
 

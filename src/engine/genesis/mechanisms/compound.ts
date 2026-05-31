@@ -25,10 +25,18 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
     const clusterPool = relatedMeanings(target).filter((m) => lang.lexicon[m]);
     const neighborPool = neighborsOf(target).filter((m) => lang.lexicon[m]);
     const pool = clusterPool.length > 0 ? clusterPool : neighborPool;
-    const partA = pool.length > 0 ? pool[rng.int(pool.length)]! : meanings[rng.int(meanings.length)]!;
+    // A compound must be built from two SEMANTICALLY-RELATED existing lexemes
+    // (kenning/calque: "firewater" = fire + water), never a random mash of two
+    // unrelated words. If the language has no ≥2 coherent related parts for this
+    // target, don't coin — the caller's cascade moves on, and the translator
+    // leaves the term untranslated rather than minting garbage. (Previously, an
+    // empty pool fell back to two RANDOM lexicon meanings — the "very weird"
+    // coinages the user reported.)
+    if (pool.length < 2) return null;
+    const partA = pool[rng.int(pool.length)]!;
     const otherPool = pool.filter((m) => m !== partA);
-    const partB = otherPool.length > 0 ? otherPool[rng.int(otherPool.length)]! : meanings[rng.int(meanings.length)]!;
-    if (partA === partB) return null;
+    if (otherPool.length === 0) return null;
+    const partB = otherPool[rng.int(otherPool.length)]!;
 
     const fa = lang.lexicon[partA]!;
     const fb = lang.lexicon[partB]!;

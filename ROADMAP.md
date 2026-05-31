@@ -128,7 +128,7 @@ ConceptId = identity), NOT FULL re-key (L-risk: 532 sites + breaks RNG-by-key-or
       (threads vs forks, maxWorkers) to the machine. Within-FILE tests do run
       sequentially, but that's rarely the wall-time driver here. NOT yet
       investigated in depth (logged per user direction, not pivoted to).
-- [ ] **Translator coinage rethink (USER REQUEST 2026-05-30): a coined term should
+- [x] **Translator coinage rethink (USER REQUEST 2026-05-30) — DONE (GLOBAL): a coined term should
       ALWAYS be a transparent compound of two EXISTING, semantically-related
       lexemes — "firewater" = fire + water — never a random mash.** Today
       `MECHANISM_COMPOUND.tryCoin` (`genesis/mechanisms/compound.ts`) is already
@@ -146,6 +146,18 @@ ConceptId = identity), NOT FULL re-key (L-risk: 532 sites + breaks RNG-by-key-or
       MILESTONE (verify determinism + simulation.test, byte-identity), not a
       surgical fix. NEEDS DECISION: should the random fallback be removed globally
       (genesis too) or only in the translator's `attemptGracefulFallback`?
+      RESOLVED 2026-05-30 (user chose GLOBAL): dropped the random-lexeme fallback in
+      `MECHANISM_COMPOUND.tryCoin` (genesis/mechanisms/compound.ts) — a compound now
+      requires ≥2 semantically-related EXISTING lexemes or doesn't coin. Fixes
+      genesis AND the translator's graceful path (shared mechanism). Determinism
+      ripple: only Toki Pona's 30-gen trajectory changed (re-baselined
+      `meaning_layer_baseline`); RUN_SLOW simulation/divergence determinism green.
+      Toki Pona has no native word for "bread" → now left UNTRANSLATED («bread») per
+      the user; `narrative_snapshot` scoped (KNOWN_UNTRANSLATABLE) to allow genuine
+      lexical gaps while still failing on real resolution bugs. FUTURE REFINEMENT
+      (user nuance): the TRANSLATOR's compounding could be PURE two-word
+      decomposition (firewater = the meaning's own two parts), DISTINCT from
+      genesis's emergent semantic-pool compounding — not yet split.
 - [x] Trim PR long-pole tests `phase72_code_review_batch_b` and
       `phase73d_direction_vector` to <60s without weakening assertions.
 - [x] Ran the end-to-end `RUN_SLOW=1` pass (35.6 min wall; **1873 pass / 1 FAIL
