@@ -4,6 +4,7 @@ import {
   getNounDeclensionClass,
 } from "../morphology/inflectionClass";
 import { applyParadigm } from "../morphology/apply";
+import { lexKeys } from "../lexicon/access";
 import type { Language, Phoneme, WordForm } from "../types";
 import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";
@@ -58,7 +59,7 @@ describe("Phase 64 T1 — noun declension classes", () => {
     expect(lang.nounDeclensionClass).toBeDefined();
     // Every seeded noun-like meaning should have a class.
     let unclassified = 0;
-    for (const m of Object.keys(lang.lexicon)) {
+    for (const m of lexKeys(lang)) {
       const cls = lang.nounDeclensionClass![m];
       if (cls && cls < 1) unclassified++;
     }
@@ -101,7 +102,7 @@ describe("Phase 64 T1 — noun declension classes", () => {
     for (const id of leaves) {
       const lang = state.tree[id]!.language;
       const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      for (const m of Object.keys(lang.lexicon)) {
+      for (const m of lexKeys(lang)) {
         const cls = getNounDeclensionClass(lang, m);
         counts[cls] = (counts[cls] ?? 0) + 1;
       }

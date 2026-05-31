@@ -1,52 +1,67 @@
 import type { Meaning, WordForm } from "../types";
 import type { LexiconState } from "../domains";
+import { conceptIdFor, buildConceptIdToGloss, type ConceptId } from "./conceptIdentity";
 
 /**
- * access.ts — the canonical lexicon ACCESSOR seam (concept re-key, R0).
+ * access.ts — the canonical lexicon ACCESSOR seam (concept re-key).
  *
  * Every read/write/iteration of `lang.lexicon` routes through these helpers
- * instead of indexing the record directly. Today (R1) they are pass-through on
- * the gloss-keyed store, so routing a call site through them is byte-identical.
- * At R2 the canonical store flips to `Record<ConceptId, WordForm>` and ONLY the
- * bodies here change — `lexGet(lang, "water")` becomes
- * `lang.lexicon[conceptIdFor(lang, "water")]` etc. Call sites stay agnostic.
+ * instead of indexing the record directly. R2 (the flip) made the canonical
+ * store `Record<ConceptId, WordForm>`; ONLY the bodies here translate the
+ * gloss the engine speaks in (`Meaning`) to/from the ConceptId the store is
+ * keyed by. Call sites stay gloss-agnostic.
  * See docs/planning/CONCEPT-REKEY-PLAN.md.
  *
+ * KEYING DISCIPLINE: `lang.lexicon` is the ONLY ConceptId-keyed map. Every
+ * satellite per-meaning field (wordFrequencyHints, registerOf,
+ * lastChangeGeneration, localNeighbors, …) and `lang.conceptIds` itself stay
+ * GLOSS-keyed. The bridge is `meaningForConceptId` / `conceptIdFor`.
+ *
  * ORDER CONTRACT (determinism footgun — read this):
- *   - `lexKeys` returns meanings in **insertion order** (the raw `Object.keys`
- *     order). Several RNG-coupled sites feed this to `rng.int`-by-index, so the
- *     re-key must preserve the SAME positional sequence (insertion parity — the
- *     ConceptId store is built in the same order the gloss store was).
- *   - SORTED iteration is a DIFFERENT contract: use `orderedLexiconKeys`
- *     (conceptIdentity.ts), NOT `lexKeys().sort()`, so the re-key can reimplement
- *     the canonical sorted order in one place.
- *   Map `Object.keys(lexicon)` → `lexKeys(lang)`; `Object.keys(lexicon).sort()`
- *   → `orderedLexiconKeys(lang.lexicon)`. Do not conflate the two.
+ *   - `lexKeys` returns GLOSSES in **insertion order** (the store's raw
+ *     `Object.keys` order, resolved to glosses). Several RNG-coupled sites feed
+ *     this to `rng.int`-by-index; insertion parity holds because the cid store
+ *     is built in the same order the gloss store was.
+ *   - SORTED iteration is a DIFFERENT contract: use `orderedLexiconKeys(lang)`
+ *     (glosses) or `orderedConceptIds(lexicon, lang)` (the matching store keys),
+ *     NOT `lexKeys().sort()`, so the canonical sorted order lives in one place.
+ *
+ * Reads (`lexGet`/`lexHas`/`lexDelete`) use the NON-minting lookup
+ * (`lang.conceptIds?.[m]`) so a miss never perturbs the ConceptId mint stream;
+ * only `lexSet` mints (via `conceptIdFor`) when a genuinely new meaning is
+ * coined.
  */
 
-/** Form for a meaning, or undefined. (`lang.lexicon[m]`) */
+/** Form for a meaning, or undefined. */
 export function lexGet(lang: LexiconState, m: Meaning): WordForm | undefined {
-  return lang.lexicon[m];
+  const cid = lang.conceptIds?.[m] as ConceptId | undefined;
+  return cid === undefined ? undefined : lang.lexicon[cid];
 }
 
-/** Whether the lexicon has a form for this meaning. (`lang.lexicon[m] !== undefined`) */
+/** Whether the lexicon has a form for this meaning. */
 export function lexHas(lang: LexiconState, m: Meaning): boolean {
-  return lang.lexicon[m] !== undefined;
+  const cid = lang.conceptIds?.[m] as ConceptId | undefined;
+  return cid !== undefined && lang.lexicon[cid] !== undefined;
 }
 
-/** Set/replace the form for a meaning, preserving insertion order. (`lang.lexicon[m] = form`) */
+/** Set/replace the form for a meaning. Mints a ConceptId for a new meaning,
+ * appending to the store in call order (insertion parity with the old gloss
+ * store). An existing meaning updates its ConceptId entry in place. */
 export function lexSet(lang: LexiconState, m: Meaning, form: WordForm): void {
-  lang.lexicon[m] = form;
+  lang.lexicon[conceptIdFor(lang, m)] = form;
 }
 
-/** Remove a meaning's entry. (`delete lang.lexicon[m]`) */
+/** Remove a meaning's entry from the store. (`lang.conceptIds` is purged
+ * separately by deleteMeaning's registry pass.) */
 export function lexDelete(lang: LexiconState, m: Meaning): void {
-  delete lang.lexicon[m];
+  const cid = lang.conceptIds?.[m] as ConceptId | undefined;
+  if (cid !== undefined) delete lang.lexicon[cid];
 }
 
-/** Meanings in INSERTION order. (`Object.keys(lang.lexicon)`) — NOT sorted. */
+/** Meanings (glosses) in INSERTION order. NOT sorted. */
 export function lexKeys(lang: LexiconState): Meaning[] {
-  return Object.keys(lang.lexicon);
+  const g = buildConceptIdToGloss(lang);
+  return Object.keys(lang.lexicon).map((cid) => g.get(cid) ?? (cid as Meaning));
 }
 
 /** Forms in insertion order. (`Object.values(lang.lexicon)`) */
@@ -54,9 +69,13 @@ export function lexValues(lang: LexiconState): WordForm[] {
   return Object.values(lang.lexicon);
 }
 
-/** [meaning, form] pairs in insertion order. (`Object.entries(lang.lexicon)`) */
+/** [meaning, form] pairs in insertion order. */
 export function lexEntries(lang: LexiconState): [Meaning, WordForm][] {
-  return Object.entries(lang.lexicon);
+  const g = buildConceptIdToGloss(lang);
+  return Object.keys(lang.lexicon).map(
+    (cid) =>
+      [g.get(cid) ?? (cid as Meaning), lang.lexicon[cid as ConceptId]!] as [Meaning, WordForm],
+  );
 }
 
 /** Number of entries. (`Object.keys(lang.lexicon).length`) */

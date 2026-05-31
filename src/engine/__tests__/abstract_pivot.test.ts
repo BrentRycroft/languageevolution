@@ -3,6 +3,7 @@ import { translateSentence } from "../translator/sentence";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { attemptAbstractPivot } from "../translator/abstraction";
+import { lexDelete } from "../lexicon/access";
 
 /**
  * abstract_pivot.test.ts
@@ -55,7 +56,7 @@ describe("Phase 51 T2 — abstract pivot", () => {
     // cluster has a representative the seed DOES include. We expect
     // the resolution to be the abstract-pivot kind ("fallback") not
     // synth-fallback.
-    delete lang.lexicon["father"];
+    lexDelete(lang, "father");
     const out = translateSentence(lang, "the father sees");
     const father = out.targetTokens.find((t) => t.englishLemma === "father");
     if (father) {

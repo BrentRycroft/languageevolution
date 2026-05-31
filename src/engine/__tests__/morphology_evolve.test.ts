@@ -3,6 +3,7 @@ import { applyPhonologyToAffixes, maybeGrammaticalize, maybeMergeParadigms, infl
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
+import { lexSet } from "../lexicon/access";
 import type { Language } from "../types";
 
 /**
@@ -14,13 +15,11 @@ import type { Language } from "../types";
  */
 
 function makeLang(): Language {
-  return {
+  const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {
-      go: ["g", "a", "n"],
-      come: ["k", "o", "m"],
-    },
+    lexicon: {},
+    conceptIds: {},
     enabledChangeIds: ["lenition.p_to_f"],
     changeWeights: { "lenition.p_to_f": 1 },
     birthGeneration: 0,
@@ -43,6 +42,9 @@ function makeLang(): Language {
     activeRules: [],
     orthography: {}, otRanking: [], lastChangeGeneration: {},
   };
+  lexSet(lang, "go", ["g", "a", "n"]);
+  lexSet(lang, "come", ["k", "o", "m"]);
+  return lang;
 }
 
 describe("morphology evolution", () => {

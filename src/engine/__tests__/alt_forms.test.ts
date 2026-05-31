@@ -7,6 +7,8 @@ import {
 } from "../lexicon/altForms";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { lexGet, lexDelete } from "../lexicon/access";
 
 /**
  * alt_forms.test.ts
@@ -17,7 +19,7 @@ import type { Language } from "../types";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
@@ -46,6 +48,8 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("altForms", () => {
@@ -112,10 +116,10 @@ describe("altForms", () => {
     const lang = makeLang({ lexicon: { x: ["a"] } });
     addAlt(lang, "x", ["b"], "high");
     addAlt(lang, "x", ["c"], "low");
-    delete lang.lexicon.x;
+    lexDelete(lang, "x");
     const promoted = promoteAltOnPrimaryLoss(lang, "x");
     expect(promoted).toEqual(["b"]);
-    expect(lang.lexicon.x).toEqual(["b"]);
+    expect(lexGet(lang, "x")).toEqual(["b"]);
     expect(lang.altForms?.x).toEqual([["c"]]);
     expect(lang.altRegister?.x).toEqual(["low"]);
   });

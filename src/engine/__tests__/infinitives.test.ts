@@ -3,6 +3,7 @@ import { verbCitationForm, flattenCitation } from "../morphology/citation";
 import { presetEnglish } from "../presets/english";
 import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";
+import { lexGet, lexKeys } from "../lexicon/access";
 import type { Language } from "../types";
 
 /**
@@ -32,7 +33,7 @@ describe("Phase 26b — infinitive morphology", () => {
     expect(cit!.kind).toBe("multi");
     if (cit && cit.kind === "multi") {
       // The root is unchanged from lang.lexicon["go"].
-      expect(cit.root).toEqual(lang.lexicon["go"]);
+      expect(cit.root).toEqual(lexGet(lang, "go"));
       // The particle resolves to lang.lexicon["to"] when present, else
       // synthesised via closedClassForm.
       expect(cit.particle.length).toBeGreaterThan(0);
@@ -55,7 +56,7 @@ describe("Phase 26b — infinitive morphology", () => {
   it("Romance citation form is single-token with -re suffix", () => {
     const lang = langFromPreset(presetRomance());
     // pick any verb that's seeded
-    const verbMeaning = Object.keys(lang.lexicon).find((k) =>
+    const verbMeaning = lexKeys(lang).find((k) =>
       ["speak", "see", "go", "have"].includes(k),
     );
     if (!verbMeaning) return;
@@ -82,7 +83,7 @@ describe("Phase 26b — infinitive morphology", () => {
     expect(cit).not.toBeNull();
     expect(cit!.kind).toBe("single");
     if (cit && cit.kind === "single") {
-      expect(cit.form).toEqual(lang.lexicon["go"]);
+      expect(cit.form).toEqual(lexGet(lang, "go"));
     }
   });
 
@@ -123,7 +124,7 @@ describe("Phase 26b — infinitive morphology", () => {
     // not the infinitive form. This is a key invariant: inflection
     // continues to work because all tense/person paradigms still apply
     // to the bare stem.
-    const goRoot = lang.lexicon["go"];
+    const goRoot = lexGet(lang, "go");
     expect(goRoot).toBeDefined();
     expect(goRoot![0]).toBe("g");
     // Root must NOT have "to" prepended.

@@ -6,6 +6,7 @@ import { formatForm } from "../engine/phonology/display";
 import { ListSearch } from "./ListSearch";
 import { CopyButton } from "./CopyButton";
 import { downloadAs, toCsv, slugForFile } from "./exportUtils";
+import { lexKeys } from "../engine/lexicon/access";
 
 /**
  * Cognate-set explorer.
@@ -29,7 +30,7 @@ export function CognateExplorer() {
   const allMeanings = useMemo(() => {
     const set = new Set<string>();
     for (const id of Object.keys(tree)) {
-      for (const m of Object.keys(tree[id]!.language.lexicon)) set.add(m);
+      for (const m of lexKeys(tree[id]!.language)) set.add(m);
     }
     return Array.from(set).sort();
   }, [tree]);

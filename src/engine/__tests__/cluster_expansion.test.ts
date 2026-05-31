@@ -10,6 +10,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
+import { lexSet, lexDelete } from "../lexicon/access";
 
 /**
  * cluster_expansion.test.ts
@@ -64,11 +65,11 @@ describe("§H.1 — cluster lookups span the expanded registry", () => {
     sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
     lang.culturalTier = 3;
-    lang.lexicon["people"] = ["p", "e", "o"];
-    lang.lexicon["law"] = ["l", "a", "w"];
-    lang.lexicon["king"] = ["k", "i", "n"];
-    lang.lexicon["power" as string] = ["p", "o", "w"];
-    delete lang.lexicon["democracy"];
+    lexSet(lang, "people", ["p", "e", "o"]);
+    lexSet(lang, "law", ["l", "a", "w"]);
+    lexSet(lang, "king", ["k", "i", "n"]);
+    lexSet(lang, "power", ["p", "o", "w"]);
+    lexDelete(lang, "democracy");
 
     const rng = makeRng("compound-democracy-seed");
     let coined = 0;
@@ -84,13 +85,13 @@ describe("§H.1 — cluster lookups span the expanded registry", () => {
     sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
     lang.culturalTier = 3;
-    lang.lexicon = {
-      people: ["p", "e", "o", "p", "l"],
-      law: ["l", "a", "w", "a"],
-      king: ["k", "i", "n", "g"],
-      gift: ["g", "i", "f", "t"],
-      truth: ["t", "r", "u", "θ"],
-    } as never;
+    lang.lexicon = {} as never;
+    lang.conceptIds = {};
+    lexSet(lang, "people", ["p", "e", "o", "p", "l"]);
+    lexSet(lang, "law", ["l", "a", "w", "a"]);
+    lexSet(lang, "king", ["k", "i", "n", "g"]);
+    lexSet(lang, "gift", ["g", "i", "f", "t"]);
+    lexSet(lang, "truth", ["t", "r", "u", "θ"]);
     const rng = makeRng("drift-democracy-seed");
     let landed = false;
     for (let i = 0; i < 500; i++) {

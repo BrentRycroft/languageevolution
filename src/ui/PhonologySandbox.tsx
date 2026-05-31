@@ -6,6 +6,7 @@ import { formatForm } from "../engine/phonology/display";
 import { makeRng } from "../engine/rng";
 import { ListSearch } from "./ListSearch";
 import { CopyButton } from "./CopyButton";
+import { lexKeys, lexGet } from "../engine/lexicon/access";
 
 /**
  * Phonology sandbox.
@@ -30,13 +31,13 @@ export function PhonologySandbox() {
 
   const sortedMeanings = useMemo(() => {
     if (!lang) return [];
-    return Object.keys(lang.lexicon).sort();
+    return lexKeys(lang).sort();
   }, [lang]);
 
   const baseForm = useMemo(() => {
     if (!lang) return [];
     if (customIpa.trim()) return textToIpa(customIpa.trim());
-    if (meaning && lang.lexicon[meaning]) return lang.lexicon[meaning]!.slice();
+    if (meaning && lexGet(lang, meaning)) return lexGet(lang, meaning)!.slice();
     return [];
   }, [lang, meaning, customIpa]);
 

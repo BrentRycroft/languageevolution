@@ -6,6 +6,7 @@ import {
 import type { Language, Phoneme } from "../types";
 import type { DerivationalSuffix } from "../lexicon/derivation";
 import { makeRng } from "../rng";
+import { lexSet, lexGet } from "../lexicon/access";
 
 /**
  * runtime_derivation.test.ts
@@ -16,13 +17,8 @@ import { makeRng } from "../rng";
  */
 
 function fakeLang(): Language {
-  return {
-    lexicon: {
-      see: ["s", "iː"] as Phoneme[],
-      run: ["ɹ", "ʌ", "n"] as Phoneme[],
-      eat: ["iː", "t"] as Phoneme[],
-      dog: ["d", "ɔ", "g"] as Phoneme[],
-    },
+  const lang = {
+    lexicon: {},
     derivationalSuffixes: [
       {
         tag: "agt",
@@ -49,6 +45,11 @@ function fakeLang(): Language {
     phonemeInventory: { segmental: [] as Phoneme[] },
     wordFrequencyHints: {},
   } as unknown as Language;
+  lexSet(lang, "see", ["s", "iː"] as Phoneme[]);
+  lexSet(lang, "run", ["ɹ", "ʌ", "n"] as Phoneme[]);
+  lexSet(lang, "eat", ["iː", "t"] as Phoneme[]);
+  lexSet(lang, "dog", ["d", "ɔ", "g"] as Phoneme[]);
+  return lang;
 }
 
 describe("Phase 66 T2 — productive derivation at narrative runtime", () => {
@@ -84,7 +85,7 @@ describe("Phase 66 T2 — productive derivation at narrative runtime", () => {
     // Base must be a verb (per VERB_HINTS).
     expect(["see", "run", "eat"]).toContain(result!.baseMeaning);
     // Form must be the base + suffix.
-    const baseForm = lang.lexicon[result!.baseMeaning]!;
+    const baseForm = lexGet(lang, result!.baseMeaning)!;
     expect(result!.form.join("")).toBe(baseForm.join("") + "əɹ");
   });
 

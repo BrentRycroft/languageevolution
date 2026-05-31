@@ -4,6 +4,7 @@ import { createSimulation } from "../simulation";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { reverseTranslate } from "../translator/reverse";
 import { formToString } from "../phonology/ipa";
+import { lexGet } from "../lexicon/access";
 
 /**
  * synonym_roundtrip.test.ts
@@ -24,7 +25,7 @@ describe("Phase 54 — synonym round-trip via reverse-lookup abstraction", () =>
 
     // The lemma now lives in lang.lexicon AND lang.words has at least
     // one synonym entry attached for the same meaning.
-    expect(lang.lexicon["wetness"]).toBeDefined();
+    expect(lexGet(lang, "wetness")).toBeDefined();
     const matchingWords = lang.words!.filter((w) =>
       w.senses.some((s) => s.meaning === "wetness"),
     );

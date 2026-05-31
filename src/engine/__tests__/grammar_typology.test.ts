@@ -4,6 +4,8 @@ import { translateSentence } from "../translator/sentence";
 import { closedClassTable } from "../translator/closedClass";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
+import { lexHas, lexSet, lexKeys, lexGet } from "../lexicon/access";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 import type { Language } from "../types";
 
 /**
@@ -74,7 +76,7 @@ describe("§1.4 — article placement per articlePresence", () => {
     const lang = sim.getState().tree["L-0"]!.language;
     lang.grammar.articlePresence = mode;
     lang.grammar.caseStrategy = "preposition";
-    if (!lang.lexicon["water"]) lang.lexicon["water"] = ["w", "a", "t"];
+    if (!lexHas(lang, "water")) lexSet(lang, "water", ["w", "a", "t"]);
     return lang;
   }
 
@@ -117,7 +119,7 @@ describe("§1.5 — preposition gating per caseStrategy", () => {
     sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
     lang.grammar.caseStrategy = strat;
-    if (!lang.lexicon["water"]) lang.lexicon["water"] = ["w", "a", "t"];
+    if (!lexHas(lang, "water")) lexSet(lang, "water", ["w", "a", "t"]);
     return lang;
   }
 
@@ -163,20 +165,23 @@ describe("§1.6 — closed-class lookup determinism", () => {
     sim.step();
     const proto = sim.getState().tree["L-0"]!.language;
     const stripped: Language["lexicon"] = {};
-    for (const m of Object.keys(proto.lexicon)) {
-      if (!isClosedClass(posOf(m))) stripped[m] = proto.lexicon[m]!;
+    for (const m of lexKeys(proto)) {
+      if (!isClosedClass(posOf(m))) stripped[m] = lexGet(proto, m)!;
     }
     const sister: Language = {
       ...proto,
       id: "L-0-X",
       name: "Sister",
       lexicon: stripped,
+      conceptIds: undefined,
       phonemeInventory: {
         ...proto.phonemeInventory,
         segmental: [...proto.phonemeInventory.segmental, "θ", "ð"],
       },
     };
-    const protoStripped: Language = { ...proto, lexicon: stripped };
+    rekeyLexiconToConceptIds(sister);
+    const protoStripped: Language = { ...proto, lexicon: stripped, conceptIds: undefined };
+    rekeyLexiconToConceptIds(protoStripped);
     const tA = closedClassTable(protoStripped);
     const tB = closedClassTable(sister);
     let differs = 0;

@@ -1,13 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { analyzeContexts, detectPhonologisation } from "../phonology/phonologization";
 import type { Language } from "../types";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { lexSet } from "../lexicon/access";
 
 /**
  * Phase 48 D4-D: phonologization-detection tests.
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
@@ -36,6 +38,8 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("Phase 48 D4-D — analyzeContexts", () => {
@@ -92,7 +96,7 @@ describe("Phase 48 D4-D — detectPhonologisation", () => {
     detectPhonologisation(lang, 0); // Set baseline snapshot.
     expect(lang.contextDiversitySnapshot?.b).toBe(1);
     // Now b appears in 2 contexts (V_V + V_#).
-    lang.lexicon.c = ["a", "b"];
+    lexSet(lang, "c", ["a", "b"]);
     const events = detectPhonologisation(lang, 5);
     expect(events.some((e) => e.phoneme === "b" && e.toDiversity >= 2)).toBe(true);
   });

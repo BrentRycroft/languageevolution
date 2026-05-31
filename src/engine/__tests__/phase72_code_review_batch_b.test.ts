@@ -9,6 +9,7 @@ import { inheritMeaningFields } from "../perMeaningFields";
 import { migrateSavedRun, LATEST_SAVE_VERSION } from "../../persistence/migrate";
 import { defaultConfig } from "../config";
 import type { Language, SavedRun } from "../types";
+import { lexGet, lexHas, lexSet } from "../lexicon/access";
 
 /**
  * phase72_code_review_batch_b.test.ts — invariants that Phase 72
@@ -45,15 +46,15 @@ describe("B7 (T72b-3) — closed-class lemmas drift slower than content lemmas",
       "moon", "star", "blood", "head", "hand", "eye", "tooth", "earth",
       "leaf", "bone", "skin", "mouth",
     ];
-    const closedClassSample = closedClassPool.filter((m) => lang0.lexicon[m]);
-    const contentSample = contentPool.filter((m) => lang0.lexicon[m]);
+    const closedClassSample = closedClassPool.filter((m) => lexHas(lang0, m));
+    const contentSample = contentPool.filter((m) => lexHas(lang0, m));
     expect(closedClassSample.length).toBeGreaterThanOrEqual(15);
     expect(contentSample.length).toBeGreaterThanOrEqual(15);
     // Snapshot pre-drift forms.
     const beforeCC: Record<string, string[]> = {};
     const beforeContent: Record<string, string[]> = {};
-    for (const m of closedClassSample) beforeCC[m] = lang0.lexicon[m]!.slice();
-    for (const m of contentSample) beforeContent[m] = lang0.lexicon[m]!.slice();
+    for (const m of closedClassSample) beforeCC[m] = lexGet(lang0, m)!.slice();
+    for (const m of contentSample) beforeContent[m] = lexGet(lang0, m)!.slice();
     // Longer run for statistical signal.
     for (let i = 0; i < 200; i++) sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
@@ -69,11 +70,11 @@ describe("B7 (T72b-3) — closed-class lemmas drift slower than content lemmas",
     let ccTotal = 0;
     let contentTotal = 0;
     for (const m of closedClassSample) {
-      const after = lang.lexicon[m] ?? beforeCC[m]!;
+      const after = lexGet(lang, m) ?? beforeCC[m]!;
       ccTotal += dist(beforeCC[m]!, after);
     }
     for (const m of contentSample) {
-      const after = lang.lexicon[m] ?? beforeContent[m]!;
+      const after = lexGet(lang, m) ?? beforeContent[m]!;
       contentTotal += dist(beforeContent[m]!, after);
     }
     const ccAvg = ccTotal / closedClassSample.length;
@@ -125,7 +126,7 @@ describe("B9 (T72a-2) — closed-class cache freshness post-phonology", () => {
     expect(before).toBeDefined();
     // Forcibly mutate lang.lexicon["the"] (simulating a sound-change
     // outcome) — pre-T72a-2 the cache would still serve the old form.
-    lang.lexicon.the = ["X", "Y"];
+    lexSet(lang, "the", ["X", "Y"]);
     // stepPhonology runs invalidateClosedClassCache. Trigger a step.
     sim.step();
     const after = closedClassForm(lang, "the")?.join("");

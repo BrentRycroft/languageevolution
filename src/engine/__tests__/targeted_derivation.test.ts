@@ -11,6 +11,7 @@ import {
 import { derivationFor, DERIVATION_TARGETS } from "../lexicon/derivation_targets";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
+import { lexSet } from "../lexicon/access";
 
 /**
  * targeted_derivation.test.ts
@@ -21,10 +22,12 @@ import type { Language } from "../types";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const { lexicon: seedLexicon, conceptIds: _cids, ...rest } = overrides;
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -52,8 +55,14 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     orthography: {},
     otRanking: [],
     lastChangeGeneration: {},
-    ...overrides,
+    ...rest,
   };
+  if (seedLexicon) {
+    for (const [g, form] of Object.entries(seedLexicon)) {
+      lexSet(lang, g, form);
+    }
+  }
+  return lang;
 }
 
 describe("derivation buckets", () => {

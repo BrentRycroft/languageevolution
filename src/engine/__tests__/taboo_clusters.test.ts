@@ -7,6 +7,7 @@ import { isExpressive } from "../lexicon/expressive";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
+import { lexGet, lexSize, lexSet } from "../lexicon/access";
 
 /**
  * taboo_clusters.test.ts
@@ -51,15 +52,11 @@ describe("expressive phonology", () => {
 
 describe("taboo replacement", () => {
   function makeLang(overrides: Partial<Language> = {}): Language {
-    return {
+    const lang: Language = {
       id: "L-0",
       name: "Proto",
-      lexicon: {
-        mother: ["m", "a", "m", "a"],
-        father: ["t", "a", "t", "a"],
-        hand: ["m", "a", "n", "u"],
-        foot: ["p", "e", "d"],
-      },
+      lexicon: {},
+      conceptIds: {},
       enabledChangeIds: [],
       changeWeights: {},
       birthGeneration: 0,
@@ -75,6 +72,11 @@ describe("taboo replacement", () => {
       orthography: {}, otRanking: [], lastChangeGeneration: {},
       ...overrides,
     };
+    lexSet(lang, "mother", ["m", "a", "m", "a"]);
+    lexSet(lang, "father", ["t", "a", "t", "a"]);
+    lexSet(lang, "hand", ["m", "a", "n", "u"]);
+    lexSet(lang, "foot", ["p", "e", "d"]);
+    return lang;
   }
 
   it("does nothing when probability is 0", () => {
@@ -87,12 +89,12 @@ describe("taboo replacement", () => {
   it("replaces a high-frequency form and tags origin as taboo", () => {
     const lang = makeLang();
     const rng = makeRng("force");
-    const before = Object.keys(lang.lexicon).length;
+    const before = lexSize(lang);
     const ev = maybeTabooReplace(lang, rng, 1);
     expect(ev).not.toBeNull();
     if (!ev) return;
-    expect(Object.keys(lang.lexicon).length).toBe(before);
-    expect(lang.lexicon[ev.meaning]!.join("")).not.toBe(ev.oldForm);
+    expect(lexSize(lang)).toBe(before);
+    expect(lexGet(lang, ev.meaning)!.join("")).not.toBe(ev.oldForm);
     expect(lang.wordOrigin[ev.meaning]).toMatch(/^taboo:/);
   });
 
@@ -101,7 +103,7 @@ describe("taboo replacement", () => {
     const rng = makeRng("length");
     const ev = maybeTabooReplace(lang, rng, 1);
     if (ev) {
-      expect(lang.lexicon[ev.meaning]!.length).toBeLessThanOrEqual(9);
+      expect(lexGet(lang, ev.meaning)!.length).toBeLessThanOrEqual(9);
     }
   });
 });

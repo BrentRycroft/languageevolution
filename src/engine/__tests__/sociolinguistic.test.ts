@@ -6,7 +6,8 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
-import type { Language, Lexicon } from "../types";
+import type { Language } from "../types";
+import { lexSet, lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * sociolinguistic.test.ts
@@ -16,11 +17,11 @@ import type { Language, Lexicon } from "../types";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
-  return {
+function makeLang(overrides: Partial<Language> = {}, seedLexicon: Record<string, string[]> = {}): Language {
+  const lang: Language = {
     id: "L-s",
     name: "TestLang",
-    lexicon,
+    lexicon: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -47,6 +48,10 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     lastChangeGeneration: {},
     ...overrides,
   };
+  for (const [m, form] of Object.entries(seedLexicon)) {
+    lexSet(lang, m, form);
+  }
+  return lang;
 }
 
 describe("agent-based actuation via social contagion", () => {
@@ -81,7 +86,7 @@ describe("agent-based actuation via social contagion", () => {
     if (finalWinning) {
       expect(finalWinning.adoptionFraction ?? 0).toBeGreaterThan(0.85);
     } else {
-      expect(lang.lexicon.water?.join("")).toBe("waθ");
+      expect(lexGet(lang, "water")?.join("")).toBe("waθ");
     }
   });
 
@@ -102,7 +107,7 @@ describe("agent-based actuation via social contagion", () => {
       }
     }
     expect(actuated).toBe(true);
-    expect(lang.lexicon.water?.join("")).toBe("waθ");
+    expect(lexGet(lang, "water")?.join("")).toBe("waθ");
   });
 });
 
@@ -158,8 +163,8 @@ describe("learner-driven simplification", () => {
       }
     }
     expect(dropped, "marked phoneme y should be dropped within 200 gens").toBe(true);
-    for (const m of Object.keys(lang.lexicon)) {
-      expect(lang.lexicon[m]!.includes("y")).toBe(false);
+    for (const m of lexKeys(lang)) {
+      expect(lexGet(lang, m)!.includes("y")).toBe(false);
     }
   });
 

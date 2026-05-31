@@ -8,6 +8,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import { isClosedClass, posOf } from "../lexicon/pos";
+import { lexKeys, lexSet } from "../lexicon/access";
 
 /**
  * closed_class_protection.test.ts
@@ -44,7 +45,7 @@ describe("Phase 26c — closed-class protection", () => {
     const state = freshLang();
     const lang = state.tree[state.rootId]!.language;
     // Boost frequency of every closed-class word to make it a candidate.
-    for (const m of Object.keys(lang.lexicon)) {
+    for (const m of lexKeys(lang)) {
       if (isClosedClass(posOf(m))) {
         lang.wordFrequencyHints[m] = 0.95;
       }
@@ -80,7 +81,7 @@ describe("Phase 26c — closed-class protection", () => {
     const state = freshLang();
     const lang = state.tree[state.rootId]!.language;
     // Boost a few closed-class words' frequencies.
-    for (const m of Object.keys(lang.lexicon)) {
+    for (const m of lexKeys(lang)) {
       if (isClosedClass(posOf(m))) {
         lang.wordFrequencyHints[m] = 0.95;
       }
@@ -102,15 +103,15 @@ describe("Phase 26c — closed-class protection", () => {
     const lang = state.tree[state.rootId]!.language;
     // Build seedLengths and force one closed-class word to be eroded.
     const seedLengths: Record<string, number> = {};
-    for (const m of Object.keys(lang.lexicon)) {
-      seedLengths[m] = lang.lexicon[m]!.length;
+    for (const m of lexKeys(lang)) {
+      seedLengths[m] = lang.lexicon[lang.conceptIds![m]!]!.length;
     }
     // Pick a closed-class meaning, manually erode it to length 1, set
     // its frequency high. Pre-Phase-26c, this would set a positive
     // shrinkage need score. Post-26c, score should be zero.
-    const closedM = Object.keys(lang.lexicon).find((m) => isClosedClass(posOf(m)));
+    const closedM = lexKeys(lang).find((m) => isClosedClass(posOf(m)));
     expect(closedM).toBeDefined();
-    lang.lexicon[closedM!] = ["x"]; // length 1, way under floor
+    lexSet(lang, closedM!, ["x"]); // length 1, way under floor
     lang.wordFrequencyHints[closedM!] = 0.95;
     const need = lexicalNeed(lang, state.tree, { seedLengths });
     expect(need[closedM!] ?? 0).toBe(0);

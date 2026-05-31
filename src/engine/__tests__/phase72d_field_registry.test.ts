@@ -7,6 +7,7 @@ import {
   BESPOKE_PER_MEANING_FIELDS,
   purgeMeaningFromRegistry,
 } from "../perMeaningFields";
+import { lexGet } from "../lexicon/access";
 
 /**
  * phase72d_field_registry.test.ts — Phase 72d T1.
@@ -60,9 +61,9 @@ describe("Phase 72d-1 — per-meaning field registry", () => {
     const lang = sim.getState().tree["L-0"]!.language;
 
     const meaning = "tail"; // a content word; not in PROTECTED_MEANINGS
-    expect(lang.lexicon[meaning]).toBeDefined();
+    expect(lexGet(lang, meaning)).toBeDefined();
     deleteMeaning(lang, meaning);
-    expect(lang.lexicon[meaning]).toBeUndefined();
+    expect(lexGet(lang, meaning)).toBeUndefined();
     expect(lang.wordOrigin[meaning]).toBeUndefined();
     expect(lang.wordFrequencyHints[meaning]).toBeUndefined();
   });
@@ -84,13 +85,13 @@ describe("Phase 72d-2 — meaning merger pathway tracker", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
 
-    expect(lang.lexicon.tail).toBeDefined();
+    expect(lexGet(lang, "tail")).toBeDefined();
     deleteMeaning(lang, "tail", {
       mergedInto: "back",
       generation: 5,
       reason: "homonym-collision",
     });
-    expect(lang.lexicon.tail).toBeUndefined();
+    expect(lexGet(lang, "tail")).toBeUndefined();
     expect(lang.meaningHistory).toBeDefined();
     expect(lang.meaningHistory!.tail).toBeDefined();
     expect(lang.meaningHistory!.tail.mergedInto).toBe("back");
@@ -105,7 +106,7 @@ describe("Phase 72d-2 — meaning merger pathway tracker", () => {
     const lang = sim.getState().tree["L-0"]!.language;
 
     deleteMeaning(lang, "tail");
-    expect(lang.lexicon.tail).toBeUndefined();
+    expect(lexGet(lang, "tail")).toBeUndefined();
     // meaningHistory should remain undefined or not contain "tail".
     expect(lang.meaningHistory?.tail).toBeUndefined();
   });
@@ -117,14 +118,14 @@ describe("Phase 72d-2 — meaning merger pathway tracker", () => {
     const lang = sim.getState().tree["L-0"]!.language;
 
     // "be" is in PROTECTED_MEANINGS
-    expect(lang.lexicon.be).toBeDefined();
+    expect(lexGet(lang, "be")).toBeDefined();
     deleteMeaning(lang, "be", {
       mergedInto: "exist",
       generation: 5,
       reason: "test",
     });
     // refused
-    expect(lang.lexicon.be).toBeDefined();
+    expect(lexGet(lang, "be")).toBeDefined();
     // and meaningHistory should NOT have been written
     expect(lang.meaningHistory?.be).toBeUndefined();
   });

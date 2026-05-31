@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { translateSentence, tokeniseEnglish } from "../translator/sentence";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 import type { Language, Lexicon } from "../types";
 
 /**
@@ -11,7 +12,7 @@ import type { Language, Lexicon } from "../types";
  */
 
 function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
-  return {
+  const lang = {
     id: "L-i",
     name: "TestLang",
     lexicon,
@@ -40,7 +41,9 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     otRanking: [],
     lastChangeGeneration: {},
     ...overrides,
-  };
+  } as Language;
+  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("interjection handling", () => {

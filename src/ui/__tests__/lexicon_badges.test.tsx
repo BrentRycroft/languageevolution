@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { LexiconView } from "../LexiconView";
 import { useSimStore } from "../../state/store";
+import { lexHas, lexKeys } from "../../engine/lexicon/access";
 
 /**
  * lexicon_badges.test.tsx
@@ -15,13 +16,14 @@ function pickKnownMeaning(): string {
   const store = useSimStore.getState();
   const state = store.state;
   const root = state.tree[state.rootId];
-  const lex = root?.language?.lexicon ?? {};
-  // Pick a meaning that's seeded by the default preset's lexicon.
+  if (!root) return "water";
+  // Pick a GLOSS seeded by the default preset's lexicon (via the seam, since
+  // the canonical store is ConceptId-keyed post R2 flip).
   for (const candidate of ["water", "father", "see", "fire", "tree"]) {
-    if (lex[candidate]) return candidate;
+    if (lexHas(root.language, candidate)) return candidate;
   }
-  // Fallback: any meaning.
-  return Object.keys(lex)[0] ?? "water";
+  // Fallback: any meaning (gloss).
+  return lexKeys(root.language)[0] ?? "water";
 }
 
 function setNounClass(meaning: string, cls: 1 | 2 | 3 | 4 | 5) {

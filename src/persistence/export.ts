@@ -1,6 +1,7 @@
 import type { LanguageTree, SimulationState } from "../engine/types";
 import { leafIds } from "../engine/tree/split";
 import { formToString, sanitizeForNewick } from "../engine/phonology/ipa";
+import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
 
 /**
  * export.ts
@@ -29,8 +30,8 @@ export function exportLexiconsJSON(state: SimulationState): void {
   for (const id of leaves) {
     const lang = state.tree[id]!.language;
     out[lang.name] = {};
-    for (const m of Object.keys(lang.lexicon).sort()) {
-      out[lang.name]![m] = formToString(lang.lexicon[m]!);
+    for (const m of lexKeys(lang).sort()) {
+      out[lang.name]![m] = formToString(lexGet(lang, m)!);
     }
   }
   const data = JSON.stringify(
@@ -45,7 +46,7 @@ export function exportLexiconsCSV(state: SimulationState): void {
   const leaves = leafIds(state.tree);
   const meanings = new Set<string>();
   for (const id of leaves) {
-    for (const m of Object.keys(state.tree[id]!.language.lexicon)) meanings.add(m);
+    for (const m of lexKeys(state.tree[id]!.language)) meanings.add(m);
   }
   const sortedMeanings = Array.from(meanings).sort();
   const header = ["meaning", ...leaves.map((id) => state.tree[id]!.language.name)];
@@ -53,7 +54,7 @@ export function exportLexiconsCSV(state: SimulationState): void {
   for (const m of sortedMeanings) {
     const cells = [m];
     for (const id of leaves) {
-      const form = state.tree[id]!.language.lexicon[m];
+      const form = lexGet(state.tree[id]!.language, m);
       cells.push(form ? formToString(form) : "");
     }
     rows.push(cells.map((c) => JSON.stringify(c)).join(","));
@@ -125,7 +126,7 @@ export function buildGrammarBrief(
   lines.push(`- **Generation**: ${state.generation}`);
   lines.push(`- **Age**: ${state.generation - lang.birthGeneration} gens`);
   lines.push(`- **Conservatism**: ${lang.conservatism.toFixed(2)}`);
-  lines.push(`- **Lexicon size**: ${Object.keys(lang.lexicon).length}`);
+  lines.push(`- **Lexicon size**: ${lexSize(lang)}`);
   if (lang.extinct) {
     lines.push(`- **Extinct** at gen ${lang.deathGeneration ?? "?"}`);
   }

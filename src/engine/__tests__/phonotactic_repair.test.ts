@@ -6,6 +6,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
+import { lexGet, lexSet, lexKeys } from "../lexicon/access";
 
 /**
  * phonotactic_repair.test.ts
@@ -25,9 +26,9 @@ describe("Phase 27c — stepPhonotacticRepair", () => {
     const lang = freshLang(presetTokipona);
     expect(lang.phonotacticProfile?.maxOnset).toBe(1);
     // Inject a violating form: "stra" — CCC onset.
-    lang.lexicon["__test_violator__"] = ["s", "t", "r", "a"];
+    lexSet(lang, "__test_violator__", ["s", "t", "r", "a"]);
     const before = phonotacticScore(
-      lang.lexicon["__test_violator__"]!,
+      lexGet(lang, "__test_violator__")!,
       lang.phonotacticProfile!,
     );
     expect(before).toBeLessThan(0.5);
@@ -35,7 +36,7 @@ describe("Phase 27c — stepPhonotacticRepair", () => {
     const rng = makeRng("repair-test-1");
     stepPhonotacticRepair(lang, rng, 1);
 
-    const repaired = lang.lexicon["__test_violator__"]!;
+    const repaired = lexGet(lang, "__test_violator__")!;
     const after = phonotacticScore(repaired, lang.phonotacticProfile!);
     // Either the form was lengthened (epenthesis fired) or it was left
     // alone if no rule produced a meaningful improvement. The first
@@ -46,8 +47,9 @@ describe("Phase 27c — stepPhonotacticRepair", () => {
 
   it("leaves compliant forms alone in a permissive language (English)", () => {
     const lang = freshLang(presetEnglish);
-    // English seed forms should mostly be compliant.
-    const snapshot = JSON.parse(JSON.stringify(lang.lexicon));
+    // English seed forms should mostly be compliant. Snapshot by gloss.
+    const snapshot: Record<string, string[]> = {};
+    for (const m of lexKeys(lang)) snapshot[m] = lexGet(lang, m)!.slice();
     const rng = makeRng("repair-test-2");
     stepPhonotacticRepair(lang, rng, 1);
     // We don't assert that NO repair fired (some seed forms may still
@@ -57,7 +59,7 @@ describe("Phase 27c — stepPhonotacticRepair", () => {
     for (const m of Object.keys(snapshot)) {
       total++;
       if (
-        JSON.stringify(snapshot[m]) === JSON.stringify(lang.lexicon[m])
+        JSON.stringify(snapshot[m]) === JSON.stringify(lexGet(lang, m))
       ) {
         unchanged++;
       }
@@ -69,18 +71,18 @@ describe("Phase 27c — stepPhonotacticRepair", () => {
     const lang = freshLang(presetTokipona);
     // Inject 10 violating forms; only ~3 should be repaired in one step.
     for (let i = 0; i < 10; i++) {
-      lang.lexicon[`__violator_${i}__`] = ["s", "t", "r", "a", String.fromCharCode(98 + i)];
+      lexSet(lang, `__violator_${i}__`, ["s", "t", "r", "a", String.fromCharCode(98 + i)]);
     }
-    const before = Object.keys(lang.lexicon).map((m) => ({
+    const before = lexKeys(lang).map((m) => ({
       m,
-      form: lang.lexicon[m]!.slice(),
+      form: lexGet(lang, m)!.slice(),
     }));
 
     const rng = makeRng("repair-test-3");
     stepPhonotacticRepair(lang, rng, 1);
 
     const changed = before.filter(
-      (e) => JSON.stringify(lang.lexicon[e.m]) !== JSON.stringify(e.form),
+      (e) => JSON.stringify(lexGet(lang, e.m)) !== JSON.stringify(e.form),
     ).length;
     expect(changed).toBeLessThanOrEqual(3);
     // And at least one change happened (the function isn't a noop).
@@ -89,7 +91,7 @@ describe("Phase 27c — stepPhonotacticRepair", () => {
 
   it("emits a sound_change event with the phonotactic_repair tag", () => {
     const lang = freshLang(presetTokipona);
-    lang.lexicon["__test_violator__"] = ["s", "t", "r", "a"];
+    lexSet(lang, "__test_violator__", ["s", "t", "r", "a"]);
     lang.events = [];
     const rng = makeRng("repair-test-4");
     stepPhonotacticRepair(lang, rng, 7);
@@ -104,20 +106,20 @@ describe("Phase 27c — stepPhonotacticRepair", () => {
   it("noop when the language has no phonotactic profile", () => {
     const lang = freshLang(presetEnglish);
     delete lang.phonotacticProfile;
-    lang.lexicon["__test_violator__"] = ["s", "t", "r", "a"];
+    lexSet(lang, "__test_violator__", ["s", "t", "r", "a"]);
     const rng = makeRng("repair-test-5");
     expect(() => stepPhonotacticRepair(lang, rng, 1)).not.toThrow();
     // Form unchanged.
-    expect(lang.lexicon["__test_violator__"]).toEqual(["s", "t", "r", "a"]);
+    expect(lexGet(lang, "__test_violator__")).toEqual(["s", "t", "r", "a"]);
   });
 
   it("noop when the profile has zero strictness", () => {
     const lang = freshLang(presetEnglish);
     lang.phonotacticProfile = { maxOnset: 1, maxCoda: 0, maxCluster: 1, strictness: 0 };
-    lang.lexicon["__test_violator__"] = ["s", "t", "r", "a"];
+    lexSet(lang, "__test_violator__", ["s", "t", "r", "a"]);
     const rng = makeRng("repair-test-6");
     stepPhonotacticRepair(lang, rng, 1);
-    expect(lang.lexicon["__test_violator__"]).toEqual(["s", "t", "r", "a"]);
+    expect(lexGet(lang, "__test_violator__")).toEqual(["s", "t", "r", "a"]);
   });
 });
 

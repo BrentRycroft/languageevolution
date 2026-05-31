@@ -5,6 +5,7 @@ import { classifierMeaningFor } from "../translator/classifiers";
 import { inflect } from "../morphology/evolve";
 import type { Language, Lexicon } from "../types";
 import type { Paradigm } from "../morphology/types";
+import { lexSet } from "../lexicon/access";
 
 /**
  * typological_depth.test.ts
@@ -15,10 +16,11 @@ import type { Paradigm } from "../morphology/types";
  */
 
 function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
-  return {
+  const lang: Language = {
     id: "L-t",
     name: "TestLang",
-    lexicon,
+    lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -45,6 +47,10 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     lastChangeGeneration: {},
     ...overrides,
   };
+  for (const [g, form] of Object.entries(lexicon)) {
+    lexSet(lang, g, form);
+  }
+  return lang;
 }
 
 describe("Phase 12 — typological depth", () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { generateNarrative } from "../narrative/generate";
 import { formToString } from "../phonology/ipa";
+import { lexSet, lexGet } from "../lexicon/access";
 import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
@@ -17,21 +18,11 @@ import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
  */
 
 function sampleLang(withCopula: boolean): Language {
-  const lexicon: Record<string, number[] | string[]> = {
-    water: ["w", "a", "t", "e", "r"],
-    stone: ["s", "t", "a", "n"],
-    tree: ["t", "r", "e"],
-    see: ["w", "i", "d"],
-    go: ["g", "a", "n"],
-    big: ["m", "a", "g"],
-    good: ["b", "o", "n"],
-    small: ["p", "a", "u"],
-  };
-  if (withCopula) lexicon["be"] = ["e", "s"];
-  return {
+  const lang: Language = {
     id: "L-cop",
     name: "Copula-test",
-    lexicon: lexicon as Language["lexicon"],
+    lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -57,12 +48,22 @@ function sampleLang(withCopula: boolean): Language {
     otRanking: [],
     lastChangeGeneration: {},
   };
+  lexSet(lang, "water", ["w", "a", "t", "e", "r"]);
+  lexSet(lang, "stone", ["s", "t", "a", "n"]);
+  lexSet(lang, "tree", ["t", "r", "e"]);
+  lexSet(lang, "see", ["w", "i", "d"]);
+  lexSet(lang, "go", ["g", "a", "n"]);
+  lexSet(lang, "big", ["m", "a", "g"]);
+  lexSet(lang, "good", ["b", "o", "n"]);
+  lexSet(lang, "small", ["p", "a", "u"]);
+  if (withCopula) lexSet(lang, "be", ["e", "s"]);
+  return lang;
 }
 
 describe("narrative copula (simple-render path)", () => {
   it("a language with a lexicalised copula emits it in copular lines", () => {
     const lang = sampleLang(true);
-    const beSurface = formToString(lang.lexicon["be"]!);
+    const beSurface = formToString(lexGet(lang, "be")!);
     // 40 lines is plenty for the shape picker (copular gated on
     // hasCopula, ~8% weight/line) to roll at least one copular shape.
     const lines = generateNarrative(lang, "cop-seed", 40, "ipa");

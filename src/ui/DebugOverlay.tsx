@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSimStore } from "../state/store";
 import { Z } from "./zIndex";
+import { lexSize } from "../engine/lexicon/access";
 
 /**
  * Lightweight debug overlay. Toggle with the button or ? key (already used
@@ -131,7 +132,7 @@ export function DebugOverlay() {
       {lang && (
         <>
           <Row k="lang" v={lang.name} />
-          <Row k="lex" v={String(Object.keys(lang.lexicon).length)} />
+          <Row k="lex" v={String(lexSize(lang))} />
           <Row k="rules" v={String(lang.activeRules?.length ?? 0)} />
           {lastRule && (
             <Row

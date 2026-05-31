@@ -5,6 +5,7 @@ import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 
 /**
  * propose.test.ts
@@ -16,7 +17,7 @@ import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 
 function sampleLang(): Language {
   const inv = ["p", "t", "k", "b", "d", "g", "a", "e", "i", "o", "u", "s", "n", "m", "h"];
-  return {
+  const lang: Language = {
     id: "L-0",
     name: "Sample",
     lexicon: {
@@ -45,6 +46,8 @@ function sampleLang(): Language {
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},
   };
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("phonology/propose", () => {
@@ -66,7 +69,7 @@ describe("phonology/propose", () => {
     const rule = proposeOneRule(lang, rng, 0);
     if (!rule) return;
     lang.activeRules = [{ ...rule, strength: 0.06, lastFireGeneration: 0 }];
-    lang.lexicon = {};
+    lang.lexicon = {}; lang.conceptIds = {};
     const { retired } = ageAndRetire(lang, 10);
     expect(retired.length).toBe(1);
     expect(lang.activeRules.length).toBe(0);

@@ -8,6 +8,7 @@ import { presetEnglish } from "../presets/english";
 import { presetRomance } from "../presets/romance";
 import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
+import { lexGet } from "../lexicon/access";
 
 /**
  * gramm_chain.test.ts
@@ -35,7 +36,7 @@ describe("Phase 66 T1 — grammaticalization multi-step chains", () => {
     }
     const m = shift.source.meaning;
     // Source meaning is still in lexicon (Phase 66 T1 keeps it).
-    expect(lang.lexicon[m]).toBeDefined();
+    expect(lexGet(lang, m)).toBeDefined();
     expect(lang.grammaticalizationStage?.[m]?.stage).toBe(2);
     // Frequency was reduced.
     expect(lang.wordFrequencyHints[m]).toBeLessThan(0.6);

@@ -7,6 +7,7 @@ import { affixCoverageReport, affixCoverageScore } from "../engine/diagnostics/a
 import { topRegularCorrespondences } from "../engine/phonology/soundLaws";
 import { closedClassForm } from "../engine/translator/closedClass";
 import { selectSynonyms } from "../engine/lexicon/word";
+import { lexKeys, lexGet, lexHas } from "../engine/lexicon/access";
 
 /**
  * Phase 32 Tranche 32d: language profile card. The TL;DR view —
@@ -62,7 +63,7 @@ export function LanguageProfile() {
     "sun", "moon", "go", "see",
   ];
   const sampleWords = SAMPLES.map((m) => {
-    const f = lang.lexicon[m];
+    const f = lexGet(lang, m);
     return { meaning: m, form: f ? formatForm(f, lang, script, m) : null };
   }).filter((s) => s.form);
 
@@ -317,13 +318,13 @@ function PronounParadigm({
       <tbody>
         {ROWS.map((r) => {
           const lemmas = [r.nom, r.acc, r.poss];
-          const present = lemmas.some((l) => l && lang.lexicon[l]);
+          const present = lemmas.some((l) => l && lexHas(lang, l));
           if (!present) return null;
           return (
             <tr key={r.label}>
               <td style={{ color: "var(--muted)", width: 60 }}>{r.label}</td>
               {lemmas.map((l, i) => {
-                const f = l ? lang.lexicon[l] : null;
+                const f = l ? lexGet(lang, l) : null;
                 return (
                   <td key={i} style={{ fontFamily: "var(--font-mono)" }}>
                     {f ? formatForm(f, lang, script, l ?? undefined) : <span className="t-muted">—</span>}
@@ -388,7 +389,7 @@ function LexiconStats({
 }: {
   lang: import("../engine/types").Language;
 }) {
-  const meanings = Object.keys(lang.lexicon);
+  const meanings = lexKeys(lang);
   const totalMeanings = meanings.length;
   let synonymTotal = 0;
   let meaningsWithSynonym = 0;
@@ -486,7 +487,7 @@ function BoundMorphemesPanel({ lang }: { lang: import("../engine/types").Languag
     <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
       <tbody>
         {list.map((m) => {
-          const form = lang.lexicon[m];
+          const form = lexGet(lang, m);
           const origin = lang.boundMorphemeOrigin?.[m];
           return (
             <tr key={m}>

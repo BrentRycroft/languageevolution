@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { enableStratalMode, getUR, isOpaque } from "../phonology/stratal";
+import { lexKeys, lexGet, lexSet } from "../lexicon/access";
 import { refreshContactLinks, linksFor } from "../contact/reticulate";
 import { englishTokensToAST, astToTokens } from "../translator/ast";
 import { tryReanalyseAlignment } from "../grammar/reanalysis";
@@ -34,8 +35,8 @@ describe("Phase 72g-1 — stratal phonology UR/SR layer", () => {
     cfg.seed = "p72g-fallback";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    const meaning = Object.keys(lang.lexicon)[0]!;
-    expect(getUR(lang, meaning)).toEqual(lang.lexicon[meaning]);
+    const meaning = lexKeys(lang)[0]!;
+    expect(getUR(lang, meaning)).toEqual(lexGet(lang, meaning));
   });
 
   it("isOpaque detects SR drift after stratal-mode enable + sound change", () => {
@@ -44,9 +45,9 @@ describe("Phase 72g-1 — stratal phonology UR/SR layer", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     enableStratalMode(lang);
-    const meaning = Object.keys(lang.lexicon)[0]!;
+    const meaning = lexKeys(lang)[0]!;
     // Forcefully mutate the surface to simulate post-rule erosion.
-    lang.lexicon[meaning] = ["x", "y"];
+    lexSet(lang, meaning, ["x", "y"]);
     expect(isOpaque(lang, meaning)).toBe(true);
   });
 

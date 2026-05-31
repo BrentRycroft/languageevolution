@@ -15,6 +15,7 @@ import { createSimulation } from "../simulation";
 import { migrateSavedRun, LATEST_SAVE_VERSION } from "../../persistence/migrate";
 import { defaultConfig } from "../config";
 import type { Language, SavedRun, SimulationState } from "../types";
+import { lexGet, lexKeys, lexSet } from "../lexicon/access";
 
 /**
  * words_phase21a.test.ts
@@ -25,10 +26,12 @@ import type { Language, SavedRun, SimulationState } from "../types";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const { lexicon: seedLexicon, conceptIds: _cids, ...rest } = overrides;
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -52,8 +55,14 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     orthography: {},
     otRanking: [],
     lastChangeGeneration: {},
-    ...overrides,
+    ...rest,
   };
+  if (seedLexicon) {
+    for (const [g, form] of Object.entries(seedLexicon)) {
+      lexSet(lang, g, form);
+    }
+  }
+  return lang;
 }
 
 describe("Phase 21a — Word/WordSense data model", () => {
@@ -170,9 +179,9 @@ describe("Phase 21a — sync between lexicon and words", () => {
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });
     addWord(lang, ["d", "ɔ", "g"], "dog", { bornGeneration: 0 });
     syncLexiconFromWords(lang);
-    expect(lang.lexicon["bank.financial"]).toEqual(["b", "æ", "ŋ", "k"]);
-    expect(lang.lexicon["bank.river"]).toEqual(["b", "æ", "ŋ", "k"]);
-    expect(lang.lexicon["dog"]).toEqual(["d", "ɔ", "g"]);
+    expect(lexGet(lang, "bank.financial")).toEqual(["b", "æ", "ŋ", "k"]);
+    expect(lexGet(lang, "bank.river")).toEqual(["b", "æ", "ŋ", "k"]);
+    expect(lexGet(lang, "dog")).toEqual(["d", "ɔ", "g"]);
   });
 
   it("syncLexiconFromWords populates colexifiedAs for shared-form meanings", () => {
@@ -245,7 +254,7 @@ describe("Phase 21a — buildInitialState seeds words from lexicon", () => {
     expect(lang.words).toBeDefined();
     expect(lang.words!.length).toBeGreaterThan(0);
     // Every meaning in the seed lexicon should have a corresponding word.
-    for (const m of Object.keys(lang.lexicon).slice(0, 10)) {
+    for (const m of lexKeys(lang).slice(0, 10)) {
       const wordsForMeaning = findWordsByMeaning(lang, m);
       expect(wordsForMeaning.length).toBeGreaterThan(0);
     }
@@ -373,10 +382,10 @@ describe("Phase 21a — backward-compat invariant: lexicon[m] still works", () =
   it("seeding builds words but lexicon[m] reads remain unchanged", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
-    expect(lang.lexicon["water"]).toBeDefined();
-    expect(lang.lexicon["fire"]).toBeDefined();
+    expect(lexGet(lang, "water")).toBeDefined();
+    expect(lexGet(lang, "fire")).toBeDefined();
     // Same form-content as the seed preset's lexicon — no behavior change.
     // Phase 48 IPA-2020: English /r/ encoded as alveolar approximant ɹ.
-    expect(lang.lexicon["water"]).toEqual(["w", "ɔ", "t", "ə", "ɹ"]);
+    expect(lexGet(lang, "water")).toEqual(["w", "ɔ", "t", "ə", "ɹ"]);
   });
 });

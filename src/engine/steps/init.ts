@@ -13,7 +13,7 @@ import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
-import { ensureConceptIdsForLexicon, orderedLexiconKeys } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
@@ -139,7 +139,10 @@ function seedRegister(
   rng: import("../rng").Rng,
 ): Record<string, "high" | "low"> {
   const out: Record<string, "high" | "low"> = {};
-  for (const m of orderedLexiconKeys(lex)) {
+  // `lex` is the gloss-keyed seed lexicon (pre-flip); sort its glosses for the
+  // canonical RNG-draw order. (The store flips to ConceptId keys immediately
+  // after this proto is built; here it is still gloss-keyed.)
+  for (const m of Object.keys(lex).sort()) {
     if (rng.chance(0.15)) {
       out[m] = rng.chance(0.5) ? "high" : "low";
     }
@@ -227,6 +230,13 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       ? cloneSuppletion(config.seedSuppletion)
       : undefined,
   };
+  // Concept re-key (R2 — the flip): the preset authors gloss -> form, so the
+  // literal above leaves rootLang.lexicon gloss-keyed. Flip it to the canonical
+  // ConceptId-keyed store NOW, before any accessor-driven setup runs
+  // (seedDerivationalSuffixes, seedClosedClassLexicon, tonaliseLexicon, …),
+  // which all assume conceptIds is populated. Mints in preset insertion order,
+  // so the downstream lexKeys gloss sequence is byte-identical.
+  rekeyLexiconToConceptIds(rootLang);
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   seedNativeProvenance(rootLang);
@@ -421,10 +431,10 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     rootLang.territory = { cells: [originId] };
     rootLang.coords = territoryCentroid(worldMap, [originId]);
   }
-  // Phase 72d (full-delivery defer-2): assign stable ConceptIds to
-  // every meaning in the proto lexicon. Daughters inherit at split;
-  // identity persists across phonological / semantic drift.
-  ensureConceptIdsForLexicon(rootLang);
+  // Phase 72d / R2: stable ConceptIds were assigned at the gloss->cid flip
+  // above (rekeyLexiconToConceptIds), which also keys the canonical store by
+  // them. Daughters inherit conceptIds at split; identity persists across
+  // phonological / semantic drift.
   const rootNode: LanguageNode = {
     language: rootLang,
     parentId: null,

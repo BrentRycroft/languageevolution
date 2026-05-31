@@ -7,6 +7,7 @@ import { useDebounced } from "./hooks/useDebounced";
 import { ScriptPicker } from "./ScriptPicker";
 import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
+import { lexGet } from "../engine/lexicon/access";
 
 /**
  * LexiconView.tsx
@@ -111,7 +112,7 @@ export function LexiconView() {
     for (const lid of visibleLeaves) {
       const lang = state.tree[lid]!.language;
       for (const meaning of meanings) {
-        const form = lang.lexicon[meaning];
+        const form = lexGet(lang, meaning);
         if (!form) continue;
         m.set(`${lid}|${meaning}`, formatForm(form, lang, script, meaning));
       }
@@ -393,6 +394,8 @@ export function LexiconView() {
                       // (Phase 64 T1). 5-way Latin-style declension
                       // assignment per noun.
                       const proto = state.tree[state.rootId]?.language;
+                      // nounDeclensionClass is a per-meaning satellite map —
+                      // GLOSS-keyed (unaffected by the R2 ConceptId store flip).
                       const cls = proto?.nounDeclensionClass?.[meaning];
                       if (!cls) return null;
                       return (
@@ -481,7 +484,7 @@ export function LexiconView() {
                         : "";
                     // Phase 21e: polysemy badge — when this meaning's form
                     // is shared with other meanings, show "×N" with a tooltip.
-                    const formStr = lang.lexicon[meaning];
+                    const formStr = lexGet(lang, meaning);
                     const polysemyMatches = formStr && lang.words
                       ? lang.words.find((w) => w.formKey === formStr.join(""))
                       : undefined;

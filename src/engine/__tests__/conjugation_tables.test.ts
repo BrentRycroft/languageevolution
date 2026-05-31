@@ -7,6 +7,7 @@ import {
 import { presetRomance } from "../presets/romance";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * conjugation_tables.test.ts
@@ -25,13 +26,13 @@ describe("Phase 26a — full conjugation tables", () => {
   it("Romance preset produces 6 distinct surface forms for a verb across person/number", () => {
     const lang = langFromPreset(presetRomance());
     // Pick a verb that's in the seed lexicon. Romance preset seeds many.
-    const m = Object.keys(lang.lexicon).find(
-      (k) => lang.lexicon[k] && lang.lexicon[k]!.length >= 3 && k === "speak",
-    ) ?? Object.keys(lang.lexicon).find((k) => k === "speak");
+    const m = lexKeys(lang).find(
+      (k) => lexGet(lang, k) && lexGet(lang, k)!.length >= 3 && k === "speak",
+    ) ?? lexKeys(lang).find((k) => k === "speak");
     if (!m) {
       // Fallback: pick any 3+ phoneme verb-style root.
-      const candidate = Object.keys(lang.lexicon).find(
-        (k) => lang.lexicon[k] && lang.lexicon[k]!.length >= 3,
+      const candidate = lexKeys(lang).find(
+        (k) => lexGet(lang, k) && lexGet(lang, k)!.length >= 3,
       );
       expect(candidate).toBeDefined();
       const table = verbConjugationTable(lang, candidate!);
@@ -51,9 +52,9 @@ describe("Phase 26a — full conjugation tables", () => {
   it("English-style preset only conjugates 3sg → only one form differs from the bare root", () => {
     const lang = langFromPreset(presetEnglish());
     const m = "speak";
-    if (!lang.lexicon[m]) return; // skip if not in seed
+    if (!lexGet(lang, m)) return; // skip if not in seed
     const table = verbConjugationTable(lang, m);
-    const root = lang.lexicon[m]!.join("");
+    const root = lexGet(lang, m)!.join("");
     const fromRoot = table.map((c) => ({
       slot: `${c.person}${c.number}`,
       surface: c.form.join(""),
@@ -79,8 +80,8 @@ describe("Phase 26a — full conjugation tables", () => {
   it("inflectForPerson picks the right cell from the grid", () => {
     const lang = langFromPreset(presetRomance());
     const m = "speak";
-    if (!lang.lexicon[m]) return;
-    const root = lang.lexicon[m]!.join("");
+    if (!lexGet(lang, m)) return;
+    const root = lexGet(lang, m)!.join("");
     const out1pl = inflectForPerson(lang, m, "1", "pl").join("");
     expect(out1pl).not.toBe(root);
     expect(out1pl).toMatch(/m.s$/); // Romance 1pl suffix is -mus
@@ -98,7 +99,7 @@ describe("Phase 26a — full conjugation tables", () => {
   it("tense option combines with person/number into a cascade", () => {
     const lang = langFromPreset(presetRomance());
     const m = "speak";
-    if (!lang.lexicon[m]) return;
+    if (!lexGet(lang, m)) return;
     // Without tense.
     const present = verbConjugationTable(lang, m);
     // With past tense.

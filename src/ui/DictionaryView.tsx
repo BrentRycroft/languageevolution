@@ -7,6 +7,7 @@ import { formatForm } from "../engine/phonology/display";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import type { Language } from "../engine/types";
+import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
 
 /**
  * DictionaryView.tsx
@@ -30,7 +31,7 @@ export function DictionaryView() {
 
   const rows = useMemo(() => {
     if (!lang) return [];
-    const meanings = Object.keys(lang.lexicon);
+    const meanings = lexKeys(lang);
     const filtered = search
       ? meanings.filter((m) => m.toLowerCase().includes(search.toLowerCase()))
       : meanings;
@@ -41,7 +42,7 @@ export function DictionaryView() {
       // Phase 26b: render verbs in their citation form (infinitive). For
       // English: "to go". For Romance: "amare". For bare-strategy
       // languages: same as the bare lexicon form.
-      let displayForm = formatForm(lang.lexicon[m]!, lang, script);
+      let displayForm = formatForm(lexGet(lang, m)!, lang, script);
       if (pos === "verb") {
         const cit = verbCitationForm(lang, m);
         if (cit) {
@@ -77,7 +78,7 @@ export function DictionaryView() {
 
   return (
     <div className="col-12">
-      <DictionaryHeader lang={lang} entryCount={Object.keys(lang.lexicon).length} />
+      <DictionaryHeader lang={lang} entryCount={lexSize(lang)} />
       <GrammarCard lang={lang} />
 
       <div className="row-8 items-center flex-wrap" style={{ marginTop: 12 }}>
@@ -98,7 +99,7 @@ export function DictionaryView() {
           </select>
         </label>
         <span className="t-muted fs-1">
-          {rows.length} of {Object.keys(lang.lexicon).length} entries
+          {rows.length} of {lexSize(lang)} entries
         </span>
       </div>
 

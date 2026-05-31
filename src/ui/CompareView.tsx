@@ -8,6 +8,7 @@ import { diffActiveRules, diffOtRankings } from "../engine/analysis/ruleDiff";
 import { ScriptPicker } from "./ScriptPicker";
 import { CopyButton } from "./CopyButton";
 import { downloadAs, slugForFile } from "./exportUtils";
+import { lexKeys, lexGet, lexHas, lexSize } from "../engine/lexicon/access";
 import {
   generateNarrative,
   randomNarrativeSeed,
@@ -32,12 +33,12 @@ function lexicalSimilarity(
   a: Language,
   b: Language,
 ): { pct: number; shared: number; cognate: number } {
-  const shared = Object.keys(a.lexicon).filter((m) => b.lexicon[m]);
+  const shared = lexKeys(a).filter((m) => lexHas(b, m));
   if (shared.length === 0) return { pct: 0, shared: 0, cognate: 0 };
   let cognate = 0;
   for (const m of shared) {
-    const fa = a.lexicon[m]!;
-    const fb = b.lexicon[m]!;
+    const fa = lexGet(a, m)!;
+    const fb = lexGet(b, m)!;
     const d = levenshtein(fa, fb);
     const longer = Math.max(fa.length, fb.length);
     if (longer === 0) continue;
@@ -267,7 +268,7 @@ function RuleDiffBanner({ a, b }: { a: Language; b: Language }) {
 function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Language }) {
   const script = useSimStore((s) => s.displayScript);
   const meanings = useMemo(
-    () => Array.from(new Set([...Object.keys(lang.lexicon), ...Object.keys(otherLang.lexicon)])).sort(),
+    () => Array.from(new Set([...lexKeys(lang), ...lexKeys(otherLang)])).sort(),
     [lang, otherLang],
   );
 
@@ -281,7 +282,7 @@ function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Languag
           )}
         </div>
         <div style={{ fontSize: "var(--fs-1)", color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-          {Object.keys(lang.lexicon).length} words · conservatism {lang.conservatism.toFixed(2)} ·{" "}
+          {lexSize(lang)} words · conservatism {lang.conservatism.toFixed(2)} ·{" "}
           {lang.phonemeInventory.segmental.length} segments
           {lang.phonemeInventory.usesTones ? " + tones" : ""}
         </div>
@@ -302,8 +303,8 @@ function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Languag
       <Section title="Lexicon">
         <div className="compare-lex">
           {meanings.slice(0, 80).map((m) => {
-            const f = lang.lexicon[m];
-            const fOther = otherLang.lexicon[m];
+            const f = lexGet(lang, m);
+            const fOther = lexGet(otherLang, m);
             const divergent =
               f && fOther ? levenshtein(f, fOther) > 0 : f !== fOther;
             return (

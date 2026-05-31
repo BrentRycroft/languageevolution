@@ -4,6 +4,7 @@ import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
+import { lexSet, lexKeys, lexGet } from "../lexicon/access";
 
 /**
  * regular.test.ts
@@ -14,14 +15,10 @@ import type { Language } from "../types";
  */
 
 function makeLang(): Language {
-  return {
+  const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {
-      pit: ["p", "i", "t"],
-      pip: ["p", "i", "p"],
-      pop: ["p", "o", "p"],
-    },
+    lexicon: {},
     enabledChangeIds: ["lenition.p_to_f"],
     changeWeights: { "lenition.p_to_f": 1 },
     birthGeneration: 0,
@@ -36,6 +33,10 @@ function makeLang(): Language {
     activeRules: [],
     orthography: {}, otRanking: [], lastChangeGeneration: {},
   };
+  lexSet(lang, "pit", ["p", "i", "t"]);
+  lexSet(lang, "pip", ["p", "i", "p"]);
+  lexSet(lang, "pop", ["p", "o", "p"]);
+  return lang;
 }
 
 describe("regular (Neogrammarian) sound change", () => {
@@ -44,8 +45,8 @@ describe("regular (Neogrammarian) sound change", () => {
     const rng = makeRng("regular");
     const rule = CATALOG_BY_ID["lenition.p_to_f"]!;
     applyOneRegularChange(lang, [rule], rng);
-    for (const m of Object.keys(lang.lexicon)) {
-      for (const p of lang.lexicon[m]!) {
+    for (const m of lexKeys(lang)) {
+      for (const p of lexGet(lang, m)!) {
         expect(p).not.toBe("p");
       }
     }
@@ -53,7 +54,8 @@ describe("regular (Neogrammarian) sound change", () => {
 
   it("returns null when no rule has any matching site", () => {
     const lang = makeLang();
-    lang.lexicon = { foo: ["f", "o", "o"] };
+    lang.lexicon = {}; lang.conceptIds = {};
+    lexSet(lang, "foo", ["f", "o", "o"]);
     const rng = makeRng("empty");
     const rule = CATALOG_BY_ID["lenition.p_to_f"]!;
     expect(applyOneRegularChange(lang, [rule], rng)).toBeNull();

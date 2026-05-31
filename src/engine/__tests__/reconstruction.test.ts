@@ -4,6 +4,8 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { levenshtein } from "../phonology/ipa";
 import type { LanguageTree, WordForm } from "../types";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { lexEntries } from "../lexicon/access";
 
 /**
  * reconstruction.test.ts
@@ -15,36 +17,9 @@ import type { LanguageTree, WordForm } from "../types";
 
 describe("comparative reconstruction", () => {
   it("reconstructs a single descendant's form trivially", () => {
-    const lang = {
-      id: "L0",
-      name: "child",
-      lexicon: { water: ["w", "a", "t", "e", "r"] },
-      enabledChangeIds: [],
-      changeWeights: {},
-      birthGeneration: 0,
-      grammar: {
-        wordOrder: "SVO" as const,
-        affixPosition: "suffix" as const,
-        pluralMarking: "none" as const,
-        tenseMarking: "none" as const,
-        hasCase: false,
-        genderCount: 0 as const,
-      },
-      events: [],
-      wordFrequencyHints: {},
-      phonemeInventory: { segmental: [], tones: [], usesTones: false },
-      morphology: { paradigms: {} },
-      localNeighbors: {},
-      conservatism: 1,
-      wordOrigin: {},
-      activeRules: [],
-      retiredRules: [],
-      orthography: {},
-      otRanking: [],
-      lastChangeGeneration: {},
-    };
+    const lang = makeStubWith("L0", { water: ["w", "a", "t", "e", "r"] });
     const tree: LanguageTree = {
-      P: { language: { ...lang, id: "P" }, parentId: null, childrenIds: ["L0"] },
+      P: { language: makeStubWith("P", { water: ["w", "a", "t", "e", "r"] }), parentId: null, childrenIds: ["L0"] },
       L0: { language: lang, parentId: "P", childrenIds: [] },
     };
     const r = reconstructProtoForm(tree, "P", "water");
@@ -61,23 +36,21 @@ describe("comparative reconstruction", () => {
     };
     const tree: LanguageTree = {
       P: { language: makeStub("P"), parentId: null, childrenIds: ["a", "b", "c"] },
-      a: { language: { ...makeStub("a"), lexicon: { x: proto.a } }, parentId: "P", childrenIds: [] },
-      b: { language: { ...makeStub("b"), lexicon: { x: proto.b } }, parentId: "P", childrenIds: [] },
-      c: { language: { ...makeStub("c"), lexicon: { x: proto.c } }, parentId: "P", childrenIds: [] },
+      a: { language: makeStubWith("a", { x: proto.a }), parentId: "P", childrenIds: [] },
+      b: { language: makeStubWith("b", { x: proto.b }), parentId: "P", childrenIds: [] },
+      c: { language: makeStubWith("c", { x: proto.c }), parentId: "P", childrenIds: [] },
     };
     const r = reconstructProtoForm(tree, "P", "x");
     expect(r!.form).toEqual(["w", "a", "t"]);
   });
 
   it("ignores extinct leaves", () => {
+    const langA = makeStubWith("a", { x: ["k", "a", "t"] });
+    (langA as any).extinct = true;
     const tree: LanguageTree = {
       P: { language: makeStub("P"), parentId: null, childrenIds: ["a", "b"] },
-      a: {
-        language: { ...makeStub("a"), lexicon: { x: ["k", "a", "t"] }, extinct: true },
-        parentId: "P",
-        childrenIds: [],
-      },
-      b: { language: { ...makeStub("b"), lexicon: { x: ["t", "i", "k"] } }, parentId: "P", childrenIds: [] },
+      a: { language: langA, parentId: "P", childrenIds: [] },
+      b: { language: makeStubWith("b", { x: ["t", "i", "k"] }), parentId: "P", childrenIds: [] },
     };
     const r = reconstructProtoForm(tree, "P", "x");
     expect(r!.form).toEqual(["t", "i", "k"]);
@@ -86,8 +59,8 @@ describe("comparative reconstruction", () => {
   it("reconstructProtoLexicon returns one entry per meaning attested", () => {
     const tree: LanguageTree = {
       P: { language: makeStub("P"), parentId: null, childrenIds: ["a", "b"] },
-      a: { language: { ...makeStub("a"), lexicon: { x: ["a"], y: ["b"] } }, parentId: "P", childrenIds: [] },
-      b: { language: { ...makeStub("b"), lexicon: { x: ["a"], z: ["c"] } }, parentId: "P", childrenIds: [] },
+      a: { language: makeStubWith("a", { x: ["a"], y: ["b"] }), parentId: "P", childrenIds: [] },
+      b: { language: makeStubWith("b", { x: ["a"], z: ["c"] }), parentId: "P", childrenIds: [] },
     };
     const list = reconstructProtoLexicon(tree, "P");
     const meanings = new Set(list.map((r) => r.meaning));
@@ -103,9 +76,9 @@ describe("comparative reconstruction", () => {
     const cfg = defaultConfig();
     cfg.seed = "reconstruction-1";
     const sim = createSimulation(cfg);
-    const seedLex = sim.getState().tree[sim.getState().rootId]!.language.lexicon;
+    const seedLang = sim.getState().tree[sim.getState().rootId]!.language;
     const seedSnapshot: Record<string, WordForm> = {};
-    for (const m of Object.keys(seedLex)) seedSnapshot[m] = seedLex[m]!.slice();
+    for (const [m, form] of lexEntries(seedLang)) seedSnapshot[m] = form.slice();
 
     for (let i = 0; i < 60; i++) sim.step();
     const tree = sim.getState().tree;
@@ -134,8 +107,16 @@ describe("comparative reconstruction", () => {
   });
 });
 
+function makeStubWith(id: string, glossLexicon: Record<string, WordForm>) {
+  const lang = makeStub(id);
+  // Replace the empty store with the gloss-keyed lexicon and rekey.
+  lang.lexicon = glossLexicon as any;
+  rekeyLexiconToConceptIds(lang as never);
+  return lang;
+}
+
 function makeStub(id: string) {
-  return {
+  const lang = {
     id,
     name: id,
     lexicon: {} as Record<string, WordForm>,
@@ -163,4 +144,6 @@ function makeStub(id: string) {
     otRanking: [],
     lastChangeGeneration: {},
   };
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }

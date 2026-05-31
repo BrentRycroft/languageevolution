@@ -4,6 +4,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { clusterOf } from "../semantics/clusters";
+import { lexKeys, lexDelete } from "../lexicon/access";
 
 /**
  * genesis_need.test.ts
@@ -19,7 +20,7 @@ describe("genesis/need", () => {
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
     const need = lexicalNeed(lang, state.tree);
-    for (const m of Object.keys(lang.lexicon)) {
+    for (const m of lexKeys(lang)) {
       expect(need[m] ?? 0, `lexicon slot ${m}`).toBe(0);
     }
   });
@@ -46,8 +47,8 @@ describe("genesis/need", () => {
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
-    for (const key of Object.keys(lang.lexicon)) {
-      if (clusterOf(key) === "animals") delete lang.lexicon[key];
+    for (const key of lexKeys(lang)) {
+      if (clusterOf(key) === "animals") lexDelete(lang, key);
     }
     const need = lexicalNeed(lang, state.tree);
     expect(need["dog"]).toBeGreaterThan(0);

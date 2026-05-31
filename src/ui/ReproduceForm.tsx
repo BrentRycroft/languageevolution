@@ -6,6 +6,7 @@ import { CloseIcon } from "./icons";
 import { Z } from "./zIndex";
 import { speakForm, ttsAvailable } from "./audio";
 import { ScriptPicker } from "./ScriptPicker";
+import { lexGet } from "../engine/lexicon/access";
 
 /**
  * ReproduceForm.tsx
@@ -40,7 +41,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
   }, [langId, state.tree]);
 
   const seedForm = seedForms[meaning];
-  const currentForm = lang?.lexicon[meaning];
+  const currentForm = lang ? lexGet(lang, meaning) : undefined;
   const origin = lang?.wordOrigin?.[meaning];
 
   const stitchedHistory = useMemo(() => {

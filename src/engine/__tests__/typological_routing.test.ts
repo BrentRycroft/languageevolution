@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { translateSentence } from "../translator/sentence";
 import { generateNarrative } from "../narrative/generate";
 import type { Language, Lexicon } from "../types";
+import { lexSet } from "../lexicon/access";
 
 /**
  * typological_routing.test.ts
@@ -12,10 +13,11 @@ import type { Language, Lexicon } from "../types";
  */
 
 function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
-  return {
+  const lang: Language = {
     id: "L-r",
     name: "TestLang",
-    lexicon,
+    lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -42,6 +44,10 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     lastChangeGeneration: {},
     ...overrides,
   };
+  for (const [g, form] of Object.entries(lexicon)) {
+    lexSet(lang, g, form);
+  }
+  return lang;
 }
 
 describe("Phase 13 — relative clauses, serial verbs, narrative routing", () => {

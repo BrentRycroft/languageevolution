@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { GENESIS_BY_ID } from "../genesis/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { lexGet } from "../lexicon/access";
 import type { Language } from "../types";
 
 /**
@@ -13,7 +15,7 @@ import type { Language } from "../types";
  */
 
 function makeLang(): Language {
-  return {
+  const lang = {
     id: "L-0",
     name: "Proto",
     lexicon: {
@@ -34,7 +36,9 @@ function makeLang(): Language {
     wordOrigin: {},
     activeRules: [],
     orthography: {}, otRanking: [], lastChangeGeneration: {},
-  };
+  } as unknown as Language;
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("word genesis", () => {
@@ -66,7 +70,7 @@ describe("word genesis", () => {
     if (!result) return;
     expect(result.meaning).toMatch(/-intens$/);
     const baseMeaning = result.meaning.replace(/-intens$/, "");
-    const base = lang.lexicon[baseMeaning]!;
+    const base = lexGet(lang, baseMeaning)!;
     expect(result.form.slice(-base.length)).toEqual(base);
   });
 });

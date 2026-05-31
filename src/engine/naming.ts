@@ -19,7 +19,7 @@ const ENDINGS = [
 ];
 
 export function generateName(parent: Language, rng: Rng): string {
-  const meanings = orderedLexiconKeys(parent.lexicon);
+  const meanings = orderedLexiconKeys(parent);
   if (meanings.length === 0) return parent.id;
   const seed = lexGet(parent, meanings[rng.int(meanings.length)]!)!;
   let root = "";

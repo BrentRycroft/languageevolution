@@ -12,6 +12,7 @@ import { populationCap } from "../lexicon/tier";
 import { makeRng } from "../rng";
 import type { GrammarFeatures, Language, LanguageTree } from "../types";
 import type { Paradigm } from "../morphology/types";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 
 /**
  * realism_round4.test.ts
@@ -22,7 +23,7 @@ import type { Paradigm } from "../morphology/types";
  */
 
 function testLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const lang: Language = {
     id: "L-r",
     name: "Test",
     lexicon: {},
@@ -53,6 +54,8 @@ function testLang(overrides: Partial<Language> = {}): Language {
     coords: { x: 0, y: 0 },
     ...overrides,
   };
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("realism round 4 — population-feedback mechanics", () => {

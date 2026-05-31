@@ -16,7 +16,8 @@ import { posOf } from "../lexicon/pos";
 import { otFit } from "./ot";
 import { wouldCreateUnrelatedHomonym } from "../lexicon/homonyms";
 import { markednessDelta } from "./markedness";
-import { orderedLexiconKeys } from "../lexicon/conceptIdentity";
+import { orderedConceptIds, buildConceptIdToGloss } from "../lexicon/conceptIdentity";
+import type { LexiconState } from "../domains";
 import type { Language } from "../types";
 
 /**
@@ -713,6 +714,7 @@ export function stratalApplyChangesToLexicon(
   changes: SoundChange[],
   rng: Rng,
   opts: ApplyOptions,
+  lang?: LexiconState,
 ): Lexicon {
   const lexicalRules = changes.filter((c) => c.stratum === "lexical");
   const postLexicalRules = changes.filter((c) => c.stratum !== "lexical");
@@ -721,52 +723,71 @@ export function stratalApplyChangesToLexicon(
   // rules tagged (degenerates to single-pass for back-compat).
   let intermediate = lexicon;
   if (lexicalRules.length > 0) {
-    intermediate = applyChangesToLexicon(lexicon, lexicalRules, rng, opts);
+    intermediate = applyChangesToLexicon(lexicon, lexicalRules, rng, opts, lang);
   }
   // Stratum 2: post-lexical rules → surface.
-  const surface = applyChangesToLexicon(intermediate, postLexicalRules, rng, opts);
+  const surface = applyChangesToLexicon(intermediate, postLexicalRules, rng, opts, lang);
   return surface;
 }
 
+/**
+ * `lexicon` is ConceptId-keyed in the production path (`lang` supplied) and
+ * gloss-keyed in the legacy/unit-test path (`lang` omitted). The single
+ * `glossOf(key)` resolver below collapses the two: with `lang`, a store key
+ * is a ConceptId resolved to its gloss; without, the key already IS the gloss.
+ * Every gloss-driven helper (sensitivity, legality, content, frequency) and
+ * the deterministic collision tiebreak read the gloss; the store and `out` are
+ * indexed by the raw key. The iteration order is by gloss either way, so the
+ * per-word RNG draw sequence is byte-identical across the flip.
+ */
 export function applyChangesToLexicon(
   lexicon: Lexicon,
   changes: SoundChange[],
   rng: Rng,
   opts: ApplyOptions,
+  lang?: LexiconState,
 ): Lexicon {
   const out: Lexicon = {};
-  const meanings = orderedLexiconKeys(lexicon);
+  // Build the ConceptId→gloss resolver ONCE per call (fresh, O(n), never
+  // stale); resolve each word's gloss with an O(1) Map.get in the hot loop.
+  const glossByCid = lang ? buildConceptIdToGloss(lang) : undefined;
+  const glossOf = (key: string): Meaning =>
+    glossByCid ? glossByCid.get(key) ?? (key as Meaning) : (key as Meaning);
+  const keys: string[] = lang
+    ? orderedConceptIds(lexicon, lang)
+    : Object.keys(lexicon).sort();
   const optsWithOrder: ApplyOptions = opts._orderedChanges
     ? opts
     : { ...opts, _orderedChanges: sortByPriority(changes) };
   let anyChanged = false;
-  for (const m of meanings) {
+  for (const key of keys) {
+    const m = glossOf(key);
     const sensitivity = soundChangeSensitivity(m);
     if (sensitivity < 1 && !rng.chance(sensitivity)) {
-      out[m] = lexicon[m]!;
+      out[key] = lexicon[key]!;
       continue;
     }
-    const next = applyChangesToWord(lexicon[m]!, changes, rng, optsWithOrder, m);
+    const next = applyChangesToWord(lexicon[key]!, changes, rng, optsWithOrder, m);
     // Defensive: a word should never erode to empty (per-rule
     // isFormLegal enforces a length floor), but if it ever does,
     // preserve the previous form rather than silently dropping the
     // meaning — matching the illegal-form fallback below.
     if (next.length === 0) {
-      out[m] = lexicon[m]!;
+      out[key] = lexicon[key]!;
       continue;
     }
     if (!isFormLegal(m, next)) {
       const repaired = repairSyllabicity(next);
       if (repaired !== next && isFormLegal(m, repaired)) {
-        out[m] = repaired;
+        out[key] = repaired;
         anyChanged = true;
         continue;
       }
-      out[m] = lexicon[m]!;
+      out[key] = lexicon[key]!;
       continue;
     }
-    if (next !== lexicon[m]) anyChanged = true;
-    out[m] = next;
+    if (next !== lexicon[key]) anyChanged = true;
+    out[key] = next;
   }
 
   if (!anyChanged) return out;
@@ -785,23 +806,27 @@ export function applyChangesToLexicon(
   // doublets like mother/father (mama/baba) don't merge into one
   // word over a few hundred generations.
   const CORE_FREQ_THRESHOLD = 0.85;
-  const coreMeanings = new Set<string>();
-  for (const m of Object.keys(out)) {
+  // Store keys (ConceptIds in production) whose GLOSS is a high-frequency
+  // content word. Iterating `out` walks gloss-sorted order, so the set's
+  // insertion order matches the pre-flip gloss set.
+  const coreKeys = new Set<string>();
+  for (const k of Object.keys(out)) {
+    const m = glossOf(k);
     if ((freq[m] ?? 0.5) >= CORE_FREQ_THRESHOLD && isContentWord(m)) {
-      coreMeanings.add(m);
+      coreKeys.add(k);
     }
   }
 
   const byForm = new Map<string, string[]>();
-  for (const m of Object.keys(out)) {
-    const key = out[m]!.join(" ");
-    const bucket = byForm.get(key);
-    if (bucket) bucket.push(m);
-    else byForm.set(key, [m]);
+  for (const k of Object.keys(out)) {
+    const formKey = out[k]!.join(" ");
+    const bucket = byForm.get(formKey);
+    if (bucket) bucket.push(k);
+    else byForm.set(formKey, [k]);
   }
-  for (const [, meanings] of byForm) {
-    if (meanings.length < 2) continue;
-    meanings.sort((a, b) => (freq[b] ?? 0.5) - (freq[a] ?? 0.5));
+  for (const [, group] of byForm) {
+    if (group.length < 2) continue;
+    group.sort((a, b) => (freq[glossOf(b)] ?? 0.5) - (freq[glossOf(a)] ?? 0.5));
     // Phase 30 Tranche 30b: if any pair in this collision bucket are
     // BOTH core, the standard revert-to-input is insufficient (they
     // were already colliding before this gen). For any core loser
@@ -813,9 +838,9 @@ export function applyChangesToLexicon(
     // pre-gen form even if it collides — at least we don't push
     // the collision FURTHER). The collision rate degrades naturally
     // as future changes fire on only one of the pair.
-    const winner = meanings[0]!;
-    for (let i = 1; i < meanings.length; i++) {
-      const loser = meanings[i]!;
+    const winner = group[0]!;
+    for (let i = 1; i < group.length; i++) {
+      const loser = group[i]!;
       const revert = lexicon[loser];
       if (revert && revert.length > 0) {
         out[loser] = revert.slice();
@@ -823,8 +848,8 @@ export function applyChangesToLexicon(
         // would still equal the winner's post-form, log it. Stays
         // reverted — but the next gen's RNG draws should diverge.
         if (
-          coreMeanings.has(loser) &&
-          coreMeanings.has(winner) &&
+          coreKeys.has(loser) &&
+          coreKeys.has(winner) &&
           revert.join(" ") === out[winner]!.join(" ")
         ) {
           // Pre-existing collision (seed homophony or already-merged
@@ -842,21 +867,21 @@ export function applyChangesToLexicon(
   // /mama/, father drifted from /baba/ → /mama/" case where the
   // collision-detection by formKey above only sees ONE side as
   // "current" (the sound-change applied in this gen).
-  for (const m of Array.from(coreMeanings)) {
-    const newForm = out[m];
-    if (!newForm || newForm === lexicon[m]) continue; // no change
+  for (const k of Array.from(coreKeys)) {
+    const newForm = out[k];
+    if (!newForm || newForm === lexicon[k]) continue; // no change
     const newKey = newForm.join(" ");
-    for (const other of coreMeanings) {
-      if (other === m) continue;
+    for (const other of coreKeys) {
+      if (other === k) continue;
       const otherCurrent = lexicon[other];
       if (!otherCurrent) continue;
       if (otherCurrent.join(" ") === newKey) {
         // Collision with another core meaning's stable form. Revert
-        // this gen's change for `m` to keep the kinship pair
+        // this gen's change for `k` to keep the kinship pair
         // distinct. (Frequency-tied: revert the alphabetically-later
-        // one for determinism.)
-        if (m > other) {
-          out[m] = lexicon[m]!.slice();
+        // GLOSS for determinism — ConceptIds don't sort like glosses.)
+        if (glossOf(k) > glossOf(other)) {
+          out[k] = lexicon[k]!.slice();
         }
         break;
       }

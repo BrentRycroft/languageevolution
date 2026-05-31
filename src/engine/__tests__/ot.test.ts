@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { otScore, otFit, maybeLearnOt, DEFAULT_OT_RANKING } from "../phonology/ot";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import type { Language } from "../types";
+import { lexSet } from "../lexicon/access";
+import type { Language, Meaning, WordForm } from "../types";
 
 /**
  * ot.test.ts
@@ -12,11 +13,15 @@ import type { Language } from "../types";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-function baseLang(overrides: Partial<Language> = {}): Language {
-  return {
+function baseLang(
+  overrides: Omit<Partial<Language>, "lexicon"> = {},
+  glossLexicon: Record<Meaning, WordForm> = {},
+): Language {
+  const lang: Language = {
     id: "L-0",
     name: "Proto",
     lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -34,6 +39,10 @@ function baseLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
+  for (const [m, f] of Object.entries(glossLexicon)) {
+    lexSet(lang, m as Meaning, f);
+  }
+  return lang;
 }
 
 describe("OT constraints", () => {
@@ -56,13 +65,11 @@ describe("OT constraints", () => {
   });
 
   it("maybeLearnOt swaps a pair when the lexicon violates a top constraint", () => {
-    const lang = baseLang({
-      lexicon: {
-        a: ["k", "a", "k", "t"],
-        b: ["p", "a", "r", "s"],
-        c: ["t", "a", "n", "k"],
-        d: ["f", "a", "t", "s"],
-      },
+    const lang = baseLang({}, {
+      a: ["k", "a", "k", "t"],
+      b: ["p", "a", "r", "s"],
+      c: ["t", "a", "n", "k"],
+      d: ["f", "a", "t", "s"],
     });
     const rng = makeRng("learn");
     const before = lang.otRanking.slice();

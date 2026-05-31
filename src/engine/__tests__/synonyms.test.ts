@@ -3,6 +3,7 @@ import { presetEnglish } from "../presets/english";
 import { buildInitialState } from "../steps/init";
 import { addSynonym, removeSynonym, setLexiconForm } from "../lexicon/mutate";
 import { selectSynonyms, findWordsByMeaning, findPrimaryWordForMeaning, formKeyOf } from "../lexicon/word";
+import { lexGet } from "../lexicon/access";
 
 /**
  * synonyms.test.ts
@@ -21,10 +22,10 @@ function freshLang() {
 describe("Phase 37 — bidirectional word ↔ meaning mapping", () => {
   test("addSynonym attaches a new form to an existing meaning without overwriting primary", () => {
     const lang = freshLang();
-    const primary = lang.lexicon["water"]!;
+    const primary = lexGet(lang, "water")!;
     const ok = addSynonym(lang, "water", ["aː", "k", "w", "a"], { bornGeneration: 0 });
     expect(ok).toBe(true);
-    expect(lang.lexicon["water"]).toEqual(primary);
+    expect(lexGet(lang, "water")).toEqual(primary);
     const forms = selectSynonyms(lang, "water");
     expect(forms.length).toBeGreaterThanOrEqual(2);
     expect(forms[0]?.formKey).toBe(formKeyOf(primary));
@@ -40,7 +41,7 @@ describe("Phase 37 — bidirectional word ↔ meaning mapping", () => {
 
   test("addSynonym refuses to register a form identical to the primary", () => {
     const lang = freshLang();
-    const primary = lang.lexicon["water"]!;
+    const primary = lexGet(lang, "water")!;
     const ok = addSynonym(lang, "water", primary.slice(), { bornGeneration: 0 });
     expect(ok).toBe(false);
   });
@@ -48,11 +49,11 @@ describe("Phase 37 — bidirectional word ↔ meaning mapping", () => {
   test("findPrimaryWordForMeaning skips synonym senses", () => {
     const lang = freshLang();
     const primaryWord = findPrimaryWordForMeaning(lang, "water");
-    expect(primaryWord?.formKey).toBe(formKeyOf(lang.lexicon["water"]!));
+    expect(primaryWord?.formKey).toBe(formKeyOf(lexGet(lang, "water")!));
     addSynonym(lang, "water", ["aː", "k", "w", "a"], { bornGeneration: 0 });
     // Still returns the same primary, not the synonym word.
     const after = findPrimaryWordForMeaning(lang, "water");
-    expect(after?.formKey).toBe(formKeyOf(lang.lexicon["water"]!));
+    expect(after?.formKey).toBe(formKeyOf(lexGet(lang, "water")!));
   });
 
   test("removeSynonym drops the synonym; primary remains", () => {
@@ -61,7 +62,7 @@ describe("Phase 37 — bidirectional word ↔ meaning mapping", () => {
     expect(selectSynonyms(lang, "water").length).toBe(2);
     removeSynonym(lang, "water", ["aː", "k", "w", "a"]);
     expect(selectSynonyms(lang, "water").length).toBe(1);
-    expect(lang.lexicon["water"]).toBeDefined();
+    expect(lexGet(lang, "water")).toBeDefined();
   });
 
   test("homonymy (same form, two meanings) coexists with synonymy", () => {

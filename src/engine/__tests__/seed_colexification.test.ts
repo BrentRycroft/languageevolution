@@ -7,6 +7,7 @@ import { presetTokipona } from "../presets/tokipona";
 import { presetPIE } from "../presets/pie";
 import { presetGermanic } from "../presets/germanic";
 import { presetRomance } from "../presets/romance";
+import { lexGet } from "../lexicon/access";
 
 /**
  * seed_colexification.test.ts
@@ -38,7 +39,7 @@ describe("seedColexification", () => {
       seedColexification: { water: ["streamlet_x"] },
     };
     const lang = buildInitialState(config).tree["L-0"]!.language;
-    const waterForm = lang.lexicon["water"]!;
+    const waterForm = lexGet(lang, "water")!;
     // `streamlet_x` has no lexicon entry of its own; the declared
     // colexification makes it resolve to water's form via reverse-colex.
     // allowFallbackCoinage:false ensures we're testing resolution, not coinage.
@@ -60,10 +61,10 @@ describe("seedColexification", () => {
       ["sleep", "lie"],
     ];
     for (const [winner, absorbed] of pairs) {
-      expect(lang.lexicon[absorbed], `${absorbed} should not be a separate Bantu lexicon entry`).toBeUndefined();
+      expect(lexGet(lang, absorbed), `${absorbed} should not be a separate Bantu lexicon entry`).toBeUndefined();
       expect(lang.colexifiedAs?.[winner], `colexifiedAs[${winner}] should contain ${absorbed}`).toContain(absorbed);
       // The absorbed meaning resolves to the winner's form via the cascade.
-      expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false })).toEqual(lang.lexicon[winner]);
+      expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false })).toEqual(lexGet(lang, winner));
     }
   });
 
@@ -82,9 +83,9 @@ describe("seedColexification", () => {
       const lang = buildInitialState({ ...cfg, seed: `colex-all-${name}` }).tree["L-0"]!.language;
       for (const [winner, absorbedList] of Object.entries(colex)) {
         for (const absorbed of absorbedList) {
-          expect(lang.lexicon[absorbed], `${name}: '${absorbed}' should be absorbed (no own lexicon entry)`).toBeUndefined();
+          expect(lexGet(lang, absorbed), `${name}: '${absorbed}' should be absorbed (no own lexicon entry)`).toBeUndefined();
           expect(lang.colexifiedAs?.[winner], `${name}: colexifiedAs['${winner}'] should contain '${absorbed}'`).toContain(absorbed);
-          expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false }), `${name}: '${absorbed}' should resolve to '${winner}' form`).toEqual(lang.lexicon[winner]);
+          expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false }), `${name}: '${absorbed}' should resolve to '${winner}' form`).toEqual(lexGet(lang, winner));
         }
       }
     }
@@ -100,9 +101,9 @@ describe("seedColexification", () => {
       ["word", "name"],
     ];
     for (const [winner, absorbed] of pairs) {
-      expect(lang.lexicon[absorbed], `${absorbed} should not be a separate Toki Pona entry`).toBeUndefined();
+      expect(lexGet(lang, absorbed), `${absorbed} should not be a separate Toki Pona entry`).toBeUndefined();
       expect(lang.colexifiedAs?.[winner], `colexifiedAs[${winner}] should contain ${absorbed}`).toContain(absorbed);
-      expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false })).toEqual(lang.lexicon[winner]);
+      expect(lookupForm(lang, absorbed, { allowFallbackCoinage: false })).toEqual(lexGet(lang, winner));
     }
   });
 });

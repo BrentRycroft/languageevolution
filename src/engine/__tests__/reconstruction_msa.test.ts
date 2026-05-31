@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { reconstructProtoForm } from "../tree/reconstruction";
 import type { LanguageTree, LanguageNode, Language } from "../types";
+import { lexSet } from "../lexicon/access";
 
 /**
  * reconstruction_msa.test.ts
@@ -14,7 +15,7 @@ function leaf(id: string, form: string[]): LanguageNode {
   const lang: Language = {
     id,
     name: id,
-    lexicon: { test: form },
+    lexicon: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -39,6 +40,7 @@ function leaf(id: string, form: string[]): LanguageNode {
     otRanking: [],
     lastChangeGeneration: {},
   };
+  lexSet(lang, "test", form);
   return { language: lang, parentId: "P", childrenIds: [] };
 }
 

@@ -9,6 +9,7 @@ import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { makeRng } from "../rng";
+import { lexKeys } from "../lexicon/access";
 
 /**
  * inflectionClass.test.ts
@@ -63,7 +64,7 @@ describe("Phase 29 Tranche 5e — inflection classes", () => {
     const { posOf } = await import("../lexicon/pos");
     let unclassifiedVerbs = 0;
     let unclassifiedNouns = 0;
-    for (const m of Object.keys(lang.lexicon)) {
+    for (const m of lexKeys(lang)) {
       const p = posOf(m);
       if (p === "verb" && !lang.inflectionClass![m]) unclassifiedVerbs++;
       if ((p === "noun" || p === "other") && !lang.nounDeclensionClass![m]) unclassifiedNouns++;
@@ -83,7 +84,7 @@ describe("Phase 29 Tranche 5e — inflection classes", () => {
     expect(leaves.length).toBeGreaterThan(0);
     const lang = state.tree[leaves[0]!]!.language;
     const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
-    for (const m of Object.keys(lang.lexicon)) {
+    for (const m of lexKeys(lang)) {
       const cls = getInflectionClass(lang, m);
       counts[cls] = (counts[cls] ?? 0) + 1;
     }

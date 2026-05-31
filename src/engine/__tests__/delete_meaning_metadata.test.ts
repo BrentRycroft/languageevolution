@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { deleteMeaning } from "../lexicon/mutate";
+import { lexGet, lexSet } from "../lexicon/access";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 import type { Language, Phoneme } from "../types";
 
 /**
@@ -12,7 +14,7 @@ import type { Language, Phoneme } from "../types";
 
 function fakeLang(): Language {
   const m = "king";
-  return {
+  const lang = {
     lexicon: { [m]: ["k", "i", "ŋ"] as Phoneme[] },
     wordFrequencyHints: { [m]: 0.9 },
     lastChangeGeneration: { [m]: 5 },
@@ -26,6 +28,8 @@ function fakeLang(): Language {
     },
     words: [],
   } as unknown as Language;
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata", () => {
@@ -33,7 +37,7 @@ describe("Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata", () => {
     const lang = fakeLang();
     deleteMeaning(lang, "king");
 
-    expect(lang.lexicon["king"]).toBeUndefined();
+    expect(lexGet(lang, "king")).toBeUndefined();
     expect(lang.wordFrequencyHints["king"]).toBeUndefined();
     expect(lang.wordOrigin["king"]).toBeUndefined();
     expect(lang.localNeighbors["king"]).toBeUndefined();
@@ -53,10 +57,10 @@ describe("Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata", () => {
 
   it("doesn't affect other meanings", () => {
     const lang = fakeLang();
-    lang.lexicon["wolf"] = ["w", "ʊ", "l", "f"] as Phoneme[];
+    lexSet(lang, "wolf", ["w", "ʊ", "l", "f"] as Phoneme[]);
     lang.nounDeclensionClass!["wolf"] = 2;
     deleteMeaning(lang, "king");
-    expect(lang.lexicon["wolf"]).toBeDefined();
+    expect(lexGet(lang, "wolf")).toBeDefined();
     expect(lang.nounDeclensionClass?.["wolf"]).toBe(2);
   });
 });

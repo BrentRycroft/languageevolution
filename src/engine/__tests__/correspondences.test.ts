@@ -5,6 +5,7 @@ import {
   scoreMeaningCorrespondence,
 } from "../tree/correspondences";
 import type { Language, LanguageNode, LanguageTree } from "../types";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 
 /**
  * correspondences.test.ts
@@ -18,7 +19,7 @@ function leaf(id: string, lex: Record<string, string[]>): LanguageNode {
   const lang: Language = {
     id,
     name: id,
-    lexicon: lex,
+    lexicon: lex as never,
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -43,6 +44,7 @@ function leaf(id: string, lex: Record<string, string[]>): LanguageNode {
     otRanking: [],
     lastChangeGeneration: {},
   };
+  rekeyLexiconToConceptIds(lang);
   return { language: lang, parentId: "P", childrenIds: [] };
 }
 

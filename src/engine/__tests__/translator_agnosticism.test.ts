@@ -8,6 +8,7 @@ import { presetPIE } from "../presets/pie";
 import { translateSentence, type TranslatedToken } from "../translator/sentence";
 import { isFeatureActive } from "../modules/legacyGate";
 import type { Language } from "../types";
+import { lexGet } from "../lexicon/access";
 
 /**
  * translator_agnosticism.test.ts
@@ -227,7 +228,7 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     // No "very" lexeme exists in the target; intensification surfaces as iconic
     // full reduplication of the adjective (big → big-big). Lexeme-free, emergent.
     const lang = protoOf(presetEnglish, "agn-intens");
-    const base = (lang.lexicon["big"] ?? []).join("");
+    const base = (lexGet(lang, "big") ?? []).join("");
     const toks = translateSentence(lang, "the very big dog runs").targetTokens;
     const adj = toks.find((t) => t.englishLemma === "big");
     expect(base.length, "'big' is lexicalised").toBeGreaterThan(0);
@@ -248,7 +249,7 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     const tok = translateSentence(lang, "we see the dog").targetTokens.find((t) => t.englishLemma === "we");
     expect(tok, "subject pronoun 'we' resolves").toBeDefined();
     expect(tok!.targetSurface, "plural pronoun 'we' is the bare lexical form, not affixed")
-      .toBe((lang.lexicon["we"] ?? []).join(""));
+      .toBe((lexGet(lang, "we") ?? []).join(""));
   });
 
   it("interrogative strategy follows grammar.interrogativeStrategy (particle/inversion/intonation)", () => {

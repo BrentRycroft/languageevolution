@@ -4,6 +4,7 @@ import type { Language, LanguageNode, LanguageTree } from "../types";
 import { makeRng } from "../rng";
 import { DEFAULT_LEXICON } from "../lexicon/defaults";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
+import { lexSet, lexGet } from "../lexicon/access";
 
 /**
  * split.test.ts
@@ -17,9 +18,7 @@ function makeTree(): LanguageTree {
   const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: Object.fromEntries(
-      Object.entries(DEFAULT_LEXICON).map(([k, v]) => [k, v.slice()]),
-    ),
+    lexicon: {},
     enabledChangeIds: ["lenition.p_to_f", "lenition.t_to_theta"],
     changeWeights: { "lenition.p_to_f": 1, "lenition.t_to_theta": 1 },
     birthGeneration: 0,
@@ -34,6 +33,9 @@ function makeTree(): LanguageTree {
     activeRules: [],
     orthography: {}, otRanking: [], lastChangeGeneration: {},
   };
+  for (const [gloss, form] of Object.entries(DEFAULT_LEXICON as Record<string, string[]>)) {
+    lexSet(lang, gloss, form.slice());
+  }
   const root: LanguageNode = {
     language: lang,
     parentId: null,
@@ -75,9 +77,9 @@ describe("tree split", () => {
     const children = splitLeaf(tree, "L-0", 1, rng);
     const a = children[0]!;
     const b = children[1]!;
-    tree[a]!.language.lexicon["water"] = ["X"];
-    expect(tree[b]!.language.lexicon["water"]).not.toEqual(["X"]);
-    expect(tree["L-0"]!.language.lexicon["water"]).not.toEqual(["X"]);
+    lexSet(tree[a]!.language, "water", ["X"]);
+    expect(lexGet(tree[b]!.language, "water")).not.toEqual(["X"]);
+    expect(lexGet(tree["L-0"]!.language, "water")).not.toEqual(["X"]);
   });
 
   it("at least one child's change set differs from the parent's", () => {

@@ -4,6 +4,7 @@ import { composeTargetSentence } from "../narrative/composer";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeDiscourse } from "../narrative/discourse";
+import { lexHas } from "../lexicon/access";
 
 /**
  * narrative_negation_coord.test.ts
@@ -120,7 +121,7 @@ describe("Phase 20c: negation + coordination in narratives", () => {
 
   it("coordination branch produces 'and' joins when the language has 'and'", () => {
     const lang = englishLang();
-    expect(lang.lexicon["and"]).toBeDefined();
+    expect(lexHas(lang, "and")).toBe(true);
     // 30 lines with 15% coord rate → ~4 expected coords; should hit ≥1.
     const out = generateDiscourseNarrative(lang, "coord-test", {
       lines: 30,
