@@ -557,17 +557,21 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       pronouns no longer take the regular noun-plural affix (realiseNP plural
       branch guarded with `!np.head.isPronoun`; "us" → "ʌs", not "ʌss"). See Done
       log.
-- [ ] **Derivation: malformed concept-ids leak into narrative glosses.** Discourse
-      play session (2026-05-29) surfaced lemmas like `take--tér.agt` (double dash +
-      agentive `-tér` + a `.agt` suffix in the ID) and `coffee-prae-.tbef` (a
-      `prae-` prefix fragment + `.tbef` in the ID). These are derived/borrowed
-      concept ids whose raw morphological scaffolding (agentive nominaliser, the
-      `prae-` preverb, a temporal `tbef` tag) is being emitted as part of the
-      ENGLISH lemma rather than resolved to a clean gloss. Investigate the
-      derivation/grammaticalisation concept-id construction (semantics/
-      grammaticalization.ts, derivation) — the id should carry a clean gloss label
-      separate from its internal build recipe. Engine-side (derivation data) →
-      likely sim-rippling; scope before touching.
+- [x] **Derivation: malformed concept-ids leak into narrative glosses.** DONE
+      2026-05-31 (render-side, NON-rippling — see Done log). Reproduced: 60-gen
+      pie/germanic/romance have 87/32/51 lexicalised derived keys (`build-tér.agt`,
+      `big-nis.abs`, `carrot-prae-.tbef`). The composer's S/O site already cleaned
+      the caption — but only in the `!base` (non-lexicalised) branch, so the common
+      lexicalised case leaked the raw key as `englishLemma`. Fix: a single
+      chokepoint pass in `projectRoleClauseToTokens` (composer.ts) strips the
+      derivational affix via a new `stripDerivationAffix` that matches the
+      language's OWN `boundMorphemes` set (concept-native; `derivedMeaningParts`
+      and `recordedParts` both MISS these — productive-suffix-only / no compounds
+      record respectively, proven by probe: 0/0 coverage on pie). Renders clean
+      base + Leipzig tag ("build" + AGT). Verified: 0 leaks across 216 discourse
+      lines; behaviour-LOCK test (narrative_gloss_clean.test.ts). The earlier
+      "engine-side / sim-rippling" worry was about rewriting the id CONSTRUCTION —
+      a render-side fix sidesteps it entirely.
 - [ ] **Translator: sentential complement clauses are DROPPED** (play session
       2026-05-29). "the man knows that the dog runs" → "man know that" (the whole
       embedded clause "the dog runs" vanishes); "the man wants to run" → "man
