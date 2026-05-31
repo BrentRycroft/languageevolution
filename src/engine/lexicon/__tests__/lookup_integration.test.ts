@@ -5,6 +5,7 @@ import { createSimulation } from "../../simulation";
 import type { Paradigm } from "../../morphology/types";
 import { applyParadigm } from "../../morphology/apply";
 import { inflect } from "../../morphology/evolve";
+import { lexGet } from "../access";
 
 /**
  * Phase 52 T3 — end-to-end demonstration that the abstraction works
@@ -54,7 +55,7 @@ describe("Phase 52 T3 — non-concat paradigm integration", () => {
       insertionPoint: "after-first-V",
     };
     // walk = ["w","ɔ","k"] in English's seed; after infix → w,ɔ,u,m,k.
-    const walkForm = lang.lexicon["walk"];
+    const walkForm = lexGet(lang, "walk");
     expect(walkForm).toBeDefined();
     const out = inflect(walkForm!, infixParadigm, lang, "walk");
     // Find the first vowel in walk's IPA form. Inserts "um" right

@@ -8,6 +8,7 @@ import { leafIds } from "../tree/split";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { formKeyOf } from "../lexicon/word";
 import type { Language } from "../types";
+import { lexGet, lexKeys, lexHas } from "../lexicon/access";
 
 /**
  * Phase 29 Tranche 7b: cross-system invariants enforced via property
@@ -44,8 +45,8 @@ function aliveLeavesOf(buildPreset: () => ReturnType<typeof presetEnglish>): {
 
 function lexiconAgreesWithWords(lang: Language): { ok: true } | { ok: false; meaning?: string; reason: string } {
   if (!lang.words) return { ok: true }; // pre-migration save
-  for (const m of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[m];
+  for (const m of lexKeys(lang)) {
+    const form = lexGet(lang, m);
     if (!form) continue;
     const key = formKeyOf(form);
     const matchingWord = lang.words.find((w) => w.formKey === key);
@@ -112,7 +113,7 @@ describe("Phase 29 Tranche 7b — cross-system invariants", () => {
           for (const m of meanings) {
             deleteMeaning(lang, m);
             // After delete, the meaning is gone everywhere.
-            if (lang.lexicon[m]) return false;
+            if (lexHas(lang, m)) return false;
             if (lang.wordFrequencyHints[m] !== undefined) return false;
             if (lang.wordOrigin[m] !== undefined) return false;
             if (lang.lastChangeGeneration[m] !== undefined) return false;

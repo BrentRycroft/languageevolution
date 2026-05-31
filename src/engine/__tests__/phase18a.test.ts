@@ -4,7 +4,8 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { prunePhonemes } from "../phonology/pruning";
 import { makeRng } from "../rng";
-import type { Language, Lexicon } from "../types";
+import { lexSet, lexGet } from "../lexicon/access";
+import type { Language, Meaning, WordForm } from "../types";
 
 /**
  * phase18a.test.ts
@@ -59,7 +60,7 @@ describe("Phase 18a — quick fixes", () => {
 
   describe("A3: phoneme pruning", () => {
     it("drops a rare phoneme that has a featural neighbour", () => {
-      const lex: Lexicon = {
+      const glossLex: Record<Meaning, WordForm> = {
         a: ["p", "a", "t", "i", "u"],
         b: ["t", "a", "p", "e", "o"],
         c: ["k", "a", "t", "i", "e"],
@@ -77,7 +78,8 @@ describe("Phase 18a — quick fixes", () => {
       const lang: Language = {
         id: "L0",
         name: "L",
-        lexicon: lex,
+        lexicon: {},
+        conceptIds: {},
         enabledChangeIds: [],
         changeWeights: {},
         birthGeneration: 0,
@@ -102,6 +104,9 @@ describe("Phase 18a — quick fixes", () => {
         otRanking: [],
         lastChangeGeneration: {},
       };
+      for (const [m, f] of Object.entries(glossLex)) {
+        lexSet(lang, m as Meaning, f);
+      }
       // Phase 31 follow-up: pruning is now functional-load aware
       // (Phase 27b/28b), so the candidate set includes any low-load
       // phoneme — not just count-rare /q/. With the original seed
@@ -125,14 +130,15 @@ describe("Phase 18a — quick fixes", () => {
       expect(merger!.from).toBe("q");
       expect(["k", "p", "t"]).toContain(merger!.to);
       expect(lang.phonemeInventory.segmental.includes("q")).toBe(false);
-      expect(lang.lexicon.rare!.includes("q")).toBe(false);
+      expect(lexGet(lang, "rare")!.includes("q")).toBe(false);
     });
 
     it("does not prune when inventory is too small", () => {
       const lang: Language = {
         id: "L0",
         name: "L",
-        lexicon: { a: ["p", "a"], b: ["q", "a"] },
+        lexicon: {},
+        conceptIds: {},
         enabledChangeIds: [],
         changeWeights: {},
         birthGeneration: 0,
@@ -153,6 +159,8 @@ describe("Phase 18a — quick fixes", () => {
         otRanking: [],
         lastChangeGeneration: {},
       };
+      lexSet(lang, "a", ["p", "a"]);
+      lexSet(lang, "b", ["q", "a"]);
       const rng = makeRng("prune-2");
       const merger = prunePhonemes(lang, rng);
       expect(merger).toBeNull();

@@ -9,6 +9,7 @@ import { PRODUCTIVITY_THRESHOLD } from "../engine/lexicon/derivation";
 import { ScriptPicker } from "./ScriptPicker";
 import { ExportButtons } from "./components/ExportButtons";
 import { EmptyState } from "./components/EmptyState";
+import { lexKeys, lexGet } from "../engine/lexicon/access";
 
 /**
  * GrammarView.tsx
@@ -124,9 +125,9 @@ function pickDemoStem(
   lang: import("../engine/types").Language,
   pos: "noun" | "verb",
 ): string | undefined {
-  const candidates = Object.keys(lang.lexicon).filter((m) => !m.includes("-"));
+  const candidates = lexKeys(lang).filter((m) => !m.includes("-"));
   for (const m of candidates) if (posOf(m) === pos) return m;
-  for (const m of Object.keys(lang.lexicon)) if (posOf(m) === pos) return m;
+  for (const m of lexKeys(lang)) if (posOf(m) === pos) return m;
   return undefined;
 }
 
@@ -384,7 +385,7 @@ function ParadigmGroup({
 }) {
   const script = useSimStore((s) => s.displayScript);
   const paradigms = lang.morphology.paradigms;
-  const stemForm = stem ? lang.lexicon[stem] : undefined;
+  const stemForm = stem ? lexGet(lang, stem) : undefined;
   return (
     <div style={{ marginTop: 8 }}>
       <div className="label-line" style={{ marginBottom: 4 }}>

@@ -6,6 +6,7 @@ import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { presetTokipona } from "../presets/tokipona";
 import { createSimulation } from "../simulation";
 import { CONCEPTS } from "../lexicon/concepts";
+import { lexSet, lexGet } from "../lexicon/access";
 
 /**
  * Phase 47 T1: morphological synthesis acceptance tests.
@@ -16,7 +17,8 @@ import { CONCEPTS } from "../lexicon/concepts";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const { lexicon: seedLexicon, ...rest } = overrides;
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
@@ -43,8 +45,14 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     orthography: {},
     otRanking: [],
     lastChangeGeneration: {},
-    ...overrides,
+    ...rest,
   };
+  if (seedLexicon) {
+    for (const [gloss, form] of Object.entries(seedLexicon as Record<string, string[]>)) {
+      lexSet(lang, gloss, form);
+    }
+  }
+  return lang;
 }
 
 function categoryForTag(tag: string): DerivationCategory {
@@ -338,7 +346,7 @@ describe("Phase 47 T5 — hand-authored decompositions on Toki Pona", () => {
     const sim = createSimulation(presetTokipona());
     const root = sim.getState().tree[sim.getState().rootId]!.language;
     // computer = work + know → pali + sona = ["p","a","l","i","s","o","n","a"]
-    expect(root.lexicon.computer).toEqual([
+    expect(lexGet(root, "computer")).toEqual([
       "p", "a", "l", "i", "s", "o", "n", "a",
     ]);
   });
@@ -357,8 +365,8 @@ describe("Phase 47 T5 — hand-authored decompositions on Toki Pona", () => {
     // Compound entry persists in lang.compounds; its surface form may
     // drift as sound change applies. The point is just that the
     // mechanism doesn't crash.
-    expect(root.lexicon.computer).toBeDefined();
-    expect(root.lexicon.computer!.length).toBeGreaterThan(0);
+    expect(lexGet(root, "computer")).toBeDefined();
+    expect(lexGet(root, "computer")!.length).toBeGreaterThan(0);
   });
 });
 

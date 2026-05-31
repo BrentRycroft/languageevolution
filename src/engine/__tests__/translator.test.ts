@@ -3,6 +3,7 @@ import { translate } from "../translator/translate";
 import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
+import { lexSet } from "../lexicon/access";
 
 /**
  * translator.test.ts
@@ -13,14 +14,11 @@ import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
  */
 
 function sampleLang(): Language {
-  return {
+  const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {
-      water: ["w", "a", "t", "e", "r"],
-      fire: ["p", "u", "r"],
-      "water-fire": ["w", "a", "t", "e", "r", "p", "u", "r"],
-    },
+    lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -37,6 +35,10 @@ function sampleLang(): Language {
     activeRules: [],
     orthography: {}, otRanking: [], lastChangeGeneration: {},
   };
+  lexSet(lang, "water", ["w", "a", "t", "e", "r"]);
+  lexSet(lang, "fire", ["p", "u", "r"]);
+  lexSet(lang, "water-fire", ["w", "a", "t", "e", "r", "p", "u", "r"]);
+  return lang;
 }
 
 describe("translator", () => {

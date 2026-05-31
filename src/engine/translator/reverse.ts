@@ -95,7 +95,7 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
       }
     }
   } else {
-    const openLemmas = orderedLexiconKeys(lang.lexicon);
+    const openLemmas = orderedLexiconKeys(lang);
     for (const lemma of openLemmas) {
       // Phase 29-2i: null-guard. The `!` was wrong — `Object.keys`
       // can race with concurrent mutations and a meaning may be

@@ -6,6 +6,7 @@ import { GENESIS_BY_ID } from "../genesis/catalog";
 import { stepPhonology } from "../steps/phonology";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 import type { Language, SimulationState } from "../types";
 import type { Paradigm } from "../morphology/types";
 
@@ -18,7 +19,7 @@ import type { Paradigm } from "../morphology/types";
  */
 
 function testLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const lang = {
     id: "L-int",
     name: "Test",
     lexicon: {},
@@ -43,7 +44,9 @@ function testLang(overrides: Partial<Language> = {}): Language {
     otRanking: [],
     lastChangeGeneration: {},
     ...overrides,
-  };
+  } as Language;
+  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("cross-feature integration", () => {

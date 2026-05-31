@@ -9,6 +9,7 @@ import {
   mintConceptId,
 } from "../lexicon/conceptIdentity";
 import { setLexiconForm } from "../lexicon/mutate";
+import { lexKeys } from "../lexicon/access";
 
 /**
  * phase72_defer2.test.ts — Phase 72 deferred item defer-2:
@@ -22,8 +23,8 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     expect(lang.conceptIds).toBeDefined();
-    // Every meaning in the lexicon should have an ID.
-    for (const m of Object.keys(lang.lexicon)) {
+    // Every meaning (gloss) in the lexicon should have an ID.
+    for (const m of lexKeys(lang)) {
       expect(lang.conceptIds![m]).toBeDefined();
       // Format: c_<8-hex>_<langId>_<seq>. Proto meanings are minted on
       // the root language (id "L-0").

@@ -12,6 +12,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
+import { lexGet, lexKeys, lexSet } from "../lexicon/access";
 
 /**
  * words_phase21d.test.ts
@@ -22,10 +23,12 @@ import type { Language } from "../types";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const { lexicon: seedLexicon, conceptIds: _cids, ...rest } = overrides;
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -49,8 +52,14 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     orthography: {},
     otRanking: [],
     lastChangeGeneration: {},
-    ...overrides,
+    ...rest,
   };
+  if (seedLexicon) {
+    for (const [g, form] of Object.entries(seedLexicon)) {
+      lexSet(lang, g, form);
+    }
+  }
+  return lang;
 }
 
 describe("Phase 21d — sound-change merger detection", () => {
@@ -65,8 +74,8 @@ describe("Phase 21d — sound-change merger detection", () => {
     addWord(lang, ["s", "a", "l"], "shall", { bornGeneration: 0 });
     expect(lang.words).toHaveLength(2);
     // Simulate a sound-change pass that drifts both forms to the same surface.
-    lang.lexicon.child = ["ʃ", "a", "l"];
-    lang.lexicon.shall = ["ʃ", "a", "l"];
+    lexSet(lang, "child", ["ʃ", "a", "l"]);
+    lexSet(lang, "shall", ["ʃ", "a", "l"]);
     const events = syncWordsAfterPhonology(lang, 10);
     expect(lang.words).toHaveLength(1);
     expect(lang.words![0]!.senses.map((s) => s.meaning).sort()).toEqual([
@@ -93,8 +102,8 @@ describe("Phase 21d — sound-change merger detection", () => {
     expect(lang.words![0]!.senses).toHaveLength(2);
     // Phonology splits one sense's form via something like a morpheme-
     // boundary-conditioned rule.
-    lang.lexicon["bank.financial"] = ["b", "a", "n", "k"];
-    lang.lexicon["bank.river"] = ["b", "a", "n", "k", "ə"];
+    lexSet(lang, "bank.financial", ["b", "a", "n", "k"]);
+    lexSet(lang, "bank.river", ["b", "a", "n", "k", "ə"]);
     syncWordsAfterPhonology(lang, 5);
     // Now we have two distinct words, each with one sense.
     expect(lang.words).toHaveLength(2);
@@ -158,8 +167,8 @@ describe("Phase 21d — obsolescence respects polysemy", () => {
       stepObsolescence(lang, cfg, rng, g);
     }
     // Both senses survived because they share a Word.
-    expect(lang.lexicon["bank.financial"]).toBeDefined();
-    expect(lang.lexicon["bank.river"]).toBeDefined();
+    expect(lexGet(lang, "bank.financial")).toBeDefined();
+    expect(lexGet(lang, "bank.river")).toBeDefined();
   });
 
   it("two distinct words with similar forms are still rivals (one gets killed)", () => {
@@ -180,7 +189,7 @@ describe("Phase 21d — obsolescence respects polysemy", () => {
       stepObsolescence(lang, cfg, rng, g);
     }
     // Distinct words → rivalry still fires; one of the two should be gone.
-    const surviving = ["cat", "bat"].filter((m) => lang.lexicon[m]);
+    const surviving = ["cat", "bat"].filter((m) => lexGet(lang, m));
     expect(surviving.length).toBeLessThanOrEqual(1);
   });
 
@@ -199,11 +208,11 @@ describe("Phase 21d — obsolescence respects polysemy", () => {
     cfg.obsolescence.maxDistanceForRivalry = 2;
     const rng = makeRng("kill-syncs-words");
     // Run until exactly one survives.
-    for (let g = 0; g < 50 && Object.keys(lang.lexicon).length > 1; g++) {
+    for (let g = 0; g < 50 && lexKeys(lang).length > 1; g++) {
       stepObsolescence(lang, cfg, rng, g);
     }
     // The words array should match the surviving lexicon (1 word, 1 sense).
-    const survivingMeanings = Object.keys(lang.lexicon);
+    const survivingMeanings = lexKeys(lang);
     expect(survivingMeanings.length).toBe(1);
     expect(lang.words).toHaveLength(1);
     expect(lang.words![0]!.senses[0]!.meaning).toBe(survivingMeanings[0]);
@@ -220,8 +229,8 @@ describe("Phase 21d — stepPhonology integration", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
     // Plant two test meanings with identical post-phonology forms.
-    lang.lexicon["__test_a__"] = ["x", "y", "z"];
-    lang.lexicon["__test_b__"] = ["x", "y", "z"];
+    lexSet(lang, "__test_a__", ["x", "y", "z"]);
+    lexSet(lang, "__test_b__", ["x", "y", "z"]);
     addWord(lang, ["x", "y", "z"], "__test_a__", { bornGeneration: 0 });
     addWord(lang, ["a", "b", "c"], "__test_b__", { bornGeneration: 0 });
     // Words table starts with two distinct entries; one points at the

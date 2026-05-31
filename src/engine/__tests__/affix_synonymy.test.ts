@@ -6,6 +6,7 @@ import {
   selectAffixesForCategory,
 } from "../lexicon/affixSelector";
 import { lookupFormWithResolution } from "../lexicon/lookup";
+import { lexGet, lexHas } from "../lexicon/access";
 
 /**
  * affix_synonymy.test.ts
@@ -115,7 +116,7 @@ describe("Phase 53 T5 — affix synonymy via abstract concept system", () => {
     const result = lookupFormWithResolution(lang, "lightness");
     if (result.resolution === "synth-affix") {
       // synth-affix fired → expect primary written + synonyms attached.
-      expect(lang.lexicon["lightness"]).toBeDefined();
+      expect(lexGet(lang, "lightness")).toBeDefined();
       const allSenses = lang.words!.filter((w) =>
         w.senses.some((s) => s.meaning === "lightness"),
       );
@@ -143,7 +144,7 @@ describe("Phase 53 T5 — affix synonymy via abstract concept system", () => {
       });
     }
     lookupFormWithResolution(lang, "kindness");
-    if (lang.lexicon["kindness"]) {
+    if (lexHas(lang, "kindness")) {
       const synonymWords = lang.words!.filter((w) =>
         w.senses.some((s) => s.meaning === "kindness" && s.synonym),
       );

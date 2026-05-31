@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { lookupForm, lookupFormWithResolution } from "../lookup";
 import { presetEnglish } from "../../presets/english";
 import { createSimulation } from "../../simulation";
+import { lexGet, lexHas, lexDelete } from "../access";
 
 /**
  * lookup.test.ts
@@ -16,7 +17,7 @@ describe("Phase 52 T1 — lookup abstraction", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree["L-0"]!.language;
     const out = lookupFormWithResolution(lang, "water");
-    expect(out.form).toEqual(lang.lexicon["water"]);
+    expect(out.form).toEqual(lexGet(lang, "water"));
     expect(out.resolution).toBe("direct");
   });
 
@@ -43,7 +44,7 @@ describe("Phase 52 T1 — lookup abstraction", () => {
   it("closed-class lemmas (be) don't trigger fallback coinage", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree["L-0"]!.language;
-    delete lang.lexicon["be"];
+    lexDelete(lang, "be");
     const out = lookupFormWithResolution(lang, "be");
     // Either pivots to a related form (fallback) or gets the literal
     // quote — never synth-fallback because FALLBACK_SKIP gates it.
@@ -53,7 +54,7 @@ describe("Phase 52 T1 — lookup abstraction", () => {
   it("lookupForm is the form-only convenience over the same logic", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree["L-0"]!.language;
-    expect(lookupForm(lang, "water")).toEqual(lang.lexicon["water"]);
+    expect(lookupForm(lang, "water")).toEqual(lexGet(lang, "water"));
     expect(lookupForm(lang, "asdfgh")).toBeNull();
   });
 
@@ -63,9 +64,9 @@ describe("Phase 52 T1 — lookup abstraction", () => {
     if (lang.compounds && Object.keys(lang.compounds).length > 0) {
       const m = Object.keys(lang.compounds)[0]!;
       const meta = lang.compounds[m]!;
-      const allPartsHave = meta.parts.every((p) => lang.lexicon[p]);
+      const allPartsHave = meta.parts.every((p) => lexHas(lang, p));
       if (allPartsHave) {
-        delete lang.lexicon[m];
+        lexDelete(lang, m);
         const out = lookupFormWithResolution(lang, m);
         expect(out.form).not.toBeNull();
         expect(out.glossNote).toContain("compound");

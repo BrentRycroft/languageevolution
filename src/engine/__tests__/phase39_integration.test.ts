@@ -6,6 +6,7 @@ import { createSimulation } from "../simulation";
 import { addSynonym } from "../lexicon/mutate";
 import { syncWordsFromLexicon } from "../lexicon/word";
 import { formatNumeral } from "../translator/numerals";
+import { lexGet } from "../lexicon/access";
 import type { Language } from "../types";
 
 /**
@@ -91,7 +92,7 @@ describe("Phase 39h — cross-system integration", () => {
     const sim = createSimulation(presetRomance());
     const root = sim.getState().tree[sim.getState().rootId]!.language;
     // 'wind' was ["v","e","n","t","u"] pre-39e; should now use β.
-    const wind = root.lexicon["wind"];
+    const wind = lexGet(root, "wind");
     expect(wind).toBeDefined();
     if (!wind) return;
     expect(wind).toContain("β");

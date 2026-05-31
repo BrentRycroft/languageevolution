@@ -4,6 +4,7 @@ import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 import { tryBorrow } from "../contact/borrow";
 import { makeRng } from "../rng";
+import { lexSet, lexDelete } from "../lexicon/access";
 
 /**
  * contact.test.ts
@@ -70,14 +71,16 @@ describe("contact / loanwords", () => {
       id: farId,
       name: "Far",
       coords: { x: 500, y: 0 },
-      lexicon: { ...nearLang.lexicon, distant_thing: ["d", "i", "s"] },
+      lexicon: { ...nearLang.lexicon },
+      conceptIds: { ...nearLang.conceptIds },
     };
+    lexSet(farLang, "distant_thing", ["d", "i", "s"]);
     state.tree[farId] = {
       language: farLang,
       parentId: state.tree[nearId]!.parentId,
       childrenIds: [],
     };
-    nearLang.lexicon.nearby_thing = ["n", "a", "r"];
+    lexSet(nearLang, "nearby_thing", ["n", "a", "r"]);
 
     let nearHits = 0;
     let farHits = 0;
@@ -85,10 +88,11 @@ describe("contact / loanwords", () => {
       const r = {
         ...recipient,
         lexicon: { ...recipient.lexicon },
+        conceptIds: { ...recipient.conceptIds },
         wordFrequencyHints: { ...recipient.wordFrequencyHints },
       };
-      delete r.lexicon.nearby_thing;
-      delete r.lexicon.distant_thing;
+      lexDelete(r, "nearby_thing");
+      lexDelete(r, "distant_thing");
       const rng = makeRng("geo-" + i);
       const loan = tryBorrow(r, state.tree, rng, 1.0);
       if (!loan) continue;

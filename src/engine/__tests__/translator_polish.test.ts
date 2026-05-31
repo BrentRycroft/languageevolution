@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { translateSentence } from "../translator/sentence";
 import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
+import { setLexiconForm } from "../lexicon/mutate";
 
 /**
  * translator_polish.test.ts
@@ -48,7 +49,7 @@ describe("translator polish — predicate adjectives", () => {
       position: "suffix",
       category: "adj.num.pl",
     };
-    lang.lexicon["happy"] = ["w", "e", "l"];
+    setLexiconForm(lang, "happy", ["w", "e", "l"], { bornGeneration: lang.birthGeneration ?? 0 });
     const out = translateSentence(lang, "the kings are happy");
     const adj = out.targetTokens.find((t) => t.englishLemma === "happy");
     expect(adj?.targetSurface).toMatch(/s$/);

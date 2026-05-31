@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { translateSentence } from "../translator/sentence";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
+import { lexSet, lexHas } from "../lexicon/access";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
 
@@ -17,13 +18,13 @@ function freshLang(seed: string): Language {
   const sim = createSimulation({ ...defaultConfig(), seed });
   sim.step();
   const lang = sim.getState().tree["L-0"]!.language;
-  if (!lang.lexicon["king"]) lang.lexicon["king"] = ["k", "i", "n"];
-  if (!lang.lexicon["dog"]) lang.lexicon["dog"] = ["k", "u"];
-  if (!lang.lexicon["see"]) lang.lexicon["see"] = ["s", "i"];
-  if (!lang.lexicon["water"]) lang.lexicon["water"] = ["w", "a", "t"];
-  if (!lang.lexicon["wolf"]) lang.lexicon["wolf"] = ["w", "u", "l"];
-  if (!lang.lexicon["big"]) lang.lexicon["big"] = ["b", "u", "k"];
-  if (!lang.lexicon["three"]) lang.lexicon["three"] = ["t", "r", "i"];
+  if (!lexHas(lang, "king")) lexSet(lang, "king", ["k", "i", "n"]);
+  if (!lexHas(lang, "dog")) lexSet(lang, "dog", ["k", "u"]);
+  if (!lexHas(lang, "see")) lexSet(lang, "see", ["s", "i"]);
+  if (!lexHas(lang, "water")) lexSet(lang, "water", ["w", "a", "t"]);
+  if (!lexHas(lang, "wolf")) lexSet(lang, "wolf", ["w", "u", "l"]);
+  if (!lexHas(lang, "big")) lexSet(lang, "big", ["b", "u", "k"]);
+  if (!lexHas(lang, "three")) lexSet(lang, "three", ["t", "r", "i"]);
   return lang;
 }
 
@@ -250,7 +251,7 @@ describe("§gap-8 — yes/no question strategies", () => {
 describe("§gap-9 — fusionIndex collapses adjacent duplicate phonemes at affix seams", () => {
   it("agglutinative (low fusion) keeps the seam visible", () => {
     const lang = freshLang("agg");
-    lang.lexicon["go"] = ["g", "o", "d"];
+    lexSet(lang, "go", ["g", "o", "d"]);
     lang.grammar.synthesisIndex = 4;
     lang.grammar.fusionIndex = 0.0;
     lang.morphology.paradigms["verb.tense.past"] = p("verb.tense.past", ["d", "e"]);
@@ -261,7 +262,7 @@ describe("§gap-9 — fusionIndex collapses adjacent duplicate phonemes at affix
 
   it("fusional (high fusion) collapses the seam", () => {
     const lang = freshLang("fus");
-    lang.lexicon["go"] = ["g", "o", "d"];
+    lexSet(lang, "go", ["g", "o", "d"]);
     lang.grammar.synthesisIndex = 4;
     lang.grammar.fusionIndex = 0.9;
     lang.morphology.paradigms["verb.tense.past"] = p("verb.tense.past", ["d", "e"]);
@@ -276,9 +277,9 @@ describe("§gap-1b — genitive surfaces from 'X of Y' English construction", ()
     const sim = createSimulation({ ...defaultConfig(), seed: "of-gen" });
     sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
-    if (!lang.lexicon["king"]) lang.lexicon["king"] = ["k", "i", "n"];
-    if (!lang.lexicon["dog"]) lang.lexicon["dog"] = ["k", "u"];
-    if (!lang.lexicon["see"]) lang.lexicon["see"] = ["s", "i"];
+    if (!lexHas(lang, "king")) lexSet(lang, "king", ["k", "i", "n"]);
+    if (!lexHas(lang, "dog")) lexSet(lang, "dog", ["k", "u"]);
+    if (!lexHas(lang, "see")) lexSet(lang, "see", ["s", "i"]);
     lang.grammar.hasCase = true;
     lang.grammar.caseStrategy = "case";
     lang.morphology.paradigms["noun.case.gen"] = p("noun.case.gen", ["s"]);

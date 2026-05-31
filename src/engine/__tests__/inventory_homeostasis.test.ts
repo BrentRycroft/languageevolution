@@ -11,6 +11,7 @@ import {
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
+import { lexSet } from "../lexicon/access";
 import type { Language } from "../types";
 
 /**
@@ -123,7 +124,7 @@ describe("Phase 27.1 — stepInventoryHomeostasis", () => {
       ...novel,
     ];
     for (let i = 0; i < novel.length; i++) {
-      lang.lexicon[`__junk_${i}__`] = ["a", novel[i]!];
+      lexSet(lang, `__junk_${i}__`, ["a", novel[i]!]);
     }
     expect(lang.phonemeInventory.segmental.length).toBe(startSize);
     expect(inventorySizePressure(lang)).toBeGreaterThan(0);

@@ -5,6 +5,7 @@ import { presetRomance } from "../presets/romance";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
 import { reverseTranslate } from "../translator/reverse";
 import { formToString } from "../phonology/ipa";
+import { lexKeys, lexGet } from "../lexicon/access";
 import type { SimulationConfig } from "../types";
 
 /**
@@ -40,7 +41,7 @@ describe("narrative gloss — derived keys never leak affix scaffolding", () => 
       // Sanity: the run actually produced derived keys, so the test exercises
       // the cleaning path rather than passing vacuously.
       const bound = lang.boundMorphemes ?? new Set<string>();
-      const derivedKeys = Object.keys(lang.lexicon).filter(
+      const derivedKeys = lexKeys(lang).filter(
         (m) => !bound.has(m) && SCAFFOLD.test(m),
       );
       expect(derivedKeys.length).toBeGreaterThan(0);
@@ -66,12 +67,12 @@ describe("translator reverse — derived target words gloss cleanly", () => {
       for (let i = 0; i < 50; i++) sim.step();
       const lang = sim.getState().tree["L-0"]!.language;
       const bound = lang.boundMorphemes ?? new Set<string>();
-      const derived = Object.keys(lang.lexicon).filter(
-        (m) => !bound.has(m) && SCAFFOLD.test(m) && (lang.lexicon[m]?.length ?? 0) > 0,
+      const derived = lexKeys(lang).filter(
+        (m) => !bound.has(m) && SCAFFOLD.test(m) && (lexGet(lang, m)?.length ?? 0) > 0,
       );
       expect(derived.length).toBeGreaterThan(0);
       for (const m of derived) {
-        const surface = formToString(lang.lexicon[m]!);
+        const surface = formToString(lexGet(lang, m)!);
         const rev = reverseTranslate(lang, surface);
         expect(
           SCAFFOLD.test(rev.english),

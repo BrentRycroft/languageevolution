@@ -1,7 +1,8 @@
-import type { Language, Lexicon, SoundChange, WordForm } from "../types";
+import type { Language, Lexicon, Meaning, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isFormLegal } from "./wordShape";
 import { lexGet, lexKeys } from "../lexicon/access";
+import { conceptIdFor } from "../lexicon/conceptIdentity";
 
 /**
  * regular.ts
@@ -51,7 +52,15 @@ export function applyOneRegularChange(
     }
     next[m] = form;
   }
-  lang.lexicon = next;
+  // `next` was built gloss-keyed (preserving the per-meaning RNG draw order
+  // above); re-key it to the canonical ConceptId store. Every surviving
+  // meaning already has a ConceptId, so conceptIdFor is a lookup, and the
+  // insertion order carries over (positional parity with the old store).
+  const nextCid: Lexicon = {};
+  for (const m of Object.keys(next)) {
+    nextCid[conceptIdFor(lang, m as Meaning)] = next[m as Meaning]!;
+  }
+  lang.lexicon = nextCid;
   for (const m of dropped) {
     delete lang.wordFrequencyHints[m];
     delete lang.lastChangeGeneration[m];

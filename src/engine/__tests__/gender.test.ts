@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { assignGenderHeuristic, assignAllGenders, genderOf } from "../morphology/gender";
 import { inflect } from "../morphology/evolve";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 import type { Language } from "../types";
 
 /**
@@ -12,7 +13,7 @@ import type { Language } from "../types";
  */
 
 function makeLang(opts: Partial<Language> = {}): Language {
-  return {
+  const lang = {
     id: "L-g",
     name: "Test",
     lexicon: {},
@@ -43,7 +44,9 @@ function makeLang(opts: Partial<Language> = {}): Language {
     otRanking: [],
     lastChangeGeneration: {},
     ...opts,
-  };
+  } as Language;
+  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("gender heuristic", () => {

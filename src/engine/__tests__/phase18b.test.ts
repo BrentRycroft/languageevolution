@@ -9,7 +9,8 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
-import type { GrammarFeatures, Language, Lexicon } from "../types";
+import { lexSet } from "../lexicon/access";
+import type { GrammarFeatures, Language, Meaning, WordForm } from "../types";
 import type { TranslatedToken } from "../translator/sentence";
 
 /**
@@ -20,11 +21,15 @@ import type { TranslatedToken } from "../translator/sentence";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
-  return {
+function makeLang(
+  overrides: Omit<Partial<Language>, "lexicon"> = {},
+  glossLexicon: Record<Meaning, WordForm> = {},
+): Language {
+  const lang: Language = {
     id: "L-b",
     name: "Test",
-    lexicon,
+    lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -46,6 +51,10 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     lastChangeGeneration: {},
     ...overrides,
   };
+  for (const [m, f] of Object.entries(glossLexicon)) {
+    lexSet(lang, m as Meaning, f);
+  }
+  return lang;
 }
 
 describe("Phase 18b — deeper engine work", () => {

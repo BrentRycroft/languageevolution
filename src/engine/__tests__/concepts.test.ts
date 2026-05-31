@@ -11,6 +11,8 @@ import { lexicalCapacity, computeTierCandidate } from "../lexicon/tier";
 import { maybeRecarve } from "../semantics/recarve";
 import { makeRng } from "../rng";
 import type { Language, LanguageTree } from "../types";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { lexGet, lexHas } from "../lexicon/access";
 
 /**
  * concepts.test.ts
@@ -21,7 +23,7 @@ import type { Language, LanguageTree } from "../types";
  */
 
 function testLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const lang: Language = {
     id: "L-c",
     name: "Test",
     lexicon: {},
@@ -51,6 +53,8 @@ function testLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("concept dictionary", () => {
@@ -137,8 +141,8 @@ describe("re-carving", () => {
     if (ev.kind === "merge") {
       expect(ev.winner).toBe("hand");
       expect(ev.loser).toBe("arm");
-      expect(lang.lexicon["hand"]).toBeDefined();
-      expect(lang.lexicon["arm"]).toBeUndefined();
+      expect(lexGet(lang, "hand")).toBeDefined();
+      expect(lexHas(lang, "arm")).toBe(false);
       expect(lang.colexifiedAs?.["hand"]).toContain("arm");
     } else {
       expect(["arm", "hand"]).toContain(ev.source);
@@ -157,7 +161,7 @@ describe("re-carving", () => {
     if (ev.kind === "split") {
       expect(ev.source).toBe("tongue");
       expect(colexWith("tongue")).toContain(ev.newTarget!);
-      expect(lang.lexicon[ev.newTarget!]).toEqual(["t", "o", "n"]);
+      expect(lexGet(lang, ev.newTarget!)).toEqual(["t", "o", "n"]);
     }
   });
 

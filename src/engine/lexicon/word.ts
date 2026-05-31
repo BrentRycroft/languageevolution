@@ -4,6 +4,7 @@ import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { lexGet, lexHas, lexEntries } from "./access";
+import { conceptIdFor } from "./conceptIdentity";
 
 /**
  * Stable join key for a phonemic form. Two words with the same key are
@@ -438,7 +439,9 @@ export function syncLexiconFromWords(lang: Language): void {
     }
   }
   for (const [meaning, { word }] of Object.entries(bestBySense)) {
-    nextLexicon[meaning] = word.form.slice();
+    // Canonical store is ConceptId-keyed; resolve each gloss to its concept.
+    // Insertion order follows bestBySense (gloss first-seen order), unchanged.
+    nextLexicon[conceptIdFor(lang, meaning)] = word.form.slice();
   }
   lang.lexicon = nextLexicon;
   // Only overwrite colexifiedAs when we have data; pre-existing entries

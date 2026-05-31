@@ -7,6 +7,8 @@ import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { lexGet } from "../lexicon/access";
 
 /**
  * realism_round3.test.ts
@@ -17,7 +19,7 @@ import type { Paradigm } from "../morphology/types";
  */
 
 function minimalLanguage(overrides: Partial<Language> = {}): Language {
-  return {
+  const lang: Language = {
     id: "L-test",
     name: "Test",
     lexicon: {},
@@ -47,6 +49,8 @@ function minimalLanguage(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 describe("realism round 3", () => {
@@ -107,7 +111,7 @@ describe("realism round 3", () => {
       expect(fired).not.toBeNull();
       expect(fired!.meaning).toBe("go");
       expect(fired!.donorMeaning).toBe("walk");
-      const inflected = inflect(lang.lexicon["go"]!, paradigm, lang, "go");
+      const inflected = inflect(lexGet(lang, "go")!, paradigm, lang, "go");
       expect(inflected).toEqual(["w", "a", "l", "k"]);
     });
   });

@@ -9,6 +9,7 @@ import {
 } from "../translator/sentence";
 import { reverseLookupForm, reverseTranslate } from "../translator/reverse";
 import type { Language } from "../types";
+import { lexSet } from "../lexicon/access";
 
 /**
  * words_phase21b.test.ts
@@ -19,10 +20,12 @@ import type { Language } from "../types";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const { lexicon: seedLexicon, conceptIds: _cids, ...rest } = overrides;
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -46,8 +49,14 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     orthography: {},
     otRanking: [],
     lastChangeGeneration: {},
-    ...overrides,
+    ...rest,
   };
+  if (seedLexicon) {
+    for (const [g, form] of Object.entries(seedLexicon)) {
+      lexSet(lang, g, form);
+    }
+  }
+  return lang;
 }
 
 describe("Phase 21b — disambiguateSense", () => {

@@ -1,6 +1,7 @@
 import type { WordForm } from "../types";
 import type { PhonologyState, LexiconState } from "../domains";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexGet } from "../lexicon/access";
+import type { ConceptId } from "../lexicon/conceptIdentity";
 
 /**
  * stratal.ts — Phase 72g T1.
@@ -36,8 +37,8 @@ import { lexGet, lexKeys } from "../lexicon/access";
  */
 export function enableStratalMode(lang: PhonologyState & LexiconState): void {
   lang.lexiconUR = {};
-  for (const meaning of lexKeys(lang)) {
-    lang.lexiconUR[meaning] = lexGet(lang, meaning)!.slice();
+  for (const cid of Object.keys(lang.lexicon)) {
+    lang.lexiconUR[cid] = lang.lexicon[cid as ConceptId]!.slice();
   }
   lang.lexiconURRefreshPolicy = "each-gen";
 }
@@ -51,8 +52,8 @@ export function enableStratalMode(lang: PhonologyState & LexiconState): void {
  */
 export function enableStratalModeManual(lang: PhonologyState & LexiconState): void {
   lang.lexiconUR = {};
-  for (const meaning of lexKeys(lang)) {
-    lang.lexiconUR[meaning] = lexGet(lang, meaning)!.slice();
+  for (const cid of Object.keys(lang.lexicon)) {
+    lang.lexiconUR[cid] = lang.lexicon[cid as ConceptId]!.slice();
   }
   lang.lexiconURRefreshPolicy = "manual";
 }
@@ -67,8 +68,8 @@ export function enableStratalModeManual(lang: PhonologyState & LexiconState): vo
 export function refreshUR(lang: PhonologyState & LexiconState): void {
   if (lang.lexiconUR === undefined) return;
   lang.lexiconUR = {};
-  for (const meaning of lexKeys(lang)) {
-    lang.lexiconUR[meaning] = lexGet(lang, meaning)!.slice();
+  for (const cid of Object.keys(lang.lexicon)) {
+    lang.lexiconUR[cid] = lang.lexicon[cid as ConceptId]!.slice();
   }
 }
 
@@ -77,8 +78,9 @@ export function refreshUR(lang: PhonologyState & LexiconState): void {
  * surface form when stratal mode is not enabled (back-compat).
  */
 export function getUR(lang: PhonologyState & LexiconState, meaning: string): WordForm | undefined {
-  if (lang.lexiconUR && lang.lexiconUR[meaning]) {
-    return lang.lexiconUR[meaning];
+  const cid = lang.conceptIds?.[meaning] as ConceptId | undefined;
+  if (lang.lexiconUR && cid && lang.lexiconUR[cid]) {
+    return lang.lexiconUR[cid];
   }
   return lexGet(lang, meaning);
 }
@@ -92,7 +94,8 @@ export function getUR(lang: PhonologyState & LexiconState, meaning: string): Wor
  */
 export function isOpaque(lang: PhonologyState & LexiconState, meaning: string): boolean {
   if (!lang.lexiconUR) return false;
-  const ur = lang.lexiconUR[meaning];
+  const cid = lang.conceptIds?.[meaning] as ConceptId | undefined;
+  const ur = cid ? lang.lexiconUR[cid] : undefined;
   const sr = lexGet(lang, meaning);
   if (!ur || !sr) return false;
   if (ur.length !== sr.length) return true;

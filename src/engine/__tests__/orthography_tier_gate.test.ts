@@ -6,7 +6,8 @@ import {
   tierOrthographyMultiplier,
 } from "../phonology/orthography";
 import { makeRng } from "../rng";
-import type { Language } from "../types";
+import { lexSet, lexGet } from "../lexicon/access";
+import type { Language, Meaning, WordForm } from "../types";
 
 /**
  * orthography_tier_gate.test.ts
@@ -16,11 +17,15 @@ import type { Language } from "../types";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+function makeLang(
+  overrides: Omit<Partial<Language>, "lexicon"> = {},
+  glossLexicon: Record<Meaning, WordForm> = {},
+): Language {
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
+    conceptIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -46,6 +51,10 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
+  for (const [m, f] of Object.entries(glossLexicon)) {
+    lexSet(lang, m as Meaning, f);
+  }
+  return lang;
 }
 
 describe("tierOrthographyMultiplier", () => {
@@ -111,11 +120,10 @@ describe("driftOrthography tier gate", () => {
 describe("freezeLexicalSpelling", () => {
   it("never fires for tier-0/1/2 languages", () => {
     for (const tier of [0, 1, 2] as const) {
-      const lang = makeLang({
-        culturalTier: tier,
-        lexicon: { house: ["h", "a", "w", "s"] },
-        wordFrequencyHints: { house: 0.9 },
-      });
+      const lang = makeLang(
+        { culturalTier: tier, wordFrequencyHints: { house: 0.9 } },
+        { house: ["h", "a", "w", "s"] },
+      );
       for (let i = 0; i < 100; i++) {
         const r = freezeLexicalSpelling(lang, makeRng(`f${tier}-${i}`), 0.5);
         if (r) throw new Error(`unexpected freeze at tier ${tier}`);
@@ -125,11 +133,10 @@ describe("freezeLexicalSpelling", () => {
   });
 
   it("freezes a high-frequency word for tier-3 languages", () => {
-    const lang = makeLang({
-      culturalTier: 3,
-      lexicon: { house: ["h", "a", "w", "s"] },
-      wordFrequencyHints: { house: 0.9 },
-    });
+    const lang = makeLang(
+      { culturalTier: 3, wordFrequencyHints: { house: 0.9 } },
+      { house: ["h", "a", "w", "s"] },
+    );
     let result: { meaning: string; spelling: string } | null = null;
     for (let i = 0; i < 50 && !result; i++) {
       result = freezeLexicalSpelling(lang, makeRng(`f3-${i}`), 1.0);
@@ -141,11 +148,10 @@ describe("freezeLexicalSpelling", () => {
   });
 
   it("ignores low-frequency words", () => {
-    const lang = makeLang({
-      culturalTier: 3,
-      lexicon: { obscure: ["o", "b", "s"] },
-      wordFrequencyHints: { obscure: 0.2 },
-    });
+    const lang = makeLang(
+      { culturalTier: 3, wordFrequencyHints: { obscure: 0.2 } },
+      { obscure: ["o", "b", "s"] },
+    );
     for (let i = 0; i < 50; i++) {
       const r = freezeLexicalSpelling(lang, makeRng(`fl-${i}`), 1.0);
       expect(r).toBeNull();
@@ -153,12 +159,10 @@ describe("freezeLexicalSpelling", () => {
   });
 
   it("doesn't re-freeze a meaning that already has a spelling", () => {
-    const lang = makeLang({
-      culturalTier: 3,
-      lexicon: { house: ["h", "a", "w", "s"] },
-      wordFrequencyHints: { house: 0.9 },
-      lexicalSpelling: { house: "hous" },
-    });
+    const lang = makeLang(
+      { culturalTier: 3, wordFrequencyHints: { house: 0.9 }, lexicalSpelling: { house: "hous" } },
+      { house: ["h", "a", "w", "s"] },
+    );
     for (let i = 0; i < 50; i++) {
       const r = freezeLexicalSpelling(lang, makeRng(`fr-${i}`), 1.0);
       expect(r).toBeNull();
@@ -169,12 +173,11 @@ describe("freezeLexicalSpelling", () => {
 
 describe("romanize honours lexicalSpelling", () => {
   it("returns the frozen spelling verbatim regardless of phoneme drift", () => {
-    const lang = makeLang({
-      culturalTier: 3,
-      lexicon: { knight: ["n", "a", "j", "t"] }, // already drifted from /knixt/
-      lexicalSpelling: { knight: "knight" },
-    });
-    const out = romanize(lang.lexicon.knight!, lang, "knight");
+    const lang = makeLang(
+      { culturalTier: 3, lexicalSpelling: { knight: "knight" } },
+      { knight: ["n", "a", "j", "t"] }, // already drifted from /knixt/
+    );
+    const out = romanize(lexGet(lang, "knight")!, lang, "knight");
     expect(out).toBe("knight");
   });
 

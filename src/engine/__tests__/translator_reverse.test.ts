@@ -5,6 +5,7 @@ import {
 } from "../translator/sentence";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
+import { lexGet } from "../lexicon/access";
 
 /**
  * translator_reverse.test.ts
@@ -24,7 +25,7 @@ describe("translator reverse direction", () => {
     const lang = englishLang();
     const index = buildReverseIndex(lang);
     // English's "cat" is /kæt/.
-    const catIpa = lang.lexicon.cat!.join("");
+    const catIpa = lexGet(lang, "cat")!.join("");
     // Phase 21b: index returns Meaning[]; "cat" is the sole sense.
     expect(index.get(catIpa)).toEqual(["cat"]);
   });
@@ -34,14 +35,14 @@ describe("translator reverse direction", () => {
     const index = buildReverseIndex(lang);
     // Most English IPA is already lowercase, but a few use uppercase
     // diacritics. Spot check via lookup case.
-    const watIpa = lang.lexicon.water!.join("");
+    const watIpa = lexGet(lang, "water")!.join("");
     expect(index.get(watIpa.toLowerCase())).toEqual(["water"]);
   });
 
   it("reverseParseToTokens splits whitespace and resolves each token", () => {
     const lang = englishLang();
-    const dog = lang.lexicon.dog!.join("");
-    const cat = lang.lexicon.cat!.join("");
+    const dog = lexGet(lang, "dog")!.join("");
+    const cat = lexGet(lang, "cat")!.join("");
     const tokens = reverseParseToTokens(lang, `${dog} ${cat}`);
     expect(tokens).toHaveLength(2);
     expect(tokens[0]?.englishLemma).toBe("dog");

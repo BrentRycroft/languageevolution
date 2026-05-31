@@ -6,6 +6,7 @@ import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import { EmptyState } from "./components/EmptyState";
 import { ExportButtons } from "./components/ExportButtons";
+import { lexGet, lexSize } from "../engine/lexicon/access";
 
 /**
  * StatsPanel.tsx
@@ -47,7 +48,7 @@ export function StatsPanel() {
     let total = 0;
     let count = 0;
     for (const m of meanings) {
-      const form = lang.lexicon[m];
+      const form = lexGet(lang, m);
       const original = seed[m];
       if (form && original) {
         total += levenshtein(form, original);
@@ -85,7 +86,7 @@ export function StatsPanel() {
       age: state.generation - lang.birthGeneration,
       changes: lang.enabledChangeIds.length,
       mean: count > 0 ? total / count : 0,
-      words: Object.keys(lang.lexicon).length,
+      words: lexSize(lang),
       conservatism: lang.conservatism,
       tier: (lang.culturalTier ?? 0) as Tier,
       speakers: lang.speakers ?? 0,

@@ -6,7 +6,8 @@ import { presetRomance } from "../presets/romance";
 import { presetGermanic } from "../presets/germanic";
 import { presetTokipona } from "../presets/tokipona";
 import { presetEnglish } from "../presets/english";
-import { orderedLexiconKeys } from "../lexicon/conceptIdentity";
+import { orderedLexiconKeys, orderedConceptIds, meaningForConceptId } from "../lexicon/conceptIdentity";
+import { lexKeys } from "../lexicon/access";
 import type { SimulationConfig } from "../types";
 
 /**
@@ -28,11 +29,19 @@ const PRESETS: Record<string, () => SimulationConfig> = {
   english: presetEnglish,
 };
 
-describe("B1 concept-order seam — canonical order is sorted glosses", () => {
+describe("concept-order seam — canonical order is sorted glosses", () => {
   for (const [name, build] of Object.entries(PRESETS)) {
-    it(`${name}: orderedLexiconKeys == Object.keys(lexicon).sort()`, () => {
+    it(`${name}: orderedLexiconKeys is the sorted gloss sequence`, () => {
       const lang = createSimulation(build()).getState().tree["L-0"]!.language;
-      expect(orderedLexiconKeys(lang.lexicon)).toEqual(Object.keys(lang.lexicon).sort());
+      // Post-flip the store is ConceptId-keyed; the canonical order is the
+      // GLOSSES sorted (resolved from the store keys).
+      expect(orderedLexiconKeys(lang)).toEqual(lexKeys(lang).sort());
+      // orderedConceptIds returns the SAME glosses' store keys in the SAME
+      // order, so the RNG hot path draws in the identical per-word sequence.
+      const cidGlosses = orderedConceptIds(lang.lexicon, lang).map(
+        (cid) => meaningForConceptId(lang, cid)!,
+      );
+      expect(cidGlosses).toEqual(orderedLexiconKeys(lang));
     });
   }
 });

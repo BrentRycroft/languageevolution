@@ -6,6 +6,7 @@ import { fnv1a } from "../engine/rng";
 import { formatForm } from "../engine/phonology/display";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 import type { Language, LanguageNode, LanguageTree } from "../engine/types";
+import { lexGet, lexHas, lexSize } from "../engine/lexicon/access";
 
 /**
  * MapView.tsx
@@ -314,8 +315,8 @@ export function MapView() {
         {smoothedLabels.map(({ langId, lang, point }) => {
           const { px, py } = project(point.x, point.y);
           const sample =
-            selectedMeaning && lang.lexicon[selectedMeaning]
-              ? formatForm(lang.lexicon[selectedMeaning]!, lang, script)
+            selectedMeaning && lexHas(lang, selectedMeaning)
+              ? formatForm(lexGet(lang, selectedMeaning)!, lang, script)
               : "";
           return (
             <g
@@ -544,13 +545,13 @@ function renderCellTooltip(
   const lang = tree[ownerId]!.language;
   const tier = lang.culturalTier ?? 0;
   const samples: string[] = [];
-  if (selectedMeaning && lang.lexicon[selectedMeaning]) {
-    samples.push(`${selectedMeaning}: ${formatForm(lang.lexicon[selectedMeaning]!, lang, script)}`);
+  if (selectedMeaning && lexHas(lang, selectedMeaning)) {
+    samples.push(`${selectedMeaning}: ${formatForm(lexGet(lang, selectedMeaning)!, lang, script)}`);
   }
   for (const m of ["water", "fire", "mother"]) {
     if (samples.length >= 3) break;
     if (m === selectedMeaning) continue;
-    if (lang.lexicon[m]) samples.push(`${m}: ${formatForm(lang.lexicon[m]!, lang, script)}`);
+    if (lexHas(lang, m)) samples.push(`${m}: ${formatForm(lexGet(lang, m)!, lang, script)}`);
   }
   return (
     <div>
@@ -562,7 +563,7 @@ function renderCellTooltip(
         {(lang.speakers ?? 0).toLocaleString()} speakers · tier {tier} ({TIER_LABELS[tier as 0 | 1 | 2 | 3]})
       </div>
       <div className="t-muted">
-        {(lang.territory?.cells.length ?? 0)} cells · {Object.keys(lang.lexicon).length} words
+        {(lang.territory?.cells.length ?? 0)} cells · {lexSize(lang)} words
       </div>
       {samples.length > 0 && (
         <div style={{ marginTop: 4, fontFamily: "var(--font-mono)", fontSize: 10 }}>

@@ -6,6 +6,8 @@ import { buildInitialState } from "../steps/init";
 import { presetEnglish } from "../presets/english";
 import type { Language } from "../types";
 import type { DerivationalSuffix, DerivationCategory } from "../lexicon/derivation";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { lexGet } from "../lexicon/access";
 
 /**
  * Phase 49 acceptance tests for language-agnostic word formation.
@@ -24,7 +26,7 @@ import type { DerivationalSuffix, DerivationCategory } from "../lexicon/derivati
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  return {
+  const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
@@ -53,6 +55,8 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 function suffixEntry(
@@ -188,7 +192,7 @@ describe("Phase 49 — waterdom regression (the user's bug)", () => {
     const lang = state.tree[rootId]!.language;
 
     // Sanity: stem and affix both seeded.
-    expect(lang.lexicon.water).toBeDefined();
+    expect(lexGet(lang, "water")).toBeDefined();
     const dom = lang.derivationalSuffixes?.find((s) => s.tag === "-dom");
     expect(dom).toBeDefined();
     // The pre-fix bug: -dom was non-productive with random phonemes.
@@ -200,7 +204,7 @@ describe("Phase 49 — waterdom regression (the user's bug)", () => {
     expect(result).not.toBeNull();
     expect(result!.resolution).toBe("synth-affix");
     expect(result!.glossNote).toBe("water + -dom");
-    expect(result!.form).toEqual([...lang.lexicon.water!, "d", "ə", "m"]);
+    expect(result!.form).toEqual([...lexGet(lang, "water")!, "d", "ə", "m"]);
   });
 
   it("modern English at gen 0 also resolves 'sadness' and 'lightness'", () => {

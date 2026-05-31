@@ -3,6 +3,7 @@ import { useSimStore } from "../state/store";
 import { leafIds } from "../engine/tree/split";
 import { Z } from "./zIndex";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
+import { lexSize } from "../engine/lexicon/access";
 
 /**
  * SelectedLanguageBar.tsx
@@ -81,7 +82,7 @@ export function SelectedLanguageBar() {
         {tempo} {selected.conservatism.toFixed(2)}
       </span>
       <span>{speakers.toLocaleString()} speakers</span>
-      <span>{Object.keys(selected.lexicon).length} words</span>
+      <span>{lexSize(selected)} words</span>
       {selected.toneRegime === "tonal" && (
         <span
           title="Tonal language — every tone-bearing syllable carries a tone"

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { translateSentence } from "../translator/sentence";
 import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
+import { lexGet, lexHas, lexDelete } from "../lexicon/access";
 
 /**
  * copula.test.ts
@@ -50,7 +51,7 @@ describe("copula handling — language-agnostic", () => {
 
   it("zero-copula languages drop the copula but keep subject + complement + negation", () => {
     const lang = preset(presetPIE);
-    delete lang.lexicon["be"];
+    lexDelete(lang, "be");
     const out = translateSentence(lang, "the man is not here");
     const englishLemmas = out.targetTokens.map((t) => t.englishLemma);
     expect(englishLemmas).toContain("man");
@@ -73,7 +74,7 @@ describe("copula evolution — erosion + genesis", () => {
     const { stepCopulaErosion } = await import("../steps/copula");
     const { makeRng } = await import("../rng");
     const lang = preset(presetPIE);
-    expect(lang.lexicon["be"]).toBeDefined();
+    expect(lexGet(lang, "be")).toBeDefined();
     // stepCopulaErosion scales probability by 1/conservatism, so a
     // conservative PIE (conservatism > 1) makes copulaLossProbability:1
     // sub-certain. Force conservatism to 1 so the erosion is guaranteed
@@ -81,18 +82,18 @@ describe("copula evolution — erosion + genesis", () => {
     lang.conservatism = 1;
     const cfg = { obsolescence: { copulaLossProbability: 1 } } as never;
     stepCopulaErosion(lang, cfg, makeRng("erosion"), 1);
-    expect(lang.lexicon["be"]).toBeUndefined();
+    expect(lexHas(lang, "be")).toBe(false);
   });
 
   it("a zero-copula language can grammaticalise a new copula from a demonstrative", async () => {
     const { stepCopulaGenesis } = await import("../steps/copula");
     const { makeRng } = await import("../rng");
     const lang = preset(presetPIE);
-    delete lang.lexicon["be"];
+    lexDelete(lang, "be");
     const cfg = { obsolescence: { copulaGenesisProbability: 1 } } as never;
     stepCopulaGenesis(lang, cfg, makeRng("genesis"), 1);
-    expect(lang.lexicon["be"]).toBeDefined();
-    expect(lang.lexicon["be"]!.length).toBeGreaterThan(0);
+    expect(lexGet(lang, "be")).toBeDefined();
+    expect(lexGet(lang, "be")!.length).toBeGreaterThan(0);
     expect(lang.wordOrigin["be"]).toMatch(/^grammaticalization:/);
   });
 
@@ -100,30 +101,30 @@ describe("copula evolution — erosion + genesis", () => {
     const { stepCopulaGenesis } = await import("../steps/copula");
     const { makeRng } = await import("../rng");
     const lang = preset(presetPIE);
-    delete lang.lexicon["be"];
-    const thisFormBefore = lang.lexicon["this"]?.slice();
+    lexDelete(lang, "be");
+    const thisFormBefore = lexGet(lang, "this")?.slice();
     const cfg = { obsolescence: { copulaGenesisProbability: 1 } } as never;
     stepCopulaGenesis(lang, cfg, makeRng("polysemy"), 1);
-    expect(lang.lexicon["this"]).toEqual(thisFormBefore);
+    expect(lexGet(lang, "this")).toEqual(thisFormBefore);
   });
 
   it("erosion is a no-op when there's no copula to lose", async () => {
     const { stepCopulaErosion } = await import("../steps/copula");
     const { makeRng } = await import("../rng");
     const lang = preset(presetPIE);
-    delete lang.lexicon["be"];
+    lexDelete(lang, "be");
     const cfg = { obsolescence: { copulaLossProbability: 1 } } as never;
     stepCopulaErosion(lang, cfg, makeRng("noop"), 1);
-    expect(lang.lexicon["be"]).toBeUndefined();
+    expect(lexHas(lang, "be")).toBe(false);
   });
 
   it("genesis is a no-op when the language already has a copula", async () => {
     const { stepCopulaGenesis } = await import("../steps/copula");
     const { makeRng } = await import("../rng");
     const lang = preset(presetPIE);
-    const original = lang.lexicon["be"]!.slice();
+    const original = lexGet(lang, "be")!.slice();
     const cfg = { obsolescence: { copulaGenesisProbability: 1 } } as never;
     stepCopulaGenesis(lang, cfg, makeRng("noop2"), 1);
-    expect(lang.lexicon["be"]).toEqual(original);
+    expect(lexGet(lang, "be")).toEqual(original);
   });
 });

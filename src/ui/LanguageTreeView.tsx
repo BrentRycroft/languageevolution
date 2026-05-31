@@ -8,6 +8,7 @@ import { StemmaView } from "./StemmaView";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import { reconstructProtoLexicon, type ReconstructedForm } from "../engine/tree/reconstruction";
+import { lexSize, lexGet } from "../engine/lexicon/access";
 
 /**
  * LanguageTreeView.tsx
@@ -60,13 +61,13 @@ function buildTooltip(
   const lang = node.language;
   const age = generation - lang.birthGeneration;
   const conservatismIcon = lang.conservatism >= 1.3 ? "🐢" : lang.conservatism <= 0.7 ? "🐇" : "⏱";
-  const lexCount = Object.keys(lang.lexicon).length;
+  const lexCount = lexSize(lang);
   const borrowCount = Object.values(lang.wordOrigin ?? {}).filter((o) =>
     o.startsWith("borrow:"),
   ).length;
   const samples: Array<{ meaning: string; form: string }> = [];
   for (const m of ["water", "fire", "mother", "go", "see", "king"]) {
-    const f = lang.lexicon[m];
+    const f = lexGet(lang, m);
     if (f) samples.push({ meaning: m, form: formatForm(f, lang, script, m) });
     if (samples.length >= 3) break;
   }
@@ -124,7 +125,7 @@ function buildHierarchy(
   const build = (id: string): NodeDatum => {
     const node = tree[id]!;
     const lang = node.language;
-    const form = lang.lexicon[sampleMeaning];
+    const form = lexGet(lang, sampleMeaning);
     return {
       id,
       name: lang.name,

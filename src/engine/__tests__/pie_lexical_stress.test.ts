@@ -5,6 +5,7 @@ import { isVowel, isSyllabic } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
 import { stressIndex } from "../phonology/stress";
 import { narrowTranscribe } from "../phonology/narrow";
+import { lexGet } from "../lexicon/access";
 
 /**
  * pie_lexical_stress.test.ts
@@ -60,7 +61,7 @@ describe("PIE lexical-accent map", () => {
   it("places stress on the right syllable for the canonical kinship oxytones", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    const ipa = (m: string) => narrowTranscribe(lang.lexicon[m]!, lang, m);
+    const ipa = (m: string) => narrowTranscribe(lexGet(lang, m)!, lang, m);
     expect(ipa("mother")).toMatch(/^[^ˈ]+\.ˈ/);
     expect(ipa("daughter")).toMatch(/^[^ˈ]+\.ˈ/);
     expect(ipa("child")).toMatch(/^[^ˈ]+\.ˈ/);
@@ -69,7 +70,7 @@ describe("PIE lexical-accent map", () => {
   it("places stress on the first syllable for the 3-syllable acrostatics", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    const ipa = (m: string) => narrowTranscribe(lang.lexicon[m]!, lang, m);
+    const ipa = (m: string) => narrowTranscribe(lexGet(lang, m)!, lang, m);
     expect(ipa("evening").startsWith("ˈ")).toBe(true);
     expect(ipa("four").startsWith("ˈ")).toBe(true);
     expect(ipa("wife").startsWith("ˈ")).toBe(true);
@@ -79,7 +80,7 @@ describe("PIE lexical-accent map", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     for (const [meaning, idx] of Object.entries(seedAccent)) {
-      const form = lang.lexicon[meaning]!;
+      const form = lexGet(lang, meaning)!;
       const stressed = stressIndex(form, "lexical", idx);
       const vs: number[] = [];
       for (let i = 0; i < form.length; i++) {
