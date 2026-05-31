@@ -323,7 +323,7 @@ function npToParticipant(np: NP, role: SemanticRole, adjunct = false): Participa
     modifiers.push({ kind: "possessor", participant: npToParticipant(np.possessor, "agent") });
   }
   if (np.numeral) {
-    modifiers.push({ kind: "numeral", lemma: np.numeral.lemma });
+    modifiers.push({ kind: "numeral", lemma: np.numeral.lemma, ...(np.numeral.ordinal ? { ordinal: true } : {}) });
   }
   for (const pp of np.pps) {
     modifiers.push({
@@ -444,7 +444,7 @@ function participantToNP(p: Participant, defaultCase: Case): NP {
   let determiner: { lemma: string } | undefined;
   const adjectives: AdjRef[] = [];
   let possessor: NP | undefined;
-  let numeral: { lemma: string } | undefined;
+  let numeral: { lemma: string; ordinal?: boolean } | undefined;
   const pps: PP[] = [];
   let coord: { lemma: string; np: NP } | undefined;
   // A participant may carry MULTIPLE flat coordination modifiers ("man and
@@ -469,7 +469,7 @@ function participantToNP(p: Participant, defaultCase: Case): NP {
         possessor = participantToNP(mod.participant, "gen");
         break;
       case "numeral":
-        numeral = { lemma: mod.lemma };
+        numeral = { lemma: mod.lemma, ...(mod.ordinal ? { ordinal: true } : {}) };
         break;
       case "oblique": {
         const preposition = mod.preposition ?? roleToPrep(mod.relation);

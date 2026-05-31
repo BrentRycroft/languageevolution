@@ -94,7 +94,7 @@ export interface NP {
   determiner?: { lemma: string };
   adjectives: AdjRef[];
   possessor?: NP;
-  numeral?: { lemma: string };
+  numeral?: { lemma: string; ordinal?: boolean };
   pps: PP[];
   coord?: { lemma: string; np: NP };
   relative?: RelativeClause;

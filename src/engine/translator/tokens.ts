@@ -22,6 +22,7 @@ export interface EnglishToken {
     role?: "subject" | "object";
     degree?: "positive" | "comparative" | "superlative" | "intensive";
     possessor?: boolean;
+    ordinal?: boolean;
   };
 }
 

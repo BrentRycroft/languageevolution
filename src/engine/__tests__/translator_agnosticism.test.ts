@@ -84,6 +84,37 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     }
   });
 
+  it("ordinal numerals ('first'/'third') survive as adnominal modifiers, placed by numeralPosition", () => {
+    // Pre-fix the tokenizer mis-tagged "first"/"third" as nouns, so the ordinal
+    // was dropped ("the first dog runs" → "dog run"). Ordinals now reuse the
+    // numeral slot (Greenberg: ordinals pattern with the numeral/adjective
+    // order) and are placed per grammar.numeralPosition, like cardinals.
+    for (const [name, build] of [["pie", presetPIE], ["english", presetEnglish]] as const) {
+      const lang = protoOf(build, `agn-ord-${name}`);
+      for (const pos of ["pre", "post"] as const) {
+        lang.grammar.numeralPosition = pos;
+        const { targetTokens: t } = translateSentence(lang, "the first dog runs");
+        const ord = idxOf(t, "first");
+        const noun = idxOf(t, "dog");
+        expect(ord, `${name}/${pos}: 'first' should survive in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
+        expect(noun, `${name}/${pos}: 'dog' should resolve in "${surface(t)}"`).toBeGreaterThanOrEqual(0);
+        if (pos === "post") {
+          expect(ord, `${name}: ord=post → 'first' after 'dog' ("${surface(t)}")`).toBeGreaterThan(noun);
+        } else {
+          expect(ord, `${name}: ord=pre → 'first' before 'dog' ("${surface(t)}")`).toBeLessThan(noun);
+        }
+      }
+      // A different ordinal on a different head ("the third king sleeps").
+      lang.grammar.numeralPosition = "pre";
+      const third = translateSentence(lang, "the third king sleeps").targetTokens;
+      expect(idxOf(third, "third"), `${name}: 'third' should survive`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(third, "king"), `${name}: 'king' should resolve`).toBeGreaterThanOrEqual(0);
+      // Cardinals must still work alongside the ordinal change.
+      const card = translateSentence(lang, "the king sees two dogs").targetTokens;
+      expect(idxOf(card, "two"), `${name}: cardinal 'two' still resolves`).toBeGreaterThanOrEqual(0);
+    }
+  });
+
   it("relativizer-strategy languages place the relative clause postnominally (head before clause)", () => {
     // Relativizer-strategy languages are VO and put the RC after the head noun:
     // "the king who sees the dog" — head, then relativizer, then clause. The

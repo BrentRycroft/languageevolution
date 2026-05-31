@@ -140,6 +140,20 @@ const BARE_NUMERALS = new Set([
   "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
   "hundred", "thousand", "million",
 ]);
+// Ordinal numerals. Cross-linguistically ordinals pattern with the cardinal/
+// adjective slot (Greenberg), so they reuse the NUM tag + numeral modifier with
+// an `ordinal` flag rather than a new modifier kind. The suppletive low forms
+// plus the regular "-th" series (and "twelfth/twentieth/…") are listed; higher
+// regular "-th" derivations are caught by the suffix check in the tokenizer.
+const BARE_ORDINALS = new Set([
+  "first", "second", "third", "fourth", "fifth", "sixth", "seventh",
+  "eighth", "ninth", "tenth", "eleventh", "twelfth", "thirteenth",
+  "fourteenth", "fifteenth", "sixteenth", "seventeenth", "eighteenth",
+  "nineteenth", "twentieth", "thirtieth", "fortieth", "fiftieth",
+  "sixtieth", "seventieth", "eightieth", "ninetieth", "hundredth", "thousandth",
+]);
+// "11th", "23rd", "1st", "2nd" — a digit run followed by an ordinal suffix.
+const DIGIT_ORDINAL = /^[0-9]+(st|nd|rd|th)$/;
 const BARE_NOUNS = new Set([
   "king", "ring", "string", "wing", "thing", "spring",
   "morning", "evening", "ceiling", "ending", "beginning",
@@ -405,6 +419,16 @@ function tokeniseEnglishImpl(text: string, dialect: SourceDialect): EnglishToken
     {
       const canon = ENGLISH_SYNONYM_CONCEPT[w];
       if (canon && !isBareNoun(w) && !isBareAdjective(w) && !isBareVerb(w)) w = canon;
+    }
+    // Ordinal numerals ("first", "third", "11th") tag NUM with an `ordinal`
+    // feature, BEFORE the bare-noun fallback that previously mis-tagged them N
+    // (so "the first dog runs" dropped "first"). They reuse the numeral modifier
+    // slot; placement follows the language's numeralPosition. Like cardinals,
+    // the numeral reading wins over any incidental noun sense ("second" = unit).
+    if (BARE_ORDINALS.has(w) || DIGIT_ORDINAL.test(w)) {
+      tokens.push({ surface: w, lemma: w, tag: "NUM", features: { ordinal: true } });
+      lastWasVerb = false;
+      continue;
     }
     if (isBareNoun(w)) {
       tokens.push({

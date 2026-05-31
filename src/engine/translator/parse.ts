@@ -201,7 +201,7 @@ function collectParticipant(
       continue;
     }
     if (t.tag === "NUM") {
-      modifiers.push({ kind: "numeral", lemma: t.lemma });
+      modifiers.push({ kind: "numeral", lemma: t.lemma, ...(t.features.ordinal ? { ordinal: true } : {}) });
       leftEdge = i;
       claim(i);
       continue;

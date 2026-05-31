@@ -92,7 +92,7 @@ export type ParticipantModifier =
   | { kind: "determiner"; lemma: string }
   | { kind: "adjective"; lemma: string; degree?: Degree }
   | { kind: "possessor"; participant: Participant }
-  | { kind: "numeral"; lemma: string }
+  | { kind: "numeral"; lemma: string; ordinal?: boolean }
   | { kind: "oblique"; relation: SemanticRole; participant: Participant; preposition?: string }
   | { kind: "coordination"; conjunction: string; participant: Participant }
   | { kind: "relative"; clause: RoleClause; relativiser?: string; subjectGap: boolean };
