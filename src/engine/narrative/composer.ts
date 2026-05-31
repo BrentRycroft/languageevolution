@@ -9,7 +9,8 @@ import { formatForm, type DisplayScript } from "../phonology/display";
 import { glossToEnglish } from "../translator/glossToEnglish";
 import { pickSynonymForGenre } from "./genre_bias";
 import { closedClassForm } from "../translator/closedClass";
-import { tryDerivedFormFromMeaning } from "../morphology/derivation";
+import { derivedMeaningParts, tryDerivedFormFromMeaning } from "../morphology/derivation";
+import { derivationGloss } from "../lexicon/derivation";
 import { composeTargetClause } from "./roleProjection";
 import type { RoleClause } from "../translator/syntax";
 
@@ -436,21 +437,44 @@ function nounRoleToken(
   // via the productive suffix. Pre-Phase-68b this returned null and
   // the slot was dropped; runtime-derived narratives now actually
   // emit forms like "see-agt" → /siːəɹ/.
+  //
+  // Decompose the derived meaning so the caption + interlinear gloss
+  // render the BASE lemma plus a Leipzig derivation gloss ("life-ADJZ")
+  // rather than leaking the synthetic English affix with a double
+  // hyphen ("life--ish"). The synthetic meaning is `${base}-${tag}`
+  // where `tag` already starts with "-", so a naive caption doubled it.
+  let captionMeaning = meaning;
+  let derivNote = "";
   if (!base && meaning.includes("-")) {
-    const derived = tryDerivedFormFromMeaning(lang, meaning);
-    if (derived) base = derived;
+    const parts = derivedMeaningParts(lang, meaning);
+    if (parts) {
+      const derived = tryDerivedFormFromMeaning(lang, meaning);
+      if (derived) {
+        base = derived;
+        captionMeaning = parts.base;
+        derivNote = derivationGloss(parts.suffix.category);
+      }
+    }
   }
   if (!base) return null;
+  // Inflect under the ORIGINAL meaning so suppletion lookup + target
+  // form stay byte-identical; only the caption/gloss use the base.
   const { form, glossNote } = inflectNoun(lang, meaning, base, opts, composeOptions);
   // Object pronoun → suppletive oblique caption ("he"→"him") so the English
   // gloss reads naturally; the target form is already case-marked above.
-  const captionLemma = role === "O" ? (PRONOUN_OBLIQUE[meaning] ?? meaning) : meaning;
+  const captionLemma = role === "O" ? (PRONOUN_OBLIQUE[captionMeaning] ?? captionMeaning) : captionMeaning;
+  // Prepend the derivation gloss so the interlinear reads "base-ADJZ-ACC".
+  const fullGloss = derivNote
+    ? glossNote
+      ? `${derivNote},${glossNote}`
+      : derivNote
+    : glossNote;
   return {
     role,
     token: makeToken({
       englishLemma: captionLemma,
       englishTag: "N",
-      glossNote,
+      glossNote: fullGloss,
       targetForm: form,
       targetSurface: renderForm(form, lang, script, meaning),
     }),

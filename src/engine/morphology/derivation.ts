@@ -3,6 +3,14 @@ import type { Rng } from "../rng";
 import { applyParadigm } from "./apply";
 
 /**
+ * The stored derivational-suffix shape on a Language. Differs from
+ * `lexicon/derivation.ts`'s `DerivationalSuffix` only in that `category`
+ * is optional here (legacy untyped suffixes), so we key off the actual
+ * `Language` field type rather than the canonical interface.
+ */
+type StoredSuffix = NonNullable<Language["derivationalSuffixes"]>[number];
+
+/**
  * Phase 66 T2: runtime productive derivation.
  *
  * Speakers emit ad-hoc derived forms ("googler", "samba-zo") whenever
@@ -47,6 +55,37 @@ const SUFFIX_TAG_TO_MORPH_CATEGORY: Record<string, string> = {
 };
 
 /**
+ * Phase 66 T2: decompose a `${base}-${suffixTag}` runtime-derived
+ * meaning into its base lemma and the matching productive suffix.
+ * Returns null when no productive suffix's tag matches the meaning's
+ * tail. Tags can themselves start with "-" (e.g. "-er", "-ness"), so
+ * we can't rely on splitting at the last dash — try every productive
+ * suffix and pick the longest match. Shared by `tryDerivedFormFromMeaning`
+ * (form synthesis) and the narrative composer (interlinear glossing).
+ */
+export function derivedMeaningParts(
+  lang: Language,
+  meaning: Meaning,
+): { base: string; suffix: StoredSuffix } | null {
+  if (!meaning.includes("-")) return null;
+  const productive = (lang.derivationalSuffixes ?? []).filter((s) => s.productive);
+  let best: { base: string; suffix: StoredSuffix } | null = null;
+  for (const s of productive) {
+    // The meaning is `${base}-${tag}` literal concat. So if the
+    // meaning ends with `-${tag}`, the base is everything before.
+    const want = `-${s.tag}`;
+    if (meaning.endsWith(want)) {
+      const base = meaning.slice(0, meaning.length - want.length);
+      if (!base) continue;
+      if (!best || s.tag.length > best.suffix.tag.length) {
+        best = { base, suffix: s };
+      }
+    }
+  }
+  return best;
+}
+
+/**
  * Phase 66 T2: build a derived form on-the-fly when given a
  * `${base}-${suffixTag}` meaning. Returns null when the base or the
  * matching productive suffix isn't available.
@@ -55,26 +94,7 @@ export function tryDerivedFormFromMeaning(
   lang: Language,
   meaning: Meaning,
 ): WordForm | null {
-  if (!meaning.includes("-")) return null;
-  // Match the full registered suffix tag at the end of the meaning.
-  // Tags can themselves start with "-" (e.g. "-er", "-ness"), so we
-  // can't rely on splitting at the last dash. Try every productive
-  // suffix and pick the longest match.
-  const productive = (lang.derivationalSuffixes ?? []).filter((s) => s.productive);
-  let best: { suffix: typeof productive[0]; base: string } | null = null;
-  for (const s of productive) {
-    const tag = s.tag;
-    // The meaning is `${base}-${tag}` literal concat. So if the
-    // meaning ends with `-${tag}`, the base is everything before.
-    const want = `-${tag}`;
-    if (meaning.endsWith(want)) {
-      const base = meaning.slice(0, meaning.length - want.length);
-      if (!base) continue;
-      if (!best || tag.length > best.suffix.tag.length) {
-        best = { suffix: s, base };
-      }
-    }
-  }
+  const best = derivedMeaningParts(lang, meaning);
   if (!best) return null;
   const baseForm = lang.lexicon[best.base];
   if (!baseForm) return null;

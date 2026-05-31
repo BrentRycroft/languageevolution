@@ -3,7 +3,10 @@ import { createSimulation } from "../simulation";
 import { presetBantu } from "../presets/bantu";
 import { presetEnglish } from "../presets/english";
 import { presetRomance } from "../presets/romance";
+import { presetTokipona } from "../presets/tokipona";
+import { presetPIE } from "../presets/pie";
 import { translateSentence, type TranslatedToken } from "../translator/sentence";
+import { isFeatureActive } from "../modules/legacyGate";
 import type { Language } from "../types";
 
 /**
@@ -116,6 +119,38 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(idxOf(loc, "in"), `plain oblique 'in' still dropped ("${surface(loc)}")`).toBe(-1);
   });
 
+  it("equative 'as ADJ as X' keeps the adjective, the standard, and an equative marker (PIE + English)", () => {
+    // Equatives ("the dog is as big as the cat") are typologically distinct from
+    // comparatives (Stassen): equal degree, marked by a similative/'like' marker,
+    // not the comparative 'than'. The construction must survive translation
+    // language-agnostically — the parameter adjective ("big"), the standard
+    // ("cat"), AND an equative marker ("as") all surface, in any word order.
+    // The pre-fix bug mis-parsed "big" as a stray manner adverb and grabbed "cat"
+    // as the object ("the dog is the cat big"), garbling the comparison.
+    for (const [name, build] of [["pie", presetPIE], ["english", presetEnglish]] as const) {
+      const lang = protoOf(build, `agn-equative-${name}`);
+      const eq = translateSentence(lang, "the dog is as big as the cat").targetTokens;
+      expect(idxOf(eq, "big"), `${name}: equative adjective 'big' kept ("${surface(eq)}")`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(eq, "cat"), `${name}: equative standard 'cat' kept ("${surface(eq)}")`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(eq, "as"), `${name}: equative marker 'as' kept ("${surface(eq)}")`).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("equative does NOT break the standard 'bigger than' comparative (PIE + English)", () => {
+    // Regression guard: the equative path mirrors — but must not disturb — the
+    // existing comparative. "the dog is bigger than the cat" still keeps the
+    // comparative adjective 'big', the standard 'cat', and the 'than' marker.
+    for (const [name, build] of [["pie", presetPIE], ["english", presetEnglish]] as const) {
+      const lang = protoOf(build, `agn-comparative-still-${name}`);
+      const cmp = translateSentence(lang, "the dog is bigger than the cat").targetTokens;
+      expect(idxOf(cmp, "big"), `${name}: comparative adjective 'big' kept ("${surface(cmp)}")`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(cmp, "cat"), `${name}: comparative standard 'cat' kept ("${surface(cmp)}")`).toBeGreaterThanOrEqual(0);
+      expect(idxOf(cmp, "than"), `${name}: comparative marker 'than' kept ("${surface(cmp)}")`).toBeGreaterThanOrEqual(0);
+      // The equative marker must NOT leak into the comparative output.
+      expect(idxOf(cmp, "as"), `${name}: comparative has no equative 'as' ("${surface(cmp)}")`).toBe(-1);
+    }
+  });
+
   it("case-strategy languages keep meaning-critical adpositions (privative 'without', comitative 'with')", () => {
     // Abessive/comitative are rare as morphological cases and none is applied to
     // the PP-NP, so dropping "without"/"with" erases meaning ("man without the
@@ -183,5 +218,56 @@ describe("translator language-agnosticism: modifier ordering follows grammar, no
     expect(tok, "subject pronoun 'we' resolves").toBeDefined();
     expect(tok!.targetSurface, "plural pronoun 'we' is the bare lexical form, not affixed")
       .toBe((lang.lexicon["we"] ?? []).join(""));
+  });
+
+  it("interrogative strategy follows grammar.interrogativeStrategy (particle/inversion/intonation)", () => {
+    // No bundled preset uses particle/inversion, so the translator_stress matrix
+    // only checks these don't crash / aren't empty — it does NOT lock the actual
+    // realisation. Lock all three here so the agnostic interrogative paths can't
+    // silently regress (cf. the stale-test drift that left the fast tier red).
+    const base = () => protoOf(presetPIE, "agn-interrog");
+
+    const inton = base();
+    inton.grammar.interrogativeStrategy = "intonation";
+    const ti = translateSentence(inton, "does the king see the wolf").targetTokens;
+    expect(ti[ti.length - 1]?.englishLemma, "intonation appends a final '?'").toBe("?");
+
+    const part = base();
+    part.grammar.interrogativeStrategy = "particle";
+    part.grammar.interrogativeParticle = "final";
+    const tp = translateSentence(part, "does the king see the wolf").targetTokens;
+    expect(tp.some((t) => t.englishLemma === "Q"), "particle strategy emits a Q particle").toBe(true);
+    expect(tp[tp.length - 1]?.englishLemma, "final placement puts Q last").toBe("Q");
+    expect(tp.some((t) => t.englishLemma === "?"), "particle strategy does NOT also append '?'").toBe(false);
+
+    part.grammar.interrogativeParticle = "initial";
+    const tpi = translateSentence(part, "does the king see the wolf").targetTokens;
+    expect(tpi[0]?.englishLemma, "initial placement puts Q first").toBe("Q");
+
+    const inv = base();
+    inv.grammar.interrogativeStrategy = "inversion";
+    const tv = translateSentence(inv, "does the king see the wolf").targetTokens;
+    const vIdx = tv.findIndex((t) => t.englishTag === "V");
+    const sIdx = tv.findIndex((t) => t.englishLemma === "king");
+    expect(vIdx, "inversion fronts the verb").toBeGreaterThanOrEqual(0);
+    expect(sIdx, "subject 'king' present").toBeGreaterThanOrEqual(0);
+    expect(vIdx, "inversion: verb precedes the subject (V-S-O)").toBeLessThan(sIdx);
+  });
+
+  it("a relativiser-less language juxtaposes the clause (parataxis), not deletes it", () => {
+    // Toki Pona has no relativiser morphosyntax (syntactical:relativiser inactive).
+    // Pre-fix the realiser DELETED the whole relative clause ("the king who sees
+    // the wolf runs" → "king run"), losing the proposition. The cross-linguistic
+    // fallback is parataxis: juxtapose the clause bare (no relativiser word).
+    const lang = protoOf(presetTokipona, "agn-rc-toki");
+    expect(isFeatureActive(lang, "syntactical:relativiser", () => true),
+      "precondition: Toki Pona has no active relativiser module").toBe(false);
+    const { targetTokens: t } = translateSentence(lang, "the king who sees the wolf runs");
+    const out = surface(t);
+    expect(idxOf(t, "king"), `head 'king' present ("${out}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(t, "see"), `RC verb 'see' survives ("${out}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(t, "wolf"), `RC object 'wolf' survives ("${out}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(t, "run"), `matrix verb 'run' survives ("${out}")`).toBeGreaterThanOrEqual(0);
+    expect(idxOf(t, "who"), `no relativiser word — parataxis ("${out}")`).toBe(-1);
   });
 });

@@ -642,12 +642,8 @@ function attachRelativeClause(
   const rc = np.relative;
   if (!rc) return npTokens;
   // Phase 46a-migration: relative-clause attachment gated on the
-  // relativiser module. Legacy fallback: always attach (the
-  // pre-migration default strategy was "relativizer" if undefined,
-  // so the previous code path always emitted a relative clause).
-  if (!isFeatureActive(lang, "syntactical:relativiser", () => true)) {
-    return npTokens;
-  }
+  // relativiser module.
+  const relativiserActive = isFeatureActive(lang, "syntactical:relativiser", () => true);
   const strategy = lang.grammar.relativeClauseStrategy ?? "relativizer";
 
   const stripped: NP = { ...np, relative: undefined };
@@ -662,6 +658,16 @@ function attachRelativeClause(
     negated: false,
   };
   const relRaw = realiseSentenceInner(fakeS, lang, ctx);
+  // Phase 76: a language whose relativiser module is INACTIVE (e.g. Toki Pona)
+  // has no relative-clause morphosyntax. Pre-fix this DELETED the clause
+  // entirely ("the king who sees the wolf runs" → "king run"), losing the whole
+  // proposition. The cross-linguistic fallback for relativiser-less languages is
+  // PARATAXIS — juxtapose the clause bare (no relativiser word), gapping the
+  // shared subject (Greenberg/typology; Toki Pona itself juxtaposes).
+  if (!relativiserActive) {
+    const para = rc.subjectGap ? relRaw.filter((t) => t.role !== "S") : relRaw;
+    return [...npTokens, ...para];
+  }
   const relTokens = rc.subjectGap && (strategy === "gap" || strategy === "relativizer")
     ? relRaw.filter((t) => t.role !== "S")
     : relRaw;
@@ -737,12 +743,14 @@ function realiseSentenceInner(
 
 // Adpositions whose role a core case affix does NOT recover, so a case-strategy
 // language must keep them as particles rather than dropping them: comparative
-// "than", privative/abessive "without", comitative "with". Abessive and
-// comitative are rare as morphological cases (WALS) and none is applied to the
-// PP-NP here, so dropping these erases the meaning — "man without the dog runs"
-// collapsed to "man run dog" (a transitive reading). Spatial/role adpositions
-// (in/on/to/from/of) stay droppable: their role IS recoverable from case.
-const RETAINED_ADPOSITIONS = new Set(["than", "without", "with"]);
+// "than", privative/abessive "without", comitative "with", equative/similative
+// "as". Abessive and comitative are rare as morphological cases (WALS) and none
+// is applied to the PP-NP here, so dropping these erases the meaning — "man
+// without the dog runs" collapsed to "man run dog" (a transitive reading).
+// Equatives (Stassen) likewise carry a dedicated similative marker, not a case,
+// so the "as" particle patterns with "than" and is retained. Spatial/role
+// adpositions (in/on/to/from/of) stay droppable: their role IS recoverable from case.
+const RETAINED_ADPOSITIONS = new Set(["than", "without", "with", "as"]);
 
 function realisePP(pp: PP, lang: Language, ctx: NPCtx): RealisedToken[] {
   const npTokens = realiseNP(pp.np, lang, ctx, "PP-NP");

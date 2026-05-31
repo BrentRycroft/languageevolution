@@ -55,6 +55,20 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## Backlog (top = next)
 
+- [ ] **Test-suite wall time (USER REQUEST 2026-05-30): speed up the full `npx vitest
+      run` (~150s).** User asked to "break up or run the suite tests in parallel
+      rather than sequentially." ACCURACY NOTE: vitest ALREADY parallelises across
+      test FILES via a worker pool — the bottleneck is NOT sequential execution. The
+      dominant cost is the module-graph COLLECT/transform (≈162s cumulative across
+      workers; see the perf note under "Sweep oversized sim.step gen-counts" above
+      and the fast-tier COLLECT finding). Real levers, in rough order: (a) cut
+      collect cost — fewer/leaner module imports in the hot test files, or a lighter
+      transform; (b) shard the suite across CI runners (`vitest --shard`); (c) the
+      two-tier fast/RUN_SLOW split already keeps the PR path fast — verify nothing
+      heavy regressed back into the fast tier; (d) tune `poolOptions`
+      (threads vs forks, maxWorkers) to the machine. Within-FILE tests do run
+      sequentially, but that's rarely the wall-time driver here. NOT yet
+      investigated in depth (logged per user direction, not pivoted to).
 - [ ] **Translator coinage rethink (USER REQUEST 2026-05-30): a coined term should
       ALWAYS be a transparent compound of two EXISTING, semantically-related
       lexemes — "firewater" = fire + water — never a random mash.** Today
@@ -391,9 +405,43 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## Done log
 
+- **PARALLEL-AGENT WAVE 1 (2026-05-30): three translator milestones landed
+  concurrently** via worktree agents + independent review + cherry-pick onto
+  auto/realism. (1) `16e6336` Passive voice — parser remaps grammatical relations
+  on `voice==="passive"` (Relational Grammar 2→1 advancement: patient promotion,
+  agent demotion), byte-identical surface. (2) `893c05b` Equative "as ADJ as X" —
+  parsed/realised like the "than" comparative (Stassen similative; "as" added to
+  RETAINED_ADPOSITIONS; new `equative` Degree), comparative unaffected. (3)
+  `05f17b9` Derivation-gloss leak — narrative now glosses runtime-derived concepts
+  with a Leipzig category ("lake-ADJZ.ACC") instead of leaking "lake--ish";
+  display-only, byte-identical. Full `npx vitest run` GREEN after integration:
+  1722 pass / 4 skip / 0 fail; tsc clean; determinism intact. Each had a focused
+  regression test + passed both an implementer full-suite run and an independent
+  reviewer pass (all SOUND). WORKFLOW NOTES for future waves: agent worktrees were
+  branched from a STALE base (a "Merge PR #185" state missing the latest local
+  commits), so integrate by CHERRY-PICK (per-commit) not branch-merge; and REMOVE
+  the worktrees (`git worktree remove`) before any full `npx vitest run` or vitest
+  collects the nested worktree checkouts and reports phantom UI-test failures.
+  Deferred (logged, not built): passive oblique agent-case marking (no typology
+  axis — see passive NEEDS DECISION).
 - (baseline) Pre-existing engine fixes + test speedups + two-tier CI + arch-doc
   updates were committed as `853b7ec "yay"` and merged to `main` via PR #176.
   The loop branches `auto/realism` from that point.
+- **Translator: a relativiser-less language now JUXTAPOSES the relative clause
+  (parataxis) instead of DELETING it.** Cross-preset play session (PIE/Bantu/
+  Romance/Toki/Germanic on the same 6 sentences) found Toki Pona rendered "the
+  king who sees the wolf runs" → "king run" — the entire RC ("sees the wolf") was
+  silently dropped, losing the proposition. Root cause: `attachRelativeClause`
+  (realise.ts) early-returned the bare head NP when the `syntactical:relativiser`
+  module is inactive. No language deletes a clause's meaning — the universal
+  fallback for relativiser-less languages is parataxis (juxtaposition; Toki Pona
+  itself juxtaposes). Fix: when the module is inactive, append the realised clause
+  bare (no relativiser word), gapping the shared subject → "king see wolf run".
+  Translator-only (engine/determinism untouched). + parataxis regression test
+  (translator_agnosticism, presetTokipona). Verified: tsc + 109 RC/translator/
+  agnosticism/typological/narrative tests green. (Also noted this session, not
+  fixed: Germanic shows a stray article in the RC subject-gap — "who the see"; and
+  Bantu flags "bread" missing — a lexical-coverage gap. Both minor/separate.)
 - **Translator: 15 more posOf="other" adjectives added to BARE_ADJECTIVES (cont.
   of the dark/loud/dead fix).** Play session: "the angry dog bites the thief" →
   "dog thief bite" ("angry" dropped). Probed posOf across ~44 candidate adjectives:
@@ -1137,6 +1185,14 @@ Non-exhaustive; the user queues more ideas — fold them in here.
   then the flag should still say so. All ripple sim (lexicon/morphology
   trajectories) → milestone-level, full suite + snapshot updates. NB: not clearly
   a bug under (c), so needs a realism call before any fix. Want me to take it on?
+  - **USER REPORT 2026-05-30: "translator on Modern English preset, plural nouns
+    do not work."** Raises priority/visibility — English is the canonical reference
+    preset where plurals should unambiguously work, so this is the most user-facing
+    face of the affixal-plural problem. NOT yet investigated (logged, not pivoted to
+    per user's working-style direction). TBD when taken on: is the English-preset
+    case the same paradigm-drop-vs-grammar-flag desync as the Romance leaf above, or
+    a distinct English-specific issue (e.g. plurals failing even at gen 0 / proto)?
+    Confirm whether it reproduces on the unstepped proto vs only after evolution.
 
 - **Engine performance — extend the trigger pre-filter to inline rules.**
   The factory subset is DONE (see Done log): factory rules expose `triggers`,
