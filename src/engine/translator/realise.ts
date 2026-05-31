@@ -647,13 +647,27 @@ function attachRelativeClause(
   const strategy = lang.grammar.relativeClauseStrategy ?? "relativizer";
 
   const stripped: NP = { ...np, relative: undefined };
+  // In a SUBJECT relative the head noun IS the gapped subject, so nothing of
+  // the RC-internal subject should surface — not the head, and not its
+  // determiner/modifiers. Realise the gapped subject as a BARE NP (head only,
+  // no determiner/adjectives/possessor/numeral/pps); the head token is then
+  // dropped by the `t.role !== "S"` filter below, leaving the subject slot
+  // empty. Pre-fix the determiner survived (e.g. Germanic "who THE see ...").
+  const gapSubject: NP = rc.subjectGap
+    ? {
+        kind: "NP",
+        head: stripped.head,
+        adjectives: [],
+        pps: [],
+      }
+    : stripped;
   // Phase 74: an OBJECT relative ("the dog that the king sees") carries its
   // own subject — use it, so the RC realises "king sees" (object gapped to the
   // head) rather than forcing the head as the subject ("dog that dog see").
   // Subject relatives (subjectGap=true) keep the head as the subject.
   const fakeS: Sentence = {
     kind: "S",
-    subject: rc.subject ?? stripped,
+    subject: rc.subject ?? gapSubject,
     predicate: rc.predicate,
     negated: false,
   };
