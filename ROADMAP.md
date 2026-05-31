@@ -53,6 +53,36 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 | **Performance** | partial | Profiled (PROFILE_STEP via vitest, 2026-05-29): phonology = **64-67%** of step time, inventoryMgmt ~18%, genesis ~15%, all else <1%. So apply.ts IS the macro hot spot; its dominant cost is the per-word×rule `probabilityFor` (countSites scan + Math.pow). **DONE: trigger pre-filter (factory subset)** — factory rules (simpleSub/contextSub/mappingSub) now expose `triggers` (the `from`/mapping phonemes); the hot loop skips a rule via an O(1) `includes` check when none are present (provably probability 0). Byte-identical (perfcheck hashes c2e431df/524c8f2c/e7b438a3 unchanged); skips **26-30%** of probabilityFor calls → **0.8-1.7% faster phonology pass** (interleaved drift-cancelled A/B). NEGATIVE/reverted earlier: word-invariant scalar hoist (no win, allocation offset it — see Assessment notes; don't re-attempt). NEXT (bigger win, NEEDS DECISION): extend `triggers` to the ~43 inline catalog rules — would multiply the skip rate, but needs per-rule byte-identical auditing. Bundle: 944 kB main chunk (load-time). |
 | **UX / GUI** | needs assessment | No play session run yet. |
 
+## Milestone loop (tiered-trust, authorized 2026-05-30)
+
+Notification-driven, session-bound (NOT a timer). Each WAVE:
+1. Pick the next ready AUTO-eligible backlog/NEEDS-DECISION items (no open design
+   fork). Spawn worktree agents — parallel for translator-side, serial for engine.
+2. On completion: my mechanical review + an INDEPENDENT reviewer agent.
+3. Integrate by CHERRY-PICK onto `auto/realism` (NOT branch-merge — worktrees may
+   carry a stale base). Resolve trivial test conflicts (keep both blocks).
+4. Verify FULL `npx vitest run` green + tsc + determinism. REMOVE worktrees first
+   (`git worktree remove`) or vitest collects the nested checkouts (phantom fails).
+5. Clean up branches. Report a digest.
+
+- **AUTO-MERGE (no user gate, just report)** iff: translator-side / non-rippling
+  (no engine/genesis/determinism/snapshot impact) AND both my review and the
+  reviewer agent return SOUND (no BLOCKER) AND full suite green AND the agent hit
+  no design fork.
+- **GATE (pause → user pick-list Merge/Hold/Drop)** iff: touches engine/genesis/
+  determinism/snapshots (re-baselines), OR open design fork, OR a review BLOCKER,
+  OR the agent stopped on a judgment call.
+- AUTO-eligible items: Germanic RC stray article; ordinal "first" drop; intensive
+  reflexive subject-drop; -ly adverb ("slowly"); existential "there"; Bantu
+  negationPosition; multi-clause (translator). (Agent reports + I gate it if it
+  hits a fork.)
+- GATED items (await USER): plural-noun fix [diagnose first]; coinage rethink
+  [genesis-rippling + fork]; runaway word length [engine + fork]; universal English
+  pronoun suppletion [anglocentrism fork + tests encode current]; demonstrativePosition
+  [new grammar axis]; inline-rule perf [engine].
+- Self-limiting: when AUTO items exhausted, surface the GATED pick-list + idle (no
+  churn). Wave 1 (passive/equative/derivation-gloss) DONE — see Done log.
+
 ## Backlog (top = next)
 
 - [ ] **Test-suite wall time (USER REQUEST 2026-05-30): speed up the full `npx vitest
@@ -405,6 +435,20 @@ Non-exhaustive; the user queues more ideas — fold them in here.
 
 ## Done log
 
+- **PARALLEL-AGENT WAVE 2 (2026-05-30, tiered-trust AUTO-merge): three translator
+  milestones landed.** `c0d8441` ordinal numerals ("the first dog runs" keeps
+  "first" as a numeral-slot modifier, placed by `numeralPosition`; Greenberg).
+  `1442193` subject-gap RC stray article (an article-bearing language no longer
+  emits the gapped subject's determiner — "who the see" fixed; bare gapSubject in
+  `attachRelativeClause`). `143b9d5` intensive/adnominal reflexive ("the man himself
+  runs" keeps the subject via a new `emphatic` modifier; reflexive-OBJECT unchanged;
+  König & Siemund). All translator-side / non-rippling, both-review SOUND, cherry-
+  picked onto auto/realism (trivial test-import conflict kept both). Full `npx vitest
+  run` GREEN: 1732 pass / 4 skip / 0 fail; tsc clean; determinism intact. WORKFLOW
+  NOTE: OneDrive worktree-path aliasing surfaced — an agent's Edit/Read transiently
+  hit the SHARED checkout (self-reverted). SAFEGUARD (now standard): verify the main
+  tree is clean (`git status`) before integrating, and integrate only AFTER all
+  agents finish (no concurrent writers).
 - **PARALLEL-AGENT WAVE 1 (2026-05-30): three translator milestones landed
   concurrently** via worktree agents + independent review + cherry-pick onto
   auto/realism. (1) `16e6336` Passive voice — parser remaps grammatical relations

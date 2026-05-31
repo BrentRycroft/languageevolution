@@ -73,6 +73,17 @@ const LINKING_VERBS = new Set([
   "be", "seem", "appear", "become", "remain", "stay", "look", "feel", "sound", "grow",
 ]);
 
+// Reflexive pronoun forms. The same surface form realises both the reflexive
+// ANAPHOR ("the man sees himself" — an argument) and the adnominal INTENSIFIER
+// ("the man himself runs" — an emphatic adjunct on the subject). The two are
+// disambiguated by POSITION (König & Siemund): an intensifier sits between the
+// subject NP and the verb, with no intervening verb, so it must not be parsed
+// as the clause's argument.
+const REFLEXIVE_LEMMAS = new Set([
+  "myself", "yourself", "yourselves", "himself", "herself", "itself", "oneself",
+  "ourselves", "themselves",
+]);
+
 // ─────────────────────────────────────────────────────────────────────
 // Participant collection. Mirrors the legacy collectNP's structural
 // decisions (head detection, possessor, determiner, adjectives,
@@ -201,7 +212,7 @@ function collectParticipant(
       continue;
     }
     if (t.tag === "NUM") {
-      modifiers.push({ kind: "numeral", lemma: t.lemma });
+      modifiers.push({ kind: "numeral", lemma: t.lemma, ...(t.features.ordinal ? { ordinal: true } : {}) });
       leftEdge = i;
       claim(i);
       continue;
@@ -523,9 +534,34 @@ export function parseSyntaxToClause(tokens: EnglishToken[]): RoleClause | null {
   const subjectRole = subjectRoleOf(verbTok.lemma);
   const objectRole = objectRoleOf(verbTok.lemma);
 
+  // Intensive/emphatic reflexive: "the man HIMSELF runs". A reflexive form that
+  // sits BETWEEN the subject NP and the verb (preverbal, with a real nominal to
+  // its left) is an adnominal INTENSIFIER on the subject, not an argument
+  // (König & Siemund). Consume it BEFORE subject collection so the left-walk
+  // skips it and reaches the real subject head; reattach it as an `emphatic`
+  // modifier so the subject survives. The postverbal reflexive ANAPHOR ("the man
+  // sees himself") is untouched — it's an object, collected to the right.
+  let intensiveReflexive: string | undefined;
+  for (let i = verbIdx - 1; i >= 0; i--) {
+    const t = tokens[i]!;
+    if (consumed.has(i)) continue;
+    if (t.tag !== "N" || !REFLEXIVE_LEMMAS.has(t.lemma)) continue;
+    const hasSubjectToLeft = tokens
+      .slice(0, i)
+      .some((u) => (u.tag === "N" || u.tag === "PRON") && !REFLEXIVE_LEMMAS.has(u.lemma));
+    if (!hasSubjectToLeft) continue;
+    consumed.add(i);
+    intensiveReflexive = t.lemma;
+    break;
+  }
+
   // Subject collection. Pronoun fallbacks construct synthesised
   // participants directly (no longer goes through NP shape).
   let subject = collectParticipant(tokens, verbIdx, "left", consumed, subjectRole);
+  if (subject && intensiveReflexive) {
+    const emph: ParticipantModifier = { kind: "emphatic", lemma: intensiveReflexive };
+    subject = { ...subject, modifiers: subject.modifiers ? [...subject.modifiers, emph] : [emph] };
+  }
   if (!subject) {
     const whSubjectLemmas = new Set(["who", "what", "which", "whoever", "whatever"]);
     const leftIsBareWh =

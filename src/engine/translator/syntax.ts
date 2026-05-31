@@ -94,10 +94,17 @@ export interface NP {
   determiner?: { lemma: string };
   adjectives: AdjRef[];
   possessor?: NP;
-  numeral?: { lemma: string };
+  numeral?: { lemma: string; ordinal?: boolean };
   pps: PP[];
   coord?: { lemma: string; np: NP };
   relative?: RelativeClause;
+  /**
+   * Adnominal emphatic INTENSIFIER ("the man HIMSELF runs"). The reflexive
+   * form attaches to the host NP as an adjunct, not an argument (König &
+   * Siemund); the realiser surfaces it adjacent to the head per the
+   * language's lexicon.
+   */
+  emphatic?: { lemma: string };
 }
 
 export interface RelativeClause {
