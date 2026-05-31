@@ -206,7 +206,9 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       are hyphen-spelled, so the old string-split already matched the records), as did
       pie/bantu/romance/tokipona — proving the change is structure-driven, not a
       blanket perturbation. Full FAST suite 1746✓ unchanged (zero behavioral
-      regressions); full RUN_SLOW green at the re-baselined hash.
+      regressions); RUN_SLOW determinism tier green (meaning_layer_baseline all 6
+      presets + divergence_regression + proto_preservation + phase73a_divergence@gen200
+      + persistence roundtrip) — verified 2026-05-31 after the commit.
       NOT DONE (deliberate — simplicity, logged as follow-ups):
         - POS "delegation" (posOf→CONCEPTS[id].pos): NOT genuine de-anglicization
           (registry POS is English-derived too). The doc's "kill VERB_HINTS/
