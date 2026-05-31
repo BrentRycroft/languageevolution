@@ -4,6 +4,7 @@ import { invalidateReverseLexCache } from "../translator/reverse";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { purgeMeaningFromRegistry, purgePerWordDiffusionForMeaning } from "../perMeaningFields";
 import { mintConceptId } from "./conceptIdentity";
+import { lexGet, lexSet, lexDelete } from "./access";
 
 /**
  * Phase 28a: single chokepoint for writing a form to the meaning-keyed
@@ -33,7 +34,7 @@ export function setLexiconForm(
     morphStructure?: import("../types").WordMorphStructure;
   },
 ): void {
-  lang.lexicon[meaning] = form;
+  lexSet(lang, meaning, form);
   // Phase 72d (full-delivery defer-2): lazy-mint a stable ConceptId
   // for the meaning if it doesn't have one yet. Setters that coin
   // genuinely new meanings (genesis, derivation, borrowing) get
@@ -114,9 +115,9 @@ export function addSynonym(
     weight?: number;
   },
 ): boolean {
-  if (!lang.lexicon[meaning]) return false;
+  if (!lexGet(lang, meaning)) return false;
   if (form.length === 0) return false;
-  const primaryKey = formKeyOf(lang.lexicon[meaning]!);
+  const primaryKey = formKeyOf(lexGet(lang, meaning)!);
   const newKey = formKeyOf(form);
   if (primaryKey === newKey) return false;
   if (!lang.words) return false;
@@ -241,7 +242,7 @@ export function deleteMeaning(
   }
 
   // Lexicon (primary form) is bespoke — deleted explicitly.
-  delete lang.lexicon[meaning];
+  lexDelete(lang, meaning);
   // Phase 72d T1: every other per-meaning field is now purged via the
   // registry in `perMeaningFields.ts`. Pre-72d this was a manual list
   // (Phase 68a fix added 4 fields; Phase 71b T2 added suppletion;
