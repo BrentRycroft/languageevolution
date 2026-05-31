@@ -144,28 +144,45 @@ subsystem groups) + a few I did by hand. Each batch verified RUN_SLOW baseline
 X.lexicon)` iteration in engine code now goes through the accessors (insertion
 order = `lexKeys`; sorted = `orderedLexiconKeys`).
 
-### R2 — NEXT (the flip; determinism-critical, do with fresh context)
-Deliberately LEFT for R2 (still raw, by design):
-1. **phonology/apply.ts** — `applyChangesToLexicon` / `stratalApplyChangesToLexicon`
-   take a BARE `lexicon: Lexicon` (no lang). Bare `lexicon[m]` at lines ~746,749,
-   755,765,768,819,847,851,859 + the `out[m]=` writes. THREAD `lang` (or a
-   conceptId↔gloss resolver) in here; iterate via `orderedLexiconKeys` (which R2
-   reimplements). This is the hot-path fork — see §"The crux" (recommend: thread
-   lang, resolve gloss per word via `meaningForConceptId`; MEASURE perf).
-2. **Whole-lexicon assignments / rebuilds** (must produce a ConceptId-keyed store
-   at R2): `lexicon/word.ts:443` (`lang.lexicon = nextLexicon` in
-   syncLexiconFromWords), `phonology/regular.ts:54` (`lang.lexicon = next`),
-   `steps/phonology.ts:253,264` (`lang.lexicon = applyChangesToLexicon(...)`).
-3. **`lexicon/conceptIdentity.ts`**: `orderedLexiconKeys(lexicon)` (line 58) →
-   reimplement to return ConceptIds **in gloss order** (needs lang, or a variant);
-   `ensureConceptIdsForLexicon` (line 165) iterates the gloss store — re-think for
-   cid store.
-4. **`steps/init.ts:33`** `observedInventorySize(lexicon)` — bare `lexicon` param
-   (value-read; key-agnostic, likely fine but confirm).
-5. Flip the **accessor bodies** (access.ts) to translate gloss↔ConceptId via
-   `conceptIdFor` / `meaningForConceptId`; flip `Lexicon` type in types.ts.
-6. **Fold in item 2 (POS from registry)** + **item 4 (string-hacks moot)**.
-7. **Serialization** (persistence): convert cid-store ↔ gloss-keyed JSON on
-   save/load (keep save format gloss-keyed → no migration yet).
-8. GATE: full `npx vitest run` + RUN_SLOW byte-identical at UNCHANGED hashes.
-`modules/legacyMigration.ts:111` reads `Object.values` (key-agnostic) — fine as-is.
+### R2 — DONE (6dd6628 + R2.0 0502edc), byte-identical at UNCHANGED hashes.
+The user chose the FULL flip + cid-native hot path. Delivered:
+- **access.ts** bodies translate gloss↔ConceptId (reads use the non-minting
+  conceptIds lookup; `lexSet` mints via `conceptIdFor`, insertion parity kept;
+  `lexKeys`/`lexEntries` resolve via a FRESH reverse map).
+- **conceptIdentity.ts**: `orderedLexiconKeys(lang)` → sorted glosses;
+  `orderedConceptIds(lexicon, lang)` → matching store keys in gloss order (the
+  RNG-draw order); `rekeyLexiconToConceptIds` (birth flip); `buildConceptIdToGloss`
+  (fresh O(n) reverse map — the hot-path resolver).
+- **apply.ts** hot path cid-native: iterate `orderedConceptIds`, resolve the gloss
+  ONCE per word for sensitivity/legality/content/freq, compare RESOLVED GLOSSES in
+  the collision tiebreak. Optional `lang` arg keeps the legacy gloss path
+  byte-identical for unit tests (min_word_length).
+- **phonology.ts / regular.ts / word.ts / stratal.ts / init.ts**: ages/momentum
+  loop, post-apply change-recording loops, lexiconUR, and all whole-lexicon
+  rebuilds produce/consume the cid store; satellite per-meaning maps STAY
+  gloss-keyed (resolved per word). init flips the proto at birth.
+- Baseline `signature()` projects through the seam → locks gloss→form, survives
+  the storage refactor (R2.0).
+
+**The one determinism bug (root cause):** three `stepPhonology` loops aliased
+`const before = lang.lexicon` and treated it as gloss-keyed; post-flip `before`
+is cid-keyed, so `lexHas(lang, cid)` was always false and the change-recording
+loop (lastChangeGeneration / bumpFrequency / recordVariant) was wholly skipped →
+next-gen ages all read 99 → different sound changes → wholesale divergence at
+gen 4 (all presets). R1 routed `lang.lexicon[...]` but NOT local aliases — that's
+the class of bug to watch. Also fixed a perf trap: `meaningForConceptId`'s
+size-based staleness check is O(n)/call and stale on balanced add+delete within a
+step; the hot path uses `buildConceptIdToGloss` instead (24s vs a 500s regression).
+
+DEFERRED (intentionally, not blocking): (a) brand the `Lexicon` type to
+`Record<ConceptId, WordForm>` — kept loose this phase to avoid a second tsc
+ripple; (b) item 2 (POS-from-registry) and item 4 (kill the `m.includes("-")`
+string-hacks) — the store is cid-keyed but the satellite maps + helpers still
+speak glosses, so these are independent follow-ons, not forced by the flip;
+(c) old-save migration / save-format vNext (loading pre-flip gloss-keyed saves).
+
+### R3 — DONE (folded into 6dd6628). Test + UI/persistence routing.
+~66 engine test files + lexicon/lookup tests routed through the seam (agents,
+self-verified); 15 UI components + export.ts routed so the UI shows glosses, not
+ConceptIds (GlobalSearch index via `lexEntries`; LexiconView badges gloss-keyed).
+No expected values changed. Full `npx vitest run` 1750 pass / 10 skip; tsc clean.

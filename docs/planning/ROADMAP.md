@@ -219,16 +219,22 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
         - 4th string-hack: derivation.ts:141 `m.includes("-")` derivation-base guard →
           could become `recordedParts(lang,m)!==null` (same principle). Left out to
           keep this re-baseline tight to the 3 named hacks.
-- [ ] **FULL CONCEPT RE-KEY — AUTHORIZED 2026-05-31 (user reversed the keep-gloss-key
-      decision).** User asked to do all 4 deferred/declined items: (1) full physical
-      re-key `Record<ConceptId,WordForm>`, (2) POS from concept registry, (3) preset
-      enrichment, (4) the 4th string-hack. Chose "re-key first as the foundation" —
-      item 1 subsumes 2 & 4 (opaque keys ⇒ POS must come from the registry; the
-      string-hacks become moot). PLAN: **docs/planning/CONCEPT-REKEY-PLAN.md**
-      (R0 accessor seam → R1 route engine → R2 the flip [hot-path fork] → R3 fallout;
-      then item 3 enrichment separately). Byte-identical via the B1 `orderedLexiconKeys`
-      seam (reimplemented to return ConceptIds in gloss order). Multi-session; execute
-      with fresh context per phase. The earlier B3-MOOT note is superseded.
+- [x] **FULL CONCEPT RE-KEY — DONE 2026-05-31.** `lang.lexicon` is now physically
+      `Record<ConceptId, WordForm>`; glosses are pure labels the access.ts seam
+      resolves. Byte-identical (RUN_SLOW baseline 12/12 at LOCKED hashes; full suite
+      1750 pass / 10 skip; tsc clean). Commits: R0 36d1dd2, R1 (6 commits), R2.0
+      0502edc (baseline seam), **R2+R3 6dd6628** (the flip + test/UI routing). PLAN +
+      full PROGRESS (incl. the determinism bug + the cid-native hot-path design):
+      **docs/planning/CONCEPT-REKEY-PLAN.md**. The user chose the full physical flip
+      over storage-only after I surfaced the hot-path tradeoffs.
+      DEFERRED follow-ons (NOT blocking, need explicit go-ahead): (a) brand the
+      `Lexicon` type to `Record<ConceptId,WordForm>` (kept loose to avoid a 2nd tsc
+      ripple); (b) **item 2** POS-from-registry + **item 4** kill `m.includes("-")`
+      string-hacks — the store is cid-keyed but satellite maps + helpers still speak
+      glosses, so these are independent improvements, NOT forced by the flip;
+      (c) old-save migration / save-format vNext; (d) **item 3** preset enrichment
+      (the original goal — authored building blocks per preset; needs reviewed
+      re-baselines; optional content-addressed per-concept RNG to make it byte-safe).
 - [x] Translator reverse gloss-leak — DONE 2026-05-31 (fafc9c0). The narrative fix
       (f4bb0e0) didn't cover the translator; its reverse path leaked the raw derived
       key into the back-translation for 100% of derived target words (pie 71/71,
