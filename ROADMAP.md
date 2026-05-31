@@ -117,17 +117,34 @@ STAGE A — words as building blocks (morpheme authoring; achievable now):
         after the seed step — pre-existing, affects seedCompounds too); behavioral
         building block (form-from-parts + drift via lang.compounds) works. Expose
         seed-time morphology on the Word = Stage-B follow-up.
-      - [ ] A1b [NEXT, SERIAL·me] — enrich PIE's derivable vocabulary via
-        seedDerivations/seedCompounds; harness re-baseline (justified). DESIGN FORK
-        to resolve (AskUserQuestion): how aggressive — add structure only where
-        byte-identical, re-author existing words as compositions (forms change), or
-        add new composed vocabulary?
-- [ ] A2 [PARALLEL·agents] — fan out enrichment to bantu/germanic/romance/english/
-      tokipona (one agent per preset; gated re-baselines + review).
-- [ ] A3 — genesis composes preferentially from authored building blocks where it
-      improves realism (extends the firewater fix); harness-gated.
+      - [BLOCKED → Stage B] A1b — tried PIE enrichment; user chose "Both" (re-author
+        existing + add new). HARD FINDING 2026-05-30 (probe, then deleted):
+        (1) Option B (re-author) is EMPTY for PIE — auto-search found only 5
+        byte-identical base+affix matches and ALL are false etymologies (e.g.
+        "time"=give+action, "skin"=basket+adj); encoding them would inject garbage
+        etymologies that then drift-track the wrong base. PIE's authored forms use
+        ablaut grades + *-os/*-r̥ suffixes NOT in our bound-morpheme set, so there are
+        no legitimate decompositions.
+        (2) Option A (add new derived vocabulary) CANNOT be byte-identical: adding
+        just 7 seedDerivations left gen-0 IDENTICAL (0 diffs) but scrambled 504
+        EXISTING words at gen-30. Cause: the per-generation evolution draws RNG while
+        iterating the lexicon in SORTED key order, so inserting keys mid-order shifts
+        every subsequent draw (coupling spans ~76 files). Vocabulary size scrambling
+        sound change is the exact fragility Stage B fixes.
+        RESOLUTION (user 2026-05-30): DEFER additive enrichment to Stage B. Stage A
+        stays byte-identical; the only byte-safe Stage-A work left is (B)-style
+        re-authoring of presets that have REAL transparent complex words (PIE has
+        none — look to Germanic/English compounds; contained per-word re-baseline,
+        no key insertion). A2/A3 move under Stage B (need the RNG/key decoupling).
+- [→ Stage B] A2 — fan out additive enrichment to the other presets. Requires
+      Stage B's per-concept RNG decoupling; not byte-identical before then.
+- [→ Stage B] A3 — genesis composes preferentially from authored building blocks
+      (extends firewater). Also needs the decoupling; was always the additive path.
 
-STAGE B — meaning decoupled from English (the full re-key; L-risk):
+STAGE B — meaning decoupled from English (the full re-key; L-risk). NOTE: B1's
+ConceptId-keyed canonical store is ALSO the natural place to decouple RNG draws from
+lexicon key-iteration order (per-concept identity → stable draw streams). That
+decoupling is the precondition that UNBLOCKS additive enrichment (A2/A3) byte-safely.
 - [ ] B1 [SERIAL·me] — dual lexicon: ConceptId-keyed canonical + string-keyed gloss
       view behind an adapter; PRESERVE Object.keys iteration ORDER (the RNG-by-index
       determinism minefield); route reads through conceptId.
