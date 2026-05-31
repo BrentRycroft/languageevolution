@@ -94,10 +94,13 @@ is ADOPT-and-EXTEND, not a rewrite. Go PRACTICAL (string-keyed lexicon = gloss,
 ConceptId = identity), NOT FULL re-key (L-risk: 532 sites + breaks RNG-by-key-order).
 
 - [x] Phase 0 — blast-radius survey + design doc.
-- [ ] Phase 1 [GATED·serial] — spine adopt + shim (materialize root morphemes +
-      concept→root bindings at init; lexicon stays a gloss-keyed derived view) +
-      save v11 + **byte-identical determinism harness across all 6 presets**.
-      Proving ground: Toki Pona. ← recommended first concrete step.
+- [x] Phase 1 — **byte-identical determinism harness across all 6 presets** locked
+      (`meaning_layer_baseline.test.ts`: fast gen-0 tier + RUN_SLOW 30-step tier).
+      REFINED on contact with the code: the concept-identity boundary
+      (`conceptIdFor`/`meaningForConceptId`) + auto-lift already existed, and
+      nothing persisted changes, so Phase 1 needed ZERO source change and NO save
+      bump (v11 deferred to whatever phase first changes the save payload). Root-
+      morpheme materialization → Phase 2C. Suite green 1738 pass.
 - [ ] Phase 2 [GATED·parallel] — POS delegation (kill pos.ts import-cycle dupes);
       populate WordMorphStructure + fix 3 meaning-string hacks (genesis.ts:417,
       embeddings.ts:160, translate.ts:78) + make MECHANISM_COMPOUND root-aware
