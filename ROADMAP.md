@@ -151,13 +151,23 @@ explicit go-ahead to start Stage B (an L-risk milestone).
 - [→ Stage B] A3 — genesis composes preferentially from authored building blocks
       (extends firewater). Also needs the decoupling; was always the additive path.
 
-STAGE B — meaning decoupled from English (the full re-key; L-risk). NOTE: B1's
-ConceptId-keyed canonical store is ALSO the natural place to decouple RNG draws from
-lexicon key-iteration order (per-concept identity → stable draw streams). That
-decoupling is the precondition that UNBLOCKS additive enrichment (A2/A3) byte-safely.
-- [ ] B1 [SERIAL·me] — dual lexicon: ConceptId-keyed canonical + string-keyed gloss
-      view behind an adapter; PRESERVE Object.keys iteration ORDER (the RNG-by-index
-      determinism minefield); route reads through conceptId.
+STAGE B — meaning decoupled from English (the full re-key; L-risk).
+**FULL B1 PLAN: see STAGE-B-PLAN.md (2026-05-30, awaiting greenlight).** KEY
+CORRECTION from that plan: the core re-key (B1→B3) is BYTE-IDENTICAL / zero forced
+re-baseline IF iteration order is preserved (invariant X = refactoring invariance).
+The full-trajectory re-baseline I earlier attributed to B1 belongs ONLY to the
+SEPARATE, OPTIONAL "content-addressed per-concept RNG" work (Y) — the part that
+actually unblocks byte-safe enrichment (A2/A3). Migration proper ≠ that. Probes
+showed the RNG/key coupling is DISTRIBUTED (not just apply.ts:737), so (Y) touches
+many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
+- [ ] B1 [SERIAL·me] — order-preserving ConceptId seam: `orderedConcepts(lang)`
+      returning today's sorted-gloss order, routed through every RNG-coupled
+      iteration site; dual ConceptId/gloss lexicon behind the existing
+      conceptIdFor/meaningForConceptId adapter. GATE: meaning_layer_baseline green
+      at UNCHANGED hashes (byte-identical) + new order-contract lock test.
+- [ ] B1-Y [OPTIONAL] — content-addressed per-concept RNG (sub-rng seeded from
+      conceptId+gen+site-tag) at the seam. ONE deliberate full re-baseline; unblocks
+      byte-safe A2/A3 enrichment; needs a perf measurement. Separable from B1/B2/B3.
 - [ ] B2 — re-key the ~30 per-language Record<Meaning,…> maps + the 532 lang.lexicon
       sites; translator/narrative/genesis concept-native; fix the 3 meaning-string
       morphology hacks (genesis.ts:417, embeddings.ts:160, translate.ts:78).
