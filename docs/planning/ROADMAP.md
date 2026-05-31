@@ -219,10 +219,22 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
         - 4th string-hack: derivation.ts:141 `m.includes("-")` derivation-base guard →
           could become `recordedParts(lang,m)!==null` (same principle). Left out to
           keep this re-baseline tight to the 3 named hacks.
-- [~] B3 — MOOT under the keep-gloss-key decision: no physical store flip → no
-      save-format change → nothing to migrate. The shipped Phase-72d conceptId sidecar
-      already provides cross-tree concept identity (closed the original audit gap).
-      Revive only if the FULL physical Record<ConceptId,WordForm> flip is ever taken on.
+- [ ] **FULL CONCEPT RE-KEY — AUTHORIZED 2026-05-31 (user reversed the keep-gloss-key
+      decision).** User asked to do all 4 deferred/declined items: (1) full physical
+      re-key `Record<ConceptId,WordForm>`, (2) POS from concept registry, (3) preset
+      enrichment, (4) the 4th string-hack. Chose "re-key first as the foundation" —
+      item 1 subsumes 2 & 4 (opaque keys ⇒ POS must come from the registry; the
+      string-hacks become moot). PLAN: **docs/planning/CONCEPT-REKEY-PLAN.md**
+      (R0 accessor seam → R1 route engine → R2 the flip [hot-path fork] → R3 fallout;
+      then item 3 enrichment separately). Byte-identical via the B1 `orderedLexiconKeys`
+      seam (reimplemented to return ConceptIds in gloss order). Multi-session; execute
+      with fresh context per phase. The earlier B3-MOOT note is superseded.
+- [x] Translator reverse gloss-leak — DONE 2026-05-31 (fafc9c0). The narrative fix
+      (f4bb0e0) didn't cover the translator; its reverse path leaked the raw derived
+      key into the back-translation for 100% of derived target words (pie 71/71,
+      romance 46/46). Shared `peelDerivation` + `glossLemma` (lexicon/word.ts); both
+      translator reverse paths (reverse.ts, sentence.ts) now render "build-AGT".
+      LOCK test extended (narrative_gloss_clean.test.ts covers reverseTranslate).
 - DEFERRED still: low-D conceptual-space vectors (see Parked) — separate later.
 
 ## Backlog (top = next)
