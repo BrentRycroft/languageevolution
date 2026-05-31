@@ -127,3 +127,45 @@ byte-SAFE — decide separately.
 ## Effort
 Multi-session. R1 is the mechanical bulk; R2 is the careful core; R3 + item 3 are
 follow-ons. Approach each phase with fresh context.
+
+---
+
+## PROGRESS
+
+### R0 — DONE (36d1dd2)
+`src/engine/lexicon/access.ts` — pass-through accessors (lexGet/lexHas/lexSet/
+lexDelete/lexKeys/lexValues/lexEntries/lexSize), all `(lang: LexiconState, …)`.
+
+### R1 — DONE (engine), byte-identical. Commits: cf1f997, 6afb96a, fec6eb6, 7e156a0, dd7271d.
+Routed ~377 engine sites through the seam via 7 parallel sub-agents (disjoint
+subsystem groups) + a few I did by hand. Each batch verified RUN_SLOW baseline
+12/12 + tsc clean; full fast suite 1750 pass / 10 skip. Every per-meaning
+`X.lexicon[m]` read/write/has/delete and every `Object.keys/entries/values(
+X.lexicon)` iteration in engine code now goes through the accessors (insertion
+order = `lexKeys`; sorted = `orderedLexiconKeys`).
+
+### R2 — NEXT (the flip; determinism-critical, do with fresh context)
+Deliberately LEFT for R2 (still raw, by design):
+1. **phonology/apply.ts** — `applyChangesToLexicon` / `stratalApplyChangesToLexicon`
+   take a BARE `lexicon: Lexicon` (no lang). Bare `lexicon[m]` at lines ~746,749,
+   755,765,768,819,847,851,859 + the `out[m]=` writes. THREAD `lang` (or a
+   conceptId↔gloss resolver) in here; iterate via `orderedLexiconKeys` (which R2
+   reimplements). This is the hot-path fork — see §"The crux" (recommend: thread
+   lang, resolve gloss per word via `meaningForConceptId`; MEASURE perf).
+2. **Whole-lexicon assignments / rebuilds** (must produce a ConceptId-keyed store
+   at R2): `lexicon/word.ts:443` (`lang.lexicon = nextLexicon` in
+   syncLexiconFromWords), `phonology/regular.ts:54` (`lang.lexicon = next`),
+   `steps/phonology.ts:253,264` (`lang.lexicon = applyChangesToLexicon(...)`).
+3. **`lexicon/conceptIdentity.ts`**: `orderedLexiconKeys(lexicon)` (line 58) →
+   reimplement to return ConceptIds **in gloss order** (needs lang, or a variant);
+   `ensureConceptIdsForLexicon` (line 165) iterates the gloss store — re-think for
+   cid store.
+4. **`steps/init.ts:33`** `observedInventorySize(lexicon)` — bare `lexicon` param
+   (value-read; key-agnostic, likely fine but confirm).
+5. Flip the **accessor bodies** (access.ts) to translate gloss↔ConceptId via
+   `conceptIdFor` / `meaningForConceptId`; flip `Lexicon` type in types.ts.
+6. **Fold in item 2 (POS from registry)** + **item 4 (string-hacks moot)**.
+7. **Serialization** (persistence): convert cid-store ↔ gloss-keyed JSON on
+   save/load (keep save format gloss-keyed → no migration yet).
+8. GATE: full `npx vitest run` + RUN_SLOW byte-identical at UNCHANGED hashes.
+`modules/legacyMigration.ts:111` reads `Object.values` (key-agnostic) — fine as-is.
