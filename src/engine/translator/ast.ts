@@ -453,6 +453,7 @@ function participantToNP(p: Participant, defaultCase: Case): NP {
   // conjuncts survive (the realiser already walks nested coord).
   const coordMods: { conjunction: string; participant: Participant }[] = [];
   let relative: RelativeClause | undefined;
+  let emphatic: { lemma: string } | undefined;
   for (const mod of p.modifiers ?? []) {
     switch (mod.kind) {
       case "determiner":
@@ -486,6 +487,9 @@ function participantToNP(p: Participant, defaultCase: Case): NP {
       case "relative":
         relative = roleClauseToRelativeClause(mod.clause, mod.relativiser, mod.subjectGap);
         break;
+      case "emphatic":
+        emphatic = { lemma: mod.lemma };
+        break;
     }
   }
   // Build the coordination chain from the end so flat siblings nest:
@@ -517,6 +521,7 @@ function participantToNP(p: Participant, defaultCase: Case): NP {
     pps,
     ...(coord ? { coord } : {}),
     ...(relative ? { relative } : {}),
+    ...(emphatic ? { emphatic } : {}),
   };
 }
 

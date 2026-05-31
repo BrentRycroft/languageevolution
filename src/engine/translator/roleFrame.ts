@@ -95,7 +95,17 @@ export type ParticipantModifier =
   | { kind: "numeral"; lemma: string; ordinal?: boolean }
   | { kind: "oblique"; relation: SemanticRole; participant: Participant; preposition?: string }
   | { kind: "coordination"; conjunction: string; participant: Participant }
-  | { kind: "relative"; clause: RoleClause; relativiser?: string; subjectGap: boolean };
+  | { kind: "relative"; clause: RoleClause; relativiser?: string; subjectGap: boolean }
+  /**
+   * Adnominal INTENSIFIER (emphatic reflexive): "the man HIMSELF runs".
+   * Typologically distinct from the reflexive ANAPHOR ("the man sees
+   * himself"): the intensifier emphasises its host NP and is an adjunct,
+   * not an argument (König & Siemund). Many languages share the surface
+   * form for both, disambiguated by position — here it sits between the
+   * subject NP and the verb. `lemma` is the reflexive form; the realiser
+   * surfaces it adnominally per the language's lexicon.
+   */
+  | { kind: "emphatic"; lemma: string };
 
 /**
  * Participant in a predicate's argument structure. The `role`

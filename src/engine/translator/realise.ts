@@ -600,6 +600,23 @@ function realiseNP(
     if (ctx.numPos === "post") out.push(...numTokens);
     if (ctx.possPos === "post") out.push(...possTokens);
   }
+  // Adnominal emphatic INTENSIFIER ("the man HIMSELF runs"): the reflexive form
+  // attaches to the host NP as an adjunct (König & Siemund), surfaced adjacent to
+  // the head. Resolve via the language's lexicon/closed-class form, falling back
+  // to a placeholder gloss like the coordinator below — no morphology invented.
+  if (np.emphatic) {
+    let ef = closedClassForm(lang, np.emphatic.lemma) ?? [];
+    if (ef.length === 0 && lang.lexicon[np.emphatic.lemma]) {
+      ef = lang.lexicon[np.emphatic.lemma]!.slice();
+    }
+    out.push({
+      surface: ef.length > 0 ? ef.join("") : `“${np.emphatic.lemma}”`,
+      form: ef,
+      english: np.emphatic.lemma,
+      role: "DET" as const,
+      resolution: "concept",
+    });
+  }
   out.push(...ppTokens);
   if (np.coord) {
     // Phase 30 Tranche 30f: ensure a coordinator is always emitted.
