@@ -15,7 +15,7 @@ import type { SimulationConfig } from "../types";
  * `orderedLexiconKeys` is the single canonical lexicon-iteration order that
  * RNG-coupled sites (apply.ts, naming.ts) walk. Stage B's re-key to ConceptId
  * MUST preserve this exact sequence (it's the byte-identity contract — see
- * STAGE-B-PLAN.md §3). Today the contract is "sorted English glosses". This
+ * docs/planning/archive/STAGE-B-PLAN.md §3). Today the contract is "sorted English glosses". This
  * test freezes that so a future change to the helper that breaks the order is
  * caught here, not as a silent trajectory divergence in the slow harness.
  */

@@ -52,7 +52,7 @@ export type ConceptId = string & { readonly __brand: "ConceptId" };
  * evolved form. Centralising the order HERE means the re-key only has to
  * preserve THIS function's output: B2 reimplements it to return ConceptIds
  * ordered by their gloss — byte-for-byte the same sequence as today — and
- * callers stay agnostic. See STAGE-B-PLAN.md §3.
+ * callers stay agnostic. See docs/planning/archive/STAGE-B-PLAN.md §3.
  */
 export function orderedLexiconKeys(lexicon: Lexicon): Meaning[] {
   return Object.keys(lexicon).sort();

@@ -83,7 +83,7 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
 - Self-limiting: when AUTO items exhausted, surface the GATED pick-list + idle (no
   churn). Wave 1 (passive/equative/derivation-gloss) DONE — see Done log.
 
-## Meaning-layer migration (PLANNED — full design in MEANING-LAYER-MIGRATION.md)
+## Meaning-layer migration (PLANNED — full design in archive/MEANING-LAYER-MIGRATION.md)
 
 Decouple word MEANING from English strings + make words morphological building
 blocks (roots/affixes/compounds), preserving byte-identical determinism. Scope:
@@ -152,7 +152,7 @@ explicit go-ahead to start Stage B (an L-risk milestone).
       (extends firewater). Also needs the decoupling; was always the additive path.
 
 STAGE B — meaning decoupled from English (the full re-key; L-risk).
-**FULL B1 PLAN: see STAGE-B-PLAN.md (2026-05-30, awaiting greenlight).** KEY
+**FULL B1 PLAN: see archive/STAGE-B-PLAN.md (2026-05-30; B1+B2 since DONE).** KEY
 CORRECTION from that plan: the core re-key (B1→B3) is BYTE-IDENTICAL / zero forced
 re-baseline IF iteration order is preserved (invariant X = refactoring invariance).
 The full-trajectory re-baseline I earlier attributed to B1 belongs ONLY to the
@@ -181,7 +181,7 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
 - [x] B2 [DONE 2026-05-31 — concept-native engine; gloss key RETAINED, no physical
       flip] — user RE-SCOPED B2 (2026-05-31) away from the full physical
       Record<ConceptId,WordForm> flip after execution surfaced: (a) the project's own
-      MEANING-LAYER-MIGRATION.md defers the FULL re-key as "not needed for the win";
+      archive/MEANING-LAYER-MIGRATION.md defers the FULL re-key as "not needed for the win";
       (b) the determinism hot path (applyChangesToLexicon, ~65%) takes a BARE lexicon
       and can't resolve concept identity without threading state through the hot loop.
       DEEPER FINDING (the real fork): while keys stay English glosses, a BYTE-IDENTICAL

@@ -12,7 +12,7 @@ import type { SimulationConfig } from "../types";
 
 /**
  * meaning_layer_baseline.test.ts — the byte-identical SAFETY NET for the
- * meaning-layer migration (see MEANING-LAYER-MIGRATION.md).
+ * meaning-layer migration (see docs/planning/archive/MEANING-LAYER-MIGRATION.md).
  *
  * The migration decouples word MEANING from English strings and turns words
  * into morphological building blocks. Its hard invariant is byte-identical
