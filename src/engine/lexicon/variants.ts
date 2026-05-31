@@ -1,5 +1,6 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { setLexiconForm } from "./mutate";
+import { lexGet } from "./access";
 
 /**
  * variants.ts
@@ -76,7 +77,7 @@ export function decayAndActuate(
   const meanings = Object.keys(lang.variants);
   for (const m of meanings) {
     const list = lang.variants[m]!;
-    const canonical = lang.lexicon[m];
+    const canonical = lexGet(lang, m);
     for (let i = 0; i < list.length; i++) {
       const v = list[i]!;
       if (canonical && formsEqual(v.form, canonical)) {

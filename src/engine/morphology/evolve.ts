@@ -5,6 +5,7 @@ import { semanticTagOf, pathwayTargetsForLang } from "../semantics/grammaticaliz
 import { posOf, isClosedClass } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
+import { lexGet, lexSet, lexHas, lexKeys, lexValues } from "../lexicon/access";
 
 /**
  * evolve.ts
@@ -73,7 +74,7 @@ export function maybeGrammaticalize(
   }
 
   if (!rng.chance(probability)) return null;
-  const meanings = Object.keys(lang.lexicon);
+  const meanings = lexKeys(lang);
   if (meanings.length === 0) return null;
 
   type Candidate = {
@@ -90,7 +91,7 @@ export function maybeGrammaticalize(
     if (isClosedClass(posOf(m))) continue;
     const tag = semanticTagOf(m);
     if (!tag) continue;
-    const form = lang.lexicon[m]!;
+    const form = lexGet(lang, m)!;
     if (form.length === 0 || form.length > 4) continue;
     const isClitic = (lang.wordOrigin?.[m] ?? "").startsWith("clitic:");
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
@@ -190,13 +191,13 @@ export function progressGrammaticalizationChain(
     // Fusion: the form's surface drops a phoneme (final-segment
     // erosion). Lexicon form shrinks; the paradigm version is
     // already affixed and stays.
-    const form = lang.lexicon[chosen];
+    const form = lexGet(lang, chosen);
     if (form && form.length > 1) {
-      lang.lexicon[chosen] = form.slice(0, -1);
+      lexSet(lang, chosen, form.slice(0, -1));
     }
     return {
       kind: "grammaticalization",
-      description: `"${chosen}" → fused [stage 3] (form shortened to /${(lang.lexicon[chosen] ?? []).join("")}/)`,
+      description: `"${chosen}" → fused [stage 3] (form shortened to /${(lexGet(lang, chosen) ?? []).join("")}/)`,
       source: {
         meaning: chosen,
         pathway: "chain-fusion",
@@ -239,11 +240,11 @@ function maybeArticleEmergence(
   // dominant donor for definite articles; "this" is rarer; "the" if
   // already present (closed-class seeded) means we already half-have
   // it and just need to flip articlePresence.
-  const donor = lang.lexicon["that"]
+  const donor = lexHas(lang, "that")
     ? "that"
-    : lang.lexicon["this"]
+    : lexHas(lang, "this")
       ? "this"
-      : lang.lexicon["the"]
+      : lexHas(lang, "the")
         ? "the"
         : null;
   if (!donor) return null;
@@ -258,8 +259,8 @@ function maybeArticleEmergence(
     r < 0.6 ? "free" : r < 0.9 ? "proclitic" : "enclitic";
   // Promote: copy donor form to "the" if it isn't already there,
   // and reduce its frequency hint slightly (function words erode).
-  if (!lang.lexicon["the"]) {
-    lang.lexicon["the"] = lang.lexicon[donor]!.slice();
+  if (!lexHas(lang, "the")) {
+    lexSet(lang, "the", lexGet(lang, donor)!.slice());
     lang.wordFrequencyHints["the"] = 0.97;
     lang.wordOrigin["the"] = `grammaticalization:${donor}`;
   }
@@ -295,7 +296,7 @@ export function maybeAffixReplacement(
   for (const m of lang.boundMorphemes) {
     const origin = lang.boundMorphemeOrigin?.[m];
     if (origin?.obsolescentGen !== undefined) continue;
-    const f = lang.lexicon[m];
+    const f = lexGet(lang, m);
     if (!f || f.length === 0) continue;
     candidates.push(m);
   }
@@ -331,11 +332,11 @@ export function maybeMoodEmergence(
   rng: Rng,
 ): MorphShift | null {
   if ((lang.grammar.moodMarking ?? "declarative") !== "declarative") return null;
-  const donor = lang.lexicon["if"]
+  const donor = lexHas(lang, "if")
     ? "if"
-    : lang.lexicon["that"]
+    : lexHas(lang, "that")
       ? "that"
-      : lang.lexicon["because"]
+      : lexHas(lang, "because")
         ? "because"
         : null;
   if (!donor) return null;
@@ -344,7 +345,7 @@ export function maybeMoodEmergence(
   // de novo): tier 0 → 0.1%, tier 3 → 0.4%.
   const baseRate = 0.001 * (1 + tier);
   if (!rng.chance(baseRate)) return null;
-  const donorForm = lang.lexicon[donor]!;
+  const donorForm = lexGet(lang, donor)!;
   const affix = donorForm.slice(0, Math.min(2, donorForm.length));
   if (affix.length === 0) return null;
   if (lang.morphology.paradigms["verb.mood.subj"]) return null;
@@ -389,10 +390,10 @@ export function maybeBackformation(
   for (const meaning of Object.keys(lang.compounds)) {
     const meta = lang.compounds[meaning]!;
     if (!meta.fossilized) continue;
-    const surface = lang.lexicon[meaning];
+    const surface = lexGet(lang, meaning);
     if (!surface) continue;
     for (const morph of lang.boundMorphemes) {
-      const affixForm = lang.lexicon[morph];
+      const affixForm = lexGet(lang, morph);
       if (!affixForm || affixForm.length === 0) continue;
       if (surface.length <= affixForm.length) continue;
       const tail = surface.slice(surface.length - affixForm.length);
@@ -402,7 +403,7 @@ export function maybeBackformation(
       // Skip if base is already a known lexeme.
       const baseStr = base.join("");
       const newLemma = `bf:${baseStr}`;
-      if (lang.lexicon[newLemma]) continue;
+      if (lexHas(lang, newLemma)) continue;
       candidates.push({ meaning, surface, base, suffix: morph });
     }
   }
@@ -424,7 +425,7 @@ export function maybeCliticize(
   probability: number,
 ): { meaning: string; from: string; to: string; pathway: string } | null {
   if (!rng.chance(probability)) return null;
-  const meanings = Object.keys(lang.lexicon);
+  const meanings = lexKeys(lang);
   if (meanings.length === 0) return null;
   type Cand = { m: string; tag: string; form: WordForm };
   const candidates: Cand[] = [];
@@ -432,7 +433,7 @@ export function maybeCliticize(
     const tag = semanticTagOf(m);
     if (!tag) continue;
     if ((lang.wordOrigin?.[m] ?? "").startsWith("clitic:")) continue;
-    const form = lang.lexicon[m]!;
+    const form = lexGet(lang, m)!;
     if (form.length < 2 || form.length > 5) continue;
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
     if (freq < 0.7) continue;
@@ -495,7 +496,7 @@ export function maybeSplitParadigm(
   if (paradigm.affix.length === 0) return null;
   let vowelFinal = 0;
   let consonantFinal = 0;
-  for (const form of Object.values(lang.lexicon)) {
+  for (const form of lexValues(lang)) {
     const last = form[form.length - 1];
     if (!last) continue;
     if (isVowelLike(last)) vowelFinal++;
@@ -688,7 +689,7 @@ export function maybeSuppletion(
   probability: number,
 ): { meaning: string; category: MorphCategory; donorMeaning: string } | null {
   if (!rng.chance(probability)) return null;
-  const verbMeanings = Object.keys(lang.lexicon).filter(
+  const verbMeanings = lexKeys(lang).filter(
     (m) => posOf(m) === "verb",
   );
   if (verbMeanings.length < 2) return null;
@@ -710,11 +711,11 @@ export function maybeSuppletion(
   const existing = lang.suppletion?.[meaning]?.[category];
   if (existing) return null;
   const donors = verbMeanings.filter(
-    (m) => m !== meaning && (lang.lexicon[m]?.length ?? 0) >= 2,
+    (m) => m !== meaning && (lexGet(lang, m)?.length ?? 0) >= 2,
   );
   if (donors.length === 0) return null;
   const donorMeaning = donors[rng.int(donors.length)]!;
-  const donorForm = lang.lexicon[donorMeaning]!;
+  const donorForm = lexGet(lang, donorMeaning)!;
   if (!lang.suppletion) lang.suppletion = {};
   if (!lang.suppletion[meaning]) lang.suppletion[meaning] = {};
   lang.suppletion[meaning]![category] = donorForm.slice();
@@ -746,7 +747,7 @@ export function maybeVowelMutationIrregular(
   probability: number,
 ): { meaning: string; category: MorphCategory } | null {
   if (!rng.chance(probability)) return null;
-  const candidates = Object.keys(lang.lexicon).filter((m) => {
+  const candidates = lexKeys(lang).filter((m) => {
     const pos = posOf(m);
     return pos === "noun" || pos === "adjective";
   });
@@ -765,7 +766,7 @@ export function maybeVowelMutationIrregular(
   if (!lang.morphology.paradigms[category]) return null;
   const existing = lang.suppletion?.[meaning]?.[category];
   if (existing) return null;
-  const baseForm = lang.lexicon[meaning];
+  const baseForm = lexGet(lang, meaning);
   if (!baseForm || baseForm.length < 2) return null;
   const mutated = vowelMutationOf(baseForm);
   if (!mutated) return null;

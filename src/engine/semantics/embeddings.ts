@@ -1,4 +1,4 @@
-import type { Meaning } from "../types";
+import type { Meaning, Language } from "../types";
 import { clusterOf } from "./clusters";
 import { complexityFor } from "../lexicon/complexity";
 import {
@@ -155,8 +155,27 @@ function buildBase(): Record<Meaning, number[]> {
 
 const BASE: Record<Meaning, number[]> = buildBase();
 
-export function embed(meaning: Meaning): number[] {
+export function embed(meaning: Meaning, lang?: Language): number[] {
   if (BASE[meaning]) return BASE[meaning]!.slice();
+  // Stage B: when a language is in scope, prefer the RECORDED decomposition
+  // (its compound / derivation records) over parsing the gloss string. The
+  // average of the constituent base embeddings is the compositional meaning;
+  // affix parts (no BASE entry) naturally drop out of the average.
+  const recorded = lang?.compounds?.[meaning]?.parts;
+  if (recorded && recorded.length > 0) {
+    let v = zero();
+    let n = 0;
+    for (const p of recorded) {
+      if (BASE[p]) {
+        v = add(v, BASE[p]!);
+        n++;
+      }
+    }
+    if (n > 0) {
+      for (let i = 0; i < EMBEDDING_DIMS; i++) v[i] = v[i]! / n;
+      return v;
+    }
+  }
   if (meaning.includes("-")) {
     const parts = meaning.split("-");
     let v = zero();

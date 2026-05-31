@@ -4,6 +4,7 @@ import { isVowel } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
 import { posOf } from "../lexicon/pos";
 import { pushEvent } from "../steps/helpers";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * Phase 64 T2: ablaut chain emergence + decay.
@@ -58,7 +59,7 @@ function pickAlternation(
   meaning: Meaning,
   rng: Rng,
 ): [string, string] | null {
-  const form = lang.lexicon[meaning];
+  const form = lexGet(lang, meaning);
   if (!form) return null;
   // Find the first stem vowel that participates in any standard
   // alternation pattern AND whose alternant is in the inventory.
@@ -100,7 +101,7 @@ export function proposeAblautEmergence(
   if (!past) return false;
   // Pick a high-frequency verb that's not already in an ablaut class.
   const candidates: Meaning[] = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     if (posOf(m) !== "verb") continue;
     if (lang.ablautClassAssignment?.[m]) continue;
     const freq = lang.wordFrequencyHints[m] ?? 0.4;
@@ -160,7 +161,7 @@ export function decayAblautClasses(
   // un-tag them.
   if (lang.ablautClassAssignment) {
     for (const m of Object.keys(lang.ablautClassAssignment)) {
-      const f = lang.lexicon[m];
+      const f = lexGet(lang, m);
       if (!f) continue;
       const hasMatch = f.some((p) => past.ablautMap![stripTone(p)] !== undefined);
       if (!hasMatch) delete lang.ablautClassAssignment[m];

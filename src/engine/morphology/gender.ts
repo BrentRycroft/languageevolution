@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * Heuristically assign a gender (0..genderCount-1) to a meaning based on its
@@ -40,7 +41,7 @@ export function genderOf(lang: Language, meaning: Meaning): number {
   if (count <= 0) return 0;
   const map = (lang.gender ??= {});
   if (map[meaning] !== undefined) return map[meaning]!;
-  const form = lang.lexicon[meaning];
+  const form = lexGet(lang, meaning);
   if (!form) return 0;
   const g = assignGenderHeuristic(form, count);
   map[meaning] = g;
@@ -55,9 +56,9 @@ export function assignAllGenders(lang: Language): void {
   const count = lang.grammar.genderCount ?? 0;
   if (count <= 0) return;
   const map = (lang.gender ??= {});
-  for (const meaning of Object.keys(lang.lexicon)) {
+  for (const meaning of lexKeys(lang)) {
     if (map[meaning] === undefined) {
-      map[meaning] = assignGenderHeuristic(lang.lexicon[meaning]!, count);
+      map[meaning] = assignGenderHeuristic(lexGet(lang, meaning)!, count);
     }
   }
 }

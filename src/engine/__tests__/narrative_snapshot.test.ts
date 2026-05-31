@@ -81,6 +81,20 @@ function hasFallbackMarker(surface: string): boolean {
 }
 
 /**
+ * Concepts a preset's language genuinely cannot express (no native word, no
+ * coherent compound). Post-firewater-fix (compound coinage no longer falls back
+ * to a random-lexeme mash) the translator leaves these UNTRANSLATED — a «lemma»
+ * marker — rather than minting garbage. That is the deliberate, user-chosen
+ * behavior. A marker for ANY OTHER lemma is still a real resolution-failure
+ * regression and fails the invariant below.
+ */
+const KNOWN_UNTRANSLATABLE: Record<string, ReadonlySet<string>> = {
+  // Toki Pona is a minimal language with no word for "bread" (and the preset
+  // carries no loanword mechanism for it) — left untranslated by design.
+  tokipona: new Set(["bread"]),
+};
+
+/**
  * For SVO/SOV/etc. word orders, assert the verb's position
  * relative to subject + object nouns matches the language's
  * declared `wordOrder`. Tolerates DET/ADJ/PREP tokens flanking
@@ -175,12 +189,16 @@ describe("Phase 73d D0 — narrative pipeline structural invariants", () => {
         }
       });
 
-      it("no surface contains unresolved-lemma fallback markers", () => {
+      it("no surface contains unresolved-lemma fallback markers (except known lexical gaps)", () => {
+        const allow = KNOWN_UNTRANSLATABLE[preset] ?? new Set<string>();
         for (const p of probes) {
+          const unexpected = p.tokens
+            .filter((t) => hasFallbackMarker(t.targetSurface ?? "") && !allow.has(t.englishLemma))
+            .map((t) => t.englishLemma);
           expect(
-            hasFallbackMarker(p.surface),
-            `${preset}/${p.sentence}: surface contains «» fallback markers ("${p.surface}")`,
-          ).toBe(false);
+            unexpected,
+            `${preset}/${p.sentence}: unexpected unresolved-lemma markers ("${p.surface}")`,
+          ).toEqual([]);
         }
       });
 

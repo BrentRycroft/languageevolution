@@ -2,6 +2,7 @@ import type { CoinageMechanism } from "./types";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
 import { relatedMeanings } from "../../semantics/clusters";
+import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
 
 /**
  * Phase 53 T1: derivation now requires the language to actually carry
@@ -22,13 +23,13 @@ export const MECHANISM_DERIVATION: CoinageMechanism = {
   originTag: "derivation",
   baseWeight: 1,
   tryCoin: (lang, target, _tree, rng) => {
-    const related = relatedMeanings(target).filter((m) => lang.lexicon[m]);
+    const related = relatedMeanings(target).filter((m) => lexHas(lang, m));
     const base =
       related.length > 0
         ? related[rng.int(related.length)]!
-        : Object.keys(lang.lexicon)[rng.int(Object.keys(lang.lexicon).length)];
+        : lexKeys(lang)[rng.int(lexKeys(lang).length)];
     if (!base) return null;
-    const baseForm = lang.lexicon[base]!;
+    const baseForm = lexGet(lang, base)!;
     // Prefer the language's own productive derivational affixes
     // (Phase 49+); fall back to inflectional suffix paradigms; if
     // neither exists, refuse to coin rather than imprint a foreign

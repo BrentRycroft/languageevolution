@@ -10,6 +10,7 @@ import {
   attemptConceptDecomposition,
   attemptClusterComposition,
 } from "./synthesis";
+import { lexGet, lexHas } from "./access";
 
 /**
  * Phase 52 T1: lexicon-lookup abstraction layer.
@@ -85,9 +86,9 @@ export function lookupFormWithResolution(
 ): LookupResult {
   const allowFallback = context?.allowFallbackCoinage ?? true;
   // Rung 1: direct lexicon hit.
-  if (lang.lexicon[meaning]) {
+  if (lexHas(lang, meaning)) {
     return {
-      form: lang.lexicon[meaning]!.slice(),
+      form: lexGet(lang, meaning)!.slice(),
       resolution: "direct",
       glossNote: "",
     };
@@ -98,7 +99,7 @@ export function lookupFormWithResolution(
     const parts: WordForm = [];
     let allFound = true;
     for (const partMeaning of meta.parts) {
-      const f = lang.lexicon[partMeaning];
+      const f = lexGet(lang, partMeaning);
       if (!f || f.length === 0) {
         allFound = false;
         break;
@@ -122,9 +123,9 @@ export function lookupFormWithResolution(
   // stays a later, weaker fallback at rung 7b.)
   if (lang.colexifiedAs) {
     for (const [winner, losers] of Object.entries(lang.colexifiedAs)) {
-      if (losers.includes(meaning) && lang.lexicon[winner]) {
+      if (losers.includes(meaning) && lexHas(lang, winner)) {
         return {
-          form: lang.lexicon[winner]!.slice(),
+          form: lexGet(lang, winner)!.slice(),
           resolution: "reverse-colex",
           glossNote: `↔ ${winner}`,
         };
@@ -148,7 +149,7 @@ export function lookupFormWithResolution(
   // productive affixes in the same DerivationCategory produce
   // synonymous realisations (e.g. -ness + -ity).
   const allowSynonymRegistration =
-    allowFallback && !lang.lexicon[meaning];
+    allowFallback && !lexHas(lang, meaning);
   const synthGen = lang.events?.at(-1)?.generation ?? 0;
   const synthNonNeg = attemptMorphologicalSynthesis(lang, meaning, "non-neg",
     allowSynonymRegistration
@@ -197,9 +198,9 @@ export function lookupFormWithResolution(
   // recorded colexification (lang.colexifiedAs) is handled earlier at rung 2b.
   if (isRegisteredConcept(meaning)) {
     for (const partner of colexWith(meaning)) {
-      if (lang.lexicon[partner]) {
+      if (lexHas(lang, partner)) {
         return {
-          form: lang.lexicon[partner]!.slice(),
+          form: lexGet(lang, partner)!.slice(),
           resolution: "colex",
           glossNote: `↔ ${partner}`,
         };

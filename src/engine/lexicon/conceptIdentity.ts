@@ -1,4 +1,4 @@
-import type { Meaning } from "../types";
+import type { Lexicon, Meaning } from "../types";
 import type { LexiconState } from "../domains";
 import { fnv1a } from "../rng";
 
@@ -39,6 +39,24 @@ import { fnv1a } from "../rng";
  */
 
 export type ConceptId = string & { readonly __brand: "ConceptId" };
+
+/**
+ * B1 (Stage B meaning re-key) — the CANONICAL lexicon iteration order.
+ *
+ * Several RNG-coupled sites (sound-change application in apply.ts, name
+ * generation in naming.ts) iterate the lexicon and draw from the shared
+ * per-language Rng PER WORD, so a word's draw POSITION depends on its rank
+ * in this order. Today that order is the sorted English-gloss keys. When
+ * Stage B re-keys the lexicon to ConceptId (which sorts differently),
+ * iterating raw ConceptIds would change the draw order and therefore every
+ * evolved form. Centralising the order HERE means the re-key only has to
+ * preserve THIS function's output: B2 reimplements it to return ConceptIds
+ * ordered by their gloss — byte-for-byte the same sequence as today — and
+ * callers stay agnostic. See docs/planning/archive/STAGE-B-PLAN.md §3.
+ */
+export function orderedLexiconKeys(lexicon: Lexicon): Meaning[] {
+  return Object.keys(lexicon).sort();
+}
 
 /**
  * Mint a fresh ConceptId for `lang`. Format:

@@ -13,6 +13,7 @@ import { otFit } from "../phonology/ot";
 import { isFormLegal } from "../phonology/wordShape";
 import { setLexiconForm } from "../lexicon/mutate";
 import { findWordByForm } from "../lexicon/word";
+import { lexHas } from "../lexicon/access";
 
 /**
  * Phase 50 T3 + Phase 53 T1 + Phase 58.5: graceful translator
@@ -60,7 +61,7 @@ function isGrounded(
   const parts = candidate.sources?.partMeanings;
   if (!parts || parts.length === 0) return false;
   // At least one cited source must be a real lexicon entry.
-  return parts.some((m) => lang.lexicon[m] !== undefined);
+  return parts.some((m) => lexHas(lang, m));
 }
 
 export function attemptGracefulFallback(
@@ -68,7 +69,7 @@ export function attemptGracefulFallback(
   lemma: Meaning,
   generation: number,
 ): GracefulFallbackResult | null {
-  if (lang.lexicon[lemma]) return null;
+  if (lexHas(lang, lemma)) return null;
 
   const seed = fnv1a(`fallback|${lang.id}|${lemma}`);
   const rng = makeRng(seed);

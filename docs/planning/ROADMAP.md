@@ -83,6 +83,160 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
 - Self-limiting: when AUTO items exhausted, surface the GATED pick-list + idle (no
   churn). Wave 1 (passive/equative/derivation-gloss) DONE — see Done log.
 
+## Meaning-layer migration (PLANNED — full design in archive/MEANING-LAYER-MIGRATION.md)
+
+Decouple word MEANING from English strings + make words morphological building
+blocks (roots/affixes/compounds), preserving byte-identical determinism. Scope:
+concept IDs + morphemes FIRST, low-D vectors deferred. Phase 0 survey DONE
+(2026-05-30) — key finding: the scaffolding mostly EXISTS (concept-ID identity
+layer, concept registry, morpheme structures, even an embedding precursor), so this
+is ADOPT-and-EXTEND, not a rewrite. Go PRACTICAL (string-keyed lexicon = gloss,
+ConceptId = identity), NOT FULL re-key (L-risk: 532 sites + breaks RNG-by-key-order).
+
+- [x] Phase 0 — blast-radius survey + design doc.
+- [x] Phase 1 — **byte-identical determinism harness across all 6 presets** locked
+      (`meaning_layer_baseline.test.ts`: fast gen-0 tier + RUN_SLOW 30-step tier).
+      REFINED on contact with the code: the concept-identity boundary
+      (`conceptIdFor`/`meaningForConceptId`) + auto-lift already existed, and
+      nothing persisted changes, so Phase 1 needed ZERO source change and NO save
+      bump (v11 deferred to whatever phase first changes the save payload). Root-
+      morpheme materialization → Phase 2C. Suite green 1738 pass.
+RE-CUT 2026-05-30 (user chose BOTH, sequenced): Stage A (building blocks) THEN
+Stage B (full re-key). Each phase auto-advances on the gate (byte-identical OR a
+justified, well-understood re-baseline + full green + my review + reviewer agent +
+no design fork); halt+surface on a fork / review-blocker / regression-looking
+re-baseline. Local commits only.
+
+STAGE A — words as building blocks (morpheme authoring). STATUS 2026-05-30:
+BYTE-SAFE WORK EXHAUSTED. A1a infra done. English + Toki Pona ALREADY author
+building blocks (true compounds + derivational suffixes — they were the presets
+designed with transparent decomposition). The other four (PIE/Germanic/Romance/
+Bantu) have NO legitimate byte-safe decompositions — auto-probe found only
+phonological coincidences (PIE 5, Germanic 0, Romance 2, Bantu 4; ALL false, e.g.
+"body"=heart+from, "two"=her+the), because their forms are authored as attested/
+evolved words, not concatenations of existing lexemes. Re-authoring any would inject
+false etymologies. ⇒ Everything further (additive vocabulary, genesis-from-blocks) is
+Stage-B-gated. Migration pauses here at a green, byte-identical stop point pending an
+explicit go-ahead to start Stage B (an L-risk milestone).
+- [~] A1 — proving-ground preset (PIE) enriched as building blocks.
+      - [x] A1a [DONE] — INFRA: `seedDerivations` config field + `addDerivation`
+        (word = base + affix; reuses the compound recompose/drift machinery, tagged
+        morphStructure.origin="derivation"). Dormant in all presets → byte-identical
+        (harness green). + seed_derivations regression test. NOTE: seed-time
+        morphStructure TAG doesn't persist onto the Word (syncWordsFromLexicon runs
+        after the seed step — pre-existing, affects seedCompounds too); behavioral
+        building block (form-from-parts + drift via lang.compounds) works. Expose
+        seed-time morphology on the Word = Stage-B follow-up.
+      - [BLOCKED → Stage B] A1b — tried PIE enrichment; user chose "Both" (re-author
+        existing + add new). HARD FINDING 2026-05-30 (probe, then deleted):
+        (1) Option B (re-author) is EMPTY for PIE — auto-search found only 5
+        byte-identical base+affix matches and ALL are false etymologies (e.g.
+        "time"=give+action, "skin"=basket+adj); encoding them would inject garbage
+        etymologies that then drift-track the wrong base. PIE's authored forms use
+        ablaut grades + *-os/*-r̥ suffixes NOT in our bound-morpheme set, so there are
+        no legitimate decompositions.
+        (2) Option A (add new derived vocabulary) CANNOT be byte-identical: adding
+        just 7 seedDerivations left gen-0 IDENTICAL (0 diffs) but scrambled 504
+        EXISTING words at gen-30. Cause: the per-generation evolution draws RNG while
+        iterating the lexicon in SORTED key order, so inserting keys mid-order shifts
+        every subsequent draw (coupling spans ~76 files). Vocabulary size scrambling
+        sound change is the exact fragility Stage B fixes.
+        RESOLUTION (user 2026-05-30): DEFER additive enrichment to Stage B. Stage A
+        stays byte-identical; the only byte-safe Stage-A work left is (B)-style
+        re-authoring of presets that have REAL transparent complex words (PIE has
+        none — look to Germanic/English compounds; contained per-word re-baseline,
+        no key insertion). A2/A3 move under Stage B (need the RNG/key decoupling).
+- [→ Stage B] A2 — fan out additive enrichment to the other presets. Requires
+      Stage B's per-concept RNG decoupling; not byte-identical before then.
+- [→ Stage B] A3 — genesis composes preferentially from authored building blocks
+      (extends firewater). Also needs the decoupling; was always the additive path.
+
+STAGE B — meaning decoupled from English (the full re-key; L-risk).
+**FULL B1 PLAN: see archive/STAGE-B-PLAN.md (2026-05-30; B1+B2 since DONE).** KEY
+CORRECTION from that plan: the core re-key (B1→B3) is BYTE-IDENTICAL / zero forced
+re-baseline IF iteration order is preserved (invariant X = refactoring invariance).
+The full-trajectory re-baseline I earlier attributed to B1 belongs ONLY to the
+SEPARATE, OPTIONAL "content-addressed per-concept RNG" work (Y) — the part that
+actually unblocks byte-safe enrichment (A2/A3). Migration proper ≠ that. Probes
+showed the RNG/key coupling is DISTRIBUTED (not just apply.ts:737), so (Y) touches
+many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
+- [x] B1 [DONE — byte-identical] — order-preserving seam established.
+      - [x] B1.0 (62cd49e) — `orderedLexiconKeys(lexicon)` in conceptIdentity.ts
+        (canonical sorted-gloss order); routed apply.ts:737 (hot path) + naming.ts:20;
+        order-contract lock test (concept_order_seam.test.ts, 6 presets). Harness
+        green at unchanged hashes (gen-0 + full 30-step RUN_SLOW). Full suite 1746✓.
+      - [x] B1.1 (b234af8) — routed init.ts seedRegister (sorted rng.chance per
+        meaning). AUDIT COMPLETE: the full X-relevant (sorted, RNG/determinism-
+        coupled, evolution-path) site set is exactly {apply.ts, naming.ts,
+        init.ts/seedRegister}. apply.ts's downstream homonym sort (804) is
+        value-based + inherits seam insertion order → safe. Insertion-order sites
+        (genesis/semantics/obsolescence) are auto-preserved by the re-key's
+        insertion parity (that distributed coupling is concern Y, not X). Translator
+        reverse.ts:96/129 is read-only on frozen state → B2 concept-native pass.
+      NOTE: the "dual ConceptId/gloss lexicon" is now folded into B2 (the flip);
+      with the seam in place there's no value in a transitional dual view.
+- [ ] B1-Y [OPTIONAL] — content-addressed per-concept RNG (sub-rng seeded from
+      conceptId+gen+site-tag) at the seam. ONE deliberate full re-baseline; unblocks
+      byte-safe A2/A3 enrichment; needs a perf measurement. Separable from B1/B2/B3.
+- [x] B2 [DONE 2026-05-31 — concept-native engine; gloss key RETAINED, no physical
+      flip] — user RE-SCOPED B2 (2026-05-31) away from the full physical
+      Record<ConceptId,WordForm> flip after execution surfaced: (a) the project's own
+      archive/MEANING-LAYER-MIGRATION.md defers the FULL re-key as "not needed for the win";
+      (b) the determinism hot path (applyChangesToLexicon, ~65%) takes a BARE lexicon
+      and can't resolve concept identity without threading state through the hot loop.
+      DEEPER FINDING (the real fork): while keys stay English glosses, a BYTE-IDENTICAL
+      concept-native refactor is a NO-OP (it only shuffles where English data lives);
+      genuine de-anglicization is a BEHAVIORAL change that needs a one-time re-baseline.
+      User chose "real de-anglicization, accept one re-baseline."
+      DELIVERED — the 3 named English-string-parsing hacks now read RECORDED structure
+      via a shared seam `recordedParts(lang, m, {contentOnly?})` (lexicon/word.ts:
+      reads lang.compounds[m].parts / primary word morphStructure; contentOnly filters
+      boundMorphemes) instead of `m.split("-")` / English-suffix regex:
+        - translate.ts compound lookup (read-only) → recordedParts.
+        - genesis.ts bootstrapNeologismNeighbors → recordedParts(contentOnly) — now
+          bootstraps freq+neighbours from a word's CONTENT constituents regardless of
+          gloss spelling (incl. non-hyphenated seed-compounds it used to skip).
+        - embeddings.ts embed(meaning, lang?) → prefers lang.compounds parts; lang
+          threaded through classifyShift (drift.ts:177, its one engine caller).
+      `recordedParts` is O(1) (compounds-only, no `lang.words` scan) since it runs
+      per lexicon key per generation in the bootstrap.
+      RE-BASELINE (deliberate, reviewed): ONLY GERMANIC shifted (25d3698b→5b98d44a) —
+      the one preset whose recorded compound/derivation structure diverges from its
+      gloss hyphenation within 30 gens. english stayed BYTE-IDENTICAL (its compounds
+      are hyphen-spelled, so the old string-split already matched the records), as did
+      pie/bantu/romance/tokipona — proving the change is structure-driven, not a
+      blanket perturbation. Full FAST suite 1746✓ unchanged (zero behavioral
+      regressions); RUN_SLOW determinism tier green (meaning_layer_baseline all 6
+      presets + divergence_regression + proto_preservation + phase73a_divergence@gen200
+      + persistence roundtrip) — verified 2026-05-31 after the commit.
+      NOT DONE (deliberate — simplicity, logged as follow-ups):
+        - POS "delegation" (posOf→CONCEPTS[id].pos): NOT genuine de-anglicization
+          (registry POS is English-derived too). The doc's "kill VERB_HINTS/
+          ADJECTIVE_HINTS dupes" premise is WRONG — those are intentional CURATED
+          subsets (verb-hints has find/lose/bring/send absent from pos.ts VERBS;
+          omits be/come/stand/sit), NOT redundant. Delegating changes behaviour + loses
+          curation for a 128-site risk. Skipped.
+        - 4th string-hack: derivation.ts:141 `m.includes("-")` derivation-base guard →
+          could become `recordedParts(lang,m)!==null` (same principle). Left out to
+          keep this re-baseline tight to the 3 named hacks.
+- [ ] **FULL CONCEPT RE-KEY — AUTHORIZED 2026-05-31 (user reversed the keep-gloss-key
+      decision).** User asked to do all 4 deferred/declined items: (1) full physical
+      re-key `Record<ConceptId,WordForm>`, (2) POS from concept registry, (3) preset
+      enrichment, (4) the 4th string-hack. Chose "re-key first as the foundation" —
+      item 1 subsumes 2 & 4 (opaque keys ⇒ POS must come from the registry; the
+      string-hacks become moot). PLAN: **docs/planning/CONCEPT-REKEY-PLAN.md**
+      (R0 accessor seam → R1 route engine → R2 the flip [hot-path fork] → R3 fallout;
+      then item 3 enrichment separately). Byte-identical via the B1 `orderedLexiconKeys`
+      seam (reimplemented to return ConceptIds in gloss order). Multi-session; execute
+      with fresh context per phase. The earlier B3-MOOT note is superseded.
+- [x] Translator reverse gloss-leak — DONE 2026-05-31 (fafc9c0). The narrative fix
+      (f4bb0e0) didn't cover the translator; its reverse path leaked the raw derived
+      key into the back-translation for 100% of derived target words (pie 71/71,
+      romance 46/46). Shared `peelDerivation` + `glossLemma` (lexicon/word.ts); both
+      translator reverse paths (reverse.ts, sentence.ts) now render "build-AGT".
+      LOCK test extended (narrative_gloss_clean.test.ts covers reverseTranslate).
+- DEFERRED still: low-D conceptual-space vectors (see Parked) — separate later.
+
 ## Backlog (top = next)
 
 - [ ] **Test-suite wall time (USER REQUEST 2026-05-30): speed up the full `npx vitest
@@ -99,7 +253,7 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
       (threads vs forks, maxWorkers) to the machine. Within-FILE tests do run
       sequentially, but that's rarely the wall-time driver here. NOT yet
       investigated in depth (logged per user direction, not pivoted to).
-- [ ] **Translator coinage rethink (USER REQUEST 2026-05-30): a coined term should
+- [x] **Translator coinage rethink (USER REQUEST 2026-05-30) — DONE (GLOBAL): a coined term should
       ALWAYS be a transparent compound of two EXISTING, semantically-related
       lexemes — "firewater" = fire + water — never a random mash.** Today
       `MECHANISM_COMPOUND.tryCoin` (`genesis/mechanisms/compound.ts`) is already
@@ -117,6 +271,18 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
       MILESTONE (verify determinism + simulation.test, byte-identity), not a
       surgical fix. NEEDS DECISION: should the random fallback be removed globally
       (genesis too) or only in the translator's `attemptGracefulFallback`?
+      RESOLVED 2026-05-30 (user chose GLOBAL): dropped the random-lexeme fallback in
+      `MECHANISM_COMPOUND.tryCoin` (genesis/mechanisms/compound.ts) — a compound now
+      requires ≥2 semantically-related EXISTING lexemes or doesn't coin. Fixes
+      genesis AND the translator's graceful path (shared mechanism). Determinism
+      ripple: only Toki Pona's 30-gen trajectory changed (re-baselined
+      `meaning_layer_baseline`); RUN_SLOW simulation/divergence determinism green.
+      Toki Pona has no native word for "bread" → now left UNTRANSLATED («bread») per
+      the user; `narrative_snapshot` scoped (KNOWN_UNTRANSLATABLE) to allow genuine
+      lexical gaps while still failing on real resolution bugs. FUTURE REFINEMENT
+      (user nuance): the TRANSLATOR's compounding could be PURE two-word
+      decomposition (firewater = the meaning's own two parts), DISTINCT from
+      genesis's emergent semantic-pool compounding — not yet split.
 - [x] Trim PR long-pole tests `phase72_code_review_batch_b` and
       `phase73d_direction_vector` to <60s without weakening assertions.
 - [x] Ran the end-to-end `RUN_SLOW=1` pass (35.6 min wall; **1873 pass / 1 FAIL
@@ -403,17 +569,21 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
       pronouns no longer take the regular noun-plural affix (realiseNP plural
       branch guarded with `!np.head.isPronoun`; "us" → "ʌs", not "ʌss"). See Done
       log.
-- [ ] **Derivation: malformed concept-ids leak into narrative glosses.** Discourse
-      play session (2026-05-29) surfaced lemmas like `take--tér.agt` (double dash +
-      agentive `-tér` + a `.agt` suffix in the ID) and `coffee-prae-.tbef` (a
-      `prae-` prefix fragment + `.tbef` in the ID). These are derived/borrowed
-      concept ids whose raw morphological scaffolding (agentive nominaliser, the
-      `prae-` preverb, a temporal `tbef` tag) is being emitted as part of the
-      ENGLISH lemma rather than resolved to a clean gloss. Investigate the
-      derivation/grammaticalisation concept-id construction (semantics/
-      grammaticalization.ts, derivation) — the id should carry a clean gloss label
-      separate from its internal build recipe. Engine-side (derivation data) →
-      likely sim-rippling; scope before touching.
+- [x] **Derivation: malformed concept-ids leak into narrative glosses.** DONE
+      2026-05-31 (render-side, NON-rippling — see Done log). Reproduced: 60-gen
+      pie/germanic/romance have 87/32/51 lexicalised derived keys (`build-tér.agt`,
+      `big-nis.abs`, `carrot-prae-.tbef`). The composer's S/O site already cleaned
+      the caption — but only in the `!base` (non-lexicalised) branch, so the common
+      lexicalised case leaked the raw key as `englishLemma`. Fix: a single
+      chokepoint pass in `projectRoleClauseToTokens` (composer.ts) strips the
+      derivational affix via a new `stripDerivationAffix` that matches the
+      language's OWN `boundMorphemes` set (concept-native; `derivedMeaningParts`
+      and `recordedParts` both MISS these — productive-suffix-only / no compounds
+      record respectively, proven by probe: 0/0 coverage on pie). Renders clean
+      base + Leipzig tag ("build" + AGT). Verified: 0 leaks across 216 discourse
+      lines; behaviour-LOCK test (narrative_gloss_clean.test.ts). The earlier
+      "engine-side / sim-rippling" worry was about rewriting the id CONSTRUCTION —
+      a render-side fix sidesteps it entirely.
 - [ ] **Translator: sentential complement clauses are DROPPED** (play session
       2026-05-29). "the man knows that the dog runs" → "man know that" (the whole
       embedded clause "the dog runs" vanishes); "the man wants to run" → "man
@@ -1166,6 +1336,46 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
   (phonology 64-67%, inventoryMgmt ~18%, genesis ~15%). (3) interleaved A/B —
   `changesForLang` (steps/helpers) + `applyChangesToLexicon` (apply), one process,
   to cancel the ~±10% run-to-run machine drift.
+
+## Parked / future direction (NOT scheduled — revisit later)
+
+- **Full componential / vector semantics for the meaning layer (USER PARKED
+  2026-05-30).** A big-rewrite alternative to encoding meaning as English-string
+  keys or language-neutral concept-IDs: represent each concept as a POSITION in a
+  semantic space, so similarity + semantic change become computed geometry instead
+  of hand-authored `neighbors`/`clusters` lists. Three flavors:
+  (1) **Componential / discrete features** — meaning = a bundle of named primitives
+  from a finite universal set (Wierzbicka NSM ~65 primes; Jackendoff). man=[+HUMAN
+  +ADULT +MALE]. Interpretable, finite.
+  (2) **Continuous embeddings** — meaning = a point in high-D space, dimensions
+  unnamed, similarity = cosine (word2vec/GloVe). Empirically models drift (Hamilton
+  et al. 2016, "Diachronic Word Embeddings Reveal Statistical Laws of Semantic
+  Change").
+  (3) **Conceptual spaces (Gärdenfors)** — low-D space with NAMED quality dimensions
+  (size×wildness×…); a concept is a convex REGION. Interpretable + geometric.
+  PAYOFF (all flavors): distance fn replaces hand-authored neighbor/cluster lists;
+  drift = vector nudge (metonymy = adjacent step, metaphor = cross-domain jump
+  preserving a shared axis); polysemy = a region / nearby points; colexification
+  EMERGES when concept-points are close (cf. CLICS); synonymy = two forms near one
+  point; broadening/narrowing = region grows/shrinks; coinage = vector composition.
+  WHY DEFERRED (why continuous embeddings specifically are a BAD fit here):
+  (a) cold-start — nobody can hand-place hundreds of concepts in N-D consistently;
+  importing real embeddings smuggles in modern-English anglocentrism; deriving from
+  features just IS flavor 1/3. (b) DETERMINISM — continuous float math + stochastic
+  nudges fights the byte-identical invariant (platform float drift); would need
+  fixed-point/quantization on every semantic op. (c) opacity — "why did wolf→dog?"
+  is unreadable in a 50-D embedding vs "[+domestic] rose" in a feature model.
+  (d) over-expressiveness + bad composition — a continuous space can represent
+  un-lexicalizable meanings (needs naturalness/Zipf constraints), and compounds are
+  metaphorical leaps, not vector averages ("firewater"≠midpoint of fire & water).
+  VIABLE MIDDLE if revisited: flavor (3) at LOW dimensionality — a few dozen named,
+  interpretable dimensions per semantic field, quantized to small ints (determinism-
+  safe), authorable because dimensions are meaningful, and the existing neighbors/
+  clusters/colexification logic DERIVED from it rather than hand-maintained. This is
+  the natural extension of the concept-ID + morpheme-building-block model discussed
+  the same day (see that discussion; not yet a ROADMAP item). Full continuous-vector
+  version = parked; low-D interpretable conceptual space = the thing to prototype
+  first if we ever go this way.
 
 ## NEEDS DECISION
 

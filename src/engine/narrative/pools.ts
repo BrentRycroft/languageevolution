@@ -1,5 +1,6 @@
 import type { Language, Meaning } from "../types";
 import { posOf } from "../lexicon/pos";
+import { lexKeys } from "../lexicon/access";
 import type { Rng } from "../rng";
 
 /**
@@ -40,7 +41,7 @@ export function isAnimate(meaning: Meaning): boolean {
  */
 export function poolByPOS(lang: Language, pos: ReturnType<typeof posOf>): Meaning[] {
   const out: Meaning[] = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     if (posOf(m) === pos) out.push(m);
   }
   out.sort((a, b) => {
@@ -77,7 +78,7 @@ const NON_NOUN_POS = new Set([
 
 export function nounLikePool(lang: Language): Meaning[] {
   const out: Meaning[] = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     const pos = posOf(m);
     if (pos === "noun") {
       out.push(m);
@@ -143,14 +144,14 @@ function sortByFrequencyDesc(lang: Language, list: Meaning[]): Meaning[] {
 export function timePool(lang: Language): Meaning[] {
   return sortByFrequencyDesc(
     lang,
-    Object.keys(lang.lexicon).filter((m) => TIME_HINTS.has(m)),
+    lexKeys(lang).filter((m) => TIME_HINTS.has(m)),
   );
 }
 
 export function placePool(lang: Language): Meaning[] {
   return sortByFrequencyDesc(
     lang,
-    Object.keys(lang.lexicon).filter((m) => PLACE_HINTS.has(m)),
+    lexKeys(lang).filter((m) => PLACE_HINTS.has(m)),
   );
 }
 

@@ -16,6 +16,7 @@ import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 import { clusterOf } from "../semantics/clusters";
+import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
 
 /**
  * borrow.ts
@@ -129,13 +130,13 @@ export function tryBorrow(
   const distance =
     recipCoords && donor.coords ? geoDistance(recipCoords, donor.coords) : 0;
 
-  const donorMeanings = Object.keys(donor.lexicon);
-  const candidates = donorMeanings.filter((m) => !recipient.lexicon[m]);
+  const donorMeanings = lexKeys(donor);
+  const candidates = donorMeanings.filter((m) => !lexHas(recipient, m));
   const pool = candidates.length > 0 ? candidates : donorMeanings;
   if (pool.length === 0) return null;
   const tierGap = (donor.culturalTier ?? 0) - (recipient.culturalTier ?? 0);
   const meaning = pickMeaningByDomain(pool, tierGap, rng);
-  const originalForm = donor.lexicon[meaning]!;
+  const originalForm = lexGet(donor, meaning)!;
   const substituted = adaptPhonemes(originalForm, recipient, rng);
   const adapted = repairLoanShape(substituted, recipient);
   if (adapted.length === 0) return null;
@@ -150,7 +151,7 @@ export function tryBorrow(
   // promote it to primary over generations. Phase 39b routes through
   // addSynonym (Phase 37) so the loan is queryable via selectSynonyms
   // and visible in the reverse translator.
-  const alreadyHas = !!recipient.lexicon[meaning];
+  const alreadyHas = lexHas(recipient, meaning);
   if (alreadyHas) {
     addAlt(recipient, meaning, adapted, prestige);
     // Phase 39b: also register as a first-class synonym in the words
@@ -182,7 +183,7 @@ export function tryBorrow(
       },
     );
     if (!commit.committed) return null;
-    recipient.lexicon[meaning] = adapted;
+    lexSet(recipient, meaning, adapted);
   }
   // Phase 68b T5: borrowed meanings need explicit Phase 64+ metadata
   // (noun-declension class, etc.) so the recipient's pickAffixVariant

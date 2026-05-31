@@ -1,6 +1,8 @@
 import type { Language } from "./types";
 import type { Rng } from "./rng";
 import { formToString, isVowel } from "./phonology/ipa";
+import { orderedLexiconKeys } from "./lexicon/conceptIdentity";
+import { lexGet } from "./lexicon/access";
 
 /**
  * naming.ts
@@ -17,9 +19,9 @@ const ENDINGS = [
 ];
 
 export function generateName(parent: Language, rng: Rng): string {
-  const meanings = Object.keys(parent.lexicon).sort();
+  const meanings = orderedLexiconKeys(parent.lexicon);
   if (meanings.length === 0) return parent.id;
-  const seed = parent.lexicon[meanings[rng.int(meanings.length)]!]!;
+  const seed = lexGet(parent, meanings[rng.int(meanings.length)]!)!;
   let root = "";
   let letters = 0;
   let prevWasVowel: boolean | null = null;

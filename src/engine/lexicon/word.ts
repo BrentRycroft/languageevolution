@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
+import { lexGet, lexHas, lexEntries } from "./access";
 
 /**
  * Stable join key for a phonemic form. Two words with the same key are
@@ -84,6 +85,104 @@ export function findPrimaryWordForMeaning(
     const sense = w.senses[w.primarySenseIndex];
     return sense?.meaning === meaning && !sense.synonym;
   });
+}
+
+/**
+ * Stage B (meaning re-key): the RECORDED structural parts of a meaning,
+ * read from the language's own compound / derivation records
+ * (`lang.compounds`, which `addCompound` AND `addDerivation` both populate)
+ * rather than parsed out of the English gloss string. Returns the part
+ * meanings in order, or null when the meaning has no recorded structure.
+ *
+ * This replaces the anglocentric `m.split("-")` / English-suffix-regex
+ * heuristics that assumed a gloss string encodes its own morphology. The
+ * recorded structure is the source of truth and is correct regardless of
+ * how the gloss happens to be spelled (hyphenated or not). It is O(1) — the
+ * caller (`bootstrapNeologismNeighbors`) runs it per lexicon key per
+ * generation, so it must not scan `lang.words`.
+ *
+ * `contentOnly` drops bound morphemes (affix keys like `-ness.abs`) via
+ * `lang.boundMorphemes`, leaving the semantic constituents — the right
+ * set for neighbour / frequency propagation, which should derive from a
+ * word's content parts, not its affixes.
+ */
+export function recordedParts(
+  lang: Language,
+  meaning: Meaning,
+  opts: { contentOnly?: boolean } = {},
+): Meaning[] | null {
+  const compound = lang.compounds?.[meaning];
+  if (!compound || compound.parts.length === 0) return null;
+  const parts = compound.parts;
+  if (opts.contentOnly && lang.boundMorphemes) {
+    const filtered = parts.filter((p) => !lang.boundMorphemes!.has(p));
+    return filtered.length > 0 ? filtered : null;
+  }
+  return parts.slice();
+}
+
+/** Strip one derivational bound-morpheme affix off a lexicalised derived key. */
+function stripOneAffix(
+  lang: Language,
+  meaning: string,
+): { base: string; category: string } | null {
+  const bound = lang.boundMorphemes;
+  if (!bound || !meaning.includes("-")) return null;
+  let base: string | null = null;
+  let category = "";
+  let bestLen = 0;
+  for (const affix of bound) {
+    // The derived key is `${base}-${core}` where `core` is the affix key
+    // without its leading hyphen (`-tér.agt` → `tér.agt`). Longest match wins.
+    const core = affix.startsWith("-") ? affix.slice(1) : affix;
+    const tail = `-${core}`;
+    if (meaning.length > tail.length && meaning.endsWith(tail) && tail.length > bestLen) {
+      bestLen = tail.length;
+      base = meaning.slice(0, meaning.length - tail.length);
+      category = core.split(/[.·]/).pop() ?? "deriv";
+    }
+  }
+  return base === null ? null : { base, category };
+}
+
+/**
+ * Stage B (de-anglicisation gloss): peel derivational affixes off a leaked,
+ * LEXICALISED derived meaning key so callers can render a clean base lemma plus
+ * Leipzig-style derivation tags (`build-tér.agt` → base "build", tags ["agt"])
+ * instead of the raw affix scaffolding. Concept-native: matches the language's
+ * OWN `boundMorphemes` set (not English string shape), and unlike
+ * `derivedMeaningParts` (productive suffixes only) / `recordedParts`
+ * (`lang.compounds` records) it catches keys coined by now-dormant affixes that
+ * carry no compound record. Returns the unchanged meaning + empty tags when it
+ * is not a recognised derivation. Display-only — never affects the sim.
+ */
+export function peelDerivation(
+  lang: Language,
+  meaning: string,
+): { base: string; tags: string[] } {
+  let base = meaning;
+  const tags: string[] = [];
+  for (let depth = 0; depth < 4; depth++) {
+    const stripped = stripOneAffix(lang, base);
+    if (!stripped) break;
+    tags.unshift(stripped.category);
+    base = stripped.base;
+  }
+  return { base, tags };
+}
+
+/**
+ * Format a (possibly derived) meaning as a clean flat gloss lemma:
+ * `build-tér.agt` → `build-AGT`. Plain words pass through unchanged. Thin
+ * formatter over `peelDerivation` for caption/back-translation contexts that
+ * want a single string (vs the narrative interlinear, which keeps the tag in a
+ * separate gloss field).
+ */
+export function glossLemma(lang: Language, meaning: string): string {
+  const { base, tags } = peelDerivation(lang, meaning);
+  return tags.length > 0
+    ? `${base}-${tags.map((t) => t.toUpperCase()).join(".")}`
+    : meaning;
 }
 
 /**
@@ -231,7 +330,7 @@ export function pickSynonym(
   },
 ): WordForm | undefined {
   const candidates = selectSynonyms(lang, meaning);
-  if (candidates.length === 0) return lang.lexicon[meaning];
+  if (candidates.length === 0) return lexGet(lang, meaning);
   const primary = candidates[0]!;
   if (candidates.length === 1) return primary.form;
   // Register-biased pick.
@@ -366,7 +465,7 @@ export function syncWordsFromLexicon(
   lang.words = [];
   // Group meanings that share a form.
   const byKey = new Map<string, { form: WordForm; meanings: Meaning[] }>();
-  for (const [meaning, form] of Object.entries(lang.lexicon)) {
+  for (const [meaning, form] of lexEntries(lang)) {
     if (!form || form.length === 0) continue;
     const key = formKeyOf(form);
     const existing = byKey.get(key);
@@ -381,13 +480,13 @@ export function syncWordsFromLexicon(
   // forms briefly differ during migration.
   if (lang.colexifiedAs) {
     for (const [m, partners] of Object.entries(lang.colexifiedAs)) {
-      const formA = lang.lexicon[m];
+      const formA = lexGet(lang, m);
       if (!formA) continue;
       const keyA = formKeyOf(formA);
       const entry = byKey.get(keyA);
       if (!entry) continue;
       for (const p of partners) {
-        if (!entry.meanings.includes(p) && lang.lexicon[p]) {
+        if (!entry.meanings.includes(p) && lexHas(lang, p)) {
           entry.meanings.push(p);
         }
       }
@@ -463,7 +562,7 @@ export function syncWordsAfterPhonology(
     // with senses sharing a form becomes one Word.
     const buckets = new Map<string, { form: WordForm; senses: WordSense[] }>();
     for (const sense of word.senses) {
-      const lexForm = lang.lexicon[sense.meaning];
+      const lexForm = lexGet(lang, sense.meaning);
       if (!lexForm || lexForm.length === 0) continue; // meaning was deleted
       const key = formKeyOf(lexForm);
       const bucket = buckets.get(key);

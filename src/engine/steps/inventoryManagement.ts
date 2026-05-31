@@ -12,6 +12,7 @@ import { findSaturatedPhoneme, proposeOneRule } from "../phonology/propose";
 import { tryUniverbation } from "../lexicon/univerbation";
 import { pushEvent } from "./helpers";
 import { isFeatureActive } from "../modules/legacyGate";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * Phase 28a: unified inventory-management step. Combines what used to
@@ -127,8 +128,8 @@ function runPhonotacticRepair(
   if (!profile || profile.strictness <= 0) return;
 
   const violators: { meaning: string; score: number }[] = [];
-  for (const m of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[m];
+  for (const m of lexKeys(lang)) {
+    const form = lexGet(lang, m);
     if (!form || form.length === 0) continue;
     const score = phonotacticScore(form, profile);
     if (score < REPAIR_THRESHOLD) violators.push({ meaning: m, score });
@@ -139,7 +140,7 @@ function runPhonotacticRepair(
   let repairs = 0;
   for (const { meaning, score: before } of violators) {
     if (repairs >= MAX_REPAIRS_PER_GEN) break;
-    const form = lang.lexicon[meaning];
+    const form = lexGet(lang, meaning);
     if (!form) continue;
 
     for (const ruleId of REPAIR_RULE_IDS) {

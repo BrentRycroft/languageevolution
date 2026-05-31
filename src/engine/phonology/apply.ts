@@ -16,6 +16,7 @@ import { posOf } from "../lexicon/pos";
 import { otFit } from "./ot";
 import { wouldCreateUnrelatedHomonym } from "../lexicon/homonyms";
 import { markednessDelta } from "./markedness";
+import { orderedLexiconKeys } from "../lexicon/conceptIdentity";
 import type { Language } from "../types";
 
 /**
@@ -734,7 +735,7 @@ export function applyChangesToLexicon(
   opts: ApplyOptions,
 ): Lexicon {
   const out: Lexicon = {};
-  const meanings = Object.keys(lexicon).sort();
+  const meanings = orderedLexiconKeys(lexicon);
   const optsWithOrder: ApplyOptions = opts._orderedChanges
     ? opts
     : { ...opts, _orderedChanges: sortByPriority(changes) };

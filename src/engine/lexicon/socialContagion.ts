@@ -1,5 +1,6 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { setLexiconForm } from "./mutate";
+import { lexGet } from "./access";
 
 const NEW_VARIANT_FRACTION = 0.05;
 const CONTAGION_RATE = 0.18;
@@ -122,7 +123,7 @@ export function stepSocialContagion(
       for (const v of list) v.adoptionFraction = (v.adoptionFraction ?? 0) / totalFrac;
     }
 
-    const canonical = lang.lexicon[m];
+    const canonical = lexGet(lang, m);
     let leader = list[0]!;
     let leaderFrac = leader.adoptionFraction ?? 0;
     for (const v of list) {

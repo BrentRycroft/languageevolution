@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { posOf } from "./pos";
+import { lexGet, lexSet, lexHas, lexKeys } from "./access";
 
 /**
  * reanalysis.ts
@@ -31,7 +32,7 @@ function maybeCompoundReanalysis(
   rng: Rng,
 ): ReanalysisEvent | null {
   const compounds: Meaning[] = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     if (!m.includes("-")) continue;
     const parts = m.split("-");
     if (parts.length !== 2) continue;
@@ -40,7 +41,7 @@ function maybeCompoundReanalysis(
   }
   if (compounds.length === 0) return null;
   const source = compounds[rng.int(compounds.length)]!;
-  const sourceForm = lang.lexicon[source]!;
+  const sourceForm = lexGet(lang, source)!;
   const len = sourceForm.length;
   if (len < 3) return null;
   const affixLen = Math.min(3, Math.max(2, Math.floor(len / 2)));
@@ -78,7 +79,7 @@ function maybeVerbGrammaticalization(
   if (!lang.morphology?.paradigms) return null;
   const candidates: Array<{ meaning: Meaning; tag: string }> = [];
   for (const [meaning, tag] of Object.entries(GRAMMATICAL_VERB_PATHWAYS)) {
-    if (!lang.lexicon[meaning]) continue;
+    if (!lexHas(lang, meaning)) continue;
     if (posOf(meaning) !== "verb") continue;
     const freq = lang.wordFrequencyHints[meaning] ?? 0;
     if (freq < 0.7) continue;
@@ -87,7 +88,7 @@ function maybeVerbGrammaticalization(
   }
   if (candidates.length === 0) return null;
   const chosen = candidates[rng.int(candidates.length)]!;
-  const sourceForm = lang.lexicon[chosen.meaning]!;
+  const sourceForm = lexGet(lang, chosen.meaning)!;
   const len = sourceForm.length;
   if (len < 2) return null;
   // Take the last 1-2 phonemes as the new inflection. Models the
@@ -127,7 +128,7 @@ function detectReanalysisTemplate(
   for (const meaning of Object.keys(compounds)) {
     const meta = compounds[meaning]!;
     if (!meta.fossilized) continue;
-    const form = lang.lexicon[meaning];
+    const form = lexGet(lang, meaning);
     if (!form || form.length < 3) continue;
     fossilised.push({ meaning, form });
   }
@@ -162,8 +163,8 @@ function detectReanalysisTemplate(
   // Register as a bound morpheme so productive derivation can use
   // it via the genesis pathway.
   if (!lang.boundMorphemes) lang.boundMorphemes = new Set();
-  if (!lang.lexicon[tag]) {
-    lang.lexicon[tag] = chosen.affix.slice();
+  if (!lexHas(lang, tag)) {
+    lexSet(lang, tag, chosen.affix.slice());
     lang.boundMorphemes.add(tag);
     if (!lang.boundMorphemeOrigin) lang.boundMorphemeOrigin = {};
     lang.boundMorphemeOrigin[tag] = {

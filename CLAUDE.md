@@ -2,6 +2,12 @@
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
+## Project map (read first to re-orient)
+
+- **Working backlog + state + decision log:** [docs/planning/ROADMAP.md](docs/planning/ROADMAP.md) — the live task list. Start here each session.
+- **Architecture:** `ARCHITECTURE.md` (subsystem / data-flow map) + `docs/ARCHITECTURE.md` (dependency layers, data model, conventions).
+- **Historical planning docs** (superseded designs, kept for rationale): `docs/planning/archive/`.
+
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**

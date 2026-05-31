@@ -1,6 +1,7 @@
 import type { Language, WordForm, Meaning } from "../types";
 import type { Rng } from "../rng";
 import { setLexiconForm } from "./mutate";
+import { lexGet } from "./access";
 
 /**
  * Phase 34 Tranche 34a: compound-word maintenance.
@@ -30,7 +31,7 @@ export function recomposeCompound(
   if (!meta || meta.fossilized) return null;
   const parts: WordForm[] = [];
   for (const partMeaning of meta.parts) {
-    const f = lang.lexicon[partMeaning];
+    const f = lexGet(lang, partMeaning);
     if (!f || f.length === 0) return null; // a part dropped — bail
     parts.push(f);
   }
@@ -65,7 +66,7 @@ export function updateCompounds(
     }
     const next = recomposeCompound(lang, meaning);
     if (!next) continue;
-    const current = lang.lexicon[meaning];
+    const current = lexGet(lang, meaning);
     if (current && current.join("") === next.join("")) continue;
     setLexiconForm(lang, meaning, next, {
       bornGeneration: generation,
@@ -106,6 +107,47 @@ export function addCompound(
       morphStructure: {
         origin: "compound",
         parts: parts.slice(),
+      },
+    });
+  }
+}
+
+/**
+ * Meaning-layer Stage A1: add a DERIVATION entry — a word authored as a base
+ * plus a derivational affix. Mechanically a compound of `[base, affix]`
+ * (suffix) or `[affix, base]` (prefix), so it reuses the compound recompose +
+ * drift machinery (the derived form tracks its base as the base drifts), but
+ * records `morphStructure.origin: "derivation"`. The affix's form must live in
+ * `seedLexicon` (it's a bound morpheme); the base must be in `seedLexicon`.
+ *
+ * This is the derivational analogue of `addCompound` — it lets presets encode a
+ * word AS a root + affix building block rather than an atomic form.
+ */
+export function addDerivation(
+  lang: Language,
+  meaning: Meaning,
+  base: Meaning,
+  affix: Meaning,
+  bornGeneration: number,
+  options: { position?: "prefix" | "suffix" } = {},
+): void {
+  const position = options.position ?? "suffix";
+  const parts = position === "prefix" ? [affix, base] : [base, affix];
+  if (!lang.compounds) lang.compounds = {};
+  lang.compounds[meaning] = {
+    parts: parts.slice(),
+    fossilized: false,
+    bornGeneration,
+  };
+  const initial = recomposeCompound(lang, meaning);
+  if (initial && initial.length > 0) {
+    setLexiconForm(lang, meaning, initial, {
+      bornGeneration,
+      origin: "derivation",
+      morphStructure: {
+        origin: "derivation",
+        base,
+        affix,
       },
     });
   }

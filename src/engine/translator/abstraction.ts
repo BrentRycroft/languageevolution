@@ -1,5 +1,6 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { CONCEPTS } from "../lexicon/concepts";
+import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 
 /**
  * Phase 51 T2: English → abstract concept → target-language pivot.
@@ -47,9 +48,9 @@ export function attemptAbstractPivot(
 
   // Direct hit — already handled at Rung 1 of resolveLemma, but guard
   // defensively in case this is called on an unsanitised path.
-  if (lang.lexicon[lemma]) {
+  if (lexHas(lang, lemma)) {
     return {
-      form: lang.lexicon[lemma]!.slice(),
+      form: lexGet(lang, lemma)!.slice(),
       via: lemma,
       glossNote: "",
     };
@@ -59,9 +60,9 @@ export function attemptAbstractPivot(
   // marked semantic neighbours.
   if (concept.colexWith) {
     for (const partner of concept.colexWith) {
-      if (lang.lexicon[partner]) {
+      if (lexHas(lang, partner)) {
         return {
-          form: lang.lexicon[partner]!.slice(),
+          form: lexGet(lang, partner)!.slice(),
           via: partner,
           glossNote: `↔ ${partner}`,
         };
@@ -71,7 +72,7 @@ export function attemptAbstractPivot(
 
   // Same cluster + same POS, prefer ≤ same frequency class.
   let bestMatch: Meaning | null = null;
-  for (const otherId of Object.keys(lang.lexicon)) {
+  for (const otherId of lexKeys(lang)) {
     const otherConcept = CONCEPTS[otherId];
     if (!otherConcept) continue;
     if (otherConcept.cluster !== concept.cluster) continue;
@@ -81,7 +82,7 @@ export function attemptAbstractPivot(
   }
   if (bestMatch) {
     return {
-      form: lang.lexicon[bestMatch]!.slice(),
+      form: lexGet(lang, bestMatch)!.slice(),
       via: bestMatch,
       glossNote: `* ${bestMatch}`,
     };

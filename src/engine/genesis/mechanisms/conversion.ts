@@ -1,5 +1,6 @@
 import type { CoinageMechanism } from "./types";
 import { clusterOf } from "../../semantics/clusters";
+import { lexGet, lexKeys } from "../../lexicon/access";
 
 /**
  * conversion.ts
@@ -17,12 +18,12 @@ export const MECHANISM_CONVERSION: CoinageMechanism = {
   tryCoin: (lang, target, _tree, rng) => {
     const targetCluster = clusterOf(target);
     if (!targetCluster) return null;
-    const candidates = Object.keys(lang.lexicon).filter(
+    const candidates = lexKeys(lang).filter(
       (m) => m !== target && clusterOf(m) === targetCluster,
     );
     if (candidates.length === 0) return null;
     const base = candidates[rng.int(candidates.length)]!;
-    const form = lang.lexicon[base]!.slice();
+    const form = lexGet(lang, base)!.slice();
     return { form };
   },
 };

@@ -27,6 +27,7 @@ import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
+import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
 
 /**
  * phonology.ts
@@ -253,8 +254,8 @@ export function stepPhonology(
     const policy = lang.lexiconURRefreshPolicy ?? "each-gen";
     if (policy === "each-gen") {
       lang.lexiconUR = {};
-      for (const m of Object.keys(lang.lexicon)) {
-        lang.lexiconUR[m] = lang.lexicon[m]!.slice();
+      for (const m of lexKeys(lang)) {
+        lang.lexiconUR[m] = lexGet(lang, m)!.slice();
       }
     }
     // policy === "manual": leave UR untouched. Caller checkpoints when
@@ -289,8 +290,8 @@ export function stepPhonology(
   // their outputs are by definition in the old inventory.
   if (inventorySizePressure(lang) > 0) {
     const oldInv = new Set(lang.phonemeInventory.segmental);
-    for (const m of Object.keys(lang.lexicon)) {
-      const newForm = lang.lexicon[m]!;
+    for (const m of lexKeys(lang)) {
+      const newForm = lexGet(lang, m)!;
       const oldForm = before[m];
       if (!oldForm || newForm === oldForm) continue;
       let introducesNovel = false;
@@ -302,12 +303,12 @@ export function stepPhonology(
         }
       }
       if (introducesNovel) {
-        lang.lexicon[m] = oldForm;
+        lexSet(lang, m, oldForm);
       }
     }
   }
   for (const m of Object.keys(before)) {
-    if (lang.lexicon[m]) continue;
+    if (lexHas(lang, m)) continue;
     delete lang.wordFrequencyHints[m];
     delete lang.lastChangeGeneration[m];
     delete lang.wordOrigin[m];
@@ -345,18 +346,18 @@ export function stepPhonology(
   }
   let mutated = 0;
   for (const m of Object.keys(before)) {
-    if (!lang.lexicon[m]) continue;
+    if (!lexHas(lang, m)) continue;
     const a = before[m]!.join("");
-    const b = lang.lexicon[m]!.join("");
+    const b = lexGet(lang, m)!.join("");
     if (a !== b) {
       mutated++;
       lang.lastChangeGeneration[m] = generation;
       bumpFrequency(lang, m, 0.04);
       recordVariant(lang, m, before[m]!, generation, 0.55);
-      recordVariant(lang, m, lang.lexicon[m]!, generation, 0.7);
-      recordInnovation(lang, m, before[m]!, lang.lexicon[m]!, generation, "phonology");
+      recordVariant(lang, m, lexGet(lang, m)!, generation, 0.7);
+      recordInnovation(lang, m, before[m]!, lexGet(lang, m)!, generation, "phonology");
     } else {
-      reinforceCanonical(lang, m, lang.lexicon[m]!);
+      reinforceCanonical(lang, m, lexGet(lang, m)!);
     }
   }
   decayFrequencies(lang);
@@ -455,14 +456,14 @@ export function stepPhonology(
     const preInv = new Set(lang.phonemeInventory.segmental);
     const preLex: Record<string, WordForm> = {};
     if (inventorySizePressure(lang) > 0) {
-      for (const m of Object.keys(lang.lexicon)) preLex[m] = lang.lexicon[m]!;
+      for (const m of lexKeys(lang)) preLex[m] = lexGet(lang, m)!;
     }
     const ruleId = applyOneRegularChange(lang, changes, rng);
     if (ruleId) {
       if (Object.keys(preLex).length > 0) {
         let introducesNovel = false;
-        outer: for (const m of Object.keys(lang.lexicon)) {
-          for (const raw of lang.lexicon[m]!) {
+        outer: for (const m of lexKeys(lang)) {
+          for (const raw of lexGet(lang, m)!) {
             const base = stripTone(raw);
             if (!preInv.has(base) && !preInv.has(raw)) {
               introducesNovel = true;
@@ -471,7 +472,7 @@ export function stepPhonology(
           }
         }
         if (introducesNovel) {
-          for (const m of Object.keys(preLex)) lang.lexicon[m] = preLex[m]!;
+          for (const m of Object.keys(preLex)) lexSet(lang, m, preLex[m]!);
         }
       }
       refreshInventory(lang);
@@ -547,8 +548,8 @@ export function stepPhonology(
 
   if (lang.activeRules && lang.activeRules.length > 0) {
     lang.activeRules = lang.activeRules.map((rule) => {
-      for (const m of Object.keys(lang.lexicon)) {
-        if (matchSites(rule, lang.lexicon[m]!).length > 0) {
+      for (const m of lexKeys(lang)) {
+        if (matchSites(rule, lexGet(lang, m)!).length > 0) {
           return reinforce(rule, generation);
         }
       }

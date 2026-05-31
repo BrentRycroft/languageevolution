@@ -1,6 +1,7 @@
 import type { Language } from "../types";
 import type { Rng } from "../rng";
 import { deleteMeaning } from "../lexicon/mutate";
+import { lexHas } from "../lexicon/access";
 
 /**
  * bleaching.ts
@@ -34,7 +35,7 @@ export function stepSemanticBleaching(
     const p = morph[cat];
     if (!p?.source) continue;
     const m = p.source.meaning;
-    if (lang.lexicon[m]) grammaticalizedSources.push(m);
+    if (lexHas(lang, m)) grammaticalizedSources.push(m);
   }
   if (grammaticalizedSources.length === 0) return null;
 

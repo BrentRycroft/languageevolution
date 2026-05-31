@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { applyParadigm } from "./apply";
+import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 
 /**
  * The stored derivational-suffix shape on a Language. Differs from
@@ -96,7 +97,7 @@ export function tryDerivedFormFromMeaning(
 ): WordForm | null {
   const best = derivedMeaningParts(lang, meaning);
   if (!best) return null;
-  const baseForm = lang.lexicon[best.base];
+  const baseForm = lexGet(lang, best.base);
   if (!baseForm) return null;
   const pdm = {
     affix: best.suffix.affix,
@@ -136,10 +137,10 @@ export function pickRuntimeDerivedMeaning(
   const wantsVerb =
     suffix.category === "agentive" || suffix.category === "nominalisation";
   const wantsAdj = suffix.category === "abstractNoun";
-  const allMeanings = Object.keys(lang.lexicon);
+  const allMeanings = lexKeys(lang);
   const candidates = allMeanings.filter((m) => {
     if (m.includes("-")) return false;
-    if (lang.lexicon[`${m}-${suffix.tag}`]) return false;
+    if (lexHas(lang, `${m}-${suffix.tag}`)) return false;
     if (wantsVerb && !VERB_HINTS.has(m)) return false;
     if (wantsAdj && !ADJECTIVE_HINTS.has(m)) return false;
     if (!wantsVerb && !wantsAdj && (VERB_HINTS.has(m) || ADJECTIVE_HINTS.has(m))) return false;

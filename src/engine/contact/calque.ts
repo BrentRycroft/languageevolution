@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { setLexiconForm } from "../lexicon/mutate";
+import { lexGet, lexHas } from "../lexicon/access";
 
 /**
  * Phase 36 Tranche 36m: calques (loan translation) and reborrowing.
@@ -38,13 +39,13 @@ export function tryCalque(
     const meta = donor.compounds[meaning]!;
     if (meta.fossilized) continue;
     // Recipient already has this meaning — no calque opportunity.
-    if (recipient.lexicon[meaning]) continue;
+    if (lexHas(recipient, meaning)) continue;
     // Each part must exist in the recipient's lexicon for a
     // morpheme-by-morpheme translation to work.
     const recipientParts: Meaning[] = [];
     let ok = true;
     for (const part of meta.parts) {
-      if (!recipient.lexicon[part]) {
+      if (!lexHas(recipient, part)) {
         ok = false;
         break;
       }
@@ -54,7 +55,7 @@ export function tryCalque(
     // Stitch the recipient's part forms together.
     const out: WordForm = [];
     for (const p of recipientParts) {
-      out.push(...recipient.lexicon[p]!);
+      out.push(...lexGet(recipient, p)!);
     }
     if (out.length === 0) continue;
     setLexiconForm(recipient, meaning, out, {

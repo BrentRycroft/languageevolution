@@ -4,6 +4,7 @@ import { neighborsOf } from "../../semantics/neighbors";
 import { complexityFor } from "../../lexicon/complexity";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
+import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
 
 /**
  * compound.ts
@@ -19,19 +20,27 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
   originTag: "compound",
   baseWeight: 1.2,
   tryCoin: (lang, target, _tree, rng) => {
-    const meanings = Object.keys(lang.lexicon);
+    const meanings = lexKeys(lang);
     if (meanings.length < 2) return null;
 
-    const clusterPool = relatedMeanings(target).filter((m) => lang.lexicon[m]);
-    const neighborPool = neighborsOf(target).filter((m) => lang.lexicon[m]);
+    const clusterPool = relatedMeanings(target).filter((m) => lexHas(lang, m));
+    const neighborPool = neighborsOf(target).filter((m) => lexHas(lang, m));
     const pool = clusterPool.length > 0 ? clusterPool : neighborPool;
-    const partA = pool.length > 0 ? pool[rng.int(pool.length)]! : meanings[rng.int(meanings.length)]!;
+    // A compound must be built from two SEMANTICALLY-RELATED existing lexemes
+    // (kenning/calque: "firewater" = fire + water), never a random mash of two
+    // unrelated words. If the language has no ≥2 coherent related parts for this
+    // target, don't coin — the caller's cascade moves on, and the translator
+    // leaves the term untranslated rather than minting garbage. (Previously, an
+    // empty pool fell back to two RANDOM lexicon meanings — the "very weird"
+    // coinages the user reported.)
+    if (pool.length < 2) return null;
+    const partA = pool[rng.int(pool.length)]!;
     const otherPool = pool.filter((m) => m !== partA);
-    const partB = otherPool.length > 0 ? otherPool[rng.int(otherPool.length)]! : meanings[rng.int(meanings.length)]!;
-    if (partA === partB) return null;
+    if (otherPool.length === 0) return null;
+    const partB = otherPool[rng.int(otherPool.length)]!;
 
-    const fa = lang.lexicon[partA]!;
-    const fb = lang.lexicon[partB]!;
+    const fa = lexGet(lang, partA)!;
+    const fb = lexGet(lang, partB)!;
     if (fa.length + fb.length > 10) return null;
     let form = [...fa, ...fb];
     const minLen = 2 + complexityFor(target);

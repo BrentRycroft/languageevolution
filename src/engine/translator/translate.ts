@@ -4,6 +4,8 @@ import { neighborsOf } from "../semantics/neighbors";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { lookupFormWithResolution } from "../lexicon/lookup";
+import { recordedParts } from "../lexicon/word";
+import { lexGet, lexKeys, lexSize } from "../lexicon/access";
 import type { LemmaResolution } from "./syntax";
 
 /**
@@ -30,7 +32,7 @@ export function translate(
   if (!key) {
     return { form: "", phonemes: [], source: "missing", notes: "Empty input." };
   }
-  if (Object.keys(lang.lexicon).length === 0) {
+  if (lexSize(lang) === 0) {
     return {
       form: "—",
       phonemes: [],
@@ -39,7 +41,7 @@ export function translate(
     };
   }
 
-  const exact = lang.lexicon[key];
+  const exact = lexGet(lang, key);
   if (exact) {
     const inflected =
       options.inflect && lang.morphology.paradigms[options.inflect]
@@ -54,7 +56,7 @@ export function translate(
   }
 
   for (const n of neighborsOf(key)) {
-    const f = lang.lexicon[n];
+    const f = lexGet(lang, n);
     if (f) {
       return {
         form: formToString(f),
@@ -64,28 +66,28 @@ export function translate(
       };
     }
   }
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     if (neighborsOf(m).includes(key)) {
       return {
-        form: formToString(lang.lexicon[m]!),
-        phonemes: lang.lexicon[m]!,
+        form: formToString(lexGet(lang, m)!),
+        phonemes: lexGet(lang, m)!,
         source: "neighbor",
         notes: `"${englishWord}" is semantically close to "${m}" in this language.`,
       };
     }
   }
 
-  for (const m of Object.keys(lang.lexicon)) {
-    if (m.includes("-")) {
-      const parts = m.split("-");
-      if (parts.includes(key)) {
-        return {
-          form: formToString(lang.lexicon[m]!),
-          phonemes: lang.lexicon[m]!,
-          source: "compound",
-          notes: `Coined compound "${m}" contains "${key}".`,
-        };
-      }
+  for (const m of lexKeys(lang)) {
+    // Stage B: match against the RECORDED decomposition (compound /
+    // derivation records), not the hyphenation of the English gloss.
+    const parts = recordedParts(lang, m);
+    if (parts && parts.includes(key)) {
+      return {
+        form: formToString(lexGet(lang, m)!),
+        phonemes: lexGet(lang, m)!,
+        source: "compound",
+        notes: `Coined compound "${m}" contains "${key}".`,
+      };
     }
   }
 
@@ -137,8 +139,8 @@ export function translateBetween(
   sourceForm: string,
 ): TranslationResult {
   let matchedMeaning: string | null = null;
-  for (const m of Object.keys(source.lexicon)) {
-    if (formToString(source.lexicon[m]!) === sourceForm) {
+  for (const m of lexKeys(source)) {
+    if (formToString(lexGet(source, m)!) === sourceForm) {
       matchedMeaning = m;
       break;
     }

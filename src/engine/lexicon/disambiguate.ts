@@ -6,6 +6,7 @@ import { stripTone } from "../phonology/tone";
 import { isVowel } from "../phonology/ipa";
 import { isFormLegal } from "../phonology/wordShape";
 import { featuresOf } from "../phonology/features";
+import { lexGet, lexKeys } from "./access";
 
 const CORE_FREQ_THRESHOLD = 0.85;
 
@@ -161,7 +162,7 @@ function disambiguateCoreCollisionsOnce(
   generation: number,
 ): number {
   const coreMeanings: string[] = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
     if (freq >= CORE_FREQ_THRESHOLD && isCoreMeaning(m)) {
       coreMeanings.push(m);
@@ -176,7 +177,7 @@ function disambiguateCoreCollisionsOnce(
 
   const byForm = new Map<string, string[]>();
   for (const m of coreMeanings) {
-    const f = lang.lexicon[m];
+    const f = lexGet(lang, m);
     if (!f || f.length === 0) continue;
     const k = f.join(" ");
     const list = byForm.get(k);
@@ -188,8 +189,8 @@ function disambiguateCoreCollisionsOnce(
   // (not just core) so the perturbed form doesn't accidentally hit
   // another existing word.
   const allForms = new Set<string>();
-  for (const m of Object.keys(lang.lexicon)) {
-    allForms.add(lang.lexicon[m]!.join(" "));
+  for (const m of lexKeys(lang)) {
+    allForms.add(lexGet(lang, m)!.join(" "));
   }
 
   let resolved = 0;
@@ -203,7 +204,7 @@ function disambiguateCoreCollisionsOnce(
     });
     for (let i = 1; i < meanings.length; i++) {
       const loser = meanings[i]!;
-      const original = lang.lexicon[loser]!;
+      const original = lexGet(lang, loser)!;
       let perturbed: WordForm | null = perturbForm(loser, original, lang, allForms, rng);
       // Fallback: append a vowel.
       if (!perturbed) {

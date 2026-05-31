@@ -38,6 +38,7 @@ import {
   pickWeighted,
 } from "./pools";
 import { pickStanza } from "./poetry";
+import { lexGet } from "../lexicon/access";
 
 /**
  * discourse_generate.ts
@@ -360,8 +361,8 @@ export function generateDiscourseNarrative(
     genre === "myth" || genre === "legend" ? 0.18 :
     genre === "dialogue" ? 0.08 :
     0.05;
-  const andForm = lang.lexicon["and"];
-  const haveForm = lang.lexicon["have"];
+  const andForm = lexGet(lang, "and");
+  const haveForm = lexGet(lang, "have");
 
   for (let i = 0; i < lines; i++) {
     const baseTemplate = pickTemplate(genre, lang, ctx, rng);

@@ -13,6 +13,7 @@ import { stressClass } from "../phonology/stress";
 import { GENESIS_BY_ID } from "../genesis/catalog";
 import type { GenesisRule } from "../genesis/types";
 import type { SimulationConfig } from "../types";
+import { lexGet, lexSet, lexKeys } from "../lexicon/access";
 
 /**
  * helpers.ts
@@ -100,8 +101,8 @@ export function classifyToneRegime(lang: Language): "non-tonal" | "tonal" | "pit
   let toned = 0;
   let toneBearingWords = 0;
   let toneMarkSum = 0;
-  for (const m of Object.keys(lang.lexicon)) {
-    const f = lang.lexicon[m]!;
+  for (const m of lexKeys(lang)) {
+    const f = lexGet(lang, m)!;
     let wTb = 0;
     let wT = 0;
     for (const p of f) {
@@ -145,15 +146,15 @@ function normaliseToneRegime(
 ): void {
   if (regime === "pitch-accent") return;
   let mutated = false;
-  for (const m of Object.keys(lang.lexicon)) {
-    const f = lang.lexicon[m]!;
+  for (const m of lexKeys(lang)) {
+    const f = lexGet(lang, m)!;
     let needsRewrite = false;
     if (regime === "non-tonal") {
       for (const p of f) {
         if (toneOf(p)) { needsRewrite = true; break; }
       }
       if (!needsRewrite) continue;
-      lang.lexicon[m] = f.map((p) => stripTone(p));
+      lexSet(lang, m, f.map((p) => stripTone(p)));
       mutated = true;
     } else {
       // tonal — auto-fill MID into un-toned tone-bearing positions
@@ -173,7 +174,7 @@ function normaliseToneRegime(
         if (toneOf(p)) return p;
         return p + MID;
       });
-      lang.lexicon[m] = next;
+      lexSet(lang, m, next);
       mutated = true;
     }
   }
@@ -204,8 +205,8 @@ export function refreshInventory(lang: Language): void {
   // merger spam.
   const observed = new Set<string>();
   const tones = new Set<string>();
-  for (const m of Object.keys(lang.lexicon)) {
-    for (const p of lang.lexicon[m]!) {
+  for (const m of lexKeys(lang)) {
+    for (const p of lexGet(lang, m)!) {
       observed.add(stripTone(p));
       const t = toneOf(p);
       if (t) tones.add(t);

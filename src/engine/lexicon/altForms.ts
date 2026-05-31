@@ -1,5 +1,6 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { setLexiconForm } from "./mutate";
+import { lexGet, lexHas } from "./access";
 
 /**
  * Helpers for managing alternative forms (synonyms / lexical doublets) on a
@@ -27,7 +28,7 @@ export function addAlt(
   register: "high" | "low" | "neutral" = "neutral",
 ): boolean {
   if (form.length === 0) return false;
-  const primary = lang.lexicon[meaning];
+  const primary = lexGet(lang, meaning);
   if (primary && formKey(primary) === formKey(form)) return false;
 
   if (!lang.altForms) lang.altForms = {};
@@ -85,7 +86,7 @@ export function pruneAlts(lang: Language, decayProbability: number, rng: { chanc
  * concept doesn't disappear from the lexicon.
  */
 export function promoteAltOnPrimaryLoss(lang: Language, meaning: Meaning): WordForm | null {
-  if (lang.lexicon[meaning]) return null; // primary still exists
+  if (lexHas(lang, meaning)) return null; // primary still exists
   const alts = lang.altForms?.[meaning];
   if (!alts || alts.length === 0) return null;
   const promoted = alts.shift()!;
@@ -107,7 +108,7 @@ export function promoteAltOnPrimaryLoss(lang: Language, meaning: Meaning): WordF
  */
 export function allFormsFor(lang: Language, meaning: Meaning): WordForm[] {
   const out: WordForm[] = [];
-  const primary = lang.lexicon[meaning];
+  const primary = lexGet(lang, meaning);
   if (primary) out.push(primary);
   const alts = lang.altForms?.[meaning];
   if (alts) out.push(...alts);

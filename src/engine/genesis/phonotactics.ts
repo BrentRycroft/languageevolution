@@ -1,5 +1,6 @@
 import type { Language, Phoneme } from "../types";
 import { isVowel } from "../phonology/ipa";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * phonotactics.ts
@@ -11,7 +12,7 @@ import { isVowel } from "../phonology/ipa";
 
 export function phonotacticFit(form: Phoneme[], lang: Language): number {
   if (form.length === 0) return 0;
-  const lexSize = Object.keys(lang.lexicon).length;
+  const lexSize = lexKeys(lang).length;
   const trustBigrams = lexSize >= 6;
   let cvHits = 0;
   let ccHits = 0;
@@ -35,8 +36,8 @@ export function phonotacticFit(form: Phoneme[], lang: Language): number {
 }
 
 function languageHasBigram(lang: Language, bigram: string): boolean {
-  for (const m of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[m]!;
+  for (const m of lexKeys(lang)) {
+    const form = lexGet(lang, m)!;
     for (let i = 0; i < form.length - 1; i++) {
       if (form[i]! + form[i + 1]! === bigram) return true;
     }
