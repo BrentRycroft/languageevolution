@@ -1,4 +1,5 @@
 import type { LanguageTree, WordForm } from "../types";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * Sound-correspondence tracking across a language tree.
@@ -80,9 +81,9 @@ export function buildCorrespondenceMatrix(
   const a = tree[langAId]?.language;
   const b = tree[langBId]?.language;
   if (!a || !b) return { langAId, langBId, pairs, totalColumns };
-  for (const meaning of Object.keys(a.lexicon)) {
-    const formA = a.lexicon[meaning];
-    const formB = b.lexicon[meaning];
+  for (const meaning of lexKeys(a)) {
+    const formA = lexGet(a, meaning);
+    const formB = lexGet(b, meaning);
     if (!formA || !formB) continue;
     if (formA.length === 0 || formB.length === 0) continue;
     for (const [segA, segB] of alignPhonemes(formA, formB)) {

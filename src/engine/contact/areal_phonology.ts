@@ -7,6 +7,7 @@ import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 import { inventorySizePressure } from "../steps/inventoryManagement";
 import { setLexiconForm } from "../lexicon/mutate";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * areal_phonology.ts
@@ -85,8 +86,8 @@ export function maybeArealPhonemeShare(
   const replaced = candidates[rng.int(candidates.length)]!;
   if (replaced === target) return null;
 
-  const meanings = Object.keys(recipient.lexicon).filter((m) =>
-    recipient.lexicon[m]!.includes(replaced),
+  const meanings = lexKeys(recipient).filter((m) =>
+    lexGet(recipient, m)!.includes(replaced),
   );
   if (meanings.length === 0) return null;
   const affected: string[] = [];
@@ -97,7 +98,7 @@ export function maybeArealPhonemeShare(
     if (used.has(idx)) continue;
     used.add(idx);
     const m = meanings[idx]!;
-    const form = recipient.lexicon[m]!;
+    const form = lexGet(recipient, m)!;
     const newForm = form.slice();
     for (let i = 0; i < newForm.length; i++) {
       if (newForm[i] === replaced) {
