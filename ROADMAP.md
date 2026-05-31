@@ -101,16 +101,32 @@ ConceptId = identity), NOT FULL re-key (L-risk: 532 sites + breaks RNG-by-key-or
       nothing persisted changes, so Phase 1 needed ZERO source change and NO save
       bump (v11 deferred to whatever phase first changes the save payload). Root-
       morpheme materialization → Phase 2C. Suite green 1738 pass.
-- [ ] Phase 2 [GATED·parallel] — POS delegation (kill pos.ts import-cycle dupes);
-      populate WordMorphStructure + fix 3 meaning-string hacks (genesis.ts:417,
-      embeddings.ts:160, translate.ts:78) + make MECHANISM_COMPOUND root-aware
-      (= firewater item); concept-relation indirection (freeze ordering);
-      translator english→conceptId adapter (2 seams); narrative gloss from
-      concept.gloss.
-- [ ] Phase 3 — presets: shim auto-lifts all 6 unchanged (zero forced edits);
-      enrich opt-in smallest→largest (Toki Pona → … → english last).
-- [ ] Phase 4 [GATED] — flip/cleanup, RUN_SLOW determinism pass, snapshot re-baseline.
-- DEFERRED: FULL ConceptId re-key; low-D conceptual-space vectors (see Parked).
+RE-CUT 2026-05-30 (user chose BOTH, sequenced): Stage A (building blocks) THEN
+Stage B (full re-key). Each phase auto-advances on the gate (byte-identical OR a
+justified, well-understood re-baseline + full green + my review + reviewer agent +
+no design fork); halt+surface on a fork / review-blocker / regression-looking
+re-baseline. Local commits only.
+
+STAGE A — words as building blocks (morpheme authoring; achievable now):
+- [ ] A1 [SERIAL·me] — proving-ground preset (PIE) enriched: derivable vocabulary
+      authored as root+affix / compound refs, reusing existing infra (rootInventory,
+      boundMorphemes, derivationalSuffixes, seedCompounds, WordMorphStructure);
+      harness-gated; + an enrichment regression test. Establishes the pattern.
+- [ ] A2 [PARALLEL·agents] — fan out enrichment to bantu/germanic/romance/english/
+      tokipona (one agent per preset; gated re-baselines + review).
+- [ ] A3 — genesis composes preferentially from authored building blocks where it
+      improves realism (extends the firewater fix); harness-gated.
+
+STAGE B — meaning decoupled from English (the full re-key; L-risk):
+- [ ] B1 [SERIAL·me] — dual lexicon: ConceptId-keyed canonical + string-keyed gloss
+      view behind an adapter; PRESERVE Object.keys iteration ORDER (the RNG-by-index
+      determinism minefield); route reads through conceptId.
+- [ ] B2 — re-key the ~30 per-language Record<Meaning,…> maps + the 532 lang.lexicon
+      sites; translator/narrative/genesis concept-native; fix the 3 meaning-string
+      morphology hacks (genesis.ts:417, embeddings.ts:160, translate.ts:78).
+- [ ] B3 — save-format vNext migration + flip default + remove shim + full RUN_SLOW
+      determinism re-baseline.
+- DEFERRED still: low-D conceptual-space vectors (see Parked) — separate later.
 
 ## Backlog (top = next)
 
