@@ -178,18 +178,49 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
 - [ ] B1-Y [OPTIONAL] — content-addressed per-concept RNG (sub-rng seeded from
       conceptId+gen+site-tag) at the seam. ONE deliberate full re-baseline; unblocks
       byte-safe A2/A3 enrichment; needs a perf measurement. Separable from B1/B2/B3.
-- [ ] B2 [NEXT, SERIAL·me — large mechanical] — flip the canonical store to
-      Record<ConceptId,WordForm>. With the seam in place this is now mechanical:
-      (1) reimplement `orderedLexiconKeys` to return ConceptIds in GLOSS order (same
-      sequence → byte-identical via the harness gate); (2) flip lang.lexicon type +
-      re-point the ~532 `lang.lexicon[m]` reads through a gloss→conceptId accessor;
-      (3) re-key the ~30 per-language Record<Meaning,…> maps; (4) make
-      translator/narrative/genesis concept-native (incl. reverse.ts ordering); (5)
-      fix the 3 meaning-string morphology hacks (genesis.ts:417, embeddings.ts:160,
-      translate.ts:78). GATE each chunk: harness green at UNCHANGED hashes + full
-      suite. Approach as its own planned increment sequence (fresh context).
-- [ ] B3 — save-format vNext migration + flip default + remove shim + full RUN_SLOW
-      determinism re-baseline.
+- [x] B2 [DONE 2026-05-31 — concept-native engine; gloss key RETAINED, no physical
+      flip] — user RE-SCOPED B2 (2026-05-31) away from the full physical
+      Record<ConceptId,WordForm> flip after execution surfaced: (a) the project's own
+      MEANING-LAYER-MIGRATION.md defers the FULL re-key as "not needed for the win";
+      (b) the determinism hot path (applyChangesToLexicon, ~65%) takes a BARE lexicon
+      and can't resolve concept identity without threading state through the hot loop.
+      DEEPER FINDING (the real fork): while keys stay English glosses, a BYTE-IDENTICAL
+      concept-native refactor is a NO-OP (it only shuffles where English data lives);
+      genuine de-anglicization is a BEHAVIORAL change that needs a one-time re-baseline.
+      User chose "real de-anglicization, accept one re-baseline."
+      DELIVERED — the 3 named English-string-parsing hacks now read RECORDED structure
+      via a shared seam `recordedParts(lang, m, {contentOnly?})` (lexicon/word.ts:
+      reads lang.compounds[m].parts / primary word morphStructure; contentOnly filters
+      boundMorphemes) instead of `m.split("-")` / English-suffix regex:
+        - translate.ts compound lookup (read-only) → recordedParts.
+        - genesis.ts bootstrapNeologismNeighbors → recordedParts(contentOnly) — now
+          bootstraps freq+neighbours from a word's CONTENT constituents regardless of
+          gloss spelling (incl. non-hyphenated seed-compounds it used to skip).
+        - embeddings.ts embed(meaning, lang?) → prefers lang.compounds parts; lang
+          threaded through classifyShift (drift.ts:177, its one engine caller).
+      `recordedParts` is O(1) (compounds-only, no `lang.words` scan) since it runs
+      per lexicon key per generation in the bootstrap.
+      RE-BASELINE (deliberate, reviewed): ONLY GERMANIC shifted (25d3698b→5b98d44a) —
+      the one preset whose recorded compound/derivation structure diverges from its
+      gloss hyphenation within 30 gens. english stayed BYTE-IDENTICAL (its compounds
+      are hyphen-spelled, so the old string-split already matched the records), as did
+      pie/bantu/romance/tokipona — proving the change is structure-driven, not a
+      blanket perturbation. Full FAST suite 1746✓ unchanged (zero behavioral
+      regressions); full RUN_SLOW green at the re-baselined hash.
+      NOT DONE (deliberate — simplicity, logged as follow-ups):
+        - POS "delegation" (posOf→CONCEPTS[id].pos): NOT genuine de-anglicization
+          (registry POS is English-derived too). The doc's "kill VERB_HINTS/
+          ADJECTIVE_HINTS dupes" premise is WRONG — those are intentional CURATED
+          subsets (verb-hints has find/lose/bring/send absent from pos.ts VERBS;
+          omits be/come/stand/sit), NOT redundant. Delegating changes behaviour + loses
+          curation for a 128-site risk. Skipped.
+        - 4th string-hack: derivation.ts:141 `m.includes("-")` derivation-base guard →
+          could become `recordedParts(lang,m)!==null` (same principle). Left out to
+          keep this re-baseline tight to the 3 named hacks.
+- [~] B3 — MOOT under the keep-gloss-key decision: no physical store flip → no
+      save-format change → nothing to migrate. The shipped Phase-72d conceptId sidecar
+      already provides cross-tree concept identity (closed the original audit gap).
+      Revive only if the FULL physical Record<ConceptId,WordForm> flip is ever taken on.
 - DEFERRED still: low-D conceptual-space vectors (see Parked) — separate later.
 
 ## Backlog (top = next)

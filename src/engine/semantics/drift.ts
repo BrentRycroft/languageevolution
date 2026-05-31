@@ -74,10 +74,11 @@ export function classifyShift(
   to: string,
   rng?: { next: () => number },
   fromRegister?: "high" | "low",
+  lang?: Language,
 ): SemanticShiftKind {
   const cFrom = clusterOf(from);
   const cTo = clusterOf(to);
-  const similarity = cosine(embed(from), embed(to));
+  const similarity = cosine(embed(from, lang), embed(to, lang));
   const sameCluster = cFrom && cTo && cFrom === cTo;
   const complexityDelta = complexityFor(to) - complexityFor(from);
 
@@ -173,7 +174,7 @@ export function driftOneMeaning(
       if (strict && targetOccupied) continue;
       const form = lang.lexicon[m]!;
       if (!isFormLegal(target, form)) continue;
-      const kind = classifyShift(m, target, rng, lang.registerOf?.[m]);
+      const kind = classifyShift(m, target, rng, lang.registerOf?.[m], lang);
       // Phase 73e: a PROTECTED source meaning (be/eat/go/…) cannot be dropped
       // by deleteMeaning's Phase-71b guard. Pre-fix, drift still copied its
       // form to `target` and reported polysemous:false while the guard silently

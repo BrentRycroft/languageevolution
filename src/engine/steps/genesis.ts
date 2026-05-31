@@ -18,6 +18,7 @@ import { DERIVATION_TARGETS } from "../lexicon/derivation_targets";
 import { CONCEPTS } from "../lexicon/concepts";
 import { assignInflectionClass, assignNounDeclensionClass } from "../morphology/inflectionClass";
 import { posOf } from "../lexicon/pos";
+import { recordedParts } from "../lexicon/word";
 import {
   langPhonotacticScore,
   repairToProfile,
@@ -416,8 +417,12 @@ function tryTargetedDerivation(lang: Language, rng: Rng) {
 
 export function bootstrapNeologismNeighbors(lang: Language): void {
   for (const m of Object.keys(lang.lexicon)) {
-    if (!m.includes("-") && !/-(er|ness|ic|al|ine|intens)$/.test(m)) continue;
-    const parts = m.split("-");
+    // Stage B: bootstrap frequency + neighbours from the RECORDED content
+    // constituents of a derived/compound meaning (concept-native), rather
+    // than splitting the English gloss on hyphens. Bound morphemes are
+    // filtered out — semantic neighbours come from content parts, not affixes.
+    const parts = recordedParts(lang, m, { contentOnly: true });
+    if (!parts) continue;
     for (const p of parts) {
       const hint = lang.wordFrequencyHints[p];
       if (hint && !lang.wordFrequencyHints[m]) {

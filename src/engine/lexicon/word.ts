@@ -87,6 +87,40 @@ export function findPrimaryWordForMeaning(
 }
 
 /**
+ * Stage B (meaning re-key): the RECORDED structural parts of a meaning,
+ * read from the language's own compound / derivation records
+ * (`lang.compounds`, which `addCompound` AND `addDerivation` both populate)
+ * rather than parsed out of the English gloss string. Returns the part
+ * meanings in order, or null when the meaning has no recorded structure.
+ *
+ * This replaces the anglocentric `m.split("-")` / English-suffix-regex
+ * heuristics that assumed a gloss string encodes its own morphology. The
+ * recorded structure is the source of truth and is correct regardless of
+ * how the gloss happens to be spelled (hyphenated or not). It is O(1) — the
+ * caller (`bootstrapNeologismNeighbors`) runs it per lexicon key per
+ * generation, so it must not scan `lang.words`.
+ *
+ * `contentOnly` drops bound morphemes (affix keys like `-ness.abs`) via
+ * `lang.boundMorphemes`, leaving the semantic constituents — the right
+ * set for neighbour / frequency propagation, which should derive from a
+ * word's content parts, not its affixes.
+ */
+export function recordedParts(
+  lang: Language,
+  meaning: Meaning,
+  opts: { contentOnly?: boolean } = {},
+): Meaning[] | null {
+  const compound = lang.compounds?.[meaning];
+  if (!compound || compound.parts.length === 0) return null;
+  const parts = compound.parts;
+  if (opts.contentOnly && lang.boundMorphemes) {
+    const filtered = parts.filter((p) => !lang.boundMorphemes!.has(p));
+    return filtered.length > 0 ? filtered : null;
+  }
+  return parts.slice();
+}
+
+/**
  * Add a new sense to an existing word. Mirrors the real-world process by
  * which a word picks up a second meaning (polysemy from drift, sound-
  * change merger, borrowing into an occupied form). Idempotent: if the

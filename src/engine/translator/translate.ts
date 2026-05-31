@@ -4,6 +4,7 @@ import { neighborsOf } from "../semantics/neighbors";
 import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { lookupFormWithResolution } from "../lexicon/lookup";
+import { recordedParts } from "../lexicon/word";
 import type { LemmaResolution } from "./syntax";
 
 /**
@@ -76,16 +77,16 @@ export function translate(
   }
 
   for (const m of Object.keys(lang.lexicon)) {
-    if (m.includes("-")) {
-      const parts = m.split("-");
-      if (parts.includes(key)) {
-        return {
-          form: formToString(lang.lexicon[m]!),
-          phonemes: lang.lexicon[m]!,
-          source: "compound",
-          notes: `Coined compound "${m}" contains "${key}".`,
-        };
-      }
+    // Stage B: match against the RECORDED decomposition (compound /
+    // derivation records), not the hyphenation of the English gloss.
+    const parts = recordedParts(lang, m);
+    if (parts && parts.includes(key)) {
+      return {
+        form: formToString(lang.lexicon[m]!),
+        phonemes: lang.lexicon[m]!,
+        source: "compound",
+        notes: `Coined compound "${m}" contains "${key}".`,
+      };
     }
   }
 

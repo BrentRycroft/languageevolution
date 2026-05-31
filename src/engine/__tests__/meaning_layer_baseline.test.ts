@@ -76,7 +76,16 @@ const GENN: Record<string, string> = {
   pie: "8dc3510e",
   bantu: "7ef8a95a",
   romance: "b517df8f",
-  germanic: "25d3698b",
+  // re-baselined 2026-05-31 (Stage B B2 — concept-native de-anglicization):
+  // bootstrapNeologismNeighbors / translate / embed now read RECORDED structure
+  // (lang.compounds[m].parts) instead of parsing the English gloss string
+  // (m.split("-") / suffix regex). Only GERMANIC shifted — the one preset whose
+  // recorded compound/derivation structure diverges from its gloss hyphenation
+  // within 30 gens. english stayed byte-identical (its compounds are hyphen-
+  // spelled, so the old string-split already matched the records); bantu/romance/
+  // pie/tokipona likewise byte-identical — proving the change is structure-driven,
+  // not a blanket perturbation.
+  germanic: "5b98d44a",
   tokipona: "2eff6781", // re-baselined 2026-05-30: compound coinage no longer
                         // falls back to a random-lexeme mash (firewater fix);
                         // Toki Pona was the only preset coining such a garbage
