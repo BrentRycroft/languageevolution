@@ -11,6 +11,7 @@ import { pickSynonymForGenre } from "./genre_bias";
 import { closedClassForm } from "../translator/closedClass";
 import { derivedMeaningParts, tryDerivedFormFromMeaning } from "../morphology/derivation";
 import { derivationGloss } from "../lexicon/derivation";
+import { peelDerivation } from "../lexicon/word";
 import { composeTargetClause } from "./roleProjection";
 import type { RoleClause } from "../translator/syntax";
 
@@ -143,42 +144,6 @@ function fallbackForm(lang: Language, candidates: Meaning[]): { meaning: Meaning
 function renderForm(form: WordForm, lang: Language, script: DisplayScript, meaning?: string): string {
   if (form.length === 0) return "";
   return script === "ipa" ? formToString(form) : formatForm(form, lang, script, meaning);
-}
-
-/**
- * Stage B (de-anglicisation, narrative gloss): peel a derivational bound
- * morpheme off a leaked, LEXICALISED derived meaning key so the caption +
- * interlinear gloss read the clean base lemma plus a Leipzig-style tag
- * (`build-tér.agt` → "build" + AGT) instead of the raw affix scaffolding.
- *
- * Concept-native: matches against the language's OWN `boundMorphemes` set
- * (not English string shape). It deliberately does NOT reuse
- * `derivedMeaningParts` (productive suffixes only) or `recordedParts`
- * (`lang.compounds` records) — these coined keys are made by now-dormant
- * affixes and carry no compound record, so neither catches them. Render-only:
- * never touches the target form.
- */
-function stripDerivationAffix(
-  lang: Language,
-  meaning: string,
-): { base: string; category: string } | null {
-  const bound = lang.boundMorphemes;
-  if (!bound || !meaning.includes("-")) return null;
-  let base: string | null = null;
-  let category = "";
-  let bestLen = 0;
-  for (const affix of bound) {
-    // The derived key is `${base}-${core}` where `core` is the affix key
-    // without its leading hyphen (`-tér.agt` → `tér.agt`). Longest match wins.
-    const core = affix.startsWith("-") ? affix.slice(1) : affix;
-    const tail = `-${core}`;
-    if (meaning.length > tail.length && meaning.endsWith(tail) && tail.length > bestLen) {
-      bestLen = tail.length;
-      base = meaning.slice(0, meaning.length - tail.length);
-      category = core.split(/[.·]/).pop() ?? "deriv";
-    }
-  }
-  return base === null ? null : { base, category };
 }
 
 function makeToken(opts: {
@@ -1089,16 +1054,9 @@ export function projectRoleClauseToTokens(
     const tok = rt.token;
     if (glossSeen.has(tok)) continue;
     glossSeen.add(tok);
-    let lemma = tok.englishLemma;
-    const tags: string[] = [];
-    for (let depth = 0; depth < 4; depth++) {
-      const stripped = stripDerivationAffix(lang, lemma);
-      if (!stripped) break;
-      tags.unshift(stripped.category);
-      lemma = stripped.base;
-    }
+    const { base, tags } = peelDerivation(lang, tok.englishLemma);
     if (tags.length === 0) continue;
-    tok.englishLemma = lemma;
+    tok.englishLemma = base;
     tok.glossNote = tok.glossNote ? `${tags.join(",")},${tok.glossNote}` : tags.join(",");
   }
 

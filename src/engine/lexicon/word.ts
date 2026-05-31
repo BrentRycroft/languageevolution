@@ -120,6 +120,70 @@ export function recordedParts(
   return parts.slice();
 }
 
+/** Strip one derivational bound-morpheme affix off a lexicalised derived key. */
+function stripOneAffix(
+  lang: Language,
+  meaning: string,
+): { base: string; category: string } | null {
+  const bound = lang.boundMorphemes;
+  if (!bound || !meaning.includes("-")) return null;
+  let base: string | null = null;
+  let category = "";
+  let bestLen = 0;
+  for (const affix of bound) {
+    // The derived key is `${base}-${core}` where `core` is the affix key
+    // without its leading hyphen (`-tér.agt` → `tér.agt`). Longest match wins.
+    const core = affix.startsWith("-") ? affix.slice(1) : affix;
+    const tail = `-${core}`;
+    if (meaning.length > tail.length && meaning.endsWith(tail) && tail.length > bestLen) {
+      bestLen = tail.length;
+      base = meaning.slice(0, meaning.length - tail.length);
+      category = core.split(/[.·]/).pop() ?? "deriv";
+    }
+  }
+  return base === null ? null : { base, category };
+}
+
+/**
+ * Stage B (de-anglicisation gloss): peel derivational affixes off a leaked,
+ * LEXICALISED derived meaning key so callers can render a clean base lemma plus
+ * Leipzig-style derivation tags (`build-tér.agt` → base "build", tags ["agt"])
+ * instead of the raw affix scaffolding. Concept-native: matches the language's
+ * OWN `boundMorphemes` set (not English string shape), and unlike
+ * `derivedMeaningParts` (productive suffixes only) / `recordedParts`
+ * (`lang.compounds` records) it catches keys coined by now-dormant affixes that
+ * carry no compound record. Returns the unchanged meaning + empty tags when it
+ * is not a recognised derivation. Display-only — never affects the sim.
+ */
+export function peelDerivation(
+  lang: Language,
+  meaning: string,
+): { base: string; tags: string[] } {
+  let base = meaning;
+  const tags: string[] = [];
+  for (let depth = 0; depth < 4; depth++) {
+    const stripped = stripOneAffix(lang, base);
+    if (!stripped) break;
+    tags.unshift(stripped.category);
+    base = stripped.base;
+  }
+  return { base, tags };
+}
+
+/**
+ * Format a (possibly derived) meaning as a clean flat gloss lemma:
+ * `build-tér.agt` → `build-AGT`. Plain words pass through unchanged. Thin
+ * formatter over `peelDerivation` for caption/back-translation contexts that
+ * want a single string (vs the narrative interlinear, which keeps the tag in a
+ * separate gloss field).
+ */
+export function glossLemma(lang: Language, meaning: string): string {
+  const { base, tags } = peelDerivation(lang, meaning);
+  return tags.length > 0
+    ? `${base}-${tags.map((t) => t.toUpperCase()).join(".")}`
+    : meaning;
+}
+
 /**
  * Add a new sense to an existing word. Mirrors the real-world process by
  * which a word picks up a second meaning (polysemy from drift, sound-

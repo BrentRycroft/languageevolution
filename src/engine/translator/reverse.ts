@@ -1,7 +1,7 @@
 import type { Language, Meaning } from "../types";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassTable } from "./closedClass";
-import { disambiguateSense } from "../lexicon/word";
+import { disambiguateSense, glossLemma } from "../lexicon/word";
 
 /**
  * reverse.ts
@@ -164,7 +164,7 @@ export function reverseLookupForm(
     const alternates = direct.lemmas.filter((l) => l !== picked);
     return {
       target: surface,
-      lemma: picked,
+      lemma: glossLemma(lang, picked),
       kind: direct.source,
       // Phase 29-2b: forward the suppletive-paradigm tag so callers
       // (translator UI, glossing) know this is e.g. a past-tense form
@@ -185,7 +185,7 @@ export function reverseLookupForm(
     const alternates = hit.lemmas.filter((l) => l !== picked);
     return {
       target: surface,
-      lemma: picked,
+      lemma: glossLemma(lang, picked),
       paradigm,
       kind: hit.source,
       ...(alternates.length > 0 ? { alternateLemmas: alternates } : {}),

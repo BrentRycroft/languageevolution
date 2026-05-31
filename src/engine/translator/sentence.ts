@@ -4,7 +4,7 @@ import { closedClassForm } from "./closedClass";
 import { parseSyntaxAll } from "./parse";
 import { realiseSentence } from "./realise";
 import { pickAspect } from "../narrative/verbClasses";
-import { disambiguateSense, pickSynonym } from "../lexicon/word";
+import { disambiguateSense, pickSynonym, glossLemma } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { inflectCascade } from "../morphology/evolve";
@@ -778,7 +778,9 @@ export function reverseParseToTokens(
         : disambiguateSense(lang, choices, { contextLemmas });
     const otherSenses = choices.filter((c) => c !== meaning);
     tokens.push({
-      englishLemma: meaning,
+      // Stage B: render a clean derivation gloss ("build-AGT") instead of
+      // leaking the raw key ("build-tér.agt"); form lookup keeps the real key.
+      englishLemma: glossLemma(lang, meaning),
       englishTag: "N",
       targetForm: lang.lexicon[meaning] ?? [],
       targetSurface: raw,

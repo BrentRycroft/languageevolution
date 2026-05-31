@@ -3,6 +3,8 @@ import { createSimulation } from "../simulation";
 import { presetPIE } from "../presets/pie";
 import { presetRomance } from "../presets/romance";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
+import { reverseTranslate } from "../translator/reverse";
+import { formToString } from "../phonology/ipa";
 import type { SimulationConfig } from "../types";
 
 /**
@@ -52,6 +54,29 @@ describe("narrative gloss — derived keys never leak affix scaffolding", () => 
             `affix scaffolding leaked into a gloss line: ${line.gloss ?? blob}`,
           ).toBe(false);
         }
+      }
+    });
+  }
+});
+
+describe("translator reverse — derived target words gloss cleanly", () => {
+  for (const [name, build] of Object.entries(PRESETS)) {
+    it(`${name}: reverseTranslate of a derived form yields a clean gloss`, () => {
+      const sim = createSimulation(build());
+      for (let i = 0; i < 50; i++) sim.step();
+      const lang = sim.getState().tree["L-0"]!.language;
+      const bound = lang.boundMorphemes ?? new Set<string>();
+      const derived = Object.keys(lang.lexicon).filter(
+        (m) => !bound.has(m) && SCAFFOLD.test(m) && (lang.lexicon[m]?.length ?? 0) > 0,
+      );
+      expect(derived.length).toBeGreaterThan(0);
+      for (const m of derived) {
+        const surface = formToString(lang.lexicon[m]!);
+        const rev = reverseTranslate(lang, surface);
+        expect(
+          SCAFFOLD.test(rev.english),
+          `reverse caption leaked scaffolding for ${m}: "${rev.english}"`,
+        ).toBe(false);
       }
     });
   }
