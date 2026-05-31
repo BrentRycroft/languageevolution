@@ -107,7 +107,17 @@ justified, well-understood re-baseline + full green + my review + reviewer agent
 no design fork); halt+surface on a fork / review-blocker / regression-looking
 re-baseline. Local commits only.
 
-STAGE A — words as building blocks (morpheme authoring; achievable now):
+STAGE A — words as building blocks (morpheme authoring). STATUS 2026-05-30:
+BYTE-SAFE WORK EXHAUSTED. A1a infra done. English + Toki Pona ALREADY author
+building blocks (true compounds + derivational suffixes — they were the presets
+designed with transparent decomposition). The other four (PIE/Germanic/Romance/
+Bantu) have NO legitimate byte-safe decompositions — auto-probe found only
+phonological coincidences (PIE 5, Germanic 0, Romance 2, Bantu 4; ALL false, e.g.
+"body"=heart+from, "two"=her+the), because their forms are authored as attested/
+evolved words, not concatenations of existing lexemes. Re-authoring any would inject
+false etymologies. ⇒ Everything further (additive vocabulary, genesis-from-blocks) is
+Stage-B-gated. Migration pauses here at a green, byte-identical stop point pending an
+explicit go-ahead to start Stage B (an L-risk milestone).
 - [~] A1 — proving-ground preset (PIE) enriched as building blocks.
       - [x] A1a [DONE] — INFRA: `seedDerivations` config field + `addDerivation`
         (word = base + affix; reuses the compound recompose/drift machinery, tagged
