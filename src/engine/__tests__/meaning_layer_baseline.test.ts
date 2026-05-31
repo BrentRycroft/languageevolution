@@ -8,6 +8,7 @@ import { presetTokipona } from "../presets/tokipona";
 import { presetEnglish } from "../presets/english";
 import { formToString } from "../phonology/ipa";
 import { fnv1a } from "../rng";
+import { lexKeys, lexGet } from "../lexicon/access";
 import type { SimulationConfig } from "../types";
 
 /**
@@ -50,9 +51,18 @@ function signature(sim: ReturnType<typeof createSimulation>): string {
   const parts: string[] = [];
   for (const id of Object.keys(tree).sort()) {
     const lang = tree[id]!.language;
-    const lex = Object.keys(lang.lexicon)
+    // Route through the accessor seam (lexKeys/lexGet) so the signature locks
+    // GLOSS → form, not the physical store key. Pre-flip the seam yields the
+    // glosses directly; post-flip (concept re-key R2) it resolves the
+    // ConceptId store key back to its gloss. Either way the linguistic
+    // content — what this test guards — is identical, so the locked hashes
+    // survive a pure storage refactor and still catch any real form change.
+    // NB: sort the GLOSSES (as the original Object.keys(...).sort() did), not
+    // the combined "gloss=form" strings — a prefix gloss with a low-ASCII
+    // continuation (e.g. "a" vs "a-thing") would otherwise reorder.
+    const lex = lexKeys(lang)
       .sort()
-      .map((m) => `${m}=${formToString(lang.lexicon[m]!)}`)
+      .map((m) => `${m}=${formToString(lexGet(lang, m)!)}`)
       .join("|");
     const words = (lang.words ?? [])
       .map((w) => w.formKey)
