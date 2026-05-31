@@ -7,6 +7,7 @@ import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS, isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning, PROTECTED_MEANINGS } from "../lexicon/mutate";
+import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 /**
  * drift.ts
  *
@@ -121,7 +122,7 @@ export function driftOneMeaning(
   override?: NeighborOverride,
   generation: number = 0,
 ): SemanticDrift | null {
-  const meanings = Object.keys(lang.lexicon);
+  const meanings = lexKeys(lang);
   if (meanings.length === 0) return null;
   const shuffled = meanings.slice();
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -170,9 +171,9 @@ export function driftOneMeaning(
       const pool = posCompatible.length > 0 ? posCompatible : neighbors;
       const target = pool[rng.int(pool.length)]!;
       if (target === m) continue;
-      const targetOccupied = !!lang.lexicon[target];
+      const targetOccupied = lexHas(lang, target);
       if (strict && targetOccupied) continue;
-      const form = lang.lexicon[m]!;
+      const form = lexGet(lang, m)!;
       if (!isFormLegal(target, form)) continue;
       const kind = classifyShift(m, target, rng, lang.registerOf?.[m], lang);
       // Phase 73e: a PROTECTED source meaning (be/eat/go/…) cannot be dropped

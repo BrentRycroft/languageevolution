@@ -2,6 +2,8 @@ import type { Language, Meaning } from "../types";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassTable } from "./closedClass";
 import { disambiguateSense, glossLemma } from "../lexicon/word";
+import { lexGet } from "../lexicon/access";
+import { orderedLexiconKeys } from "../lexicon/conceptIdentity";
 
 /**
  * reverse.ts
@@ -93,13 +95,13 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
       }
     }
   } else {
-    const openLemmas = Object.keys(lang.lexicon).sort();
+    const openLemmas = orderedLexiconKeys(lang.lexicon);
     for (const lemma of openLemmas) {
       // Phase 29-2i: null-guard. The `!` was wrong — `Object.keys`
       // can race with concurrent mutations and a meaning may be
       // mid-deletion when this runs (the engine never deletes during
       // a render but defensive code should not assume).
-      const form = lang.lexicon[lemma];
+      const form = lexGet(lang, lemma);
       if (!form) continue;
       const surface = form.join("");
       if (!surface) continue;

@@ -7,6 +7,7 @@ import type { MorphCategory } from "../morphology/types";
 import { tokeniseEnglish, translateSentenceViaAST } from "../translator/sentence";
 import { englishTokensToAST } from "../translator/ast";
 import { posOf } from "../lexicon/pos";
+import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 
 /**
  * Phase 53 T6: narrative generator runs purely off the language's own
@@ -81,7 +82,7 @@ function pickShape(lang: Language, rng: Rng): SentenceShape {
   // even when the underlying language is identical. The base weights
   // give roughly even coverage across the 9 SHAPES while keeping
   // copular gated on the language having "be".
-  const hasCopula = !!lang.lexicon["be"];
+  const hasCopula = lexHas(lang, "be");
   const supportsPlural = lang.grammar.pluralMarking === "affix";
   const baseWeights: number[] = [
     0.30, // S V O
@@ -120,7 +121,7 @@ function pickMeaningByPOS(
   rng: Rng,
 ): Meaning | null {
   const candidates: Array<{ m: Meaning; w: number }> = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     if (posOf(m) !== pos) continue;
     if (m.includes("-")) continue; // skip compounds for shape simplicity
     const freq = lang.wordFrequencyHints[m] ?? 0.4;
@@ -417,9 +418,9 @@ function realizeSkeleton(
   rng: Rng,
 ): NarrativeLine | null {
   const { shape, subjectNoun, verb, objectNoun, adjective } = skeleton;
-  if (!lang.lexicon[subjectNoun] || !lang.lexicon[verb]) return null;
-  if (shape.needsObject && (!objectNoun || !lang.lexicon[objectNoun])) return null;
-  if (shape.needsAdj && (!adjective || !lang.lexicon[adjective])) return null;
+  if (!lexHas(lang, subjectNoun) || !lexHas(lang, verb)) return null;
+  if (shape.needsObject && (!objectNoun || !lexHas(lang, objectNoun))) return null;
+  if (shape.needsAdj && (!adjective || !lexHas(lang, adjective))) return null;
 
   if (usesDeepRouting(lang)) {
     const englishStr = buildEnglishSentence(
@@ -457,8 +458,8 @@ function realizeSkeleton(
     }
   }
 
-  const sForm = lang.lexicon[subjectNoun]!;
-  const vForm = lang.lexicon[verb]!;
+  const sForm = lexGet(lang, subjectNoun)!;
+  const vForm = lexGet(lang, verb)!;
   const render = (form: WordForm): string =>
     script === "ipa" ? formToString(form) : formatForm(form, lang, script);
 
@@ -466,7 +467,7 @@ function realizeSkeleton(
   const V = render(inflectVerb(vForm, lang, verb, rng));
 
   if (shape.copular && adjective) {
-    const adjForm = lang.lexicon[adjective]!;
+    const adjForm = lexGet(lang, adjective)!;
     const A = render(adjForm);
     // Overt copula vs zero-copula is a typological parameter. A language
     // that has lexicalised "be" places the copula like a verb (per
@@ -475,7 +476,7 @@ function realizeSkeleton(
     // tense, Arabic nominal sentences) juxtaposes subject + predicate
     // with no copula. (Deep routing handles richer copula morphology;
     // this is the light path.)
-    const beForm = lang.lexicon["be"];
+    const beForm = lexGet(lang, "be");
     if (beForm && beForm.length > 0) {
       const COP = render(beForm);
       const arranged = arrange(lang.grammar.wordOrder, S, COP, A);
@@ -491,11 +492,11 @@ function realizeSkeleton(
   }
 
   if (shape.needsObject && objectNoun) {
-    const oForm = lang.lexicon[objectNoun]!;
+    const oForm = lexGet(lang, objectNoun)!;
     const O = render(inflectNoun(oForm, lang, "O", objectNoun, rng, !!shape.pluralObject));
     const arranged = arrange(lang.grammar.wordOrder, S, V, O);
     if (shape.needsAdj && adjective) {
-      const adjForm = lang.lexicon[adjective]!;
+      const adjForm = lexGet(lang, adjective)!;
       const A = render(adjForm);
       // Phase 61: when shape.adjOnObject, render the adj inline next to
       // the object inside the SVO arrangement; otherwise keep the
@@ -521,7 +522,7 @@ function realizeSkeleton(
   }
 
   if (shape.needsAdj && adjective) {
-    const adjForm = lang.lexicon[adjective]!;
+    const adjForm = lexGet(lang, adjective)!;
     const A = render(adjForm);
     return {
       text: `${A} ${S} ${V}`,

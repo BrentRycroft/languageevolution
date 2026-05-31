@@ -12,6 +12,7 @@ import { closedClassForm } from "../translator/closedClass";
 import { derivedMeaningParts, tryDerivedFormFromMeaning } from "../morphology/derivation";
 import { derivationGloss } from "../lexicon/derivation";
 import { peelDerivation } from "../lexicon/word";
+import { lexGet, lexHas } from "../lexicon/access";
 import { composeTargetClause } from "./roleProjection";
 import type { RoleClause } from "../translator/syntax";
 
@@ -135,7 +136,7 @@ const PRONOUN_OBLIQUE: Readonly<Record<string, string>> = {
 
 function fallbackForm(lang: Language, candidates: Meaning[]): { meaning: Meaning; form: WordForm } | null {
   for (const m of candidates) {
-    const f = lang.lexicon[m];
+    const f = lexGet(lang, m);
     if (f && f.length > 0) return { meaning: m, form: f };
   }
   return null;
@@ -180,7 +181,7 @@ function pickFormWithAlts(
   meaning: Meaning,
   options: ComposeOptions,
 ): WordForm | null {
-  const primary = lang.lexicon[meaning];
+  const primary = lexGet(lang, meaning);
   if (!primary) return null;
   const {
     rng,
@@ -356,10 +357,10 @@ function articleRoleToken(
     if (count <= 1) lemma = "a";
     else lemma = "the";
   }
-  let form = lang.lexicon[lemma];
+  let form = lexGet(lang, lemma);
   // If indefinite isn't lexicalised, fall back to definite — better
   // a slight definiteness mismatch than no article at all.
-  if (!form && lemma === "a") form = lang.lexicon["the"];
+  if (!form && lemma === "a") form = lexGet(lang, "the");
   if (!form) return null;
   return {
     role: "DET",
@@ -530,7 +531,7 @@ function placeRoleTokens(
   script: DisplayScript,
 ): RoleToken[] {
   const out: RoleToken[] = [];
-  const prepForm = lang.lexicon["at"] ?? lang.lexicon["in"] ?? lang.lexicon["on"];
+  const prepForm = lexGet(lang, "at") ?? lexGet(lang, "in") ?? lexGet(lang, "on");
   if (prepForm) {
     out.push({
       role: "PREP",
@@ -545,7 +546,7 @@ function placeRoleTokens(
   }
   const detTok = articleRoleToken(lang, script);
   if (detTok) out.push(detTok);
-  const placeForm = lang.lexicon[meaning];
+  const placeForm = lexGet(lang, meaning);
   if (placeForm) {
     out.push({
       role: "O",
@@ -570,7 +571,7 @@ function timePrefixRoleTokens(
   // Deictic adverbs (today/yesterday/tomorrow) surface bare — no adposition,
   // no article. Temporal nouns take "in" (+ optional article).
   const isDeictic = DEICTIC_TIME.has(meaning);
-  const prepForm = lang.lexicon["in"] ?? lang.lexicon["at"];
+  const prepForm = lexGet(lang, "in") ?? lexGet(lang, "at");
   if (!isDeictic && prepForm) {
     out.push({
       role: "PREP",
@@ -585,7 +586,7 @@ function timePrefixRoleTokens(
   }
   const detTok = isDeictic ? null : articleRoleToken(lang, script);
   if (detTok) out.push(detTok);
-  const timeForm = lang.lexicon[meaning];
+  const timeForm = lexGet(lang, meaning);
   if (timeForm) {
     out.push({
       role: "TIME",
@@ -616,18 +617,18 @@ function adjunctRoleTokens(
   script: DisplayScript,
 ): RoleToken[] {
   const out: RoleToken[] = [];
-  let prepForm = lang.lexicon[prepLemma];
+  let prepForm = lexGet(lang, prepLemma);
   let prepUsedLemma = prepLemma;
   if (!prepForm) {
     for (const fb of fallbackLemmas) {
-      if (lang.lexicon[fb]) {
-        prepForm = lang.lexicon[fb];
+      if (lexHas(lang, fb)) {
+        prepForm = lexGet(lang, fb);
         prepUsedLemma = fb;
         break;
       }
     }
   }
-  const nounForm = lang.lexicon[meaning];
+  const nounForm = lexGet(lang, meaning);
   if (!nounForm) return out;
   const prepTok: RoleToken | null = prepForm
     ? {
@@ -667,7 +668,7 @@ function adjunctRoleTokens(
 function longAgoRoleToken(lang: Language, script: DisplayScript): RoleToken | null {
   const cand = ["long-ago", "before", "ancient", "past"];
   for (const m of cand) {
-    const f = lang.lexicon[m];
+    const f = lexGet(lang, m);
     if (f) {
       return {
         role: "ADV",
@@ -853,8 +854,8 @@ export function projectRoleClauseToTokens(
   // emits the negator at the language's own `negationPosition`. We inflect
   // "do" via verbRoleToken so suppletion fires → past "did", present 3sg "does".
   const negated = !!template.negated;
-  const auxNot = lang.lexicon["not"];
-  const doForm = lang.lexicon["do"];
+  const auxNot = lexGet(lang, "not");
+  const doForm = lexGet(lang, "do");
   let didDoSupport = false;
   if (negated && auxNot && doForm && lang.grammar.doSupport) {
     const auxTok = verbRoleToken(
@@ -891,7 +892,7 @@ export function projectRoleClauseToTokens(
   }
 
   if (tense === "future") {
-    const willForm = lang.lexicon["will"];
+    const willForm = lexGet(lang, "will");
     if (willForm) {
       verbTokens.push({
         role: "V",
@@ -914,7 +915,7 @@ export function projectRoleClauseToTokens(
   const wantsPerfect = template.aspect === "perfect" && !didDoSupport && tense !== "future";
   let perfectAux: RoleToken | null = null;
   if (wantsPerfect) {
-    const haveForm = lang.lexicon["have"];
+    const haveForm = lexGet(lang, "have");
     if (haveForm) {
       const auxLemma = tense === "past" ? "had" : subjectIs3sg ? "has" : "have";
       perfectAux = {

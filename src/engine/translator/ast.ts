@@ -30,6 +30,7 @@
  */
 
 import type { EnglishToken } from "./tokens";
+import { lexGet } from "../lexicon/access";
 
 export type ASTRole = "subject" | "object" | "indirect" | "oblique";
 
@@ -202,7 +203,7 @@ export function astToSentence(
   const subject = ast.participants.find((p) => p.role === "subject");
   if (!subject) return null;
   const object = ast.participants.find((p) => p.role === "object");
-  const lookupForm = (lemma: string) => lang.lexicon[lemma]?.length ? lang.lexicon[lemma] : [];
+  const lookupForm = (lemma: string) => lexGet(lang, lemma)?.length ? lexGet(lang, lemma)! : [];
 
   const subjectNP: NP = {
     kind: "NP",

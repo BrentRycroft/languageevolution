@@ -4,6 +4,7 @@ import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { isFormLegal } from "../phonology/wordShape";
 import { recordOneSidedColexification } from "./colexification";
 import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
+import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 
 /**
  * recarve.ts
@@ -41,13 +42,12 @@ export function maybeRecarve(
 }
 
 function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | null {
-  const lex = lang.lexicon;
-  const meanings = Object.keys(lex).filter(isRegisteredConcept);
+  const meanings = lexKeys(lang).filter(isRegisteredConcept);
   const pairs: Array<readonly [Meaning, Meaning]> = [];
   const seen = new Set<string>();
   for (const a of meanings) {
     for (const b of colexWith(a)) {
-      if (!lex[b]) continue;
+      if (!lexHas(lang, b)) continue;
       const k = a < b ? `${a}|${b}` : `${b}|${a}`;
       if (seen.has(k)) continue;
       seen.add(k);
@@ -92,7 +92,7 @@ export function applyKinshipSimplification(
   ];
   for (let attempts = 0; attempts < maxEvents * 3 && out.length < maxEvents; attempts++) {
     const [a, b] = KINSHIP_PAIRS[rng.int(KINSHIP_PAIRS.length)]!;
-    if (!lang.lexicon[a] || !lang.lexicon[b]) continue;
+    if (!lexHas(lang, a) || !lexHas(lang, b)) continue;
     const fa = lang.wordFrequencyHints[a] ?? 0.4;
     const fb = lang.wordFrequencyHints[b] ?? 0.4;
     const winner = fa >= fb ? a : b;
@@ -111,18 +111,17 @@ export function applyKinshipSimplification(
 }
 
 function trySplit(lang: Language, rng: Rng): RecarveEvent | null {
-  const lex = lang.lexicon;
-  const meanings = Object.keys(lex).filter(isRegisteredConcept);
+  const meanings = lexKeys(lang).filter(isRegisteredConcept);
   const candidates: Array<{ source: Meaning; target: Meaning }> = [];
   for (const source of meanings) {
     for (const target of colexWith(source)) {
-      if (lex[target]) continue;
+      if (lexHas(lang, target)) continue;
       candidates.push({ source, target });
     }
   }
   if (candidates.length === 0) return null;
   const pick = candidates[rng.int(candidates.length)]!;
-  const form = lex[pick.source]!;
+  const form = lexGet(lang, pick.source)!;
   if (!isFormLegal(pick.target, form)) return null;
   // Phase 29 Tranche 1 round 3: route through chokepoint.
   setLexiconForm(lang, pick.target, form.slice(), {

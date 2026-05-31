@@ -3,6 +3,7 @@ import type { Rng } from "../rng";
 import { addSynonym, setLexiconForm } from "./mutate";
 import { selectSynonyms, formKeyOf, findWordsByMeaning } from "./word";
 import { posOf, isClosedClass } from "./pos";
+import { lexGet, lexKeys } from "./access";
 
 /**
  * Phase 37: synonym genesis + homonym suppression.
@@ -45,12 +46,12 @@ export function maybeSpawnSynonym(
   // frequency ≥ 0.4 (frequent enough to stylistically split, not so
   // rare that nobody would coin an alternative).
   const candidates: Array<{ meaning: Meaning; form: WordForm }> = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     if (isClosedClass(posOf(m))) continue;
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
     if (freq < 0.4) continue;
     if (selectSynonyms(lang, m).length >= 3) continue; // already saturated
-    const f = lang.lexicon[m]!;
+    const f = lexGet(lang, m)!;
     if (f.length < 2) continue;
     candidates.push({ meaning: m, form: f });
   }
@@ -180,7 +181,7 @@ export function maybeReplacePrimary(
   // Find a meaning with ≥ 2 senses across all words, where one is
   // primary and at least one is a synonym.
   const candidates: Meaning[] = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     const syns = selectSynonyms(lang, m);
     if (syns.length >= 2) candidates.push(m);
   }
@@ -190,7 +191,7 @@ export function maybeReplacePrimary(
   // First entry is current primary; pick a non-primary synonym.
   const newPrimaryWord = syns[1 + rng.int(syns.length - 1)]!;
   const newForm = newPrimaryWord.form.slice();
-  const oldForm = lang.lexicon[meaning]!.slice();
+  const oldForm = lexGet(lang, meaning)!.slice();
   // Promote the synonym to primary by re-routing setLexiconForm,
   // which also demotes the old form to a synonym entry.
   setLexiconForm(lang, meaning, newForm, {
