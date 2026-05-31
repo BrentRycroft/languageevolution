@@ -110,3 +110,44 @@ export function addCompound(
     });
   }
 }
+
+/**
+ * Meaning-layer Stage A1: add a DERIVATION entry — a word authored as a base
+ * plus a derivational affix. Mechanically a compound of `[base, affix]`
+ * (suffix) or `[affix, base]` (prefix), so it reuses the compound recompose +
+ * drift machinery (the derived form tracks its base as the base drifts), but
+ * records `morphStructure.origin: "derivation"`. The affix's form must live in
+ * `seedLexicon` (it's a bound morpheme); the base must be in `seedLexicon`.
+ *
+ * This is the derivational analogue of `addCompound` — it lets presets encode a
+ * word AS a root + affix building block rather than an atomic form.
+ */
+export function addDerivation(
+  lang: Language,
+  meaning: Meaning,
+  base: Meaning,
+  affix: Meaning,
+  bornGeneration: number,
+  options: { position?: "prefix" | "suffix" } = {},
+): void {
+  const position = options.position ?? "suffix";
+  const parts = position === "prefix" ? [affix, base] : [base, affix];
+  if (!lang.compounds) lang.compounds = {};
+  lang.compounds[meaning] = {
+    parts: parts.slice(),
+    fossilized: false,
+    bornGeneration,
+  };
+  const initial = recomposeCompound(lang, meaning);
+  if (initial && initial.length > 0) {
+    setLexiconForm(lang, meaning, initial, {
+      bornGeneration,
+      origin: "derivation",
+      morphStructure: {
+        origin: "derivation",
+        base,
+        affix,
+      },
+    });
+  }
+}

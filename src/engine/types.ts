@@ -1387,6 +1387,22 @@ export interface SimulationConfig {
     linker?: WordForm;
   }>;
   /**
+   * Meaning-layer Stage A1 (words as building blocks): preset-declared
+   * DERIVATIONS — a word authored as a base + a derivational affix (the affix's
+   * form lives in `seedLexicon` as a bound morpheme; the base is in
+   * `seedLexicon`). Materialised at birth via `addDerivation`, which reuses the
+   * compound recompose/drift machinery (so the derived form tracks its base)
+   * but records `morphStructure.origin: "derivation"`. `position` defaults to
+   * "suffix".
+   *
+   * Example: `seedDerivations: { ruler: { base: "rule", affix: "-tér.agt" } }`.
+   */
+  seedDerivations?: Record<Meaning, {
+    base: Meaning;
+    affix: Meaning;
+    position?: "prefix" | "suffix";
+  }>;
+  /**
    * Phase 36 Tranche 36f: bound-morpheme set. At language birth the
    * preset hands a Set of meanings that are bound morphemes (e.g.,
    * `-er.agt`, `-ness`) so the lexicon UI / translator skip them

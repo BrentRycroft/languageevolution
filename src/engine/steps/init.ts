@@ -20,7 +20,7 @@ import { assignAllGenders } from "../morphology/gender";
 import { activeModulesOf } from "../modules/registry";
 import { classifyLexicon } from "../morphology/inflectionClass";
 import { isToneBearing, toneOf, MID } from "../phonology/tone";
-import { addCompound } from "../lexicon/compound";
+import { addCompound, addDerivation } from "../lexicon/compound";
 import { assignAllNounClasses } from "../lexicon/nounClass";
 
 /**
@@ -274,6 +274,12 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   if (config.seedCompounds) {
     for (const [meaning, def] of Object.entries(config.seedCompounds)) {
       addCompound(rootLang, meaning, def.parts, 0, { linker: def.linker });
+    }
+  }
+  // Meaning-layer Stage A1: preset-declared derivations (word = base + affix).
+  if (config.seedDerivations) {
+    for (const [meaning, def] of Object.entries(config.seedDerivations)) {
+      addDerivation(rootLang, meaning, def.base, def.affix, 0, { position: def.position });
     }
   }
   // Phase 36 Tranche 36f: register bound morphemes so they're

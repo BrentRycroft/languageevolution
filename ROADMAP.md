@@ -108,10 +108,20 @@ no design fork); halt+surface on a fork / review-blocker / regression-looking
 re-baseline. Local commits only.
 
 STAGE A — words as building blocks (morpheme authoring; achievable now):
-- [ ] A1 [SERIAL·me] — proving-ground preset (PIE) enriched: derivable vocabulary
-      authored as root+affix / compound refs, reusing existing infra (rootInventory,
-      boundMorphemes, derivationalSuffixes, seedCompounds, WordMorphStructure);
-      harness-gated; + an enrichment regression test. Establishes the pattern.
+- [~] A1 — proving-ground preset (PIE) enriched as building blocks.
+      - [x] A1a [DONE] — INFRA: `seedDerivations` config field + `addDerivation`
+        (word = base + affix; reuses the compound recompose/drift machinery, tagged
+        morphStructure.origin="derivation"). Dormant in all presets → byte-identical
+        (harness green). + seed_derivations regression test. NOTE: seed-time
+        morphStructure TAG doesn't persist onto the Word (syncWordsFromLexicon runs
+        after the seed step — pre-existing, affects seedCompounds too); behavioral
+        building block (form-from-parts + drift via lang.compounds) works. Expose
+        seed-time morphology on the Word = Stage-B follow-up.
+      - [ ] A1b [NEXT, SERIAL·me] — enrich PIE's derivable vocabulary via
+        seedDerivations/seedCompounds; harness re-baseline (justified). DESIGN FORK
+        to resolve (AskUserQuestion): how aggressive — add structure only where
+        byte-identical, re-author existing words as compositions (forms change), or
+        add new composed vocabulary?
 - [ ] A2 [PARALLEL·agents] — fan out enrichment to bantu/germanic/romance/english/
       tokipona (one agent per preset; gated re-baselines + review).
 - [ ] A3 — genesis composes preferentially from authored building blocks where it
