@@ -83,6 +83,32 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
 - Self-limiting: when AUTO items exhausted, surface the GATED pick-list + idle (no
   churn). Wave 1 (passive/equative/derivation-gloss) DONE — see Done log.
 
+## Meaning-layer migration (PLANNED — full design in MEANING-LAYER-MIGRATION.md)
+
+Decouple word MEANING from English strings + make words morphological building
+blocks (roots/affixes/compounds), preserving byte-identical determinism. Scope:
+concept IDs + morphemes FIRST, low-D vectors deferred. Phase 0 survey DONE
+(2026-05-30) — key finding: the scaffolding mostly EXISTS (concept-ID identity
+layer, concept registry, morpheme structures, even an embedding precursor), so this
+is ADOPT-and-EXTEND, not a rewrite. Go PRACTICAL (string-keyed lexicon = gloss,
+ConceptId = identity), NOT FULL re-key (L-risk: 532 sites + breaks RNG-by-key-order).
+
+- [x] Phase 0 — blast-radius survey + design doc.
+- [ ] Phase 1 [GATED·serial] — spine adopt + shim (materialize root morphemes +
+      concept→root bindings at init; lexicon stays a gloss-keyed derived view) +
+      save v11 + **byte-identical determinism harness across all 6 presets**.
+      Proving ground: Toki Pona. ← recommended first concrete step.
+- [ ] Phase 2 [GATED·parallel] — POS delegation (kill pos.ts import-cycle dupes);
+      populate WordMorphStructure + fix 3 meaning-string hacks (genesis.ts:417,
+      embeddings.ts:160, translate.ts:78) + make MECHANISM_COMPOUND root-aware
+      (= firewater item); concept-relation indirection (freeze ordering);
+      translator english→conceptId adapter (2 seams); narrative gloss from
+      concept.gloss.
+- [ ] Phase 3 — presets: shim auto-lifts all 6 unchanged (zero forced edits);
+      enrich opt-in smallest→largest (Toki Pona → … → english last).
+- [ ] Phase 4 [GATED] — flip/cleanup, RUN_SLOW determinism pass, snapshot re-baseline.
+- DEFERRED: FULL ConceptId re-key; low-D conceptual-space vectors (see Parked).
+
 ## Backlog (top = next)
 
 - [ ] **Test-suite wall time (USER REQUEST 2026-05-30): speed up the full `npx vitest
