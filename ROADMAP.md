@@ -160,17 +160,34 @@ SEPARATE, OPTIONAL "content-addressed per-concept RNG" work (Y) — the part tha
 actually unblocks byte-safe enrichment (A2/A3). Migration proper ≠ that. Probes
 showed the RNG/key coupling is DISTRIBUTED (not just apply.ts:737), so (Y) touches
 many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
-- [ ] B1 [SERIAL·me] — order-preserving ConceptId seam: `orderedConcepts(lang)`
-      returning today's sorted-gloss order, routed through every RNG-coupled
-      iteration site; dual ConceptId/gloss lexicon behind the existing
-      conceptIdFor/meaningForConceptId adapter. GATE: meaning_layer_baseline green
-      at UNCHANGED hashes (byte-identical) + new order-contract lock test.
+- [x] B1 [DONE — byte-identical] — order-preserving seam established.
+      - [x] B1.0 (62cd49e) — `orderedLexiconKeys(lexicon)` in conceptIdentity.ts
+        (canonical sorted-gloss order); routed apply.ts:737 (hot path) + naming.ts:20;
+        order-contract lock test (concept_order_seam.test.ts, 6 presets). Harness
+        green at unchanged hashes (gen-0 + full 30-step RUN_SLOW). Full suite 1746✓.
+      - [x] B1.1 (b234af8) — routed init.ts seedRegister (sorted rng.chance per
+        meaning). AUDIT COMPLETE: the full X-relevant (sorted, RNG/determinism-
+        coupled, evolution-path) site set is exactly {apply.ts, naming.ts,
+        init.ts/seedRegister}. apply.ts's downstream homonym sort (804) is
+        value-based + inherits seam insertion order → safe. Insertion-order sites
+        (genesis/semantics/obsolescence) are auto-preserved by the re-key's
+        insertion parity (that distributed coupling is concern Y, not X). Translator
+        reverse.ts:96/129 is read-only on frozen state → B2 concept-native pass.
+      NOTE: the "dual ConceptId/gloss lexicon" is now folded into B2 (the flip);
+      with the seam in place there's no value in a transitional dual view.
 - [ ] B1-Y [OPTIONAL] — content-addressed per-concept RNG (sub-rng seeded from
       conceptId+gen+site-tag) at the seam. ONE deliberate full re-baseline; unblocks
       byte-safe A2/A3 enrichment; needs a perf measurement. Separable from B1/B2/B3.
-- [ ] B2 — re-key the ~30 per-language Record<Meaning,…> maps + the 532 lang.lexicon
-      sites; translator/narrative/genesis concept-native; fix the 3 meaning-string
-      morphology hacks (genesis.ts:417, embeddings.ts:160, translate.ts:78).
+- [ ] B2 [NEXT, SERIAL·me — large mechanical] — flip the canonical store to
+      Record<ConceptId,WordForm>. With the seam in place this is now mechanical:
+      (1) reimplement `orderedLexiconKeys` to return ConceptIds in GLOSS order (same
+      sequence → byte-identical via the harness gate); (2) flip lang.lexicon type +
+      re-point the ~532 `lang.lexicon[m]` reads through a gloss→conceptId accessor;
+      (3) re-key the ~30 per-language Record<Meaning,…> maps; (4) make
+      translator/narrative/genesis concept-native (incl. reverse.ts ordering); (5)
+      fix the 3 meaning-string morphology hacks (genesis.ts:417, embeddings.ts:160,
+      translate.ts:78). GATE each chunk: harness green at UNCHANGED hashes + full
+      suite. Approach as its own planned increment sequence (fresh context).
 - [ ] B3 — save-format vNext migration + flip default + remove shim + full RUN_SLOW
       determinism re-baseline.
 - DEFERRED still: low-D conceptual-space vectors (see Parked) — separate later.
