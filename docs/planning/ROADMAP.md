@@ -31,6 +31,24 @@ languages it grows, and which keeps getting faster as it grows. Three faces:
 
 Non-exhaustive; the user queues more ideas — fold them in here.
 
+## Operating policy — accuracy vs. byte-identical vs. performance (UPDATED 2026-05-31)
+
+Reproducibility-determinism stays a **HARD** invariant: no `Math.random()` in
+`src/engine/`, seeded `Rng` threaded everywhere, sort before order-sensitive
+`Object.keys`, new rng draws **appended** after existing draws, `simulation.test`
+green. Same `SimulationConfig` → identical output, always. This does NOT relax.
+
+What DOES relax (user 2026-05-31): "byte-identical against the PRIOR baseline" is
+no longer an absolute gate on ACCURACY work. An improvement that raises realism /
+de-anglicization MAY (a) shift trajectories and require a **reviewed** re-baseline,
+and (b) cost a **slight, measured** amount of performance — both acceptable, as
+long as the perf hit stays small (measure it; don't tank a hot path; the sim
+should still trend faster overall). Pure optimizations that touch NO behaviour
+must still be byte-identical net wins.
+
+This unblocks the content-addressed per-concept RNG (B1-Y) and the additive
+enrichment (A2 / A3 / item 3) that depended on it — see those entries.
+
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
 | Area | State | Gap note |
@@ -175,9 +193,11 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
         reverse.ts:96/129 is read-only on frozen state → B2 concept-native pass.
       NOTE: the "dual ConceptId/gloss lexicon" is now folded into B2 (the flip);
       with the seam in place there's no value in a transitional dual view.
-- [ ] B1-Y [OPTIONAL] — content-addressed per-concept RNG (sub-rng seeded from
-      conceptId+gen+site-tag) at the seam. ONE deliberate full re-baseline; unblocks
-      byte-safe A2/A3 enrichment; needs a perf measurement. Separable from B1/B2/B3.
+- [ ] B1-Y [UNBLOCKED 2026-05-31 — see "Operating policy"] — content-addressed
+      per-concept RNG (sub-rng seeded from conceptId+gen+site-tag) at the seam. ONE
+      deliberate full re-baseline; unblocks byte-safe A2/A3 enrichment. Has a per-draw
+      hashing cost — MEASURE it; a slight, bounded perf hit is now acceptable for the
+      accuracy payoff (don't tank the apply.ts hot path). Separable from B1/B2/B3.
 - [x] B2 [DONE 2026-05-31 — concept-native engine; gloss key RETAINED, no physical
       flip] — user RE-SCOPED B2 (2026-05-31) away from the full physical
       Record<ConceptId,WordForm> flip after execution surfaced: (a) the project's own
