@@ -1167,6 +1167,46 @@ Notification-driven, session-bound (NOT a timer). Each WAVE:
   `changesForLang` (steps/helpers) + `applyChangesToLexicon` (apply), one process,
   to cancel the ~±10% run-to-run machine drift.
 
+## Parked / future direction (NOT scheduled — revisit later)
+
+- **Full componential / vector semantics for the meaning layer (USER PARKED
+  2026-05-30).** A big-rewrite alternative to encoding meaning as English-string
+  keys or language-neutral concept-IDs: represent each concept as a POSITION in a
+  semantic space, so similarity + semantic change become computed geometry instead
+  of hand-authored `neighbors`/`clusters` lists. Three flavors:
+  (1) **Componential / discrete features** — meaning = a bundle of named primitives
+  from a finite universal set (Wierzbicka NSM ~65 primes; Jackendoff). man=[+HUMAN
+  +ADULT +MALE]. Interpretable, finite.
+  (2) **Continuous embeddings** — meaning = a point in high-D space, dimensions
+  unnamed, similarity = cosine (word2vec/GloVe). Empirically models drift (Hamilton
+  et al. 2016, "Diachronic Word Embeddings Reveal Statistical Laws of Semantic
+  Change").
+  (3) **Conceptual spaces (Gärdenfors)** — low-D space with NAMED quality dimensions
+  (size×wildness×…); a concept is a convex REGION. Interpretable + geometric.
+  PAYOFF (all flavors): distance fn replaces hand-authored neighbor/cluster lists;
+  drift = vector nudge (metonymy = adjacent step, metaphor = cross-domain jump
+  preserving a shared axis); polysemy = a region / nearby points; colexification
+  EMERGES when concept-points are close (cf. CLICS); synonymy = two forms near one
+  point; broadening/narrowing = region grows/shrinks; coinage = vector composition.
+  WHY DEFERRED (why continuous embeddings specifically are a BAD fit here):
+  (a) cold-start — nobody can hand-place hundreds of concepts in N-D consistently;
+  importing real embeddings smuggles in modern-English anglocentrism; deriving from
+  features just IS flavor 1/3. (b) DETERMINISM — continuous float math + stochastic
+  nudges fights the byte-identical invariant (platform float drift); would need
+  fixed-point/quantization on every semantic op. (c) opacity — "why did wolf→dog?"
+  is unreadable in a 50-D embedding vs "[+domestic] rose" in a feature model.
+  (d) over-expressiveness + bad composition — a continuous space can represent
+  un-lexicalizable meanings (needs naturalness/Zipf constraints), and compounds are
+  metaphorical leaps, not vector averages ("firewater"≠midpoint of fire & water).
+  VIABLE MIDDLE if revisited: flavor (3) at LOW dimensionality — a few dozen named,
+  interpretable dimensions per semantic field, quantized to small ints (determinism-
+  safe), authorable because dimensions are meaningful, and the existing neighbors/
+  clusters/colexification logic DERIVED from it rather than hand-maintained. This is
+  the natural extension of the concept-ID + morpheme-building-block model discussed
+  the same day (see that discussion; not yet a ROADMAP item). Full continuous-vector
+  version = parked; low-D interpretable conceptual space = the thing to prototype
+  first if we ever go this way.
+
 ## NEEDS DECISION
 
 - **Translator anglocentrism — universal English-style pronoun suppletion.**
