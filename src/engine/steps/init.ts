@@ -13,7 +13,7 @@ import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
-import { ensureConceptIdsForLexicon } from "../lexicon/conceptIdentity";
+import { ensureConceptIdsForLexicon, orderedLexiconKeys } from "../lexicon/conceptIdentity";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
 import { assignAllGenders } from "../morphology/gender";
@@ -138,7 +138,7 @@ function seedRegister(
   rng: import("../rng").Rng,
 ): Record<string, "high" | "low"> {
   const out: Record<string, "high" | "low"> = {};
-  for (const m of Object.keys(lex).sort()) {
+  for (const m of orderedLexiconKeys(lex)) {
     if (rng.chance(0.15)) {
       out[m] = rng.chance(0.5) ? "high" : "low";
     }
