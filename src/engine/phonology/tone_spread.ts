@@ -2,6 +2,7 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isToneBearing, stripTone, toneOf, capToneStacking } from "./tone";
 import { setLexiconForm } from "../lexicon/mutate";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * tone_spread.ts
@@ -18,8 +19,8 @@ export function maybeSpreadTone(
 ): number {
   if (!lang.phonemeInventory.usesTones) return 0;
   let changed = 0;
-  for (const m of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[m]!;
+  for (const m of lexKeys(lang)) {
+    const form = lexGet(lang, m)!;
     if (!rng.chance(probability)) continue;
     const next = spreadOnce(form, rng);
     if (next !== form) {

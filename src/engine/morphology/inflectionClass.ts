@@ -3,6 +3,7 @@ import type { InflectionClass, NounDeclensionClass } from "./types";
 import { isVowel } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
 import { posOf } from "../lexicon/pos";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * Phase 29 Tranche 5e: inflection-class assignment.
@@ -110,8 +111,8 @@ export function classifyLexicon(
 ): void {
   if (!lang.inflectionClass) lang.inflectionClass = {};
   if (!lang.nounDeclensionClass) lang.nounDeclensionClass = {};
-  for (const meaning of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[meaning];
+  for (const meaning of lexKeys(lang)) {
+    const form = lexGet(lang, meaning);
     if (!form || form.length === 0) continue;
     const pos = posOf(meaning);
     if (pos === "verb") {

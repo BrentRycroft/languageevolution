@@ -11,6 +11,7 @@ import {
 import { featuresOf, shiftHeight } from "./features";
 import { markednessOf } from "./markedness";
 import { repairOutputMapByFeatures } from "./featureGeometry";
+import { lexGet, lexKeys, lexSize } from "../lexicon/access";
 
 /**
  * propose.ts
@@ -156,7 +157,7 @@ export function proposeOneRule(
     if (!hasAnyMatch(candidate, lang)) continue;
 
     const affected = countAffectedForms(candidate, lang);
-    const totalForms = Math.max(1, Object.keys(lang.lexicon).length);
+    const totalForms = Math.max(1, lexSize(lang));
     if (affected / totalForms > 0.8) continue;
 
     if (active.some((r) => r.templateId === candidate.templateId)) continue;
@@ -386,8 +387,8 @@ export function findSaturatedPhoneme(
   if (inv.length === 0) return null;
   const counts: Record<string, number> = {};
   let total = 0;
-  for (const m of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[m];
+  for (const m of lexKeys(lang)) {
+    const form = lexGet(lang, m);
     if (!form) continue;
     for (const ph of form) {
       counts[ph] = (counts[ph] ?? 0) + 1;

@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import type { MorphCategory } from "./types";
 import { inflect, inflectCascade } from "./evolve";
+import { lexGet } from "../lexicon/access";
 
 /**
  * Phase 26a: full verb conjugation table.
@@ -55,7 +56,7 @@ export function verbConjugationTable(
   meaning: Meaning,
   options: { tense?: "verb.tense.past" | "verb.tense.fut" } = {},
 ): ConjugationCell[] {
-  const root = lang.lexicon[meaning];
+  const root = lexGet(lang, meaning);
   if (!root || root.length === 0) return [];
 
   return PERSON_NUMBER_GRID.map(({ person, number }) => {
@@ -87,7 +88,7 @@ export function inflectForPerson(
   number: Number_,
   tense?: "verb.tense.past" | "verb.tense.fut",
 ): WordForm {
-  const root = lang.lexicon[meaning];
+  const root = lexGet(lang, meaning);
   if (!root) return [];
   const personCat = `verb.person.${person}${number}` as MorphCategory;
   const stack: MorphCategory[] = [];

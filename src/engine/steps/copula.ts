@@ -2,6 +2,7 @@ import type { Language, SimulationConfig } from "../types";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
+import { lexGet, lexHas } from "../lexicon/access";
 
 /**
  * copula.ts
@@ -17,11 +18,11 @@ export function stepCopulaErosion(
   rng: Rng,
   generation: number,
 ): void {
-  if (!lang.lexicon["be"]) return;
+  if (!lexHas(lang, "be")) return;
   const baseP = config.obsolescence.copulaLossProbability ?? 0.005;
   const p = Math.min(1, baseP / Math.max(0.3, lang.conservatism));
   if (!rng.chance(p)) return;
-  const oldForm = lang.lexicon["be"]!.join("");
+  const oldForm = lexGet(lang, "be")!.join("");
   // Phase 29 Tranche 1 round 2: route through chokepoint.
   // `force`: copula erosion is a DELIBERATE, modeled loss (→ zero-copula
   // language), so it must bypass the PROTECTED_MEANINGS guard that
@@ -48,7 +49,7 @@ export function stepCopulaGenesis(
   rng: Rng,
   generation: number,
 ): void {
-  if (lang.lexicon["be"]) return;
+  if (lexHas(lang, "be")) return;
   const baseP = config.obsolescence.copulaGenesisProbability ?? 0.0025;
   const p = Math.min(1, baseP / Math.max(0.3, lang.conservatism));
   if (!rng.chance(p)) return;
@@ -56,7 +57,7 @@ export function stepCopulaGenesis(
   let donor: string | null = null;
   let pathway: string | null = null;
   for (const candidates of COPULA_DONORS) {
-    const found = candidates.find((m) => lang.lexicon[m]);
+    const found = candidates.find((m) => lexHas(lang, m));
     if (found) {
       donor = found;
       pathway =
@@ -70,7 +71,7 @@ export function stepCopulaGenesis(
   if (!donor || !pathway) return;
 
   // Phase 29 Tranche 1 round 2: route through chokepoint.
-  setLexiconForm(lang, "be", lang.lexicon[donor]!.slice(), {
+  setLexiconForm(lang, "be", lexGet(lang, donor)!.slice(), {
     bornGeneration: 0,
     origin: `grammaticalization:${pathway}:${donor}`,
   });
@@ -81,6 +82,6 @@ export function stepCopulaGenesis(
   pushEvent(lang, {
     generation,
     kind: "semantic_drift",
-    description: `gained a copula "be" via the ${pathway} pathway — borrowed the form of "${donor}" (/${lang.lexicon[donor]!.join("")}/)`,
+    description: `gained a copula "be" via the ${pathway} pathway — borrowed the form of "${donor}" (/${lexGet(lang, donor)!.join("")}/)`,
   });
 }

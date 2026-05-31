@@ -30,6 +30,7 @@ import {
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
 import { tryCommitCoinage, rebuildFormKeyIndex } from "../lexicon/word";
+import { lexGet, lexHas, lexKeys, lexSet } from "../lexicon/access";
 import {
   findSuffixByTag,
   registerSuffixUsage,
@@ -100,7 +101,7 @@ export function stepGenesis(
   // Legacy fallback: always on (coinage was unconditional).
   if (!isFeatureActive(lang, "semantic:coinage", () => true)) return;
   const rules = genesisRulesFor(config);
-  const lexSize = Object.keys(lang.lexicon).length;
+  const lexSize = lexKeys(lang).length;
   const capacity = lang.lexicalCapacity ?? lexicalCapacity(lang, generation);
   const deficit = Math.max(0, capacity - lexSize);
   // Phase 60: aggressive coinage volume — user wanted "magnitudes
@@ -173,7 +174,7 @@ export function stepGenesis(
             },
           );
           if (!commit.committed) continue;
-          lang.lexicon[derived.meaning] = derived.form;
+          lexSet(lang, derived.meaning, derived.form);
           lang.wordFrequencyHints[derived.meaning] = 0.4;
           lang.wordOrigin[derived.meaning] = "derivation";
           recordDerivationChain(lang, derived);
@@ -235,11 +236,11 @@ export function stepGenesis(
     // form's sense from lang.words BEFORE the new commit so the words
     // table doesn't accumulate stale entries.
     const isReplacement =
-      !!lang.lexicon[outcome.meaning] &&
-      lang.lexicon[outcome.meaning]!.join("") !== outcome.form.join("");
+      lexHas(lang, outcome.meaning) &&
+      lexGet(lang, outcome.meaning)!.join("") !== outcome.form.join("");
     let oldFormStr = "";
     if (isReplacement) {
-      oldFormStr = lang.lexicon[outcome.meaning]!.join("");
+      oldFormStr = lexGet(lang, outcome.meaning)!.join("");
     }
     // Phase 21c: collision-aware commit. The form may already exist as
     // a word for another meaning; in that case roll polysemy/reject.
@@ -308,7 +309,7 @@ export function stepGenesis(
       // filtered copy, so the form-key index is stale. Rebuild it.
       rebuildFormKeyIndex(lang);
     }
-    lang.lexicon[outcome.meaning] = outcome.form;
+    lexSet(lang, outcome.meaning, outcome.form);
     lang.wordFrequencyHints[outcome.meaning] = 0.4;
     lang.wordOrigin[outcome.meaning] = isReplacement
       ? `lexical-replacement:${outcome.originTag}`
@@ -405,9 +406,9 @@ function tryTargetedDerivation(lang: Language, rng: Rng) {
   }
   const candidates: string[] = [];
   for (const meaning of Object.keys(DERIVATION_TARGETS)) {
-    if (lang.lexicon[meaning]) continue; // already have it
+    if (lexHas(lang, meaning)) continue; // already have it
     const target = DERIVATION_TARGETS[meaning]!;
-    if (!lang.lexicon[target.root]) continue;
+    if (!lexHas(lang, target.root)) continue;
     candidates.push(meaning);
   }
   if (candidates.length === 0) return null;
@@ -416,7 +417,7 @@ function tryTargetedDerivation(lang: Language, rng: Rng) {
 }
 
 export function bootstrapNeologismNeighbors(lang: Language): void {
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     // Stage B: bootstrap frequency + neighbours from the RECORDED content
     // constituents of a derived/compound meaning (concept-native), rather
     // than splitting the English gloss on hyphens. Bound morphemes are
@@ -439,7 +440,7 @@ export function bootstrapNeologismNeighbors(lang: Language): void {
       for (const n of lang.localNeighbors[p] ?? []) proposed.add(n);
     }
     const usable = Array.from(proposed).filter(
-      (n) => n !== m && lang.lexicon[n] !== undefined,
+      (n) => n !== m && lexHas(lang, n),
     );
     if (usable.length > 0) {
       lang.localNeighbors[m] = usable.slice(0, 5);

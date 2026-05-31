@@ -4,6 +4,7 @@ import { clusterOf, relatedMeanings } from "../semantics/clusters";
 import { isFormLegal } from "../phonology/wordShape";
 import { isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm } from "../lexicon/mutate";
+import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 
 /**
  * analogy.ts
@@ -25,7 +26,7 @@ export function maybeAnalogicalLevel(
   probability: number,
 ): AnalogyEvent | null {
   if (!rng.chance(probability)) return null;
-  const meanings = Object.keys(lang.lexicon);
+  const meanings = lexKeys(lang);
   if (meanings.length < 3) return null;
   const candidates: Array<{
     meaning: string;
@@ -47,12 +48,12 @@ export function maybeAnalogicalLevel(
     const cluster = clusterOf(m);
     if (!cluster) continue;
     const mates = relatedMeanings(m).filter(
-      (x) => x !== m && lang.lexicon[x],
+      (x) => x !== m && lexHas(lang, x),
     );
     if (mates.length < 2) continue;
-    const mateLens = mates.map((x) => lang.lexicon[x]!.length);
+    const mateLens = mates.map((x) => lexGet(lang, x)!.length);
     const mean = mateLens.reduce((a, b) => a + b, 0) / mateLens.length;
-    const form = lang.lexicon[m]!;
+    const form = lexGet(lang, m)!;
     if (Math.abs(form.length - mean) >= 2) {
       candidates.push({ meaning: m, mean, form });
     }

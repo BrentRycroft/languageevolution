@@ -1,5 +1,6 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { closedClassForm } from "../translator/closedClass";
+import { lexGet, lexHas } from "../lexicon/access";
 
 /**
  * Phase 26b: derived view of a verb's citation form (infinitive).
@@ -32,7 +33,7 @@ export function verbCitationForm(
   lang: Language,
   meaning: Meaning,
 ): VerbCitation | null {
-  const root = lang.lexicon[meaning];
+  const root = lexGet(lang, meaning);
   if (!root || root.length === 0) return null;
   const strat = lang.infinitiveStrategy ?? { kind: "bare" as const };
 
@@ -81,6 +82,6 @@ export function flattenCitation(citation: VerbCitation): WordForm[] {
  * with optional `lang.lexicon[lemma]` overrides.
  */
 function resolveParticle(lang: Language, lemma: string): WordForm | null {
-  if (lang.lexicon[lemma]) return lang.lexicon[lemma]!.slice();
+  if (lexHas(lang, lemma)) return lexGet(lang, lemma)!.slice();
   return closedClassForm(lang, lemma) ?? null;
 }

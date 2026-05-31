@@ -6,6 +6,7 @@ import { isFormLegal } from "./wordShape";
 import { functionalLoadMap, phonemeFunctionalLoad } from "./functionalLoad";
 import { SWADESH_LIST } from "../semantics/lexicostat";
 import { areMeaningsRelated } from "../lexicon/word";
+import { lexGet, lexSet, lexKeys, lexSize } from "../lexicon/access";
 
 const MAX_RARE_OCCURRENCES = 2;
 const MIN_INVENTORY_TO_PRUNE = 12;
@@ -54,8 +55,8 @@ const SWADESH_CORE_SET: ReadonlySet<string> = new Set(SWADESH_LIST);
 
 function countOccurrences(lang: Language): Map<Phoneme, number> {
   const counts = new Map<Phoneme, number>();
-  for (const m of Object.keys(lang.lexicon)) {
-    const f = lang.lexicon[m]!;
+  for (const m of lexKeys(lang)) {
+    const f = lexGet(lang, m)!;
     for (const raw of f) {
       const p = stripTone(raw);
       counts.set(p, (counts.get(p) ?? 0) + 1);
@@ -270,8 +271,8 @@ export function prunePhonemes(
     let formKeyToMeanings = ctx.formKeyToMeanings;
     if (!formKeyToMeanings) {
       formKeyToMeanings = new Map();
-      for (const m of Object.keys(lang.lexicon)) {
-        const f = lang.lexicon[m]!;
+      for (const m of lexKeys(lang)) {
+        const f = lexGet(lang, m)!;
         const key = f.join("|");
         if (!formKeyToMeanings.has(key)) formKeyToMeanings.set(key, []);
         formKeyToMeanings.get(key)!.push(m);
@@ -280,10 +281,10 @@ export function prunePhonemes(
     let projectedCollisions = 0;
     const collisionCap = Math.max(
       HOMONYM_COLLISION_ABS_CAP,
-      Math.ceil(Object.keys(lang.lexicon).length * HOMONYM_COLLISION_REL_CAP),
+      Math.ceil(lexSize(lang) * HOMONYM_COLLISION_REL_CAP),
     );
-    for (const m of Object.keys(lang.lexicon)) {
-      const form = lang.lexicon[m]!;
+    for (const m of lexKeys(lang)) {
+      const form = lexGet(lang, m)!;
       let hasCand = false;
       for (const raw of form) if (stripTone(raw) === candidate) { hasCand = true; break; }
       if (!hasCand) continue;
@@ -317,8 +318,8 @@ export function prunePhonemes(
 
   let affected = 0;
   let swadeshSkipped = 0;
-  for (const m of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[m]!;
+  for (const m of lexKeys(lang)) {
+    const form = lexGet(lang, m)!;
     // Phase 40a: skip Swadesh-core high-freq words. They keep the
     // candidate phoneme; the gated phonology pipeline handles their
     // drift over many gens via the Wang sigmoid + freq tilt.
@@ -357,7 +358,7 @@ export function prunePhonemes(
       // end-of-step in stepInventoryManagement to amortise the cost
       // across all per-gen pruning attempts. See Phase 29 Tranche 7b
       // notes in pruning + inventoryManagement.
-      lang.lexicon[m] = next;
+      lexSet(lang, m, next);
       affected++;
     }
   }
@@ -411,8 +412,8 @@ export function prunePhonemes(
   //   that would match the next verb).
   if (lang.grammar.verbThemes && lang.grammar.verbThemes.length > 1) {
     const verbForms: WordForm[] = [];
-    for (const m of Object.keys(lang.lexicon)) {
-      const f = lang.lexicon[m];
+    for (const m of lexKeys(lang)) {
+      const f = lexGet(lang, m);
       if (f && f.length > 0) verbForms.push(f);
     }
     const matchedAtLeastOne = (theme: WordForm) => {

@@ -5,6 +5,7 @@ import { CONCEPT_IDS, CONCEPTS, tierOf, type Tier } from "../lexicon/concepts";
 import { EXPANSION_NEED_BASELINE } from "../constants";
 import { leafIds } from "../tree/split";
 import { isClosedClass, posOf } from "../lexicon/pos";
+import { lexGet, lexHas } from "../lexicon/access";
 
 /**
  * need.ts
@@ -32,12 +33,11 @@ export function lexicalNeed(
   opts: LexicalNeedOptions = {},
 ): Record<Meaning, number> {
   const out: Record<Meaning, number> = {};
-  const lex = lang.lexicon;
 
   const clusterCounts: Record<string, { have: number; total: number }> = {};
   for (const [name, members] of Object.entries(SEMANTIC_CLUSTERS)) {
     let have = 0;
-    for (const m of members) if (lex[m]) have++;
+    for (const m of members) if (lexHas(lang, m)) have++;
     clusterCounts[name] = { have, total: members.length };
   }
 
@@ -58,7 +58,7 @@ export function lexicalNeed(
   const basicSetLookup = new Set(basicSet);
   const seedLengths = opts.seedLengths;
   for (const m of CONCEPT_IDS) {
-    if (lex[m]) {
+    if (lexHas(lang, m)) {
       // Phase 24: existing meanings get a shrinkage-based replacement
       // need when the current form is below 70% of seed length AND the
       // word is still high-frequency. This closes the loop: erosion →
@@ -71,7 +71,7 @@ export function lexicalNeed(
       // "gonna" is a feature, not a bug). Skip the shrinkage signal.
       if (seedLengths && !isClosedClass(posOf(m))) {
         const seedLen = seedLengths[m];
-        const cur = lex[m];
+        const cur = lexGet(lang, m);
         if (seedLen && cur && cur.length < Math.ceil(seedLen * 0.7)) {
           const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
           if (freq > 0.4) {
@@ -99,7 +99,7 @@ export function lexicalNeed(
     }
     let sistersWithIt = 0;
     for (const s of sisters) {
-      if (s.lexicon[m]) sistersWithIt++;
+      if (lexHas(s, m)) sistersWithIt++;
     }
     if (sisters.length > 0) {
       score += (sistersWithIt / sisters.length) * 0.4;

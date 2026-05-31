@@ -5,6 +5,7 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { findWordsByMeaning } from "../lexicon/word";
 import { deleteMeaning } from "../lexicon/mutate";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * Phase 21d: two meanings sharing the same Word entry are not rivals —
@@ -28,14 +29,14 @@ export function stepObsolescence(
   rng: Rng,
   generation: number,
 ): void {
-  const meanings = Object.keys(lang.lexicon);
+  const meanings = lexKeys(lang);
   if (meanings.length < 2) return;
   for (let attempt = 0; attempt < 6; attempt++) {
     const a = meanings[rng.int(meanings.length)]!;
     const b = meanings[rng.int(meanings.length)]!;
     if (a === b) continue;
-    const fa = lang.lexicon[a]!;
-    const fb = lang.lexicon[b]!;
+    const fa = lexGet(lang, a)!;
+    const fb = lexGet(lang, b)!;
     if (Math.abs(fa.length - fb.length) > 1) continue;
     if (levenshtein(fa, fb) > config.obsolescence.maxDistanceForRivalry) continue;
     // Phase 21d: skip rivalry when both meanings already share a Word

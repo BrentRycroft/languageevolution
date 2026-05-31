@@ -4,6 +4,7 @@ import { neighborsOf } from "../../semantics/neighbors";
 import { complexityFor } from "../../lexicon/complexity";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
+import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
 
 /**
  * compound.ts
@@ -19,11 +20,11 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
   originTag: "compound",
   baseWeight: 1.2,
   tryCoin: (lang, target, _tree, rng) => {
-    const meanings = Object.keys(lang.lexicon);
+    const meanings = lexKeys(lang);
     if (meanings.length < 2) return null;
 
-    const clusterPool = relatedMeanings(target).filter((m) => lang.lexicon[m]);
-    const neighborPool = neighborsOf(target).filter((m) => lang.lexicon[m]);
+    const clusterPool = relatedMeanings(target).filter((m) => lexHas(lang, m));
+    const neighborPool = neighborsOf(target).filter((m) => lexHas(lang, m));
     const pool = clusterPool.length > 0 ? clusterPool : neighborPool;
     // A compound must be built from two SEMANTICALLY-RELATED existing lexemes
     // (kenning/calque: "firewater" = fire + water), never a random mash of two
@@ -38,8 +39,8 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
     if (otherPool.length === 0) return null;
     const partB = otherPool[rng.int(otherPool.length)]!;
 
-    const fa = lang.lexicon[partA]!;
-    const fb = lang.lexicon[partB]!;
+    const fa = lexGet(lang, partA)!;
+    const fb = lexGet(lang, partB)!;
     if (fa.length + fb.length > 10) return null;
     let form = [...fa, ...fb];
     const minLen = 2 + complexityFor(target);

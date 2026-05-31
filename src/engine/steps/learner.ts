@@ -6,6 +6,7 @@ import { isFormLegal } from "../phonology/wordShape";
 import { setLexiconForm } from "../lexicon/mutate";
 import { isVowel, isConsonant } from "../phonology/ipa";
 import { featuresOf } from "../phonology/features";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * learner.ts
@@ -87,8 +88,8 @@ export function stepLearner(
   const reduction = attemptMarkednessReduction(lang, rng);
   if (reduction) {
     let mutated = 0;
-    for (const m of Object.keys(lang.lexicon)) {
-      const form = lang.lexicon[m]!;
+    for (const m of lexKeys(lang)) {
+      const form = lexGet(lang, m)!;
       if (!form.includes(reduction.phoneme)) continue;
       const next: WordForm = form.map((p) => (p === reduction.phoneme ? reduction.replacement : p));
       if (!isFormLegal(m, next)) continue;
@@ -112,8 +113,8 @@ export function stepLearner(
 
   if (rng.chance(0.04 * lang.conservatism)) {
     let codaSimplifications = 0;
-    for (const m of Object.keys(lang.lexicon)) {
-      const form = lang.lexicon[m]!;
+    for (const m of lexKeys(lang)) {
+      const form = lexGet(lang, m)!;
       const freq = lang.wordFrequencyHints[m] ?? 0.5;
       if (freq > 0.4) continue;
       const simplified = simplifyCoda(form);

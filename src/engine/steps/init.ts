@@ -14,6 +14,7 @@ import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { ensureConceptIdsForLexicon, orderedLexiconKeys } from "../lexicon/conceptIdentity";
+import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
 import { assignAllGenders } from "../morphology/gender";
@@ -60,8 +61,8 @@ function tonaliseLexicon(lang: Language): void {
   // Phase 39f: pitch-accent regime marks ONE tone per word (the
   // accented syllable). Tonal regime marks every tone-bearing syllable.
   const isPitchAccent = lang.toneRegime === "pitch-accent";
-  for (const m of Object.keys(lang.lexicon)) {
-    const f = lang.lexicon[m]!;
+  for (const m of lexKeys(lang)) {
+    const f = lexGet(lang, m)!;
     let needsRewrite = false;
     for (const p of f) {
       if (isToneBearing(p) && !toneOf(p)) { needsRewrite = true; break; }
@@ -71,7 +72,7 @@ function tonaliseLexicon(lang: Language): void {
       // Mark only the FIRST tone-bearing position with HIGH (accent),
       // leave the rest untoned. Models Japanese/Norwegian.
       let marked = false;
-      lang.lexicon[m] = f.map((p) => {
+      lexSet(lang, m, f.map((p) => {
         if (!isToneBearing(p)) return p;
         if (toneOf(p)) { marked = true; return p; }
         if (!marked) {
@@ -79,13 +80,13 @@ function tonaliseLexicon(lang: Language): void {
           return p + "˥"; // HIGH = accent peak
         }
         return p;
-      });
+      }));
     } else {
-      lang.lexicon[m] = f.map((p) => {
+      lexSet(lang, m, f.map((p) => {
         if (!isToneBearing(p)) return p;
         if (toneOf(p)) return p;
         return p + MID;
-      });
+      }));
     }
   }
 }
@@ -105,10 +106,10 @@ function initialLexicalCapacity(lang: Language): number {
 function seedClosedClassLexicon(lang: Language): void {
   for (const lemma of CLOSED_CLASS_LEMMAS) {
     if (lemma === "Q" || lemma === "CLF") continue;
-    if (lang.lexicon[lemma]) continue;
+    if (lexHas(lang, lemma)) continue;
     const form = closedClassForm(lang, lemma);
     if (!form || form.length === 0) continue;
-    lang.lexicon[lemma] = form;
+    lexSet(lang, lemma, form);
     if (!lang.wordOrigin[lemma]) lang.wordOrigin[lemma] = "closed-class";
     if (lang.wordFrequencyHints[lemma] === undefined) {
       lang.wordFrequencyHints[lemma] = 0.95;
@@ -308,7 +309,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       // silently skipped, leaving "-dom" with random phonemes and
       // productive=false — the user-reported "waterdom doesn't work"
       // bug stemmed from exactly this collision.
-      const affix = rootLang.lexicon[m];
+      const affix = lexGet(rootLang, m);
       if (affix && affix.length > 0) {
         // Phase 47 T2: detect position from tag shape. Tags ending
         // with "-" (e.g. "re-", "un-") are prefixes; otherwise default

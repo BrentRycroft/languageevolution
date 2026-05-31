@@ -1,6 +1,7 @@
 import type { Language, Phoneme, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { stripTone } from "./tone";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * orthography.ts
@@ -335,15 +336,15 @@ export function freezeLexicalSpelling(
 
   // Candidates: high-frequency meanings (>=0.6) without a frozen spelling.
   const candidates: string[] = [];
-  for (const m of Object.keys(lang.lexicon)) {
+  for (const m of lexKeys(lang)) {
     if (lang.lexicalSpelling?.[m]) continue;
     const f = lang.wordFrequencyHints[m] ?? 0.4;
-    if (f >= 0.6 && lang.lexicon[m]!.length > 0) candidates.push(m);
+    if (f >= 0.6 && lexGet(lang, m)!.length > 0) candidates.push(m);
   }
   if (candidates.length === 0) return null;
 
   const meaning = candidates[rng.int(candidates.length)]!;
-  const form = lang.lexicon[meaning]!;
+  const form = lexGet(lang, meaning)!;
   // Capture the current romanization at this moment.
   const spelling = romanize(form, { ...lang, lexicalSpelling: undefined }, undefined);
   if (!lang.lexicalSpelling) lang.lexicalSpelling = {};

@@ -2,6 +2,7 @@ import type { Language, Meaning, WordForm } from "../../types";
 import type { Rng } from "../../rng";
 import { derivationFor } from "../../lexicon/derivation_targets";
 import { findSuffixByCategory, type DerivationalSuffix } from "../../lexicon/derivation";
+import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
 
 /**
  * Targeted derivation: when the genesis loop is asked to coin a meaning M
@@ -36,7 +37,7 @@ export function attemptTargetedDerivation(
   const target = derivationFor(meaning);
   if (!target) return null;
 
-  const root = lang.lexicon[target.root];
+  const root = lexGet(lang, target.root);
   if (!root || root.length === 0) return null;
 
   const suffix: DerivationalSuffix | null = findSuffixByCategory(lang, target.via);
@@ -97,7 +98,7 @@ export function attemptProductiveDerivation(
   // Filter potential roots by suffix category. agentive/nominalisation
   // wants verb roots; adjectival wants noun roots; abstractNoun wants
   // adjective roots (freedom < free); etc.
-  const allMeanings = Object.keys(lang.lexicon);
+  const allMeanings = lexKeys(lang);
   const wantsVerb = suffix.category === "agentive" || suffix.category === "nominalisation";
   const wantsAdj = suffix.category === "abstractNoun";
   const wantsNoun =
@@ -111,7 +112,7 @@ export function attemptProductiveDerivation(
     // Skip if already derived (avoid recursive -er-er pyramids).
     if (m.includes("-")) continue;
     // Skip if the derived meaning would already exist.
-    if (lang.lexicon[`${m}-${suffix.tag}`]) continue;
+    if (lexHas(lang, `${m}-${suffix.tag}`)) continue;
     // Skip closed-class.
     if (m.length <= 1) continue;
     // POS-match heuristic by simple word lists. The simulator's
@@ -128,7 +129,7 @@ export function attemptProductiveDerivation(
   }
   if (candidates.length === 0) return null;
   const rootMeaning = candidates[rng.int(candidates.length)]!;
-  const root = lang.lexicon[rootMeaning]!;
+  const root = lexGet(lang, rootMeaning)!;
   const form: WordForm = [...root, ...suffix.affix];
   // Phase 34 Tranche 34b: tag is sometimes "-hood" (leading dash);
   // strip it so the meaning is "dry-hood" not "dry--hood".

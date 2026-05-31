@@ -2,6 +2,7 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { HIGH, LOW, MID, RISING, FALLING, isToneBearing, toneOf, stripTone, capToneStacking } from "./tone";
 import { setLexiconForm } from "../lexicon/mutate";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * Phase 29 Tranche 5g: tone sandhi.
@@ -135,8 +136,8 @@ export function stepToneSandhi(
   void generation;
   if (!lang.phonemeInventory.usesTones) return 0;
   const sites: SandhiSite[] = [];
-  for (const meaning of Object.keys(lang.lexicon)) {
-    const form = lang.lexicon[meaning];
+  for (const meaning of lexKeys(lang)) {
+    const form = lexGet(lang, meaning);
     if (!form || form.length < 2) continue;
     // Walk adjacent tone-bearing pairs (allowing intervening consonants).
     const toneIdxs: number[] = [];
@@ -179,7 +180,7 @@ export function stepToneSandhi(
     else byMeaning.set(s.meaning, [s]);
   }
   for (const [meaning, list] of byMeaning) {
-    const form = lang.lexicon[meaning]!;
+    const form = lexGet(lang, meaning)!;
     const next: WordForm = form.slice();
     for (const s of list) {
       // Phase 30 Tranche 30a: stripTone now strips recursively, so a

@@ -1,6 +1,7 @@
 import type { Language, Lexicon, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isFormLegal } from "./wordShape";
+import { lexGet, lexKeys } from "../lexicon/access";
 
 /**
  * regular.ts
@@ -16,8 +17,8 @@ export function applyOneRegularChange(
   rng: Rng,
 ): string | null {
   const applicable = changes.filter((c) => {
-    for (const m of Object.keys(lang.lexicon)) {
-      if (c.probabilityFor(lang.lexicon[m]!) > 0) return true;
+    for (const m of lexKeys(lang)) {
+      if (c.probabilityFor(lexGet(lang, m)!) > 0) return true;
     }
     return false;
   });
@@ -34,8 +35,8 @@ export function applyOneRegularChange(
   // interactions where `probabilityFor` can stay > 0 across many
   // applications without `after === form` triggering.
   const MAX_PER_MEANING_PASSES = 10;
-  for (const m of Object.keys(lang.lexicon)) {
-    const original = lang.lexicon[m]!;
+  for (const m of lexKeys(lang)) {
+    const original = lexGet(lang, m)!;
     let form = original;
     for (let safety = 0; safety < MAX_PER_MEANING_PASSES; safety++) {
       if (picked.probabilityFor(form) <= 0) break;
