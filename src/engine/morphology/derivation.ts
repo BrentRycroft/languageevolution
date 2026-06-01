@@ -2,6 +2,7 @@ import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { applyParadigm } from "./apply";
 import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { recordedParts } from "../lexicon/word";
 
 /**
  * The stored derivational-suffix shape on a Language. Differs from
@@ -139,7 +140,11 @@ export function pickRuntimeDerivedMeaning(
   const wantsAdj = suffix.category === "abstractNoun";
   const allMeanings = lexKeys(lang);
   const candidates = allMeanings.filter((m) => {
-    if (m.includes("-")) return false;
+    // Concept-native (item 4): skip already-structured words via the recorded
+    // compound/derivation record (covers coinage post-genesis-recording), not a
+    // gloss hyphen; still exclude bound morphemes (no record), as the old
+    // `m.includes("-")` did via the dash.
+    if (recordedParts(lang, m) !== null || lang.boundMorphemes?.has(m)) return false;
     if (lexHas(lang, `${m}-${suffix.tag}`)) return false;
     if (wantsVerb && !VERB_HINTS.has(m)) return false;
     if (wantsAdj && !ADJECTIVE_HINTS.has(m)) return false;

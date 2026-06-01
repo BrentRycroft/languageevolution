@@ -3,6 +3,7 @@ import type { Rng } from "../../rng";
 import { derivationFor } from "../../lexicon/derivation_targets";
 import { findSuffixByCategory, type DerivationalSuffix } from "../../lexicon/derivation";
 import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
+import { recordedParts } from "../../lexicon/word";
 
 /**
  * Targeted derivation: when the genesis loop is asked to coin a meaning M
@@ -109,8 +110,13 @@ export function attemptProductiveDerivation(
 
   const candidates: string[] = [];
   for (const m of allMeanings) {
-    // Skip if already derived (avoid recursive -er-er pyramids).
-    if (m.includes("-")) continue;
+    // Skip if already structured (avoid recursive -er-er pyramids).
+    // Concept-native (item 4): read the language's own compound/derivation
+    // record (covers coinage since genesis records it) rather than guessing
+    // from a hyphen in the English gloss. Bound morphemes (affix keys like
+    // `-er.agt`, runtime `-xy.reanalysed`) carry no compound record, so keep
+    // excluding them explicitly — the old `m.includes("-")` did so via the dash.
+    if (recordedParts(lang, m) !== null || lang.boundMorphemes?.has(m)) continue;
     // Skip if the derived meaning would already exist.
     if (lexHas(lang, `${m}-${suffix.tag}`)) continue;
     // Skip closed-class.

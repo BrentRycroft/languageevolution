@@ -120,13 +120,27 @@ const GEN0: Record<string, string> = {
 // item-4 batch 2). NB: an earlier fossilized:false attempt let updateCompounds
 // re-derive coinages post-UR-snapshot and degraded a PIE word to an illegal
 // no-nucleus "f" — caught by ipa_pie syllabicity, hence fossilized:true.
+// GENN re-baselined 2026-06-01 (item-4 batch 2, derivation skip-guards): the
+// productive-derivation base guards in attemptProductiveDerivation
+// (targetedDerivation.ts) and pickRuntimeDerivedMeaning (morphology/derivation.ts)
+// now read the language's RECORDED compound/derivation structure
+// (`recordedParts(lang,m) !== null`, covering coinage post-genesis-recording) OR a
+// bound morpheme, instead of the anglocentric `m.includes("-")` gloss-hyphen test.
+// Net effect: the item-3 NON-hyphen seed compounds (rainbow, firewood, king, …) —
+// previously eligible as derivation bases because their gloss has no dash — are now
+// correctly skipped as already-structured words. ALL SIX presets shifted (each
+// gained such compounds in item 3); zero -er-er pyramids (probe: 0/6) confirming
+// recordedParts covers coinage. GEN0 unchanged (no coinage at gen 0). NB: the
+// matching 60-gen ipa_pie run drove out two LATENT final-erosion bugs (cliticize
+// 3aeae6b, grammaticalization-fusion 86e98ca) — both committed separately, both
+// byte-identical to THESE hashes (the malformation they fix is post-gen-30).
 const GENN: Record<string, string> = {
-  pie: "d7fb34d7",
-  bantu: "c9845be7",
-  romance: "a94f437e",
-  germanic: "cdf934f8",
-  tokipona: "0a4bceaf",
-  english: "67c3b025",
+  pie: "f5ffb2e6",
+  bantu: "f4938ee4",
+  romance: "092e426b",
+  germanic: "02c2297e",
+  tokipona: "2a1b6a3b",
+  english: "0adbf12e",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {
