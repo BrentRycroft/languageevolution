@@ -8,6 +8,7 @@ import {
 } from "../translator/closedClass";
 import { translateSentence } from "../translator/sentence";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
+import { lexGet, lexSet } from "../lexicon/access";
 
 /**
  * phase72a_quick_wins.test.ts — guards for the seven Phase 72a fixes.
@@ -45,8 +46,10 @@ describe("Phase 72a-2 — closedClassTable cache invalidation", () => {
     const theBefore = before.the?.slice();
     expect(theBefore).toBeDefined();
 
-    // Mutate the lexicon directly (simulating phonology rewrite).
-    lang.lexicon.the = ["x", "y"];
+    // Mutate the lexicon directly (simulating phonology rewrite) via the seam,
+    // since lang.lexicon is ConceptId-keyed (a raw `lang.lexicon.the =` write
+    // would be invisible to closedClassTable, which reads through the seam).
+    lexSet(lang, "the", ["x", "y"]);
     invalidateClosedClassCache(lang);
 
     const after = closedClassTable(lang);
@@ -67,9 +70,9 @@ describe("Phase 72a-2 — closedClassTable cache invalidation", () => {
     for (let i = 0; i < 30; i++) sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
     const post = closedClassTable(lang);
-    expect(lang.lexicon.the).toBeDefined();
+    expect(lexGet(lang, "the")).toBeDefined();
     expect(post.the).toBeDefined();
-    expect(post.the?.join("")).toBe(lang.lexicon.the!.join(""));
+    expect(post.the?.join("")).toBe(lexGet(lang, "the")!.join(""));
   });
 });
 

@@ -6,6 +6,7 @@ import { findSchedule, milestoneKey } from "../historical";
 import { romanceSchedule } from "../historical/romance";
 import { validateSchedule } from "../historical/validate";
 import { narrativeHistoricalVoice } from "../historical/voice";
+import { lexGet, lexSet } from "../lexicon/access";
 
 /**
  * historical.test.ts — Phase 70 T1: Historical Mode runner unit tests.
@@ -424,14 +425,15 @@ describe("Phase 71b — translator + suppletion fixes", () => {
     cfg.seed = "p71b-protect";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    expect(lang.lexicon.be).toBeDefined();
-    expect(lang.lexicon.go).toBeDefined();
+    // Route gloss → form through the access seam (lang.lexicon is ConceptId-keyed).
+    expect(lexGet(lang, "be")).toBeDefined();
+    expect(lexGet(lang, "go")).toBeDefined();
     expect(PROTECTED_MEANINGS.has("be")).toBe(true);
     expect(PROTECTED_MEANINGS.has("go")).toBe(true);
     deleteMeaning(lang, "be");
     deleteMeaning(lang, "go");
-    expect(lang.lexicon.be).toBeDefined(); // refused
-    expect(lang.lexicon.go).toBeDefined(); // refused
+    expect(lexGet(lang, "be")).toBeDefined(); // refused
+    expect(lexGet(lang, "go")).toBeDefined(); // refused
   });
 
   it("deleteMeaning purges lang.suppletion entry for unprotected meanings", async () => {
@@ -444,9 +446,9 @@ describe("Phase 71b — translator + suppletion fixes", () => {
     lang.suppletion["nonprotected-verb"] = {
       "verb.tense.past": ["x", "y"] as never,
     };
-    lang.lexicon["nonprotected-verb"] = ["x"] as never;
+    lexSet(lang, "nonprotected-verb", ["x"] as never);
     deleteMeaning(lang, "nonprotected-verb");
-    expect(lang.lexicon["nonprotected-verb"]).toBeUndefined();
+    expect(lexGet(lang, "nonprotected-verb")).toBeUndefined();
     expect(lang.suppletion?.["nonprotected-verb"]).toBeUndefined();
   });
 

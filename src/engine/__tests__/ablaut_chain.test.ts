@@ -10,6 +10,7 @@ import type { Paradigm, Morphology } from "../morphology/types";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 import { makeRng } from "../rng";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 
 /**
  * ablaut_chain.test.ts
@@ -98,6 +99,9 @@ describe("Phase 64 T2 — ablaut chain emergence + sound-change tracking", () =>
       lexicon: { sing: ["s", "i", "ŋ"] as WordForm },
       events: [],
     } as unknown as Language;
+    // Rekey the hand-built gloss-keyed lexicon to ConceptIds + conceptIds map,
+    // so decayAblautClasses (which reads forms via the access seam) finds "sing".
+    rekeyLexiconToConceptIds(fakeLang);
     decayAblautClasses(fakeLang, 100);
     const map = fakeLang.morphology.paradigms["verb.tense.past"]!.ablautMap!;
     // /i/ and /o/ both gone from inventory; both entries dropped.
