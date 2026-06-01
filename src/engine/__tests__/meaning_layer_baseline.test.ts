@@ -79,7 +79,9 @@ const GEN0: Record<string, string> = {
   bantu: "f071ed04",
   romance: "8917b341",
   germanic: "8d42348c",
-  tokipona: "4cb04ce4",
+  // tokipona re-baselined 2026-05-31 (item 3 enrichment): +3 authored seedCompounds
+  // (king=jan lawa, soldier=jan utala, city=ma tomo) appended → 3 new gen-0 entries.
+  tokipona: "963106db",
   english: "ced79fd3",
 };
 // RE-BASELINED 2026-05-31 (B1-Y — content-addressed per-concept RNG). ALL SIX
@@ -99,7 +101,11 @@ const GENN: Record<string, string> = {
   bantu: "0b3dcf47",
   romance: "a86a875f",
   germanic: "5aa88ca4",
-  tokipona: "fc2582cc",
+  // tokipona re-baselined 2026-05-31 (item 3 enrichment, append-only): the 3 new
+  // compounds + their localized genesis/obsolescence cascade. Only tokipona shifted;
+  // the other 5 presets stayed byte-identical (B1-Y insulates existing words' sound
+  // trajectories — the enrichment is isolated, not a blanket perturbation).
+  tokipona: "6efea09c",
   english: "edcc59b5",
 };
 
