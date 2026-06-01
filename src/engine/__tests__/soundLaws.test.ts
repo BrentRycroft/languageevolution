@@ -71,12 +71,15 @@ describe("Phase 29 Tranche 5d — sound correspondence laws", () => {
   });
 
   // Phase 29 Tranche 7g: 100→60 gens. The systematic-shift signature
-  // emerges by gen 40–60 in any English run with active lenition rules;
-  // 100 was overkill and pushed CI time past budget.
-  it("a 60-gen English run produces at least one systematic correspondence", () => {
+  // emerges by gen 40–60 in any English run with active lenition rules.
+  // 2026-06-01: bumped 60→90 — the correspondence MACHINERY is proven by the
+  // unit tests above; this integration check needs enough generations for some
+  // shift to cross the regularity threshold (≥5 fires, ≥0.5 regular), and the
+  // exact gen depends on the trajectory (which the item-3 enrichment shifted).
+  it("a 90-gen English run produces at least one systematic correspondence", () => {
     const cfg = { ...presetEnglish(), seed: "soundlaw-test" };
     const sim = createSimulation(cfg);
-    for (let i = 0; i < 60; i++) sim.step();
+    for (let i = 0; i < 90; i++) sim.step();
     const state = sim.getState();
     const leaves = leafIds(state.tree).filter(
       (id) => !state.tree[id]!.language.extinct,

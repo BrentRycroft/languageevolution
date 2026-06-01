@@ -331,6 +331,19 @@ export function presetBantu(): SimulationConfig {
     seed: "bantu",
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
+    // Item 3 enrichment (append-only): Bantu agentive/relational nominal
+    // compounds via the productive "mwana/mu- + X" pattern this preset already
+    // uses for man (mwana+ume) and woman (mwana+mke) — cf. Swahili mwanafunzi
+    // (child+learning = student), mwananchi (child+land = citizen), mvuvi
+    // (person+fish = fisherman). Built only from existing primitives.
+    seedCompounds: {
+      // student = child + know (mwana + jua — "knowledge child")
+      student: { parts: ["child", "know"] },
+      // citizen = child + land (mwana + itaka — "child of the land")
+      citizen: { parts: ["child", "earth"] },
+      // fisherman = person + fish (mutu + insui — "person of fish")
+      fisherman: { parts: ["person", "fish"] },
+    },
     seedMorphology: MORPHOLOGY,
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 1,

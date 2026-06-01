@@ -854,6 +854,13 @@ export function presetEnglish(): SimulationConfig {
       waterfall: { parts: ["water", "fall"] },
       homework: { parts: ["home", "work"] },
       riverside: { parts: ["river", "side"] },
+      // Item 3 enrichment (append-only): more transparent English N+N compounds
+      // (the family compounds maximally productively). All parts already seeded.
+      rainbow: { parts: ["rain", "bow"] },
+      firewood: { parts: ["fire", "wood"] },
+      seaside: { parts: ["sea", "side"] },
+      sunflower: { parts: ["sun", "flower"] },
+      footpath: { parts: ["foot", "path"] },
       // Phase 36 Tranche 36f: derivational compounds. Each rebuilt
       // at language birth from base + bound morpheme. The base and
       // suffix evolve independently; sound-change drift on `dark`

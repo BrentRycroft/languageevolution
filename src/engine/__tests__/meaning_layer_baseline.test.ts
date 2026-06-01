@@ -74,15 +74,20 @@ function signature(sim: ReturnType<typeof createSimulation>): string {
 }
 
 // Baseline hashes from the current (pre-migration) engine. Locked.
+// GEN0 re-baselined 2026-06-01 (item 3 enrichment, all presets): each preset
+// gained appended seedCompounds built from existing primitives (verified to
+// materialise as exact part concatenations), so each gen-0 lexicon gained those
+// entries. Per preset (authentic, family-calibrated): pie +master (*dem-pótis);
+// bantu +student/citizen/fisherman (mwana/mu-+X); romance +wallet/scarecrow (V+N);
+// germanic +rainbow/firewood/daylight/seabird (N+N); english +rainbow/firewood/
+// seaside/sunflower/footpath; tokipona +king/soldier/city (landed 2026-05-31).
 const GEN0: Record<string, string> = {
-  pie: "ab7faeaa",
-  bantu: "f071ed04",
-  romance: "8917b341",
-  germanic: "8d42348c",
-  // tokipona re-baselined 2026-05-31 (item 3 enrichment): +3 authored seedCompounds
-  // (king=jan lawa, soldier=jan utala, city=ma tomo) appended → 3 new gen-0 entries.
+  pie: "8e1e516d",
+  bantu: "cb709a71",
+  romance: "28661e99",
+  germanic: "442a10cb",
   tokipona: "963106db",
-  english: "ced79fd3",
+  english: "77c30563",
 };
 // RE-BASELINED 2026-05-31 (B1-Y — content-addressed per-concept RNG). ALL SIX
 // presets shifted, as expected and intended: sound change in apply.ts now draws
@@ -96,17 +101,20 @@ const GEN0: Record<string, string> = {
 // append-a-concept probe. Machinery cost is negligible (isolated per-call delta
 // within noise). Reproducibility-determinism is fully preserved (same config →
 // identical output; re-run confirmed).
+// GENN re-baselined 2026-06-01 (item 3 enrichment): each preset's gen-30 shifted
+// by ITS OWN appended compounds + their localized genesis/obsolescence cascade.
+// Each enrichment is ISOLATED — appending one preset's compounds left every OTHER
+// preset byte-identical (B1-Y insulates existing words' per-concept sound
+// trajectories), proven by the staged re-baseline (tokipona unchanged when the
+// other 5 were enriched, and vice-versa). This is the clean, reviewable enrichment
+// diff B1-Y was built to enable.
 const GENN: Record<string, string> = {
-  pie: "9f3159ef",
-  bantu: "0b3dcf47",
-  romance: "a86a875f",
-  germanic: "5aa88ca4",
-  // tokipona re-baselined 2026-05-31 (item 3 enrichment, append-only): the 3 new
-  // compounds + their localized genesis/obsolescence cascade. Only tokipona shifted;
-  // the other 5 presets stayed byte-identical (B1-Y insulates existing words' sound
-  // trajectories — the enrichment is isolated, not a blanket perturbation).
+  pie: "d7fb34d7",
+  bantu: "e0b0c09d",
+  romance: "81bf802b",
+  germanic: "cdf934f8",
   tokipona: "6efea09c",
-  english: "edcc59b5",
+  english: "67c3b025",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

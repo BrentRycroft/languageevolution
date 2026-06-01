@@ -461,6 +461,15 @@ export function presetRomance(): SimulationConfig {
     seed: "romance",
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
+    // Item 3 enrichment (append-only): Romance V+N exocentric compounds (verb +
+    // object → instrument/agent noun) — the family's characteristic compounding,
+    // less prolific than Germanic. Built from existing primitives.
+    seedCompounds: {
+      // wallet = carry + leaf (Italian portafoglio = porta + foglio)
+      wallet: { parts: ["carry", "leaf"] },
+      // scarecrow = fear + bird (cf. Italian spaventapasseri = spaventa + passeri)
+      scarecrow: { parts: ["fear", "bird"] },
+    },
     // Phase 73e de-anglicization: Latin/Romance caro = flesh/meat (carne) and
     // infante = child/baby. Declare these colexifications instead of duplicate
     // forms.
