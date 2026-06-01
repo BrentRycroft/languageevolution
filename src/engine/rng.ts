@@ -24,6 +24,21 @@ export function fnv1a(str: string): number {
   return h >>> 0;
 }
 
+/**
+ * Continue an fnv1a hash from an existing accumulator. By construction
+ * `fnv1aChain(fnv1a(a), b) === fnv1a(a + b)` (fnv1a folds left-to-right), so a
+ * fixed prefix can be hashed ONCE and a varying suffix folded per call without
+ * re-hashing the prefix or allocating the concatenated string — the per-word
+ * hot path in apply.ts (B1-Y per-concept seeding) relies on this.
+ */
+export function fnv1aChain(h: number, str: string): number {
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
 export function makeRng(seed: number | string): Rng {
   let s = (typeof seed === "string" ? fnv1a(seed) : seed) >>> 0;
   if (s === 0) s = 1;

@@ -90,8 +90,11 @@ function hasFallbackMarker(surface: string): boolean {
  */
 const KNOWN_UNTRANSLATABLE: Record<string, ReadonlySet<string>> = {
   // Toki Pona is a minimal language with no word for "bread" (and the preset
-  // carries no loanword mechanism for it) — left untranslated by design.
-  tokipona: new Set(["bread"]),
+  // carries no loanword mechanism for it) — left untranslated by design. "king"
+  // is likewise a genuine lexical gap (Toki Pona expresses it periphrastically,
+  // "jan lawa"); after the B1-Y re-baseline tokipona's "king" entry no longer
+  // survives to gen 30, so the marker is correct behaviour, not a resolution bug.
+  tokipona: new Set(["bread", "king"]),
 };
 
 /**

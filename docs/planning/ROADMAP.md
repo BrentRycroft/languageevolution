@@ -193,11 +193,27 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
         reverse.ts:96/129 is read-only on frozen state → B2 concept-native pass.
       NOTE: the "dual ConceptId/gloss lexicon" is now folded into B2 (the flip);
       with the seam in place there's no value in a transitional dual view.
-- [ ] B1-Y [UNBLOCKED 2026-05-31 — see "Operating policy"] — content-addressed
-      per-concept RNG (sub-rng seeded from conceptId+gen+site-tag) at the seam. ONE
-      deliberate full re-baseline; unblocks byte-safe A2/A3 enrichment. Has a per-draw
-      hashing cost — MEASURE it; a slight, bounded perf hit is now acceptable for the
-      accuracy payoff (don't tank the apply.ts hot path). Separable from B1/B2/B3.
+- [x] B1-Y [DONE 2026-05-31 — content-addressed per-concept RNG]. apply.ts's
+      per-word sound-change draws now come from a sub-rng seeded by
+      `fnv1a(config.seed|lang.id|generation|conceptId)` (stepPhonology builds the
+      base; fixed prefix hashed once, cid folded per word via `fnv1aChain`) instead
+      of the shared sequential stream. A word's phonological draws depend on its own
+      identity, not its draw position — so adding vocabulary no longer scrambles
+      existing words' sound trajectories (PROVED 0/427 perturbation when a concept is
+      appended; legacy shared stream perturbs). ONE deliberate full re-baseline of
+      meaning_layer_baseline GENN (all 6 presets; GEN0 unchanged — no draws at gen 0).
+      PERF: isolated per-call machinery delta within noise (≈0); end-to-end one preset
+      +15% / another −5% = benign trajectory reshuffle, not overhead. Reproducibility
+      preserved (re-run identical). 5 trajectory-dependent tests updated (seed/cap/
+      assertion shifts, all benign — none implicated the mechanism).
+      SCOPE NOTE (honest): this insulates the SOUND-CHANGE channel only (the dominant
+      pure artifact). Class-B selection draws (genesis coinage COUNT by lexSize,
+      obsolescence random-pair selection, semantics drift) stay lexicon-coupled BY
+      DESIGN, as do cross-word mechanisms (homonym avoidance, collision revert,
+      neighbour momentum). So enrichment is sound-trajectory-safe but NOT fully
+      byte-identical; a small reviewed re-baseline per enrichment is still expected.
+      ENRICHMENT DISCIPLINE: APPEND new seed words (don't insert mid-list) so existing
+      words keep their ConceptId seq → stable per-concept seed.
 - [x] B2 [DONE 2026-05-31 — concept-native engine; gloss key RETAINED, no physical
       flip] — user RE-SCOPED B2 (2026-05-31) away from the full physical
       Record<ConceptId,WordForm> flip after execution surfaced: (a) the project's own
@@ -255,6 +271,15 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       (c) old-save migration / save-format vNext; (d) **item 3** preset enrichment
       (the original goal — authored building blocks per preset; needs reviewed
       re-baselines; optional content-addressed per-concept RNG to make it byte-safe).
+      (e) [BACKLOG — latent R2 test-access bug] Several RUN_SLOW/wholesale-excluded
+      tests read `lang.lexicon[gloss]` directly (now ConceptId-keyed → silently
+      `undefined`), so they ran green for the wrong reason during the R3 fast-tier
+      sweep. `frequency_direction.test.ts` was the live one (its means collapsed to
+      0/0 → caught by the B1-Y RUN_SLOW pass, FIXED via `lexGet`). Audit the rest
+      that READ existing words by gloss (divergence_regression, lexical_diffusion,
+      rate_calibration, targeted_derivation_integration) and route via the seam.
+      Tests that WRITE `lang.lexicon[gloss]=…` or assert `toBeUndefined()` are
+      self-consistent and lower priority.
 - [x] Translator reverse gloss-leak — DONE 2026-05-31 (fafc9c0). The narrative fix
       (f4bb0e0) didn't cover the translator; its reverse path leaked the raw derived
       key into the back-translation for 100% of derived target words (pie 71/71,

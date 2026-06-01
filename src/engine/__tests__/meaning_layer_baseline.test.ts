@@ -82,25 +82,25 @@ const GEN0: Record<string, string> = {
   tokipona: "4cb04ce4",
   english: "ced79fd3",
 };
+// RE-BASELINED 2026-05-31 (B1-Y — content-addressed per-concept RNG). ALL SIX
+// presets shifted, as expected and intended: sound change in apply.ts now draws
+// from a per-concept sub-rng seeded by `config.seed|lang.id|generation|conceptId`
+// instead of the shared sequential stream, so a word's phonological draws depend
+// on its own identity rather than its position in the iteration order. This is
+// the ONE deliberate full-trajectory re-baseline the migration plan reserved for
+// the (Y) work (see docs/planning/archive/STAGE-B-PLAN.md §5). GEN0 is unchanged
+// (no draws in the seed state). The payoff: adding vocabulary no longer scrambles
+// existing words' sound trajectories — verified 0/427 perturbation in an
+// append-a-concept probe. Machinery cost is negligible (isolated per-call delta
+// within noise). Reproducibility-determinism is fully preserved (same config →
+// identical output; re-run confirmed).
 const GENN: Record<string, string> = {
-  pie: "8dc3510e",
-  bantu: "7ef8a95a",
-  romance: "b517df8f",
-  // re-baselined 2026-05-31 (Stage B B2 — concept-native de-anglicization):
-  // bootstrapNeologismNeighbors / translate / embed now read RECORDED structure
-  // (lang.compounds[m].parts) instead of parsing the English gloss string
-  // (m.split("-") / suffix regex). Only GERMANIC shifted — the one preset whose
-  // recorded compound/derivation structure diverges from its gloss hyphenation
-  // within 30 gens. english stayed byte-identical (its compounds are hyphen-
-  // spelled, so the old string-split already matched the records); bantu/romance/
-  // pie/tokipona likewise byte-identical — proving the change is structure-driven,
-  // not a blanket perturbation.
-  germanic: "5b98d44a",
-  tokipona: "2eff6781", // re-baselined 2026-05-30: compound coinage no longer
-                        // falls back to a random-lexeme mash (firewater fix);
-                        // Toki Pona was the only preset coining such a garbage
-                        // compound within 30 gens. Other 5 presets byte-identical.
-  english: "d5b13c47",
+  pie: "9f3159ef",
+  bantu: "0b3dcf47",
+  romance: "a86a875f",
+  germanic: "5aa88ca4",
+  tokipona: "fc2582cc",
+  english: "edcc59b5",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

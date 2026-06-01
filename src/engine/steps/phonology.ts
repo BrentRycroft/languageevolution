@@ -257,8 +257,15 @@ export function stepPhonology(
   //   - "manual": UR persists across gens; opacity accumulates over
   //     multiple rule fires. Caller must invoke enableStratalMode /
   //     refreshUR to checkpoint.
+  // B1-Y: per-concept RNG seed base. A word's sound-change draws are seeded
+  // from `config.seed|lang.id|generation|conceptId` (see apply.ts), so they
+  // depend on the word's own identity rather than its draw position — adding
+  // vocabulary no longer scrambles existing words' phonological trajectories.
+  // config.seed keeps the global seed in control; lang.id makes sibling
+  // daughters diverge; generation gives independent draws each gen.
+  const conceptSeedBase = `${config.seed}|${lang.id}|${generation}`;
   if (lang.lexiconUR !== undefined) {
-    lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts, lang);
+    lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
     const policy = lang.lexiconURRefreshPolicy ?? "each-gen";
     if (policy === "each-gen") {
       // UR mirrors the surface store, so it is ConceptId-keyed too.
@@ -270,7 +277,7 @@ export function stepPhonology(
     // policy === "manual": leave UR untouched. Caller checkpoints when
     // a morphological reanalysis or other event justifies updating UR.
   } else {
-    lang.lexicon = applyChangesToLexicon(before, changes, rng, opts, lang);
+    lang.lexicon = applyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
   }
   // Phase 72a T2 (Invariant 1 fix): closed-class forms are cached
   // per-language; the cache silently goes stale when phonology rewrites
