@@ -284,15 +284,25 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       diminishing AUTHENTICITY returns (esp. PIE/Romance) — add only what the
       realism compass can name. (Side path: have genesis RECORD coined compound/
       derivation structure into lang.compounds → unblocks item-4 batch 2.)
-      (e) [BACKLOG — latent R2 test-access bug] Several RUN_SLOW/wholesale-excluded
-      tests read `lang.lexicon[gloss]` directly (now ConceptId-keyed → silently
-      `undefined`), so they ran green for the wrong reason during the R3 fast-tier
-      sweep. `frequency_direction.test.ts` was the live one (its means collapsed to
-      0/0 → caught by the B1-Y RUN_SLOW pass, FIXED via `lexGet`). Audit the rest
-      that READ existing words by gloss (divergence_regression, lexical_diffusion,
-      rate_calibration, targeted_derivation_integration) and route via the seam.
-      Tests that WRITE `lang.lexicon[gloss]=…` or assert `toBeUndefined()` are
-      self-consistent and lower priority.
+      (e) [DONE 2026-06-01 — RUN_SLOW audit] The full `RUN_SLOW=1` suite had drifted
+      RED (only meaning_layer was ever run under the determinism gate, so the
+      fast-tier-EXCLUDED behavioural tests went unchecked after the R2 concept-rekey
+      AND the B1-Y re-baseline). Enumerated 11 fails / ~8 files and fixed each:
+        - GLOSS-KEYED test-debt (R2 rekey): route `lang.lexicon[gloss]` reads/writes
+          through the access seam (`lexGet`/`lexSet`/`lexKeys`) or rekey hand-built
+          fakeLangs — divergence_regression + lexical_diffusion (aa8a762); historical,
+          phase72e_stress (Object.keys=cids→lexKeys), ablaut_chain + properties
+          (rekey fakeLang), phase72a_quick_wins (5f97017). frequency_direction was the
+          earlier exemplar.
+        - TRAJECTORY-FRAGILITY (B1-Y RNG reshuffle tipped single-seed assertions):
+          rate_calibration tree-split → 3-seed majority (6550216).
+        - REAL ENGINE BUGS surfaced by the reshuffle: categoryMomentum purge sat after
+          the stable-era early-return → never ran on skip-gens (81bd701, byte-identical);
+          + the two final-erosion nucleus bugs (3aeae6b/86e98ca).
+        - STALE-vs-deliberate-change: genesis compound test used a synthetic target but
+          the mechanism now needs a SEMANTICALLY-RELATED pair → real cluster target
+          "fire" (04ff4ff). autosave throttle was load-flaky → freeze Date.now (2f7d66b).
+      Each verified green individually under RUN_SLOW; final full-suite gate re-run.
 - **Item 4 (kill `m.includes("-")` gloss-string hacks) — DONE 2026-06-01** (batch 1 +
   batch 2 landed; only the deliberately-out-of-scope sites below remain, by design).
   - [x] Batch 1 DONE (e937ed2, byte-identical): taboo.ts + narrative/generate.ts
