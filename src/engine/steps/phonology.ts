@@ -52,6 +52,19 @@ export function stepPhonology(
   generation: number,
   state?: SimulationState,
 ): void {
+  // Phase 72a T3 (Contract C7 fix): purge expired categoryMomentum entries
+  // once per gen. This MUST run before the stable-era freeze early-return
+  // below — otherwise low-volatility skip-gens never prune, and the map grows
+  // monotonically (bloating saves) exactly when the language is most stable.
+  // The purge only deletes entries apply.ts already treats as inert (until <
+  // gen) and draws no rng, so it does not perturb sound output.
+  if (lang.categoryMomentum) {
+    for (const cat of Object.keys(lang.categoryMomentum)) {
+      if (generation >= lang.categoryMomentum[cat]!.until) {
+        delete lang.categoryMomentum[cat];
+      }
+    }
+  }
   // Phase 38a: stable-era freeze gate. When a language is in deep
   // stable phase (multiplier ≤ 0.15 after Phase 38a's contrast
   // sharpening), skip phonology entirely 30% of the time. The
@@ -169,19 +182,6 @@ export function stepPhonology(
     const step = (rng.next() < 0.5 ? -1 : 1) * 0.02;
     const next = Math.max(0.7, Math.min(1.3, cur + step));
     lang.naturalBiasOverride[cat] = next;
-  }
-  // Phase 72a T3 (Contract C7 fix): purge expired categoryMomentum
-  // entries before any new boosts are seeded. Pre-72a, expired entries
-  // were skipped at read-time (apply.ts:485 checks `until` vs gen) but
-  // never deleted, so the map grew monotonically and bloated saves on
-  // long runs. Now we delete-on-expiry once per gen.
-  if (lang.categoryMomentum) {
-    for (const cat of Object.keys(lang.categoryMomentum)) {
-      const m = lang.categoryMomentum[cat]!;
-      if (generation >= m.until) {
-        delete lang.categoryMomentum[cat];
-      }
-    }
   }
   const lexiconKeys = Object.keys(before);
   for (const change of changes) {
