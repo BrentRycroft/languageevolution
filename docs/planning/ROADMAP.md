@@ -293,23 +293,30 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       rate_calibration, targeted_derivation_integration) and route via the seam.
       Tests that WRITE `lang.lexicon[gloss]=…` or assert `toBeUndefined()` are
       self-consistent and lower priority.
-- **Item 4 (kill `m.includes("-")` gloss-string hacks) — STATUS 2026-05-31.**
+- **Item 4 (kill `m.includes("-")` gloss-string hacks) — DONE 2026-06-01** (batch 1 +
+  batch 2 landed; only the deliberately-out-of-scope sites below remain, by design).
   - [x] Batch 1 DONE (e937ed2, byte-identical): taboo.ts + narrative/generate.ts
     compound guards now read `recordedParts(lang,m)` (lang.compounds) not the gloss
     hyphen. (B2 earlier did the 3 hot-path sites: translate / genesis bootstrap / embed.)
-  - [BLOCKED — needs a prerequisite, reverted] Batch 2 (reanalysis.ts,
-    targetedDerivation.ts:113, morphology/derivation.ts pickRuntimeDerivedMeaning).
-    Converting these `m.includes("-")` guards to `recordedParts` is a REGRESSION:
-    `addCompound`/`addDerivation` run ONLY at init (seed structure) — genesis coinage
-    does NOT record into `lang.compounds`. So a genesis-coined derived key
-    (`build-er.agt`) has a hyphen but NO record; `recordedParts` returns null → the
-    guard fails to skip it → reintroduces `-er-er` derivation pyramids (proved: all 6
-    presets diverged at gen-30). The hyphen on the synthetic `${base}-${tag}` key is
-    LOAD-BEARING as the "is this a coined derived/compound key" signal. PREREQUISITE:
-    genesis records coined compound/derivation parts into `lang.compounds` (then
-    `recordedParts` covers coinage, not just seeds). That recording is itself a
-    behavioural change — B2's `recordedParts` reads it in bootstrapNeologismNeighbors —
-    so it needs its own reviewed re-baseline, and it overlaps item 3 (building blocks).
+  - [x] Batch 2 DONE 2026-06-01 (unblocked by genesis-records-coinage d4c7840, which
+    makes `recordedParts` cover coinage so the `-er-er`-pyramid regression that forced
+    the earlier revert is gone — probe 0/6 pyramids). Three sites:
+      - targetedDerivation.ts:113 + morphology/derivation.ts:142 (skip-guards, db705ea):
+        `m.includes("-")` → `recordedParts(lang,m)!==null || lang.boundMorphemes?.has(m)`.
+        The boundMorphemes clause preserves the affix-key exclusion the dash gave for
+        free (these guards run before any freq/POS filter, unlike batch-1's taboo site).
+        Re-baselined all 6 presets at gen-30 (item-3 non-hyphen compounds rainbow/
+        firewood/king/… were wrongly eligible as derivation bases; now skipped). GEN0
+        unchanged.
+      - reanalysis.ts:36/49 (collect-guard, dcbf645): pool now reads recorded 2-part
+        structure; promoted tag = 2nd recorded constituent, dash-normalised. BYTE-
+        IDENTICAL (reanalysis doesn't fire <30 gens for these presets) — clean. Updated
+        realism_round4's setup to register the test compound in lang.compounds.
+    SIDE-EFFECT FIX (the re-baseline's RNG reshuffle exposed two LATENT bugs, both
+    committed separately + byte-identical to the locked hashes): final-phoneme erosion
+    in cliticize (3aeae6b) and grammaticalization-fusion (86e98ca) could delete a
+    word's only syllable nucleus (PIE "run"→"dd"); both now guard with isSyllabic. The
+    ipa_pie 60-gen syllabicity test caught it — kept as ground truth, NOT re-baselined.
   - [NOT a target] `derivedMeaningParts` (morphology/derivation.ts:71) parses our OWN
     synthetic `${base}-${tag}` derived-key convention (productive suffixes aren't in
     lang.compounds) — legitimate, leave it. `complexity.ts` is a hardcoded English
