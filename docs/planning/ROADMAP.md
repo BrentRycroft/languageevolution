@@ -347,8 +347,10 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       right").** Diagnostic only (NO edits made); 5 parallel sub-agents each audited one
       evolution slice on the real presets with throwaway probes. Findings are
       evidence-backed (actual evolved forms/numbers + code file:line). Awaiting user
-      go-ahead before ANY fix. Four CROSS-CUTTING root patterns explain most of the
-      "doesn't feel right":
+      go-ahead before ANY fix. **IMPLEMENTATION PLAN:
+      docs/planning/EVOLUTION-REALISM-MILESTONE.md** (6 phases + a realism-scorecard
+      harness; each phase's design, deliberate re-baseline/breakage, and success metric).
+      Four CROSS-CUTTING root patterns explain most of the "doesn't feel right":
 
   **A. One-way ratchets — everything converges to one over-marked endpoint (no cycle).**
     - Morphology: `synthesisIndex` only rises (paradigm count only grows; `maybeMergeParadigms`
