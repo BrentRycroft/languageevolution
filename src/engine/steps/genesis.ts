@@ -30,6 +30,7 @@ import {
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
 import { tryCommitCoinage, rebuildFormKeyIndex } from "../lexicon/word";
+import { recordCoinageStructure } from "../lexicon/compound";
 import { lexGet, lexHas, lexKeys, lexSet } from "../lexicon/access";
 import {
   findSuffixByTag,
@@ -178,6 +179,14 @@ export function stepGenesis(
           lang.wordFrequencyHints[derived.meaning] = 0.4;
           lang.wordOrigin[derived.meaning] = "derivation";
           recordDerivationChain(lang, derived);
+          // Record the derived word's structure so recordedParts() sees coined
+          // derivations, not just seed ones (concept-native structure checks).
+          recordCoinageStructure(
+            lang,
+            derived.meaning,
+            [derived.rootMeaning, derived.suffixTag],
+            generation,
+          );
           // Phase 22: register the suffix usage. Productive suffixes
           // (post-threshold) suppress per-coinage events — the rule
           // applies silently like a plural marker — but the etymology
@@ -314,6 +323,15 @@ export function stepGenesis(
     lang.wordOrigin[outcome.meaning] = isReplacement
       ? `lexical-replacement:${outcome.originTag}`
       : outcome.originTag;
+    // Record structure for coined compounds (mechanisms that report ≥2
+    // constituents) so recordedParts() covers coinage, not just seed compounds.
+    if (
+      !isReplacement &&
+      outcome.sources?.partMeanings &&
+      outcome.sources.partMeanings.length >= 2
+    ) {
+      recordCoinageStructure(lang, outcome.meaning, outcome.sources.partMeanings, generation);
+    }
     if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
       lang.registerOf[outcome.meaning] = outcome.register ?? "low";
     }

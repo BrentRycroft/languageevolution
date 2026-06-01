@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { deleteMeaning, PROTECTED_MEANINGS } from "../lexicon/mutate";
+import { lexKeys } from "../lexicon/access";
 import { translateSentence } from "../translator/sentence";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
 
@@ -20,8 +21,10 @@ describe("Phase 72e-1 — empty lexicon stress test", () => {
     const lang = sim.getState().tree["L-0"]!.language;
     const initialSize = Object.keys(lang.lexicon).length;
 
-    // Delete every non-protected meaning.
-    const all = Object.keys(lang.lexicon);
+    // Delete every non-protected meaning. Iterate GLOSSES via the seam:
+    // Object.keys(lang.lexicon) now yields ConceptIds, which neither
+    // PROTECTED_MEANINGS (gloss-keyed) nor deleteMeaning (gloss-keyed) accept.
+    const all = lexKeys(lang);
     for (const m of all) {
       if (!PROTECTED_MEANINGS.has(m)) {
         deleteMeaning(lang, m);

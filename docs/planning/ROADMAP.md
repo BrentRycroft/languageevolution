@@ -31,6 +31,24 @@ languages it grows, and which keeps getting faster as it grows. Three faces:
 
 Non-exhaustive; the user queues more ideas — fold them in here.
 
+## Operating policy — accuracy vs. byte-identical vs. performance (UPDATED 2026-05-31)
+
+Reproducibility-determinism stays a **HARD** invariant: no `Math.random()` in
+`src/engine/`, seeded `Rng` threaded everywhere, sort before order-sensitive
+`Object.keys`, new rng draws **appended** after existing draws, `simulation.test`
+green. Same `SimulationConfig` → identical output, always. This does NOT relax.
+
+What DOES relax (user 2026-05-31): "byte-identical against the PRIOR baseline" is
+no longer an absolute gate on ACCURACY work. An improvement that raises realism /
+de-anglicization MAY (a) shift trajectories and require a **reviewed** re-baseline,
+and (b) cost a **slight, measured** amount of performance — both acceptable, as
+long as the perf hit stays small (measure it; don't tank a hot path; the sim
+should still trend faster overall). Pure optimizations that touch NO behaviour
+must still be byte-identical net wins.
+
+This unblocks the content-addressed per-concept RNG (B1-Y) and the additive
+enrichment (A2 / A3 / item 3) that depended on it — see those entries.
+
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
 | Area | State | Gap note |
@@ -175,9 +193,27 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
         reverse.ts:96/129 is read-only on frozen state → B2 concept-native pass.
       NOTE: the "dual ConceptId/gloss lexicon" is now folded into B2 (the flip);
       with the seam in place there's no value in a transitional dual view.
-- [ ] B1-Y [OPTIONAL] — content-addressed per-concept RNG (sub-rng seeded from
-      conceptId+gen+site-tag) at the seam. ONE deliberate full re-baseline; unblocks
-      byte-safe A2/A3 enrichment; needs a perf measurement. Separable from B1/B2/B3.
+- [x] B1-Y [DONE 2026-05-31 — content-addressed per-concept RNG]. apply.ts's
+      per-word sound-change draws now come from a sub-rng seeded by
+      `fnv1a(config.seed|lang.id|generation|conceptId)` (stepPhonology builds the
+      base; fixed prefix hashed once, cid folded per word via `fnv1aChain`) instead
+      of the shared sequential stream. A word's phonological draws depend on its own
+      identity, not its draw position — so adding vocabulary no longer scrambles
+      existing words' sound trajectories (PROVED 0/427 perturbation when a concept is
+      appended; legacy shared stream perturbs). ONE deliberate full re-baseline of
+      meaning_layer_baseline GENN (all 6 presets; GEN0 unchanged — no draws at gen 0).
+      PERF: isolated per-call machinery delta within noise (≈0); end-to-end one preset
+      +15% / another −5% = benign trajectory reshuffle, not overhead. Reproducibility
+      preserved (re-run identical). 5 trajectory-dependent tests updated (seed/cap/
+      assertion shifts, all benign — none implicated the mechanism).
+      SCOPE NOTE (honest): this insulates the SOUND-CHANGE channel only (the dominant
+      pure artifact). Class-B selection draws (genesis coinage COUNT by lexSize,
+      obsolescence random-pair selection, semantics drift) stay lexicon-coupled BY
+      DESIGN, as do cross-word mechanisms (homonym avoidance, collision revert,
+      neighbour momentum). So enrichment is sound-trajectory-safe but NOT fully
+      byte-identical; a small reviewed re-baseline per enrichment is still expected.
+      ENRICHMENT DISCIPLINE: APPEND new seed words (don't insert mid-list) so existing
+      words keep their ConceptId seq → stable per-concept seed.
 - [x] B2 [DONE 2026-05-31 — concept-native engine; gloss key RETAINED, no physical
       flip] — user RE-SCOPED B2 (2026-05-31) away from the full physical
       Record<ConceptId,WordForm> flip after execution surfaced: (a) the project's own
@@ -219,16 +255,84 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
         - 4th string-hack: derivation.ts:141 `m.includes("-")` derivation-base guard →
           could become `recordedParts(lang,m)!==null` (same principle). Left out to
           keep this re-baseline tight to the 3 named hacks.
-- [ ] **FULL CONCEPT RE-KEY — AUTHORIZED 2026-05-31 (user reversed the keep-gloss-key
-      decision).** User asked to do all 4 deferred/declined items: (1) full physical
-      re-key `Record<ConceptId,WordForm>`, (2) POS from concept registry, (3) preset
-      enrichment, (4) the 4th string-hack. Chose "re-key first as the foundation" —
-      item 1 subsumes 2 & 4 (opaque keys ⇒ POS must come from the registry; the
-      string-hacks become moot). PLAN: **docs/planning/CONCEPT-REKEY-PLAN.md**
-      (R0 accessor seam → R1 route engine → R2 the flip [hot-path fork] → R3 fallout;
-      then item 3 enrichment separately). Byte-identical via the B1 `orderedLexiconKeys`
-      seam (reimplemented to return ConceptIds in gloss order). Multi-session; execute
-      with fresh context per phase. The earlier B3-MOOT note is superseded.
+- [x] **FULL CONCEPT RE-KEY — DONE 2026-05-31.** `lang.lexicon` is now physically
+      `Record<ConceptId, WordForm>`; glosses are pure labels the access.ts seam
+      resolves. Byte-identical (RUN_SLOW baseline 12/12 at LOCKED hashes; full suite
+      1750 pass / 10 skip; tsc clean). Commits: R0 36d1dd2, R1 (6 commits), R2.0
+      0502edc (baseline seam), **R2+R3 6dd6628** (the flip + test/UI routing). PLAN +
+      full PROGRESS (incl. the determinism bug + the cid-native hot-path design):
+      **docs/planning/CONCEPT-REKEY-PLAN.md**. The user chose the full physical flip
+      over storage-only after I surfaced the hot-path tradeoffs.
+      DEFERRED follow-ons (NOT blocking, need explicit go-ahead): (a) brand the
+      `Lexicon` type to `Record<ConceptId,WordForm>` (kept loose to avoid a 2nd tsc
+      ripple); (b) **item 2** POS-from-registry + **item 4** kill `m.includes("-")`
+      string-hacks — the store is cid-keyed but satellite maps + helpers still speak
+      glosses, so these are independent improvements, NOT forced by the flip;
+      (c) old-save migration / save-format vNext; (d) **item 3** preset enrichment
+      — FIRST FULL PASS DONE (f438afc tokipona; fb4fdf7 the other 5). B1-Y makes
+      append-only enrichment byte-safe on the sound channel, so each preset's
+      re-baseline is ISOLATED (proven: enriching one leaves the other 5
+      byte-identical). All 6 presets now carry authentic, family-calibrated
+      building-block compounds from existing primitives (no invented etymologies):
+      tokipona king/soldier/city; bantu student/citizen/fisherman (mwana+X);
+      germanic rainbow(*regnabogô)/firewood/daylight/seabird; romance wallet/
+      scarecrow (V+N); pie master (*dem-pótis only — rest too speculative); english
+      rainbow/firewood/seaside/sunflower/footpath. WORKFLOW per enrichment: author
+      authentic compounds, append-only, verify they materialise as part
+      concatenations, re-baseline just that preset, robustify any rng-sequence-
+      fragile integration tests (NOT regressions). FURTHER ROUNDS possible but hit
+      diminishing AUTHENTICITY returns (esp. PIE/Romance) — add only what the
+      realism compass can name. (Side path: have genesis RECORD coined compound/
+      derivation structure into lang.compounds → unblocks item-4 batch 2.)
+      (e) [DONE 2026-06-01 — RUN_SLOW audit] The full `RUN_SLOW=1` suite had drifted
+      RED (only meaning_layer was ever run under the determinism gate, so the
+      fast-tier-EXCLUDED behavioural tests went unchecked after the R2 concept-rekey
+      AND the B1-Y re-baseline). Enumerated 11 fails / ~8 files and fixed each:
+        - GLOSS-KEYED test-debt (R2 rekey): route `lang.lexicon[gloss]` reads/writes
+          through the access seam (`lexGet`/`lexSet`/`lexKeys`) or rekey hand-built
+          fakeLangs — divergence_regression + lexical_diffusion (aa8a762); historical,
+          phase72e_stress (Object.keys=cids→lexKeys), ablaut_chain + properties
+          (rekey fakeLang), phase72a_quick_wins (5f97017). frequency_direction was the
+          earlier exemplar.
+        - TRAJECTORY-FRAGILITY (B1-Y RNG reshuffle tipped single-seed assertions):
+          rate_calibration tree-split → 3-seed majority (6550216).
+        - REAL ENGINE BUGS surfaced by the reshuffle: categoryMomentum purge sat after
+          the stable-era early-return → never ran on skip-gens (81bd701, byte-identical);
+          + the two final-erosion nucleus bugs (3aeae6b/86e98ca).
+        - STALE-vs-deliberate-change: genesis compound test used a synthetic target but
+          the mechanism now needs a SEMANTICALLY-RELATED pair → real cluster target
+          "fire" (04ff4ff). autosave throttle was load-flaky → freeze Date.now (2f7d66b).
+      Each verified green individually under RUN_SLOW; final full-suite gate re-run.
+- **Item 4 (kill `m.includes("-")` gloss-string hacks) — DONE 2026-06-01** (batch 1 +
+  batch 2 landed; only the deliberately-out-of-scope sites below remain, by design).
+  - [x] Batch 1 DONE (e937ed2, byte-identical): taboo.ts + narrative/generate.ts
+    compound guards now read `recordedParts(lang,m)` (lang.compounds) not the gloss
+    hyphen. (B2 earlier did the 3 hot-path sites: translate / genesis bootstrap / embed.)
+  - [x] Batch 2 DONE 2026-06-01 (unblocked by genesis-records-coinage d4c7840, which
+    makes `recordedParts` cover coinage so the `-er-er`-pyramid regression that forced
+    the earlier revert is gone — probe 0/6 pyramids). Three sites:
+      - targetedDerivation.ts:113 + morphology/derivation.ts:142 (skip-guards, db705ea):
+        `m.includes("-")` → `recordedParts(lang,m)!==null || lang.boundMorphemes?.has(m)`.
+        The boundMorphemes clause preserves the affix-key exclusion the dash gave for
+        free (these guards run before any freq/POS filter, unlike batch-1's taboo site).
+        Re-baselined all 6 presets at gen-30 (item-3 non-hyphen compounds rainbow/
+        firewood/king/… were wrongly eligible as derivation bases; now skipped). GEN0
+        unchanged.
+      - reanalysis.ts:36/49 (collect-guard, dcbf645): pool now reads recorded 2-part
+        structure; promoted tag = 2nd recorded constituent, dash-normalised. BYTE-
+        IDENTICAL (reanalysis doesn't fire <30 gens for these presets) — clean. Updated
+        realism_round4's setup to register the test compound in lang.compounds.
+    SIDE-EFFECT FIX (the re-baseline's RNG reshuffle exposed two LATENT bugs, both
+    committed separately + byte-identical to the locked hashes): final-phoneme erosion
+    in cliticize (3aeae6b) and grammaticalization-fusion (86e98ca) could delete a
+    word's only syllable nucleus (PIE "run"→"dd"); both now guard with isSyllabic. The
+    ipa_pie 60-gen syllabicity test caught it — kept as ground truth, NOT re-baselined.
+  - [NOT a target] `derivedMeaningParts` (morphology/derivation.ts:71) parses our OWN
+    synthetic `${base}-${tag}` derived-key convention (productive suffixes aren't in
+    lang.compounds) — legitimate, leave it. `complexity.ts` is a hardcoded English
+    gloss→score TABLE (de-anglicising it is bigger than the hyphen). `calque.ts` /
+    `genesis/apply.ts:73` decompose a NEEDED meaning's gloss (the need isn't recorded
+    yet) — need a structural refactor to read the donor's record.
 - [x] Translator reverse gloss-leak — DONE 2026-05-31 (fafc9c0). The narrative fix
       (f4bb0e0) didn't cover the translator; its reverse path leaked the raw derived
       key into the back-translation for 100% of derived target words (pie 71/71,

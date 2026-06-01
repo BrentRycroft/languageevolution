@@ -1,5 +1,5 @@
 import type { Lexicon, Meaning, Phoneme, SoundChange, SoundChangeCategory, WordForm } from "../types";
-import type { Rng } from "../rng";
+import { makeRng, fnv1a, fnv1aChain, type Rng } from "../rng";
 import { soundChangeSensitivity } from "../lexicon/expressive";
 // Phase 26e: corenessResistance import removed. Swadesh-membership-based
 // rate dampening was redundant with Phase 24c's frequency-direction split
@@ -715,18 +715,24 @@ export function stratalApplyChangesToLexicon(
   rng: Rng,
   opts: ApplyOptions,
   lang?: LexiconState,
+  conceptSeedBase?: string,
 ): Lexicon {
   const lexicalRules = changes.filter((c) => c.stratum === "lexical");
   const postLexicalRules = changes.filter((c) => c.stratum !== "lexical");
+
+  // B1-Y: distinguish the two strata's per-concept seeds so the lexical
+  // and post-lexical passes don't draw correlated sequences for the same word.
+  const lexBase = conceptSeedBase === undefined ? undefined : `${conceptSeedBase}|L`;
+  const postBase = conceptSeedBase === undefined ? undefined : `${conceptSeedBase}|P`;
 
   // Stratum 1: lexical rules → intermediate. Skip when no lexical
   // rules tagged (degenerates to single-pass for back-compat).
   let intermediate = lexicon;
   if (lexicalRules.length > 0) {
-    intermediate = applyChangesToLexicon(lexicon, lexicalRules, rng, opts, lang);
+    intermediate = applyChangesToLexicon(lexicon, lexicalRules, rng, opts, lang, lexBase);
   }
   // Stratum 2: post-lexical rules → surface.
-  const surface = applyChangesToLexicon(intermediate, postLexicalRules, rng, opts, lang);
+  const surface = applyChangesToLexicon(intermediate, postLexicalRules, rng, opts, lang, postBase);
   return surface;
 }
 
@@ -739,6 +745,18 @@ export function stratalApplyChangesToLexicon(
  * the deterministic collision tiebreak read the gloss; the store and `out` are
  * indexed by the raw key. The iteration order is by gloss either way, so the
  * per-word RNG draw sequence is byte-identical across the flip.
+ *
+ * B1-Y (content-addressed per-concept RNG): when `conceptSeedBase` is supplied
+ * (production path, built by stepPhonology from `config.seed|lang.id|generation`),
+ * each word's sound-change draws come from a sub-rng seeded by
+ * `fnv1a(conceptSeedBase|conceptId)` instead of the shared sequential `rng`. A
+ * word's draws then depend only on its own stable identity + language +
+ * generation — NOT on its position in the iteration order or how many other
+ * words exist, so existing words' phonological trajectories are insulated from
+ * vocabulary changes (append-enrichment keeps each word's ConceptId, hence its
+ * seed, stable). Without `conceptSeedBase` (unit-test path) the legacy shared-
+ * stream draw is used unchanged. Cross-word mechanisms (homonym avoidance,
+ * collision revert, neighbour momentum) remain lexicon-coupled by design.
  */
 export function applyChangesToLexicon(
   lexicon: Lexicon,
@@ -746,6 +764,7 @@ export function applyChangesToLexicon(
   rng: Rng,
   opts: ApplyOptions,
   lang?: LexiconState,
+  conceptSeedBase?: string,
 ): Lexicon {
   const out: Lexicon = {};
   // Build the ConceptId→gloss resolver ONCE per call (fresh, O(n), never
@@ -759,15 +778,27 @@ export function applyChangesToLexicon(
   const optsWithOrder: ApplyOptions = opts._orderedChanges
     ? opts
     : { ...opts, _orderedChanges: sortByPriority(changes) };
+  // B1-Y: one reusable sub-rng, reseeded per word from its ConceptId. Reusing a
+  // single object + setState (vs makeRng per word) is byte-identical to a fresh
+  // makeRng(seed) and avoids a per-word allocation in the hot loop. The fixed
+  // `base|` prefix is hashed once here; only the cid is folded per word, so the
+  // seed equals fnv1a(`${base}|${cid}`) with no per-word string allocation.
+  const conceptRng = conceptSeedBase === undefined ? undefined : makeRng(1);
+  const conceptBaseHash = conceptSeedBase === undefined ? 0 : fnv1a(`${conceptSeedBase}|`);
   let anyChanged = false;
   for (const key of keys) {
     const m = glossOf(key);
+    let drawRng: Rng = rng;
+    if (conceptSeedBase !== undefined) {
+      conceptRng!.setState(fnv1aChain(conceptBaseHash, key));
+      drawRng = conceptRng!;
+    }
     const sensitivity = soundChangeSensitivity(m);
-    if (sensitivity < 1 && !rng.chance(sensitivity)) {
+    if (sensitivity < 1 && !drawRng.chance(sensitivity)) {
       out[key] = lexicon[key]!;
       continue;
     }
-    const next = applyChangesToWord(lexicon[key]!, changes, rng, optsWithOrder, m);
+    const next = applyChangesToWord(lexicon[key]!, changes, drawRng, optsWithOrder, m);
     // Defensive: a word should never erode to empty (per-rule
     // isFormLegal enforces a length floor), but if it ever does,
     // preserve the previous form rather than silently dropping the

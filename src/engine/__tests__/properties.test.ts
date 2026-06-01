@@ -7,6 +7,8 @@ import { applyChangesToWord } from "../phonology/apply";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
+import { lexGet, lexHas } from "../lexicon/access";
+import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 import type { Language, WordForm } from "../types";
 
 /**
@@ -47,6 +49,14 @@ function makeTestLang(forms: Record<string, WordForm>): Language {
     otRanking: [],
     lastChangeGeneration: {},
   } as Language;
+}
+
+/** Build a test lang AND rekey its gloss-keyed seed lexicon to ConceptIds +
+ * conceptIds map, so engine code that reads via the access seam works. */
+function makeRekeyedTestLang(forms: Record<string, WordForm>): Language {
+  const lang = makeTestLang(forms);
+  rekeyLexiconToConceptIds(lang);
+  return lang;
 }
 
 function stringifyLeafLexicons(tree: ReturnType<ReturnType<typeof createSimulation>["getState"]>["tree"]) {
@@ -164,7 +174,7 @@ describe("engine property tests", () => {
           for (let i = 0; i < meanings.length; i++) {
             forms[meanings[i]!] = ["p", "a", "t", "i"].slice(0, 2 + (i % 3));
           }
-          const lang = makeTestLang(forms);
+          const lang = makeRekeyedTestLang(forms);
           const beforeSize = Object.keys(lang.lexicon).length;
           const result = driftOneMeaning(lang, makeRng(seed));
           if (result === null) return;
@@ -174,9 +184,10 @@ describe("engine property tests", () => {
           const afterSize = Object.keys(lang.lexicon).length;
           expect(afterSize).toBeGreaterThanOrEqual(beforeSize - 1);
           expect(afterSize).toBeLessThanOrEqual(beforeSize + 1);
-          expect(lang.lexicon[result.to]).toBeDefined();
+          // gloss → form via the access seam (lang.lexicon is ConceptId-keyed).
+          expect(lexHas(lang, result.to)).toBe(true);
           if (!result.polysemous) {
-            expect(lang.lexicon[result.from]).toBeUndefined();
+            expect(lexGet(lang, result.from)).toBeUndefined();
           }
         },
       ),
@@ -194,8 +205,8 @@ describe("engine property tests", () => {
           for (let i = 0; i < meanings.length; i++) {
             forms[meanings[i]!] = ["p", "a", "t", "i"].slice(0, 2 + (i % 3));
           }
-          const a = makeTestLang(forms);
-          const b = makeTestLang(forms);
+          const a = makeRekeyedTestLang(forms);
+          const b = makeRekeyedTestLang(forms);
           const ra = driftOneMeaning(a, makeRng(seed));
           const rb = driftOneMeaning(b, makeRng(seed));
           expect(JSON.stringify(ra)).toBe(JSON.stringify(rb));

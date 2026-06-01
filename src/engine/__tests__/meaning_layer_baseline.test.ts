@@ -74,33 +74,73 @@ function signature(sim: ReturnType<typeof createSimulation>): string {
 }
 
 // Baseline hashes from the current (pre-migration) engine. Locked.
+// GEN0 re-baselined 2026-06-01 (item 3 enrichment, all presets): each preset
+// gained appended seedCompounds built from existing primitives (verified to
+// materialise as exact part concatenations), so each gen-0 lexicon gained those
+// entries. Per preset (authentic, family-calibrated): pie +master (*dem-pótis);
+// bantu +student/citizen/fisherman (mwana/mu-+X); romance +wallet/scarecrow (V+N);
+// germanic +rainbow/firewood/daylight/seabird (N+N); english +rainbow/firewood/
+// seaside/sunflower/footpath; tokipona +king/soldier/city (landed 2026-05-31).
 const GEN0: Record<string, string> = {
-  pie: "ab7faeaa",
-  bantu: "f071ed04",
-  romance: "8917b341",
-  germanic: "8d42348c",
-  tokipona: "4cb04ce4",
-  english: "ced79fd3",
+  pie: "8e1e516d",
+  bantu: "cb709a71",
+  romance: "28661e99",
+  germanic: "442a10cb",
+  tokipona: "963106db",
+  english: "77c30563",
 };
+// RE-BASELINED 2026-05-31 (B1-Y — content-addressed per-concept RNG). ALL SIX
+// presets shifted, as expected and intended: sound change in apply.ts now draws
+// from a per-concept sub-rng seeded by `config.seed|lang.id|generation|conceptId`
+// instead of the shared sequential stream, so a word's phonological draws depend
+// on its own identity rather than its position in the iteration order. This is
+// the ONE deliberate full-trajectory re-baseline the migration plan reserved for
+// the (Y) work (see docs/planning/archive/STAGE-B-PLAN.md §5). GEN0 is unchanged
+// (no draws in the seed state). The payoff: adding vocabulary no longer scrambles
+// existing words' sound trajectories — verified 0/427 perturbation in an
+// append-a-concept probe. Machinery cost is negligible (isolated per-call delta
+// within noise). Reproducibility-determinism is fully preserved (same config →
+// identical output; re-run confirmed).
+// GENN re-baselined 2026-06-01 (item 3 enrichment): each preset's gen-30 shifted
+// by ITS OWN appended compounds + their localized genesis/obsolescence cascade.
+// Each enrichment is ISOLATED — appending one preset's compounds left every OTHER
+// preset byte-identical (B1-Y insulates existing words' per-concept sound
+// trajectories), proven by the staged re-baseline (tokipona unchanged when the
+// other 5 were enriched, and vice-versa). This is the clean, reviewable enrichment
+// diff B1-Y was built to enable.
+// GENN re-baselined 2026-06-01 (genesis-records-coinage, fossilized records):
+// genesis now stamps the structure of COINED compounds/derivations into
+// lang.compounds (recordCoinageStructure, fossilized:true so the recompose
+// machinery leaves the already-final coinage form alone), so bootstrapNeologism-
+// Neighbors integrates a coinage's frequency + semantic neighbours from its content
+// constituents — like seed compounds. Only bantu/romance/tokipona shifted (they coin
+// bootstrappable compounds within 30 gens); pie/germanic/english are BYTE-IDENTICAL
+// to their enrichment values (the record is invisible without recompose). GEN0
+// unchanged (no coinage at gen 0). Makes recordedParts() cover coinage (unblocks
+// item-4 batch 2). NB: an earlier fossilized:false attempt let updateCompounds
+// re-derive coinages post-UR-snapshot and degraded a PIE word to an illegal
+// no-nucleus "f" — caught by ipa_pie syllabicity, hence fossilized:true.
+// GENN re-baselined 2026-06-01 (item-4 batch 2, derivation skip-guards): the
+// productive-derivation base guards in attemptProductiveDerivation
+// (targetedDerivation.ts) and pickRuntimeDerivedMeaning (morphology/derivation.ts)
+// now read the language's RECORDED compound/derivation structure
+// (`recordedParts(lang,m) !== null`, covering coinage post-genesis-recording) OR a
+// bound morpheme, instead of the anglocentric `m.includes("-")` gloss-hyphen test.
+// Net effect: the item-3 NON-hyphen seed compounds (rainbow, firewood, king, …) —
+// previously eligible as derivation bases because their gloss has no dash — are now
+// correctly skipped as already-structured words. ALL SIX presets shifted (each
+// gained such compounds in item 3); zero -er-er pyramids (probe: 0/6) confirming
+// recordedParts covers coinage. GEN0 unchanged (no coinage at gen 0). NB: the
+// matching 60-gen ipa_pie run drove out two LATENT final-erosion bugs (cliticize
+// 3aeae6b, grammaticalization-fusion 86e98ca) — both committed separately, both
+// byte-identical to THESE hashes (the malformation they fix is post-gen-30).
 const GENN: Record<string, string> = {
-  pie: "8dc3510e",
-  bantu: "7ef8a95a",
-  romance: "b517df8f",
-  // re-baselined 2026-05-31 (Stage B B2 — concept-native de-anglicization):
-  // bootstrapNeologismNeighbors / translate / embed now read RECORDED structure
-  // (lang.compounds[m].parts) instead of parsing the English gloss string
-  // (m.split("-") / suffix regex). Only GERMANIC shifted — the one preset whose
-  // recorded compound/derivation structure diverges from its gloss hyphenation
-  // within 30 gens. english stayed byte-identical (its compounds are hyphen-
-  // spelled, so the old string-split already matched the records); bantu/romance/
-  // pie/tokipona likewise byte-identical — proving the change is structure-driven,
-  // not a blanket perturbation.
-  germanic: "5b98d44a",
-  tokipona: "2eff6781", // re-baselined 2026-05-30: compound coinage no longer
-                        // falls back to a random-lexeme mash (firewater fix);
-                        // Toki Pona was the only preset coining such a garbage
-                        // compound within 30 gens. Other 5 presets byte-identical.
-  english: "d5b13c47",
+  pie: "f5ffb2e6",
+  bantu: "f4938ee4",
+  romance: "092e426b",
+  germanic: "02c2297e",
+  tokipona: "2a1b6a3b",
+  english: "0adbf12e",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

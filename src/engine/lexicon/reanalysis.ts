@@ -2,6 +2,7 @@ import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { posOf } from "./pos";
 import { lexGet, lexSet, lexHas, lexKeys } from "./access";
+import { recordedParts } from "./word";
 
 /**
  * reanalysis.ts
@@ -33,9 +34,12 @@ function maybeCompoundReanalysis(
 ): ReanalysisEvent | null {
   const compounds: Meaning[] = [];
   for (const m of lexKeys(lang)) {
-    if (!m.includes("-")) continue;
-    const parts = m.split("-");
-    if (parts.length !== 2) continue;
+    // Concept-native (item 4): a "compound to reanalyse" is one with RECORDED
+    // 2-part structure (lang.compounds, via recordedParts) — not an English
+    // gloss that happens to contain one hyphen. This also finds non-hyphen
+    // compounds (rainbow, firewood) and excludes bound morphemes (no record).
+    const parts = recordedParts(lang, m);
+    if (!parts || parts.length !== 2) continue;
     if (!parts[0] || !parts[1]) continue;
     compounds.push(m);
   }
@@ -46,8 +50,12 @@ function maybeCompoundReanalysis(
   if (len < 3) return null;
   const affixLen = Math.min(3, Math.max(2, Math.floor(len / 2)));
   const affix = sourceForm.slice(len - affixLen);
-  const parts = source.split("-");
-  const tag = `-${parts[1]}`;
+  // Promote the 2nd recorded constituent to a derivational tag. Normalise to a
+  // single leading dash: a content part ("bow") → "-bow"; an affix part already
+  // spelled with a dash ("-er.agt") stays "-er.agt" (not "--er.agt"), matching
+  // the old `-${glossTail}` convention for hyphen-spelled keys.
+  const second = recordedParts(lang, source)![1]!;
+  const tag = second.startsWith("-") ? second : `-${second}`;
   const existing = lang.derivationalSuffixes ?? [];
   if (existing.some((s) => s.tag === tag)) return null;
   if (!lang.derivationalSuffixes) lang.derivationalSuffixes = [];

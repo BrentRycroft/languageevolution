@@ -6,6 +6,7 @@ import { isFormLegal } from "../phonology/wordShape";
 import { setLexiconForm } from "./mutate";
 import { isClosedClass, posOf } from "./pos";
 import { lexGet, lexHas, lexKeys } from "./access";
+import { recordedParts } from "./word";
 
 /**
  * taboo.ts
@@ -31,7 +32,12 @@ export function maybeTabooReplace(
   const candidates = lexKeys(lang).filter((m) => {
     const freq = lang.wordFrequencyHints[m] ?? 0.5;
     if (freq < 0.7) return false;
-    if (m.includes("-")) return false;
+    // Concept-native (item 4): skip words with RECORDED compound/derivation
+    // structure, read from lang.compounds, rather than guessing from a hyphen in
+    // the English gloss. (Taboo targets simple high-freq content roots; compounds
+    // are excluded either way, so this is byte-identical — it just stops trusting
+    // gloss spelling as a morphology signal.)
+    if (recordedParts(lang, m) !== null) return false;
     // Phase 26c: closed-class words (DET, AUX, PREP, CONJ, PRON, NEG, COP)
     // are NOT subject to taboo replacement. Real languages don't taboo
     // their function words — taboo affects content words tied to

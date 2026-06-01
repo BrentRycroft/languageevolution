@@ -137,6 +137,12 @@ describe("realism round 4 — population-feedback mechanics", () => {
         lexicon: {
           "water-keeper": ["w", "a", "t", "e", "r", "k", "i", "p"],
         },
+        // Concept-native (item 4): reanalysis reads RECORDED compound structure
+        // (lang.compounds), not the gloss hyphen. Register the compound the way
+        // addCompound would, so maybeReanalyse sees its two constituents.
+        compounds: {
+          "water-keeper": { parts: ["water", "keeper"], fossilized: false, bornGeneration: 0 },
+        },
       });
       const rng = makeRng("reanalysis-1");
       const ev = maybeReanalyse(lang, rng, 1);

@@ -8,6 +8,7 @@ import { tokeniseEnglish, translateSentenceViaAST } from "../translator/sentence
 import { englishTokensToAST } from "../translator/ast";
 import { posOf } from "../lexicon/pos";
 import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { recordedParts } from "../lexicon/word";
 
 /**
  * Phase 53 T6: narrative generator runs purely off the language's own
@@ -123,7 +124,9 @@ function pickMeaningByPOS(
   const candidates: Array<{ m: Meaning; w: number }> = [];
   for (const m of lexKeys(lang)) {
     if (posOf(m) !== pos) continue;
-    if (m.includes("-")) continue; // skip compounds for shape simplicity
+    // Concept-native (item 4): skip words with recorded compound/derivation
+    // structure (read from lang.compounds) rather than gloss-hyphen guessing.
+    if (recordedParts(lang, m) !== null) continue; // skip compounds for shape simplicity
     const freq = lang.wordFrequencyHints[m] ?? 0.4;
     // Phase 61: smoothing floor 0.05 → 0.12 widens the long tail
     // without flattening the frequency curve. Pre-Phase-61 only the

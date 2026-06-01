@@ -152,3 +152,36 @@ export function addDerivation(
     });
   }
 }
+
+/**
+ * Record the structural parts of an ALREADY-COMMITTED coinage into
+ * `lang.compounds`, WITHOUT recomposing or overwriting its form. Genesis has
+ * already set the surface form (possibly with phonotactic repair), so unlike
+ * `addCompound` / `addDerivation` (birth-time authoring, which recompose from
+ * parts) this only stamps the structure record.
+ *
+ * Effect: `recordedParts(lang, m)` then sees genesis-coined compounds and
+ * derivations — not just seed ones — so concept-native structure checks cover
+ * coinage. No-op if the meaning is already recorded or has fewer than two parts.
+ */
+export function recordCoinageStructure(
+  lang: Language,
+  meaning: Meaning,
+  parts: Meaning[],
+  bornGeneration: number,
+): void {
+  if (parts.length < 2) return;
+  if (!lang.compounds) lang.compounds = {};
+  if (lang.compounds[meaning]) return;
+  lang.compounds[meaning] = {
+    parts: parts.slice(),
+    // fossilized: the coinage's surface form is ALREADY final (genesis committed
+    // it, possibly with phonotactic repair), so the per-gen compound recompose
+    // machinery (updateCompounds) must NOT re-derive it from parts — doing so
+    // mutates the lexicon after the UR snapshot and can degrade the form to an
+    // illegal shape. This record exists only so recordedParts() sees the
+    // structure; the word then drifts as an ordinary lexicon entry.
+    fossilized: true,
+    bornGeneration,
+  };
+}

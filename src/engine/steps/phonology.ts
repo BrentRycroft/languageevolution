@@ -52,6 +52,19 @@ export function stepPhonology(
   generation: number,
   state?: SimulationState,
 ): void {
+  // Phase 72a T3 (Contract C7 fix): purge expired categoryMomentum entries
+  // once per gen. This MUST run before the stable-era freeze early-return
+  // below — otherwise low-volatility skip-gens never prune, and the map grows
+  // monotonically (bloating saves) exactly when the language is most stable.
+  // The purge only deletes entries apply.ts already treats as inert (until <
+  // gen) and draws no rng, so it does not perturb sound output.
+  if (lang.categoryMomentum) {
+    for (const cat of Object.keys(lang.categoryMomentum)) {
+      if (generation >= lang.categoryMomentum[cat]!.until) {
+        delete lang.categoryMomentum[cat];
+      }
+    }
+  }
   // Phase 38a: stable-era freeze gate. When a language is in deep
   // stable phase (multiplier ≤ 0.15 after Phase 38a's contrast
   // sharpening), skip phonology entirely 30% of the time. The
@@ -170,19 +183,6 @@ export function stepPhonology(
     const next = Math.max(0.7, Math.min(1.3, cur + step));
     lang.naturalBiasOverride[cat] = next;
   }
-  // Phase 72a T3 (Contract C7 fix): purge expired categoryMomentum
-  // entries before any new boosts are seeded. Pre-72a, expired entries
-  // were skipped at read-time (apply.ts:485 checks `until` vs gen) but
-  // never deleted, so the map grew monotonically and bloated saves on
-  // long runs. Now we delete-on-expiry once per gen.
-  if (lang.categoryMomentum) {
-    for (const cat of Object.keys(lang.categoryMomentum)) {
-      const m = lang.categoryMomentum[cat]!;
-      if (generation >= m.until) {
-        delete lang.categoryMomentum[cat];
-      }
-    }
-  }
   const lexiconKeys = Object.keys(before);
   for (const change of changes) {
     if (lang.diffusionState[change.id] !== undefined) continue;
@@ -257,8 +257,15 @@ export function stepPhonology(
   //   - "manual": UR persists across gens; opacity accumulates over
   //     multiple rule fires. Caller must invoke enableStratalMode /
   //     refreshUR to checkpoint.
+  // B1-Y: per-concept RNG seed base. A word's sound-change draws are seeded
+  // from `config.seed|lang.id|generation|conceptId` (see apply.ts), so they
+  // depend on the word's own identity rather than its draw position — adding
+  // vocabulary no longer scrambles existing words' phonological trajectories.
+  // config.seed keeps the global seed in control; lang.id makes sibling
+  // daughters diverge; generation gives independent draws each gen.
+  const conceptSeedBase = `${config.seed}|${lang.id}|${generation}`;
   if (lang.lexiconUR !== undefined) {
-    lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts, lang);
+    lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
     const policy = lang.lexiconURRefreshPolicy ?? "each-gen";
     if (policy === "each-gen") {
       // UR mirrors the surface store, so it is ConceptId-keyed too.
@@ -270,7 +277,7 @@ export function stepPhonology(
     // policy === "manual": leave UR untouched. Caller checkpoints when
     // a morphological reanalysis or other event justifies updating UR.
   } else {
-    lang.lexicon = applyChangesToLexicon(before, changes, rng, opts, lang);
+    lang.lexicon = applyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
   }
   // Phase 72a T2 (Invariant 1 fix): closed-class forms are cached
   // per-language; the cache silently goes stale when phonology rewrites

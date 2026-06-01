@@ -375,6 +375,20 @@ export function presetGermanic(): SimulationConfig {
     seed: "germanic",
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
+    // Item 3 enrichment (append-only): transparent Germanic N+N compounds —
+    // compounding is the family's hallmark and maximally productive. Built only
+    // from existing primitives; rainbow is a genuinely reconstructed PGmc
+    // compound (*regnabogô = rain + bow).
+    seedCompounds: {
+      // rainbow = rain + bow (*regnabogô — attested Proto-Germanic compound)
+      rainbow: { parts: ["rain", "bow"] },
+      // firewood = fire + wood (canonical "wood for the fire")
+      firewood: { parts: ["fire", "wood"] },
+      // daylight = day + light
+      daylight: { parts: ["day", "light"] },
+      // seabird = sea + bird
+      seabird: { parts: ["sea", "bird"] },
+    },
     // Phase 73e de-anglicization: Proto-Germanic *flaiski = flesh/meat (cf.
     // German Fleisch). Declare the colexification instead of a duplicate form.
     seedColexification: { meat: ["flesh"] },

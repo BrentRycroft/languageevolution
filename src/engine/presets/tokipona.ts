@@ -261,6 +261,17 @@ export function presetTokipona(): SimulationConfig {
       bridge: { parts: ["stone", "earth"] },
       // train = work + go (pali + tawa — "going work-thing")
       train: { parts: ["work", "go"] },
+      // Item 3 enrichment (append-only, byte-safe sound channel via B1-Y):
+      // canonical Toki Pona compounds for concepts the ~135-root inventory
+      // lacks, composed from existing primitives — authentic community usage,
+      // not invented etymologies.
+      // king = person + head (jan lawa — "leading person"); also fixes the
+      //   narrative "king" gap that was previously allow-listed as untranslatable.
+      king: { parts: ["child", "head"] },
+      // soldier = person + fight (jan utala — "fighting person").
+      soldier: { parts: ["child", "fight"] },
+      // city = land + home (ma tomo — "land of homes"), distinct from village (ma).
+      city: { parts: ["earth", "home"] },
     },
     // Phase 46a-migration: Toki Pona is extreme-isolating — no case,
     // no articles, no inflection, no agreement, no derivation. Activate

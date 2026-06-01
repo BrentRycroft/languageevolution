@@ -3,6 +3,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { levenshtein } from "../phonology/ipa";
+import { lexGet } from "../lexicon/access";
 import type { Language } from "../types";
 
 /**
@@ -23,7 +24,9 @@ function meanDelta(
   let total = 0;
   let n = 0;
   for (const m of Object.keys(seedLex)) {
-    const cur = lang.lexicon[m];
+    // Route gloss → form through the access seam: post concept-rekey the
+    // physical store is ConceptId-keyed, so `lang.lexicon[gloss]` is undefined.
+    const cur = lexGet(lang, m);
     const seed = seedLex[m];
     if (!cur || !seed) continue;
     total += levenshtein(cur, seed);
@@ -44,8 +47,8 @@ function pairwiseMeanDistance(
       let d = 0;
       let n = 0;
       for (const meaning of Object.keys(seedLex)) {
-        const fa = langs[i]!.lexicon[meaning];
-        const fb = langs[j]!.lexicon[meaning];
+        const fa = lexGet(langs[i]!, meaning);
+        const fb = lexGet(langs[j]!, meaning);
         if (!fa || !fb) continue;
         d += levenshtein(fa, fb);
         n++;
@@ -135,7 +138,7 @@ describe("Phase 23 — high-frequency word persistence (shorter sim)", () => {
       );
       if (leaves.length === 0) break;
       const lang = sim.getState().tree[leaves[0]!]!.language;
-      const cur = lang.lexicon["water"]?.join("") ?? "";
+      const cur = lexGet(lang, "water")?.join("") ?? "";
       if (cur !== seedForm) everChanged = true;
     }
     const finalLeaves = leafIds(sim.getState().tree).filter(
@@ -143,7 +146,7 @@ describe("Phase 23 — high-frequency word persistence (shorter sim)", () => {
     );
     if (finalLeaves.length > 0) {
       const finalLang = sim.getState().tree[finalLeaves[0]!]!.language;
-      const finalForm = finalLang.lexicon["water"]?.join("") ?? "";
+      const finalForm = lexGet(finalLang, "water")?.join("") ?? "";
       endChanged = finalForm !== seedForm;
     }
     expect(everChanged).toBe(true);

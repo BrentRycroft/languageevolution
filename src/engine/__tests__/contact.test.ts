@@ -47,9 +47,11 @@ describe("contact / loanwords", () => {
   it("prefers spatially-close donors over distant ones", () => {
     const cfg = { ...defaultConfig(), seed: "geo-bias" };
     const sim = createSimulation(cfg);
-    // Phase 70.1: no day-one split; step until the proto has split (this
-    // seed diverges around gen ~15) so there are ≥2 leaves to wire up.
-    for (let i = 0; i < 100; i++) {
+    // Phase 70.1: no day-one split; step until the proto has split so there are
+    // ≥2 leaves to wire up. (Split timing is trajectory-dependent — it shifted
+    // later after the B1-Y per-concept-RNG re-baseline — so cap generously and
+    // break as soon as the split occurs.)
+    for (let i = 0; i < 400; i++) {
       sim.step();
       if (leafIds(sim.getState().tree).length >= 2) break;
     }

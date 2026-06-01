@@ -506,6 +506,15 @@ export function presetPIE(): SimulationConfig {
     seed: "pie",
     seedLexicon: LEXICON,
     seedFrequencyHints: FREQ,
+    // Item 3 enrichment (append-only, deliberately MINIMAL for PIE): PIE
+    // compounding is sparsely + speculatively reconstructed, so add only a
+    // SECURELY attested compound type rather than inventing etymologies. master =
+    // house + husband = *dem-pótis ("house-lord" → Greek despótēs, Vedic dámpati)
+    // — the masculine counterpart of the preset's existing wife = *dem-s-potni
+    // ("lady of the house"), so it's grounded in a form the preset already encodes.
+    seedCompounds: {
+      master: { parts: ["house", "husband"] },
+    },
     // Phase 73e de-anglicization: PIE colexifies attested pairs — *dóru =
     // tree/wood, *h₃ekʷ- = eye/face, *mēms- = flesh/meat. Declare them instead
     // of storing duplicate forms so the concept space reflects PIE, not the

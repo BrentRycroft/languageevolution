@@ -41,12 +41,16 @@ describe("Phase 20 close-out: pruneAlts wired into stepSemantics", () => {
     pruneAlts(lang, 1.0, rng);
     expect(lang.altForms?.["__decoy__"]).toBeUndefined();
     // Re-add and let stepSemantics run for many generations to confirm
-    // gradual decay of low-freq alts.
+    // gradual decay of low-freq alts. (This is a PROBABILISTIC integration check
+    // — per-gen prune prob ≈ 0.02 × 0.95 × conservatism — so it depends on the
+    // exact rng sequence stepSemantics consumes. The deterministic proof that
+    // pruneAlts works is the prob-1.0 call above; here we just need enough
+    // generations that survival is negligible regardless of how the surrounding
+    // drift/recarve draws shift it. 600 gens keeps P(survive) well under 1%.)
     addAlt(lang, "__decoy__", ["b"], "low");
-    for (let g = 0; g < 200; g++) {
+    for (let g = 0; g < 600; g++) {
       stepSemantics(lang, cfg, rng, g);
     }
-    // After 200 gens at 0.02 base × 0.95 decay × conservatism, alt should be gone.
     expect(lang.altForms?.["__decoy__"]).toBeUndefined();
   });
 });

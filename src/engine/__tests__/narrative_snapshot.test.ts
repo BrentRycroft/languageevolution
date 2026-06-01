@@ -90,7 +90,8 @@ function hasFallbackMarker(surface: string): boolean {
  */
 const KNOWN_UNTRANSLATABLE: Record<string, ReadonlySet<string>> = {
   // Toki Pona is a minimal language with no word for "bread" (and the preset
-  // carries no loanword mechanism for it) — left untranslated by design.
+  // carries no loanword mechanism for it) — left untranslated by design. ("king"
+  // is now authored as a seedCompound — jan lawa — so it resolves; item 3.)
   tokipona: new Set(["bread"]),
 };
 

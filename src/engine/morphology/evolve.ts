@@ -5,6 +5,7 @@ import { semanticTagOf, pathwayTargetsForLang } from "../semantics/grammaticaliz
 import { posOf, isClosedClass } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
+import { isSyllabic } from "../phonology/ipa";
 import { lexGet, lexSet, lexHas, lexKeys, lexValues } from "../lexicon/access";
 
 /**
@@ -190,10 +191,16 @@ export function progressGrammaticalizationChain(
   if (newStage === 3) {
     // Fusion: the form's surface drops a phoneme (final-segment
     // erosion). Lexicon form shrinks; the paradigm version is
-    // already affixed and stays.
+    // already affixed and stays. Like cliticization, the erosion must
+    // not delete the word's only syllable nucleus (which would yield an
+    // unpronounceable cluster) — skip the shrink if it would, the stage
+    // still advances.
     const form = lexGet(lang, chosen);
     if (form && form.length > 1) {
-      lexSet(lang, chosen, form.slice(0, -1));
+      const eroded = form.slice(0, -1);
+      if (eroded.some((p) => isSyllabic(p))) {
+        lexSet(lang, chosen, eroded);
+      }
     }
     return {
       kind: "grammaticalization",
@@ -443,6 +450,11 @@ export function maybeCliticize(
   const chosen = candidates[rng.int(candidates.length)]!;
   const next = chosen.form.slice(0, -1);
   if (next.length < 2) return null;
+  // Cliticization erodes the final phoneme, but it must not delete the
+  // word's only syllable nucleus — that yields an unpronounceable cluster
+  // (e.g. PIE "run" /dər/-like → "dd"). Decline if the eroded form has no
+  // syllabic peak (vowel or syllabic resonant), same as the length guard.
+  if (!next.some((p) => isSyllabic(p))) return null;
   // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
   setLexiconForm(lang, chosen.m, next, { bornGeneration: 0, origin: `clitic:${chosen.tag}` });
   lang.wordOrigin[chosen.m] = `clitic:${chosen.tag}`;
