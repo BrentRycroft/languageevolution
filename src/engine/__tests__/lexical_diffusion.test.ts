@@ -5,6 +5,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { levenshtein } from "../phonology/ipa";
+import { lexGet } from "../lexicon/access";
 import { makeRng } from "../rng";
 
 /**
@@ -92,11 +93,15 @@ describe("Phase 28d — lexical diffusion", () => {
     // smaller mean Δ — that's the lexical-diffusion / freq-direction
     // signature (Phase 24 + Phase 28d combined).
     const entries = Object.keys(freqHints)
-      .filter((m) => lang.lexicon[m] && seedLex[m])
+      // Route gloss → form through the access seam: post concept-rekey,
+      // `lang.lexicon[gloss]` is undefined (the store is ConceptId-keyed),
+      // which previously collapsed `entries` to empty and made this test
+      // return early without asserting anything.
+      .filter((m) => lexGet(lang, m) && seedLex[m])
       .map((m) => ({
         meaning: m,
         freq: freqHints[m]!,
-        delta: levenshtein(lang.lexicon[m]!, seedLex[m]!),
+        delta: levenshtein(lexGet(lang, m)!, seedLex[m]!),
       }));
     if (entries.length < 20) return;
     const top = entries.filter((e) => e.freq >= 0.92);
