@@ -269,8 +269,15 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       string-hacks — the store is cid-keyed but satellite maps + helpers still speak
       glosses, so these are independent improvements, NOT forced by the flip;
       (c) old-save migration / save-format vNext; (d) **item 3** preset enrichment
-      (the original goal — authored building blocks per preset; needs reviewed
-      re-baselines; optional content-addressed per-concept RNG to make it byte-safe).
+      — IN PROGRESS. B1-Y (content-addressed per-concept RNG) DONE, so the sound
+      channel is byte-safe under APPEND-only enrichment. First enrichment landed
+      (f438afc): Toki Pona +3 canonical compounds (king=jan lawa, soldier=jan utala,
+      city=ma tomo); re-baseline was ISOLATED to tokipona, other 5 presets
+      byte-identical — the proven workflow. NEXT: more Toki Pona compounds, then the
+      other presets smallest→largest. Each enrichment = author authentic compounds
+      from existing primitives (no invented etymologies), append-only, re-baseline
+      just that preset. (A side-benefit path: have genesis RECORD coined compound/
+      derivation structure into lang.compounds — that unblocks item-4 batch 2.)
       (e) [BACKLOG — latent R2 test-access bug] Several RUN_SLOW/wholesale-excluded
       tests read `lang.lexicon[gloss]` directly (now ConceptId-keyed → silently
       `undefined`), so they ran green for the wrong reason during the R3 fast-tier
