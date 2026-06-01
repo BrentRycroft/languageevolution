@@ -343,6 +343,95 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
 
 ## Backlog (top = next)
 
+- [ ] **EVOLUTION REALISM AUDIT (2026-06-01, user-driven — "evolution doesn't feel
+      right").** Diagnostic only (NO edits made); 5 parallel sub-agents each audited one
+      evolution slice on the real presets with throwaway probes. Findings are
+      evidence-backed (actual evolved forms/numbers + code file:line). Awaiting user
+      go-ahead before ANY fix. Four CROSS-CUTTING root patterns explain most of the
+      "doesn't feel right":
+
+  **A. One-way ratchets — everything converges to one over-marked endpoint (no cycle).**
+    - Morphology: `synthesisIndex` only rises (paradigm count only grows; `maybeMergeParadigms`
+      fired 0× in 250 gens; no affix-loss→paradigm-removal). PIE 2.5→4.48, Romance 2.0→4.0,
+      Toki Pona 0.2→2.48 — ALL drift polysynthetic; Latin→French went the opposite way.
+      (grammar/typology_drift.ts:27, morphology/evolve.ts:470, inflect() guard evolve.ts:597)
+    - Phonology: lenition/voicing bias 1.5 vs fortition 0.5 (3×) + `/h/` one-way sink (exit
+      rule disabled) → onsets become voiced-stop/+/h/-dominated (english 34% /h/; default 60%
+      voiced-stop onsets; voiceless p/t/k near-extinct). (apply.ts:280; CATEGORY_NATURAL_BIAS)
+    - Lexicon: words never die of disuse; every non-basic concept carries permanent +0.15
+      coinage pressure → lexicon only grows (751→840+, one leaf 1105); basic-word loss 0–1%/5kyr.
+      (genesis/need.ts:97, EXPANSION_NEED_BASELINE; obsolescence.ts:41 only homophone-rivalry)
+    - Frequency: per-event bumps dominate ×0.998 decay → hints saturate at 0.95 cap (top-50 all
+      0.95, Zipf ratio 1.0); "frequency" ≈ word age, not usage → only ~7% erosion advantage for
+      core vocab. (frequencyDynamics.ts:15, bumps phonology.ts:381/411)
+
+  **B. Semantic incoherence — the "weird/random" feeling. Rich curated graph exists, unused.**
+    - Compounds = two RANDOM siblings of the head's cluster (ape=seal+piglet, arm=blood+throat,
+      aurora=light+wind); target meaning never a part → endocentric compounds impossible. The
+      "weird mashup" a prior fix claimed to close is still open. (genesis/mechanisms/compound.ts:26)
+    - Drift navigates a degenerate 12-dim embedding where antonyms ≈ identical (cos(water,fire)=
+      0.987, cos(alive,dead)=0.952) → words drift to their OPPOSITE / arbitrary targets
+      (freedom→yen, music→recycling). No directional cline; metonymy mislabels ~77% of shifts.
+      (embeddings.ts:138, drift.ts:73/159)
+    - Clusters are huge coarse buckets (king "related" to 509 abstract words) → "related" is
+      meaningless. The curated CLICS-aligned `COLEX_PAIRS` (tree/wood, eye/face, see/know) sits
+      mostly UNUSED. Both genesis+semantics agents: drive coinage AND drift from the colex/
+      neighbor graph; demote coarse clusters. (clusters.ts:55, concepts.ts:92)
+    - reduplication/clipping file etymologically-UNRELATED forms under the target meaning.
+      (reduplication.ts:23, clipping.ts:18)
+
+  **C. Anglocentrism in BEHAVIOUR (distinct from legit English meaning-KEYS).**
+    - Productive derivation gated on HARDCODED English verb/adj wordlists → non-English langs
+      can't derive agentives from own roots (Bantu only derived from speak/eat/go/...).
+      (targetedDerivation.ts:128 — comment admits posOf skipped to avoid import cycle)
+    - Isolating langs grow case/mood/articles from a universal English/IE pathway map, ungated by
+      typology (Toki Pona grew subjunctive + articles). (semantics/grammaticalization.ts:105;
+      maybeArticleEmergence evolve.ts:241; gate on `morphological:paradigms` module)
+    - Swadesh-stability + closed-class brakes keyed on English GLOSS sets, not overridable.
+      (apply.ts:348 SWADESH_CONTENT_CORE, frequency.ts:11 DEFAULT_FREQUENCY_HINTS — 89 English
+      hints for a 707-word lexicon)
+    - Colexification inferred from English HOMOPHONES (sun=son, sea=see) not recorded polysemy.
+      (colexification.ts:71 — should read lang.colexifiedAs)
+    - Umlaut/ablaut uses a hardcoded German/English vowel-mutation shape. (evolve.ts:737
+      VOWEL_MUTATIONS); ablaut emergence picks a random pair, not conditioned by a real prior
+      sound change. (morphology/ablaut.ts:93)
+    - Bonus bug: Bantu noun-class prefixes (ku-/mu-/ka-) stored as derivationalSuffixes with
+      category=undefined+productive → smeared onto conjunctions/adjectives (because-mu-, big-ku-).
+
+  **D. Calibration & process-skipping.**
+    - Basic vocab erodes ~2× too fast: 54% retention/millennium vs glottochronological ~80%.
+      (config.ts:52 globalRate 0.05; high-freq brake loosened 0.4→0.6 at apply.ts:446)
+    - Grammaticalization SKIPS the cline: free word → bound affix in ONE gen, no clitic stage
+      (maybeCliticize just truncates citation forms: belly→/kʷefoː/, never feeds a paradigm).
+      (evolve.ts:106, 451)
+    - TAM categories STACK illegally: one verb got past+future+perfective at once
+      (eat→/ɾafgaɾaaweɔdoaβis/); narrative picks tense XOR but core morphology doesn't.
+      (inflectCascade evolve.ts:625; needs per-axis mutual exclusion)
+    - **Upstream phonology bug (cheap, high cascade):** `repairOutputMapByFeatures` substitutes a
+      rule's output by raw feature-distance → changes stop performing what they name
+      (palatalization→labials k→f, lenition b→m, ejective-fortition→voicing). Corrupts most
+      GENERATED rules (the hand-written catalog is fine). (phonology/featureGeometry.ts:111)
+    - Split timing wildly seed-variable (first split gen 22 vs gen 166); splits are instantaneous
+      multifurcations (2–9 daughters) not successive binary cladogenesis; not tied to population
+      growth. (steps/tree.ts:42, tree/split.ts:102/336). Recarve split/merge OSCILLATES
+      (cold→cool→cold, no memory). (semantics/recarve.ts:44)
+    - Taboo replacement targets high-freq words by frequency ALONE, no link to taboo referents
+      (replaced go/take/want/see, not dangerous referents). (lexicon/taboo.ts:26)
+
+  **LEVERAGE ORDER (cheap→structural), if/when authorized:** (1) fix repairOutputMapByFeatures
+  type-preservation [cheap, cascades through all phonology]; (2) compound = modifier-from-other-
+  cluster + head=target/hypernym [cheap, kills weird mashups]; (3) embedding polarity dim + drive
+  drift from colex graph [medium]; (4) affix-loss→paradigm-removal + low-freq obsolescence channel
+  [structural — restores the cycles]; (5) frequency decay > bumps + stronger core-vocab brake
+  [calibration].
+
+  **HEALTHY — do NOT break:** hand-written sound-change CATALOG (typologically sound; only the
+  GENERATED stack corrupts); curated COLEX_PAIRS (CLICS-aligned); borrowing (Thomason/Haugen
+  hierarchy — pronouns hard, structure>lexicon); grammaticalization pathway DIRECTIONS (motion→
+  future, have→perfect, body→case); productivity threshold (no -er-er pyramids); closed-class
+  shielded from drift/taboo/leveling; tree-branch SHAPE; B2 de-anglicization (recorded-structure
+  reads). Steady-state coinage rate, phonotactic repair, collision-revert, endangerment ladder.
+
 - [ ] **Test-suite wall time (USER REQUEST 2026-05-30): speed up the full `npx vitest
       run` (~150s).** User asked to "break up or run the suite tests in parallel
       rather than sequentially." ACCURACY NOTE: vitest ALREADY parallelises across
