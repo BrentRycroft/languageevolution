@@ -108,12 +108,24 @@ const GEN0: Record<string, string> = {
 // trajectories), proven by the staged re-baseline (tokipona unchanged when the
 // other 5 were enriched, and vice-versa). This is the clean, reviewable enrichment
 // diff B1-Y was built to enable.
+// GENN re-baselined 2026-06-01 (genesis-records-coinage, fossilized records):
+// genesis now stamps the structure of COINED compounds/derivations into
+// lang.compounds (recordCoinageStructure, fossilized:true so the recompose
+// machinery leaves the already-final coinage form alone), so bootstrapNeologism-
+// Neighbors integrates a coinage's frequency + semantic neighbours from its content
+// constituents — like seed compounds. Only bantu/romance/tokipona shifted (they coin
+// bootstrappable compounds within 30 gens); pie/germanic/english are BYTE-IDENTICAL
+// to their enrichment values (the record is invisible without recompose). GEN0
+// unchanged (no coinage at gen 0). Makes recordedParts() cover coinage (unblocks
+// item-4 batch 2). NB: an earlier fossilized:false attempt let updateCompounds
+// re-derive coinages post-UR-snapshot and degraded a PIE word to an illegal
+// no-nucleus "f" — caught by ipa_pie syllabicity, hence fossilized:true.
 const GENN: Record<string, string> = {
   pie: "d7fb34d7",
-  bantu: "e0b0c09d",
-  romance: "81bf802b",
+  bantu: "c9845be7",
+  romance: "a94f437e",
   germanic: "cdf934f8",
-  tokipona: "6efea09c",
+  tokipona: "0a4bceaf",
   english: "67c3b025",
 };
 
