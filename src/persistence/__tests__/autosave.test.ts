@@ -50,25 +50,35 @@ describe("autosave", () => {
   });
 
   it("throttles rapid repeat saves", async () => {
-    const config = { ...defaultConfig(), seed: "throttle" };
-    const sim = createSimulation(config);
-    sim.step();
-    const first = sim.getState();
-    await saveAutosave({ config, state: first, generationsRun: 1 }, { force: true });
-    const a = await loadAutosave();
-    expect(a.ok && a.payload.state.generation).toBe(1);
-    sim.step();
-    const second = sim.getState();
-    // Throttled (no force, less than MIN_SAVE_INTERVAL_MS since previous).
-    await saveAutosave({ config, state: second, generationsRun: 2 });
-    const b = await loadAutosave();
-    expect(b.ok && b.payload.state.generation).toBe(1);
-    await saveAutosave(
-      { config, state: second, generationsRun: 2 },
-      { force: true },
-    );
-    const c = await loadAutosave();
-    expect(c.ok && c.payload.state.generation).toBe(2);
+    // Freeze Date.now() so the throttle window (MIN_SAVE_INTERVAL_MS) is
+    // measured against a fixed clock. Otherwise, under heavy load the real
+    // wall-time between the two saves can exceed the window and the
+    // "throttled" save slips through (flaky). Mock only Date.now — timers and
+    // IDB async stay real.
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      const config = { ...defaultConfig(), seed: "throttle" };
+      const sim = createSimulation(config);
+      sim.step();
+      const first = sim.getState();
+      await saveAutosave({ config, state: first, generationsRun: 1 }, { force: true });
+      const a = await loadAutosave();
+      expect(a.ok && a.payload.state.generation).toBe(1);
+      sim.step();
+      const second = sim.getState();
+      // Throttled (no force, less than MIN_SAVE_INTERVAL_MS since previous).
+      await saveAutosave({ config, state: second, generationsRun: 2 });
+      const b = await loadAutosave();
+      expect(b.ok && b.payload.state.generation).toBe(1);
+      await saveAutosave(
+        { config, state: second, generationsRun: 2 },
+        { force: true },
+      );
+      const c = await loadAutosave();
+      expect(c.ok && c.payload.state.generation).toBe(2);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it("clearAutosave empties the slot", async () => {
