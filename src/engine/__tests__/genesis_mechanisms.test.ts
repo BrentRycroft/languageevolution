@@ -30,9 +30,13 @@ describe("genesis mechanisms", () => {
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
     const compound = MECHANISMS.find((m) => m.id === "mechanism.compound")!;
+    // The compound mechanism builds from two SEMANTICALLY-RELATED lexemes
+    // (the random-mash fallback was removed — see compound.ts), so the target
+    // must belong to a populated semantic cluster. "fire" is in the rich
+    // `environment` cluster (water/stone/tree/sun/…), giving ≥2 in-lexicon parts.
     let hit: { form: import("../types").WordForm } | null = null;
     for (let i = 0; i < 16; i++) {
-      hit = compound.tryCoin(lang, "sky-fire", state.tree, makeRng("c" + i));
+      hit = compound.tryCoin(lang, "fire", state.tree, makeRng("c" + i));
       if (hit) break;
     }
     expect(hit).not.toBeNull();
