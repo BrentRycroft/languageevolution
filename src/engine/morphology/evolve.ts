@@ -191,10 +191,16 @@ export function progressGrammaticalizationChain(
   if (newStage === 3) {
     // Fusion: the form's surface drops a phoneme (final-segment
     // erosion). Lexicon form shrinks; the paradigm version is
-    // already affixed and stays.
+    // already affixed and stays. Like cliticization, the erosion must
+    // not delete the word's only syllable nucleus (which would yield an
+    // unpronounceable cluster) — skip the shrink if it would, the stage
+    // still advances.
     const form = lexGet(lang, chosen);
     if (form && form.length > 1) {
-      lexSet(lang, chosen, form.slice(0, -1));
+      const eroded = form.slice(0, -1);
+      if (eroded.some((p) => isSyllabic(p))) {
+        lexSet(lang, chosen, eroded);
+      }
     }
     return {
       kind: "grammaticalization",
