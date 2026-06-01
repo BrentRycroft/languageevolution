@@ -269,15 +269,21 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       string-hacks — the store is cid-keyed but satellite maps + helpers still speak
       glosses, so these are independent improvements, NOT forced by the flip;
       (c) old-save migration / save-format vNext; (d) **item 3** preset enrichment
-      — IN PROGRESS. B1-Y (content-addressed per-concept RNG) DONE, so the sound
-      channel is byte-safe under APPEND-only enrichment. First enrichment landed
-      (f438afc): Toki Pona +3 canonical compounds (king=jan lawa, soldier=jan utala,
-      city=ma tomo); re-baseline was ISOLATED to tokipona, other 5 presets
-      byte-identical — the proven workflow. NEXT: more Toki Pona compounds, then the
-      other presets smallest→largest. Each enrichment = author authentic compounds
-      from existing primitives (no invented etymologies), append-only, re-baseline
-      just that preset. (A side-benefit path: have genesis RECORD coined compound/
-      derivation structure into lang.compounds — that unblocks item-4 batch 2.)
+      — FIRST FULL PASS DONE (f438afc tokipona; fb4fdf7 the other 5). B1-Y makes
+      append-only enrichment byte-safe on the sound channel, so each preset's
+      re-baseline is ISOLATED (proven: enriching one leaves the other 5
+      byte-identical). All 6 presets now carry authentic, family-calibrated
+      building-block compounds from existing primitives (no invented etymologies):
+      tokipona king/soldier/city; bantu student/citizen/fisherman (mwana+X);
+      germanic rainbow(*regnabogô)/firewood/daylight/seabird; romance wallet/
+      scarecrow (V+N); pie master (*dem-pótis only — rest too speculative); english
+      rainbow/firewood/seaside/sunflower/footpath. WORKFLOW per enrichment: author
+      authentic compounds, append-only, verify they materialise as part
+      concatenations, re-baseline just that preset, robustify any rng-sequence-
+      fragile integration tests (NOT regressions). FURTHER ROUNDS possible but hit
+      diminishing AUTHENTICITY returns (esp. PIE/Romance) — add only what the
+      realism compass can name. (Side path: have genesis RECORD coined compound/
+      derivation structure into lang.compounds → unblocks item-4 batch 2.)
       (e) [BACKLOG — latent R2 test-access bug] Several RUN_SLOW/wholesale-excluded
       tests read `lang.lexicon[gloss]` directly (now ConceptId-keyed → silently
       `undefined`), so they ran green for the wrong reason during the R3 fast-tier
