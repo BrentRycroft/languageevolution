@@ -147,13 +147,23 @@ const GEN0: Record<string, string> = {
 // docs/planning/EVOLUTION-REALISM-MILESTONE.md §1b) — the gate is the
 // realism scorecard, not byte-identity. Reproducibility-determinism is
 // preserved (same config → identical output; re-run confirmed).
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 2a — endocentric
+// compounds). The compound coinage mechanism (genesis/mechanisms/
+// compound.ts) now prefers the target concept's curated cross-linguistic
+// `decomposition` (an authentic head-final kenning: breeze=small+wind,
+// hail=hard+rain, hurricane=big+storm) over a random pair of cluster-
+// siblings, and REFUSES to mint a sibling mashup for a decomposable target
+// whose authentic parts aren't lexicalised yet. Every preset that coins a
+// compound within 30 gens shifts. GEN0 unchanged (no coinage at gen 0).
+// Approved milestone re-baseline; scorecard compound decomp-match rose from
+// a meaningless 0% to 80–100% across presets. Determinism preserved.
 const GENN: Record<string, string> = {
-  pie: "e5f46667",
-  bantu: "59da20b2",
-  romance: "b74d4cfa",
-  germanic: "b0a557da",
-  tokipona: "58377321",
-  english: "cf27df6f",
+  pie: "4404049a",
+  bantu: "a36a3a38",
+  romance: "6ed11066",
+  germanic: "a8f5dddc",
+  tokipona: "ce9a97b7",
+  english: "f5de9b0e",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

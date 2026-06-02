@@ -5,6 +5,8 @@ import { complexityFor } from "../../lexicon/complexity";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
 import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
+import { attemptConceptDecomposition } from "../../lexicon/synthesis";
+import { CONCEPTS } from "../../lexicon/concepts";
 
 /**
  * compound.ts
@@ -22,6 +24,39 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
   tryCoin: (lang, target, _tree, rng) => {
     const meanings = lexKeys(lang);
     if (meanings.length < 2) return null;
+
+    // Phase 2a (evolution-realism): prefer the concept's curated cross-
+    // linguistic decomposition — an authentic MODIFIER+HEAD kenning that is
+    // head-final and endocentric by construction (breeze = small+wind, hail
+    // = hard+rain, council = many+person, citizen = person+city) — over a
+    // random pair of cluster-siblings. The sibling pool produced the "weird
+    // mashup" coinages the audit flagged (breeze = ridge+frost, council =
+    // relief+marriage) by ignoring the very decomposition that gives a
+    // coherent head. attemptConceptDecomposition already requires every part
+    // to be in the lexicon and refuses primitives.
+    const decomp = attemptConceptDecomposition(lang, target);
+    if (decomp && decomp.parts.length >= 2 && decomp.form.length <= 10) {
+      let form = decomp.form.slice();
+      const minLen = 2 + complexityFor(target);
+      if (form.length < minLen) form = [...form, "ə"];
+      const fit = 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
+      if (fit >= 0.25) {
+        return {
+          form,
+          sources: { partMeanings: decomp.parts.map((p) => p.meaning) },
+        };
+      }
+    }
+
+    // Phase 2a: if the target HAS a curated decomposition but it isn't
+    // satisfiable yet (a part isn't lexicalised, or the fit failed), REFUSE
+    // to mint a random-sibling mashup for it. Wait until the authentic parts
+    // exist (or let another mechanism handle it) rather than coining
+    // breeze=ridge+frost when the language's own answer is small+wind. Only
+    // decomposition-LESS targets fall through to the related-sibling pool.
+    if (CONCEPTS[target]?.decomposition && CONCEPTS[target]!.decomposition!.length > 0) {
+      return null;
+    }
 
     const clusterPool = relatedMeanings(target).filter((m) => lexHas(lang, m));
     const neighborPool = neighborsOf(target).filter((m) => lexHas(lang, m));
