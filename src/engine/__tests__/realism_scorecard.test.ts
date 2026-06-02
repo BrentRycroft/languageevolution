@@ -6,7 +6,9 @@ import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 import { levenshtein } from "../phonology/ipa";
 import { SWADESH_LIST } from "../semantics/lexicostat";
 import { embed, cosine } from "../semantics/embeddings";
-import { CONCEPTS } from "../lexicon/concepts";
+import { CONCEPTS, colexWith } from "../lexicon/concepts";
+import { neighborsOf } from "../semantics/neighbors";
+import { areAntonyms } from "../semantics/antonyms";
 import { YEARS_PER_GENERATION } from "../constants";
 import type { Language, WordForm, SimulationConfig, SimulationState } from "../types";
 
@@ -38,10 +40,10 @@ import type { Language, WordForm, SimulationConfig, SimulationState } from "../t
 const CHECKPOINTS = [40, 100, 200] as const; // 1000, 2500, 5000 years
 const HORIZON = CHECKPOINTS[CHECKPOINTS.length - 1];
 
-// Curated high-confidence antonym pairs (the audit flagged water/fire,
-// alive/dead, hot/cold drifting into each other because they share an
-// embedding centroid). Phase 3b formalises this into a real ANTONYM set;
-// here it only powers the antonym-drift COUNT metric.
+// Pairs for the embedding-COSINE metric (separate from the engine's
+// gradable-only antonym set): includes co-element / converse pairs
+// (water/fire, day/night, give/take) the audit cited as embedding-
+// degenerate (cos≈0.99) even though they are not gradable antonyms.
 const ANTONYM_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["big", "small"], ["good", "bad"], ["hot", "cold"], ["new", "old"],
   ["black", "white"], ["day", "night"], ["alive", "dead"], ["water", "fire"],
@@ -49,11 +51,6 @@ const ANTONYM_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["high", "low"], ["near", "far"], ["give", "take"], ["come", "go"],
   ["love", "hate"], ["open", "close"], ["happy", "sad"], ["fast", "slow"],
 ];
-const ANTONYM = new Set<string>();
-for (const [a, b] of ANTONYM_PAIRS) {
-  ANTONYM.add(`${a}|${b}`);
-  ANTONYM.add(`${b}|${a}`);
-}
 
 const VOICELESS_STOPS = new Set(["p", "t", "k"]);
 
@@ -145,21 +142,82 @@ function onsetStats(lang: Language): {
   };
 }
 
-/** Share of lexemes whose form collides with at least one other lexeme. */
+/**
+ * TRUE (accidental) homophony: share of lexemes sharing a form with an
+ * UNRELATED lexeme. Deliberate colexification (recorded polysemy in
+ * `colexifiedAs` — related senses sharing a form, the CLICS pattern Phase 3a
+ * increases) is EXCLUDED — that is healthy, not pathological homophony.
+ */
 function homophonyRate(lang: Language): number {
-  const byForm = new Map<string, number>();
+  const byForm = new Map<string, string[]>();
   let total = 0;
+  for (const m of lexKeys(lang)) {
+    if (!isLexeme(lang, m)) continue;
+    const _f0 = lexGet(lang, m);
+    if (!_f0 || _f0.length === 0) continue;
+    const _k0 = _f0.join("");
+    const arr = byForm.get(_k0);
+    if (arr) arr.push(m);
+    else byForm.set(_k0, [m]);
+    total++;
+  }
+  let collide = 0;
+  for (const ms of byForm.values()) {
+    if (ms.length < 2) continue;
+    for (const m of ms) {
+      const colex = new Set(lang.colexifiedAs?.[m] ?? []);
+      // homophonous only if it shares the form with an UNRELATED meaning
+      if (ms.some((o) => o !== m && !colex.has(o))) collide++;
+    }
+  }
+  return total === 0 ? NaN : collide / total;
+}
+
+/**
+ * Senses-per-word (a cleaner aggregate of lexical ambiguity than the
+ * collision %). `total` counts every meaning on a form — INCLUDING
+ * colexification (polysemy), so a realistic language sits ~1.1–1.3 because
+ * CLICS-style colexification is pervasive (and Phase 3a grows it).
+ * `accidental` first merges each form's colexified meanings into one
+ * sense-CLUSTER (recorded polysemy), then counts unrelated clusters per
+ * form — this is the homophony signal, and the realism target is ≤ ~1.05.
+ */
+function sensesPerWord(lang: Language): { total: number; accidental: number } {
+  const byForm = new Map<string, string[]>();
+  let lexemes = 0;
   for (const m of lexKeys(lang)) {
     if (!isLexeme(lang, m)) continue;
     const f = lexGet(lang, m);
     if (!f || f.length === 0) continue;
-    const k = f.join("");
-    byForm.set(k, (byForm.get(k) ?? 0) + 1);
-    total++;
+    const k = f.join("");
+    const arr = byForm.get(k);
+    if (arr) arr.push(m);
+    else byForm.set(k, [m]);
+    lexemes++;
   }
-  let collide = 0;
-  for (const c of byForm.values()) if (c >= 2) collide += c;
-  return total === 0 ? NaN : collide / total;
+  const forms = byForm.size;
+  let clusters = 0;
+  for (const ms of byForm.values()) {
+    // connected components of `ms` under the colexification relation
+    const seen = new Set<string>();
+    for (const start of ms) {
+      if (seen.has(start)) continue;
+      clusters++;
+      const stack = [start];
+      while (stack.length > 0) {
+        const cur = stack.pop()!;
+        if (seen.has(cur)) continue;
+        seen.add(cur);
+        for (const o of lang.colexifiedAs?.[cur] ?? []) {
+          if (ms.includes(o) && !seen.has(o)) stack.push(o);
+        }
+      }
+    }
+  }
+  return {
+    total: forms === 0 ? NaN : lexemes / forms,
+    accidental: forms === 0 ? NaN : clusters / forms,
+  };
 }
 
 /** Zipf health: rank-1 / rank-100 frequency ratio + share pinned at the cap. */
@@ -207,16 +265,29 @@ function compoundCoherence(lang: Language): {
   return { trueCompounds, decomposable, matched };
 }
 
-/** Count semantic-drift events whose source→target are a known antonym pair. */
-function antonymDriftCount(lang: Language): number {
-  let count = 0;
+/**
+ * Drift-target quality. Parses `<tag>: <from> → <to>` drift events and
+ * scores how many land on a CURATED neighbour/colexification of the source
+ * (tight, CLICS-aligned — the Phase 3a target) vs. how many land on the
+ * source's own antonym (the Phase 3b bug). High curated-share + zero
+ * antonyms = realistic drift.
+ */
+function driftQuality(lang: Language): { total: number; curated: number; antonym: number } {
+  let total = 0;
+  let curated = 0;
+  let antonym = 0;
   for (const e of lang.events) {
     if (e.kind !== "semantic_drift") continue;
-    const m = e.description.match(/: ([\w-]+) → ([\w-]+)$/);
-    if (!m) continue;
-    if (ANTONYM.has(`${m[1]}|${m[2]}`)) count++;
+    const mt = e.description.match(/: ([\w-]+) → ([\w-]+)$/);
+    if (!mt) continue;
+    const from = mt[1]!;
+    const to = mt[2]!;
+    total++;
+    const curatedSet = new Set([...neighborsOf(from), ...colexWith(from)]);
+    if (curatedSet.has(to)) curated++;
+    if (areAntonyms(from, to)) antonym++;
   }
-  return count;
+  return { total, curated, antonym };
 }
 
 /**
@@ -272,7 +343,8 @@ describe("realism scorecard (RUN_SLOW)", () => {
       const identical1000 = curve[0]!.identical;
       const identical5000 = curve[curve.length - 1]!.identical;
       const homophony = homophonyRate(lang);
-      const antonyms = antonymDriftCount(lang);
+      const senses = sensesPerWord(lang);
+      const drift = driftQuality(lang);
       const antonymCos = antonymCosine(lang);
       const sizeRatio = lexKeys(lang).length / Math.max(1, seed.size);
       const synth = lang.grammar.synthesisIndex;
@@ -293,13 +365,14 @@ describe("realism scorecard (RUN_SLOW)", () => {
         `  Onset voiceless-stop p/t/k ${pct(onset.voicelessStopShare)}`,
         `  Onset top-6               ${onset.top.map(([s, n]) => `${s}:${n}`).join(" ")}`,
         `  Homophony rate            ${pct(homophony)}   (target <4%)`,
+        `  Senses/word total|accid   ${senses.total.toFixed(3)} | ${senses.accidental.toFixed(3)}   (accidental target ≤1.05; total ~1.1–1.3 w/ colex)`,
         `  Synthesis index / type    ${synth?.toFixed(2) ?? "n/a"} / ${morphType ?? "n/a"}`,
         `  Inventory size            ${invSize} (seed ${seedInvSize}, target ${Number.isNaN(invTarget) ? "n/a" : invTarget})   (target: near tier target, not inflated)`,
         `  Lexicon size ratio        ${sizeRatio.toFixed(2)}×   (target ~1.0, stationary)`,
         `  Zipf rank1/rank100        ${Number.isFinite(zipf.ratio) ? zipf.ratio.toFixed(2) : "∞"}   cap-pinned ${pct(zipf.capShare)}   (target ratio≫1)`,
         `  Compound decomp-match     ${compound.matched}/${compound.decomposable} ${pct(compound.decomposable === 0 ? NaN : compound.matched / compound.decomposable)}  (true compounds=${compound.trueCompounds})  (target ≥80%)`,
         `  Antonym embed-cosine      mean ${Number.isNaN(antonymCos.mean) ? "n/a" : antonymCos.mean.toFixed(3)}  max ${Number.isNaN(antonymCos.max) ? "n/a" : antonymCos.max.toFixed(3)}  (n=${antonymCos.n})  (target ≪1)`,
-        `  Antonym-drift events      ${antonyms}   (target ~0)`,
+        `  Drift-target curated      ${drift.curated}/${drift.total} ${pct(drift.total === 0 ? NaN : drift.curated / drift.total)}  antonym-drifts=${drift.antonym}  (target: high curated, 0 antonym)`,
       ].join("\n");
       // eslint-disable-next-line no-console
       console.log(report);
@@ -311,7 +384,7 @@ describe("realism scorecard (RUN_SLOW)", () => {
       expect(onset.hShare).toBeGreaterThanOrEqual(0);
       expect(homophony).toBeGreaterThanOrEqual(0);
       expect(sizeRatio).toBeGreaterThan(0);
-      expect(antonyms).toBeGreaterThanOrEqual(0);
+      expect(drift.antonym).toBeGreaterThanOrEqual(0);
 
       // ── Wide baseline bands (regression floor; tightened per phase) ──
       // These are deliberately loose "don't get WORSE than today's audited
