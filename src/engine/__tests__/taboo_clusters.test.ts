@@ -62,7 +62,11 @@ describe("taboo replacement", () => {
       birthGeneration: 0,
       grammar: { ...DEFAULT_GRAMMAR },
       events: [],
-      wordFrequencyHints: { mother: 0.95, father: 0.95, hand: 0.9, foot: 0.9 },
+      // Evolution-realism Phase 3d: taboo targets dangerous REFERENTS, not
+      // high-freq words. `snake` (a predator) is the eligible target here;
+      // mother/father/hand/foot are present as the surrounding lexicon /
+      // potential euphemism donors.
+      wordFrequencyHints: { mother: 0.95, father: 0.95, hand: 0.9, foot: 0.9, snake: 0.6 },
       phonemeInventory: { segmental: [], tones: [], usesTones: false },
       morphology: { paradigms: {} },
       localNeighbors: {},
@@ -76,6 +80,7 @@ describe("taboo replacement", () => {
     lexSet(lang, "father", ["t", "a", "t", "a"]);
     lexSet(lang, "hand", ["m", "a", "n", "u"]);
     lexSet(lang, "foot", ["p", "e", "d"]);
+    lexSet(lang, "snake", ["n", "a", "g", "a"]);
     return lang;
   }
 
@@ -86,13 +91,16 @@ describe("taboo replacement", () => {
     expect(ev).toBeNull();
   });
 
-  it("replaces a high-frequency form and tags origin as taboo", () => {
+  it("replaces a taboo-referent form and tags origin as taboo", () => {
     const lang = makeLang();
     const rng = makeRng("force");
     const before = lexSize(lang);
     const ev = maybeTabooReplace(lang, rng, 1);
     expect(ev).not.toBeNull();
     if (!ev) return;
+    // Phase 3d: the eligible target is the dangerous referent, not a
+    // high-freq kinship/body word.
+    expect(ev.meaning).toBe("snake");
     expect(lexSize(lang)).toBe(before);
     expect(lexGet(lang, ev.meaning)!.join("")).not.toBe(ev.oldForm);
     expect(lang.wordOrigin[ev.meaning]).toMatch(/^taboo:/);
