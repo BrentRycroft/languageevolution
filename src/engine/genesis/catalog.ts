@@ -1,6 +1,5 @@
 import type { GenesisRule } from "./types";
 import type { Language, Meaning, WordForm } from "../types";
-import type { Rng } from "../rng";
 import { isVowel, isConsonant } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { relatedMeanings } from "../semantics/clusters";
@@ -19,20 +18,6 @@ import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 
 function combinedFit(form: WordForm, lang: Language): number {
   return 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
-}
-
-function pickMeanings(lang: Language, rng: Rng, n: number): Meaning[] {
-  const keys = lexKeys(lang);
-  if (keys.length < n) return [];
-  const chosen: Meaning[] = [];
-  const used = new Set<number>();
-  while (chosen.length < n && used.size < keys.length) {
-    const idx = rng.int(keys.length);
-    if (used.has(idx)) continue;
-    used.add(idx);
-    chosen.push(keys[idx]!);
-  }
-  return chosen;
 }
 
 const FALLBACK_SUFFIXES: ReadonlyArray<{ affix: WordForm; semanticSuffix: string }> = [
@@ -60,25 +45,22 @@ export const GENESIS_CATALOG: GenesisRule[] = [
     enabledByDefault: true,
     baseWeight: 1,
     tryCoin: (lang, rng) => {
-      let a: Meaning | undefined;
-      let b: Meaning | undefined;
       const meanings = lexKeys(lang);
       if (meanings.length === 0) return null;
-      if (rng.chance(0.7)) {
-        a = meanings[rng.int(meanings.length)];
-        const pool = a
-          ? relatedMeanings(a).filter((n) => lexHas(lang, n))
-          : [];
-        const legacy = a ? neighborsOf(a).filter((n) => lexHas(lang, n)) : [];
-        const combined = pool.length > 0 ? pool : legacy;
-        if (a && combined.length > 0) b = combined[rng.int(combined.length)];
-      }
-      if (!a || !b || a === b) {
-        const pick = pickMeanings(lang, rng, 2);
-        a = pick[0];
-        b = pick[1];
-      }
-      if (!a || !b || a === b) return null;
+      // Phase 2c (evolution-realism): a spontaneous compound must glue two
+      // SEMANTICALLY-RELATED lexemes. The old path had a fully-random
+      // pickMeanings(rng, 2) fallback — a SECOND unfixed mashup generator,
+      // gluing two unrelated words (the "very weird" coinages the audit and
+      // the user flagged). Drop it: if the seed word has no related partner
+      // in the lexicon, refuse to coin (the caller's cascade moves on).
+      const a: Meaning | undefined = meanings[rng.int(meanings.length)];
+      if (!a) return null;
+      const pool = relatedMeanings(a).filter((n) => lexHas(lang, n));
+      const legacy = neighborsOf(a).filter((n) => lexHas(lang, n));
+      const combined = pool.length > 0 ? pool : legacy;
+      const candidates = combined.filter((n) => n !== a);
+      if (candidates.length === 0) return null;
+      const b: Meaning = candidates[rng.int(candidates.length)]!;
       const newMeaning: Meaning = `${a}-${b}`;
       if (lexHas(lang, newMeaning)) return null;
       const fa = lexGet(lang, a)!;

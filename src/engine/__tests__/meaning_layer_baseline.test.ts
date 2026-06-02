@@ -147,23 +147,29 @@ const GEN0: Record<string, string> = {
 // docs/planning/EVOLUTION-REALISM-MILESTONE.md §1b) — the gate is the
 // realism scorecard, not byte-identity. Reproducibility-determinism is
 // preserved (same config → identical output; re-run confirmed).
-// GENN re-baselined 2026-06-02 (evolution-realism Phase 2a — endocentric
-// compounds). The compound coinage mechanism (genesis/mechanisms/
-// compound.ts) now prefers the target concept's curated cross-linguistic
-// `decomposition` (an authentic head-final kenning: breeze=small+wind,
-// hail=hard+rain, hurricane=big+storm) over a random pair of cluster-
-// siblings, and REFUSES to mint a sibling mashup for a decomposable target
-// whose authentic parts aren't lexicalised yet. Every preset that coins a
-// compound within 30 gens shifts. GEN0 unchanged (no coinage at gen 0).
-// Approved milestone re-baseline; scorecard compound decomp-match rose from
-// a meaningless 0% to 80–100% across presets. Determinism preserved.
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 2 — word-formation
+// coherence, 2a+2b+2c). All coinage mechanisms now require SEMANTICALLY-
+// COHERENT parts instead of random lexemes:
+//  2a compound.ts — prefers the concept's curated cross-linguistic
+//     `decomposition` (head-final kenning: breeze=small+wind, hail=hard+rain,
+//     hurricane=big+storm); refuses a sibling mashup for a decomposable
+//     target whose parts aren't lexicalised yet.
+//  2b reduplication.ts/clipping.ts — base must be a RELATED root (the
+//     mechanisms previously reduplicated/clipped a random word and filed it
+//     under an unrelated target; reduplication literally did `void target`).
+//  2c genesis/catalog.ts — dropped the fully-random pickMeanings(rng,2)
+//     fallback in the legacy spontaneous-compound rule (a second mashup
+//     generator); always requires a related pair now.
+// Every preset coining within 30 gens shifts. GEN0 unchanged (no coinage at
+// gen 0). Approved milestone re-baseline; scorecard compound decomp-match
+// rose from a meaningless 0% to 80–100%. Determinism preserved.
 const GENN: Record<string, string> = {
-  pie: "4404049a",
-  bantu: "a36a3a38",
-  romance: "6ed11066",
-  germanic: "a8f5dddc",
-  tokipona: "ce9a97b7",
-  english: "f5de9b0e",
+  pie: "50fe9e80",
+  bantu: "a1f187ef",
+  romance: "4fb1628e",
+  germanic: "1cc5841a",
+  tokipona: "84f5cef7",
+  english: "d3175ff6",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

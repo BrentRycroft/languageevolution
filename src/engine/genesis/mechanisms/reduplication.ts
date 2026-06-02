@@ -1,7 +1,9 @@
 import type { CoinageMechanism } from "./types";
 import type { WordForm } from "../../types";
 import { isVowel, isConsonant } from "../../phonology/ipa";
-import { lexGet, lexKeys } from "../../lexicon/access";
+import { lexGet, lexHas } from "../../lexicon/access";
+import { relatedMeanings } from "../../semantics/clusters";
+import { neighborsOf } from "../../semantics/neighbors";
 
 /**
  * reduplication.ts
@@ -18,12 +20,17 @@ export const MECHANISM_REDUPLICATION: CoinageMechanism = {
   register: "low",
   baseWeight: 0.8,
   tryCoin: (lang, target, _tree, rng) => {
-    const meanings = lexKeys(lang);
-    if (meanings.length === 0) return null;
-    const shortMeanings = meanings.filter(
-      (m) => (lexGet(lang, m)?.length ?? 0) <= 4,
+    // Phase 2b (evolution-realism): reduplication intensifies/iterates a
+    // RELATED root, not a random word (the mechanism previously did
+    // `void target` and reduplicated an arbitrary lexeme). AA conventionally
+    // means an intensified/iterated/plural A, so the base must be
+    // semantically linked to the target (target ≈ intensified base). Pick a
+    // SHORT related lexeme; if none, refuse rather than file an orphan
+    // etymology under the target.
+    const pool = [...relatedMeanings(target), ...neighborsOf(target)].filter(
+      (m) => m !== target && lexHas(lang, m) && (lexGet(lang, m)?.length ?? 99) <= 4,
     );
-    const pool = shortMeanings.length > 0 ? shortMeanings : meanings;
+    if (pool.length === 0) return null;
     const base = pool[rng.int(pool.length)]!;
     const form = lexGet(lang, base)!;
     if (form.length === 0 || form.length > 4) return null;
@@ -35,7 +42,6 @@ export const MECHANISM_REDUPLICATION: CoinageMechanism = {
         : isConsonant(first)
           ? [first, "a"]
           : [first];
-    void target;
     return { form: [...redup, ...form] };
   },
 };

@@ -18,10 +18,14 @@ function makeLang(): Language {
   const lang = {
     id: "L-0",
     name: "Proto",
+    // Phase 2c (evolution-realism): genesis.compound now requires a
+    // SEMANTICALLY-RELATED pair (the fully-random pickMeanings fallback was
+    // removed). Use three `body`-cluster words so whichever base the rng
+    // picks has a related partner in the lexicon.
     lexicon: {
       foot: ["p", "o", "d"],
-      ball: ["b", "a", "l"],
-      water: ["w", "a", "t", "e", "r"],
+      hand: ["h", "a", "n", "d"],
+      head: ["h", "e", "d"],
     },
     enabledChangeIds: [],
     changeWeights: {},

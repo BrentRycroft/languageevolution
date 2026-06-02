@@ -1,5 +1,7 @@
 import type { CoinageMechanism } from "./types";
 import { lexEntries, lexGet } from "../../lexicon/access";
+import { relatedMeanings } from "../../semantics/clusters";
+import { neighborsOf } from "../../semantics/neighbors";
 
 /**
  * clipping.ts
@@ -16,8 +18,14 @@ export const MECHANISM_CLIPPING: CoinageMechanism = {
   register: "low",
   baseWeight: 0.7,
   tryCoin: (lang, target, _tree, rng) => {
+    // Phase 2b (evolution-realism): clipping shortens a longer word that is
+    // a SYNONYM/hypernym of the target (auto ← automobile, fridge ←
+    // refrigerator), not a random long lexeme filed under an unrelated
+    // target. Constrain the base to the target's semantic neighbourhood; if
+    // no long related word exists, refuse.
+    const related = new Set([...relatedMeanings(target), ...neighborsOf(target)]);
     const candidates = lexEntries(lang)
-      .filter(([m, f]) => m !== target && f.length >= 5)
+      .filter(([m, f]) => m !== target && f.length >= 5 && related.has(m))
       .map(([m]) => m);
     if (candidates.length === 0) return null;
     const base = candidates[rng.int(candidates.length)]!;
