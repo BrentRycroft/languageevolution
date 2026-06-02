@@ -11,6 +11,7 @@ import { soundChangeSensitivity } from "../lexicon/expressive";
 import { isFormLegal, repairSyllabicity } from "./wordShape";
 import { stressClass, type StressPattern } from "./stress";
 import { isVowel } from "./ipa";
+import { featuresOf } from "./features";
 import { stripTone } from "./tone";
 import { posOf } from "../lexicon/pos";
 import { otFit } from "./ot";
@@ -175,6 +176,13 @@ export interface ApplyOptions {
   ruleActuationGen?: Record<string, number>;
   currentGeneration?: number;
   /**
+   * Phase 1b (evolution-realism): the share of the recipient inventory's
+   * obstruents that are voiced, computed once per leaf by stepPhonology.
+   * Damps lenition/voicing bias as it climbs (self-limiting feedback).
+   * Undefined → no damping (back-compat / replay determinism).
+   */
+  voicedObstruentShare?: number;
+  /**
    * Phase 29 Tranche 5o: pass the language's OT ranking so candidate
    * outputs can be scored against the constraint hierarchy. When a
    * change worsens otFit by more than `OT_REJECT_THRESHOLD`, reject
@@ -301,6 +309,49 @@ const CATEGORY_NATURAL_BIAS: Record<SoundChange["category"], number> = {
   delabialisation: 1.2,
   deaspiration: 1.2,
 };
+
+// ── Phase 1b (evolution-realism): self-limiting lenition/voicing ──
+//
+// Lenition (×1.5) and voicing (×1.2) outrun fortition (×0.5) ~3×, a
+// one-way push that drives every inventory toward voiced fricatives /
+// approximants and a runaway /h/ onset sink. Real systems are
+// self-limiting: once an inventory is saturated with voiced obstruents
+// there is little voiceless material left to lenite/voice, so the bias
+// must DAMP as that saturation climbs. This is the share of obstruents
+// that are already voiced; stepPhonology computes it once per leaf.
+const OBSTRUENT_MANNERS = new Set([
+  "stop",
+  "affricate",
+  "fricative",
+  "lateral-fricative",
+]);
+
+export function voicedObstruentShareOf(inventory: ReadonlyArray<Phoneme>): number {
+  let obstruents = 0;
+  let voiced = 0;
+  for (const p of inventory) {
+    const f = featuresOf(p);
+    if (!f || f.type !== "consonant" || !OBSTRUENT_MANNERS.has(f.manner)) continue;
+    obstruents++;
+    if (f.voice) voiced++;
+  }
+  return obstruents === 0 ? 0 : voiced / obstruents;
+}
+
+/**
+ * Phase 1b: damp lenition/voicing bias as the voiced-obstruent share
+ * climbs past 0.4, falling linearly to ×0.3 by share 0.8. Returns 1 for
+ * all other categories and when the share is unknown (back-compat).
+ */
+function saturationDamping(
+  category: SoundChange["category"],
+  share: number | undefined,
+): number {
+  if (share === undefined) return 1;
+  if (category !== "lenition" && category !== "voicing") return 1;
+  if (share <= 0.4) return 1;
+  return Math.max(0.3, 1 - ((share - 0.4) / 0.4) * 0.7);
+}
 
 function priorityFor(change: SoundChange): number {
   if (typeof change.priority === "number") return change.priority;
@@ -517,7 +568,13 @@ export function applyChangesToWord(
     const baseBias = CATEGORY_NATURAL_BIAS[change.category] ?? 1.0;
     const langOverride = (opts.langForOt as Language | undefined)
       ?.naturalBiasOverride?.[change.category];
-    const naturalBias = baseBias * (langOverride ?? 1.0);
+    // Phase 1b: self-limiting feedback — damp lenition/voicing as the
+    // inventory's voiced-obstruent share saturates (stationary onset
+    // distribution; stops the runaway one-way lenition push).
+    const naturalBias =
+      baseBias *
+      (langOverride ?? 1.0) *
+      saturationDamping(change.category, opts.voicedObstruentShare);
     // Phase 28d: lexical-diffusion S-curve. When this meaning's
     // semantic neighbours have recently undergone change, the rule's
     // probability boosts here too — modeling how sound changes spread

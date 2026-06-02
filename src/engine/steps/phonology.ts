@@ -1,5 +1,5 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
-import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority } from "../phonology/apply";
+import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority, voicedObstruentShareOf } from "../phonology/apply";
 import { buildConceptIdToGloss, type ConceptId } from "../lexicon/conceptIdentity";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
@@ -244,6 +244,10 @@ export function stepPhonology(
     // collisions with unrelated words. Default ON; per-language
     // tunable via `lang.homonymInhibition`.
     langForHomonym: lang,
+    // Phase 1b (evolution-realism): voiced-obstruent saturation, computed
+    // once per leaf, damps lenition/voicing bias as the inventory fills
+    // with voiced obstruents (self-limiting onset distribution).
+    voicedObstruentShare: voicedObstruentShareOf(lang.phonemeInventory.segmental),
     // Phase 69a T1: pre-sorted rule list — applyChangesToLexicon
     // skips its internal sort when this is present.
     _orderedChanges: orderedChanges,

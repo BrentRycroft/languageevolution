@@ -299,11 +299,10 @@ export const CATALOG: SoundChange[] = [
     label: "h → ∅ / #_",
     category: "deletion",
     description:
-      "Drop word-initial h. Phase 29 Tranche 5e: unstressed-only — Romance h-loss attested mostly in unstressed function words first, content-word stressed h survives longer.",
-    stressFilter: "unstressed",
+      "Drop word-initial h. Evolution-realism Phase 1b: enabled by default and no longer unstressed-only, so /h/ has an EXIT instead of being an absorbing onset sink. Word-initial h-loss is cross-linguistically common in stressed onsets too — English h-dropping, French h muet, Greek psilosis, Spanish Latin-f→h→∅, Māori. The low base rate keeps it a gradual drain (h-deletion is levenshtein-distance-1, so it does not break Swadesh cognate retention).",
     probabilityFor: (w) => (w.length > 1 && w[0] === "h" ? 0.05 : 0),
     apply: (word) => (word[0] === "h" && word.length > 1 ? word.slice(1) : word),
-    enabledByDefault: false,
+    enabledByDefault: true,
     baseWeight: 1,
   },
   {
