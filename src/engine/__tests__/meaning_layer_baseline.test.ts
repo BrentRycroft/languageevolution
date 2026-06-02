@@ -163,13 +163,30 @@ const GEN0: Record<string, string> = {
 // Every preset coining within 30 gens shifts. GEN0 unchanged (no coinage at
 // gen 0). Approved milestone re-baseline; scorecard compound decomp-match
 // rose from a meaningless 0% to 80–100%. Determinism preserved.
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 3a+3b — semantic-
+// change integrity). Semantic drift now (3a) draws its candidate TARGET
+// from the curated SEMANTIC_NEIGHBORS + recorded-colexification graph as the
+// PRIMARY source, demoting the degenerate 12-dim embedding (where antonyms
+// share a centroid) and whole-cluster relatedMeanings to fallbacks; and (3b)
+// excludes a word's curated gradable antonym from the candidate pool (no
+// alive→dead drift). Different drift targets shift every preset that drifts
+// within 30 gens. GEN0 unchanged. Approved milestone re-baseline; scorecard
+// antonym-drifts=0 and drift targets land on curated neighbours where the
+// source has them. Determinism preserved.
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 3d — taboo on
+// referents). maybeTabooReplace now gates candidates on a curated
+// dangerous-referent set (death / supernatural / predator / disease / sex /
+// in-law) instead of freq ≥ 0.7, so it no longer tabooes go/take/want/see.
+// pie/romance/tokipona/english shifted (a taboo event fired on a different
+// target within 30 gens); bantu/germanic byte-identical (no eligible
+// referent fired in their 30-gen window). GEN0 unchanged.
 const GENN: Record<string, string> = {
-  pie: "50fe9e80",
-  bantu: "a1f187ef",
-  romance: "4fb1628e",
-  germanic: "1cc5841a",
-  tokipona: "84f5cef7",
-  english: "d3175ff6",
+  pie: "bcb4ac22",
+  bantu: "86d4a420",
+  romance: "129fe55e",
+  germanic: "b07e670c",
+  tokipona: "5bfa4ce6",
+  english: "f2d457ce",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

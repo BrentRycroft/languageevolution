@@ -23,6 +23,34 @@ export interface TabooEvent {
   donor: Meaning | null;
 }
 
+/**
+ * Evolution-realism Phase 3d: taboo replacement targets culturally
+ * DANGEROUS REFERENTS, not high-frequency words. Cross-linguistically,
+ * word taboo + avoidance/replacement clusters on death, the supernatural,
+ * predators/dangerous animals, disease/bodily affliction, and sacred /
+ * sexual / in-law terms (the "noa" vocabularies). The old gate
+ * (freq ≥ 0.7) wrongly tabooed go/take/want/see. Only concepts in this
+ * curated set are eligible; most generations find no eligible target —
+ * which is correct, taboo replacement is occasional, not constant.
+ */
+const TABOO_REFERENTS: ReadonlySet<Meaning> = new Set<Meaning>([
+  // death & the dead
+  "die", "dead", "death", "corpse", "grave", "tomb", "bury", "funeral",
+  "ghost", "spirit", "soul", "ancestor",
+  // the supernatural / sacred
+  "god", "devil", "demon", "spirit", "sacred", "holy", "curse", "witch",
+  "magic", "ritual", "sacrifice", "taboo",
+  // predators & dangerous animals
+  "snake", "serpent", "bear", "wolf", "lion", "tiger", "spider",
+  "scorpion", "shark", "crocodile",
+  // disease & affliction
+  "disease", "sick", "illness", "plague", "fever", "wound", "blood",
+  "pus", "rot",
+  // sexual / bodily / in-law (the most strongly avoided)
+  "sex", "penis", "vagina", "menstruation", "birth", "mother-in-law",
+  "father-in-law",
+]);
+
 export function maybeTabooReplace(
   lang: Language,
   rng: Rng,
@@ -30,13 +58,14 @@ export function maybeTabooReplace(
 ): TabooEvent | null {
   if (!rng.chance(probability)) return null;
   const candidates = lexKeys(lang).filter((m) => {
-    const freq = lang.wordFrequencyHints[m] ?? 0.5;
-    if (freq < 0.7) return false;
+    // Phase 3d: only culturally-dangerous referents attract taboo
+    // replacement (death / supernatural / predator / disease / sex / in-law),
+    // not merely high-frequency words. Most generations find none eligible.
+    if (!TABOO_REFERENTS.has(m)) return false;
     // Concept-native (item 4): skip words with RECORDED compound/derivation
     // structure, read from lang.compounds, rather than guessing from a hyphen in
-    // the English gloss. (Taboo targets simple high-freq content roots; compounds
-    // are excluded either way, so this is byte-identical — it just stops trusting
-    // gloss spelling as a morphology signal.)
+    // the English gloss. (Taboo targets simple content roots; compounds
+    // are excluded either way — it just stops trusting gloss spelling.)
     if (recordedParts(lang, m) !== null) return false;
     // Phase 26c: closed-class words (DET, AUX, PREP, CONJ, PRON, NEG, COP)
     // are NOT subject to taboo replacement. Real languages don't taboo

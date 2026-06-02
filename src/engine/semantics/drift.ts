@@ -3,6 +3,8 @@ import type { Rng } from "../rng";
 import { neighborsOf } from "./neighbors";
 import { relatedMeanings, clusterOf } from "./clusters";
 import { nearestMeanings, embed, cosine } from "./embeddings";
+import { areAntonyms } from "./antonyms";
+import { colexWith } from "../lexicon/concepts";
 import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS, isClosedClass, posOf } from "../lexicon/pos";
@@ -156,16 +158,32 @@ export function driftOneMeaning(
         expansionExtras.length === 0
           ? meanings
           : Array.from(new Set([...meanings, ...expansionExtras]));
-      const embeddingNearest = nearestMeanings(m, candidates, 5);
+      // Phase 3a (evolution-realism): drive drift from the CURATED graph —
+      // SEMANTIC_NEIGHBORS (CLICS-aligned) + recorded colexifications — as
+      // the PRIMARY candidate source, demoting the degenerate 12-dim
+      // embedding (where antonyms share a centroid: cos(water,fire)=0.99) and
+      // the coarse whole-cluster relatedMeanings to fallbacks. The curated
+      // graph is tight and attested, so drift targets become realistic and
+      // it never links a word to its element-/antonym-twin.
+      const curated = Array.from(new Set([...neighborsOf(m), ...colexWith(m)]));
+      const embeddingNearest =
+        curated.length > 0 ? [] : nearestMeanings(m, candidates, 5);
       const related = relatedMeanings(m);
-      const neighbors =
+      const rawNeighbors =
         overrideNeighbors && overrideNeighbors.length > 0
           ? overrideNeighbors
-          : embeddingNearest.length > 0
-            ? embeddingNearest
-            : related.length > 0
-              ? related
-              : neighborsOf(m);
+          : curated.length > 0
+            ? curated
+            : embeddingNearest.length > 0
+              ? embeddingNearest
+              : related.length > 0
+                ? related
+                : neighborsOf(m);
+      // Phase 3b: a content word must not drift into its own curated
+      // (gradable/complementary) antonym. Excludes alive→dead, hot→cold,
+      // etc.; converses (brother/sister) are NOT in the set and stay
+      // eligible (they legitimately colexify).
+      const neighbors = rawNeighbors.filter((n) => n !== m && !areAntonyms(m, n));
       if (neighbors.length === 0) continue;
       const posCompatible = neighbors.filter((n) => samePOS(m, n));
       const pool = posCompatible.length > 0 ? posCompatible : neighbors;
