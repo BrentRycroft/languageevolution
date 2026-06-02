@@ -223,6 +223,7 @@ describe("realism scorecard (RUN_SLOW)", () => {
     it(`${preset.id}: realism metrics within baseline bands`, () => {
       const sim = createSimulation(scorecardConfig(preset.build));
       const seed = captureSeed(soleLeaf(sim.getState()));
+      const seedInvSize = soleLeaf(sim.getState()).phonemeInventory.segmental.length;
 
       const curve: Array<{ gen: number; swadesh: number; identical: number }> = [];
       let gen = 0;
@@ -252,6 +253,8 @@ describe("realism scorecard (RUN_SLOW)", () => {
       const sizeRatio = lexKeys(lang).length / Math.max(1, seed.size);
       const synth = lang.grammar.synthesisIndex;
       const morphType = lang.grammar.morphologicalType;
+      const invSize = lang.phonemeInventory.segmental.length;
+      const invTarget = lang.phonemeTarget ?? NaN;
 
       const report = [
         ``,
@@ -267,6 +270,7 @@ describe("realism scorecard (RUN_SLOW)", () => {
         `  Onset top-6               ${onset.top.map(([s, n]) => `${s}:${n}`).join(" ")}`,
         `  Homophony rate            ${pct(homophony)}   (target <4%)`,
         `  Synthesis index / type    ${synth?.toFixed(2) ?? "n/a"} / ${morphType ?? "n/a"}`,
+        `  Inventory size            ${invSize} (seed ${seedInvSize}, target ${Number.isNaN(invTarget) ? "n/a" : invTarget})   (target: near tier target, not inflated)`,
         `  Lexicon size ratio        ${sizeRatio.toFixed(2)}×   (target ~1.0, stationary)`,
         `  Zipf rank1/rank100        ${Number.isFinite(zipf.ratio) ? zipf.ratio.toFixed(2) : "∞"}   cap-pinned ${pct(zipf.capShare)}   (target ratio≫1)`,
         `  Compound coherence        ${pct(compound.endocentric)}  (n=${compound.n})  (target ≥80%)`,

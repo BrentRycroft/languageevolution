@@ -123,6 +123,28 @@ approved — this is the point.
 (palatalization yields coronals/palatals, lenition yields fricatives/approximants).
 **Effort:** M. **Risk:** medium (hot path; perf-sensitive — keep `closestByFeatures` O(inv)).
 
+### STATUS: 1a + 1b DONE; 1c DEFERRED (2026-06-02)
+
+- **1a DONE (67a02b9):** `repairOutputMapByFeatures` now type-preserving — lenition
+  can't land on a nasal, palatalisation can't land on a labial, drops the rule when no
+  type-preserving output exists. Unit-locked in `feature_repair.test.ts`. meaning_layer
+  unchanged (the locked preset's corruption paths coincided with the type-preserving pick).
+- **1b DONE (892efb0):** self-limiting lenition/voicing (damp as voiced-obstruent share
+  saturates) + `/h/` exit (`deletion.h_initial` enabled, stress-unrestricted). Scorecard:
+  voiceless-stop onset share rose across presets; `/h/` drained (romance 5.9→0%, bantu
+  11.5→2.1%, pie 8.2→3.8%). meaning_layer GENN re-baselined (all 6).
+- **1c DEFERRED** → see ROADMAP backlog "EVOLUTION REALISM AUDIT". Two reasons it's not a
+  clean surgical fix yet: (i) the founder re-introduction of marked series (`bʰ/dʰ/gʰ`)
+  lives in `tree/inventoryExpansion.ts maybeExpandInventory`, which fires only at SPLIT
+  events — invisible to the single-lineage scorecard, so it needs a splitting-run probe to
+  gate; (ii) there is no persistent "had-and-shed" signal to gate on — `inventoryProvenance`
+  is pruned to observed phonemes (`steps/helpers.ts:227`), so blocking re-acquisition of a
+  shed series needs new shed-tracking infrastructure (a `shedSeries`/loss record), not a
+  one-line guard. The pruning-pressure half (`inventoryManagement.ts:44`) DOES fire in
+  single-lineage; an inventory-size metric was added to the scorecard to quantify any
+  inflation before tuning it (defer to Phase 6 calibration if the data shows it's mild).
+  Lower-priority than the headline metrics; sequenced after the high-visibility Phase 2 win.
+
 ---
 
 ## Phase 2 — Word-formation coherence (cheap; kills the "weird mashup" feeling)
