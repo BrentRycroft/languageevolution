@@ -1,4 +1,5 @@
 import type { GrammarFeatures, Language } from "../types";
+import { pushEvent } from "../steps/helpers";
 
 /**
  * typology_drift.ts
@@ -24,8 +25,18 @@ export function stepTypologyDrift(lang: Language, generation: number): void {
   const g = lang.grammar;
   const paradigmCount = Object.keys(lang.morphology.paradigms).length;
   const synthFromParadigms = 0.8 + 0.2 * paradigmCount;
+  // Phase 4a: analytic case-marking pulls the synthesis target DOWN, so the
+  // index isn't a one-way function of paradigm count alone. A language that
+  // has gone adpositional (English "of/to", Romance de/à vs Latin -ī/-ō) or
+  // shed its case system is drifting analytic regardless of residual paradigm
+  // entries — the Latin→French direction the ratchet used to forbid.
+  let analyticPull = 0;
+  if (g.caseStrategy === "preposition" || g.caseStrategy === "postposition") {
+    analyticPull += 0.5;
+  }
+  if (g.hasCase === false) analyticPull += 0.3;
   const currentSynth = g.synthesisIndex ?? 2.0;
-  const targetSynth = Math.max(0.8, Math.min(4.5, synthFromParadigms));
+  const targetSynth = Math.max(0.8, Math.min(4.5, synthFromParadigms - analyticPull));
   // Phase 73d D5: smoothing reduced 0.85 → 0.70 so daughters'
   // synthesis index adapts faster to their paradigm-richness
   // trajectory. Combined with D1's split-time seed delta, sisters
@@ -52,7 +63,11 @@ export function stepTypologyDrift(lang: Language, generation: number): void {
   const previousType = g.morphologicalType;
   g.morphologicalType = recomputeMorphologicalType(g);
   if (previousType && previousType !== g.morphologicalType) {
-    lang.events.push({
+    // Phase 4a: route through the pushEvent chokepoint so this event obeys
+    // MAX_EVENTS_PER_LANGUAGE. It was a raw lang.events.push (the one event
+    // sink that bypassed the ring-buffer cap); now that 4a's analytic pull
+    // makes type-drift fire more often it could tip a long-lived leaf to 81.
+    pushEvent(lang, {
       generation,
       kind: "grammar_shift",
       description: `morphological type drifted: ${previousType} → ${g.morphologicalType} (synth ${newSynth.toFixed(2)}, fusion ${newFusion.toFixed(2)})`,

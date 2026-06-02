@@ -180,13 +180,27 @@ const GEN0: Record<string, string> = {
 // pie/romance/tokipona/english shifted (a taboo event fired on a different
 // target within 30 gens); bantu/germanic byte-identical (no eligible
 // referent fired in their 30-gen window). GEN0 unchanged.
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 4a — synthesis
+// ratchet break). Two changes close the one-way "everything drifts
+// polysynthetic" ratchet: (1) maybeDropCollapsedParadigm removes a paradigm
+// whose affix has eroded to ∅ (surface-neutral — inflect() already bailed it
+// to bare stem — but paradigm count, hence the synthesis target 0.8+0.2*count,
+// could previously only GROW); it fires each grammar step via a new rng.chance
+// draw, which reshuffles the shared stream → ALL SIX presets' gen-30
+// trajectories shift. (2) stepTypologyDrift's synthesis target is now pulled
+// DOWN by analytic case-marking (caseStrategy=adposition, hasCase=false), so a
+// language can shed morphology (the Latin→French direction). Also routes
+// stepTypologyDrift's type-drift event through the pushEvent cap chokepoint
+// (was a raw push that could tip a long leaf to 81 events). GEN0 unchanged (no
+// morphology at gen 0). Approved milestone re-baseline (gate = realism
+// scorecard, not byte-identity). Determinism preserved (re-run confirmed).
 const GENN: Record<string, string> = {
-  pie: "bcb4ac22",
-  bantu: "86d4a420",
-  romance: "129fe55e",
-  germanic: "b07e670c",
-  tokipona: "5bfa4ce6",
-  english: "f2d457ce",
+  pie: "a728668c",
+  bantu: "57152ba0",
+  romance: "b1639983",
+  germanic: "0d773638",
+  tokipona: "39a3dd23",
+  english: "6d1b4dcc",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

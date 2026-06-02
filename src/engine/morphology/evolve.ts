@@ -491,6 +491,39 @@ export function maybeMergeParadigms(
   return null;
 }
 
+/**
+ * Evolution-realism Phase 4a: drop a paradigm whose affix (and every variant)
+ * has eroded to ∅. Such a paradigm marks nothing — `inflect()` already bails it
+ * to the bare stem (paradigmHasOnlyEmptyAffixes guard) — but it lingered in
+ * `lang.morphology.paradigms` forever, so paradigm count, hence the synthesis
+ * target (`0.8 + 0.2*paradigmCount`), could only ever GROW. That one-way
+ * ratchet made every lineage drift polysynthetic and made the Latin→French
+ * analytic direction impossible. Removing the collapsed paradigm is SURFACE-
+ * NEUTRAL (same bare-stem output) but lets synthesis fall on the next
+ * stepTypologyDrift. This is the affix-loss → paradigm-removal channel that
+ * `paradigmHasOnlyEmptyAffixes`'s comment deferred to "a separate concern".
+ */
+export function maybeDropCollapsedParadigm(
+  lang: Language,
+  rng: Rng,
+  probability: number,
+): MorphShift | null {
+  if (!rng.chance(probability)) return null;
+  const collapsed = (Object.keys(lang.morphology.paradigms) as MorphCategory[]).filter(
+    (c) => {
+      const p = lang.morphology.paradigms[c];
+      return p != null && paradigmHasOnlyEmptyAffixes(p);
+    },
+  );
+  if (collapsed.length === 0) return null;
+  const cat = collapsed[rng.int(collapsed.length)]!;
+  delete lang.morphology.paradigms[cat];
+  return {
+    kind: "affix_erode",
+    description: `paradigm lost: ${cat} (affix eroded to ∅)`,
+  };
+}
+
 export function maybeSplitParadigm(
   lang: Language,
   rng: Rng,

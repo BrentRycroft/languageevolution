@@ -12,6 +12,7 @@ import {
 import {
   maybeGrammaticalize,
   maybeMergeParadigms,
+  maybeDropCollapsedParadigm,
   maybeCliticize,
   maybeAffixReplacement,
   progressGrammaticalizationChain,
@@ -246,6 +247,24 @@ export function stepMorphology(
       generation,
       kind: "grammar_shift",
       description: merge.description,
+    });
+  }
+  // Phase 4a: affix-loss → paradigm-removal. A paradigm whose affix eroded
+  // to ∅ is dead weight; dropping it lets the synthesis target fall (closes
+  // the one-way ratchet). Same simplification drivers as paradigm merge.
+  const dropped = maybeDropCollapsedParadigm(
+    lang,
+    rng,
+    (config.morphology.paradigmLossProbability ?? 0) *
+      lang.conservatism *
+      trudgill *
+      substrateBoost,
+  );
+  if (dropped) {
+    pushEvent(lang, {
+      generation,
+      kind: "grammar_shift",
+      description: dropped.description,
     });
   }
   const cliticRate =

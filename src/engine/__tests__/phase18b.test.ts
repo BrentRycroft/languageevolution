@@ -119,6 +119,33 @@ describe("Phase 18b — deeper engine work", () => {
       stepTypologyDrift(lang, 10);
       expect(lang.grammar.morphologicalType).toBeDefined();
     });
+
+    it("Phase 4a: adpositional / caseless typology pulls synthesis target down", () => {
+      // Same paradigm count for both, so synthFromParadigms is identical;
+      // only the analytic case-marking differs. The adpositional + caseless
+      // language must end with a LOWER synthesis index — the Latin→French
+      // direction the old paradigm-count-only target made impossible.
+      const mkParadigms = () => ({
+        "noun.case.acc": { affix: ["m"], position: "suffix" as const, category: "noun.case.acc" as const },
+        "noun.case.dat": { affix: ["i"], position: "suffix" as const, category: "noun.case.dat" as const },
+        "verb.tense.past": { affix: ["e", "d"], position: "suffix" as const, category: "verb.tense.past" as const },
+      });
+      const baseGrammar = {
+        wordOrder: "SVO" as const, affixPosition: "suffix" as const,
+        pluralMarking: "none" as const, tenseMarking: "none" as const, genderCount: 0 as const,
+      };
+      const synthetic = makeLang({
+        morphology: { paradigms: mkParadigms() },
+        grammar: { ...baseGrammar, hasCase: true, caseStrategy: "case" },
+      });
+      const analytic = makeLang({
+        morphology: { paradigms: mkParadigms() },
+        grammar: { ...baseGrammar, hasCase: false, caseStrategy: "preposition" },
+      });
+      stepTypologyDrift(synthetic, 10);
+      stepTypologyDrift(analytic, 10);
+      expect(analytic.grammar.synthesisIndex!).toBeLessThan(synthetic.grammar.synthesisIndex!);
+    });
   });
 
   describe("B2: vowel-mutation irregulars", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyPhonologyToAffixes, maybeGrammaticalize, maybeMergeParadigms, inflect } from "../morphology/evolve";
+import { applyPhonologyToAffixes, maybeGrammaticalize, maybeMergeParadigms, maybeDropCollapsedParadigm, inflect } from "../morphology/evolve";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
@@ -87,6 +87,32 @@ describe("morphology evolution", () => {
     const rng = makeRng("merge");
     const shift = maybeMergeParadigms(lang, rng, 1);
     expect(shift).not.toBeNull();
+    expect(Object.keys(lang.morphology.paradigms).length).toBe(1);
+  });
+
+  it("Phase 4a: drops a paradigm whose affix has eroded to ∅, keeps live ones", () => {
+    const lang = makeLang();
+    // A collapsed (empty-affix) paradigm — marks nothing, inflect() bails it
+    // to bare stem. It must be removable so paradigm count can fall.
+    lang.morphology.paradigms["noun.case.acc"] = {
+      affix: [],
+      position: "suffix",
+      category: "noun.case.acc",
+    };
+    const rng = makeRng("drop");
+    const shift = maybeDropCollapsedParadigm(lang, rng, 1);
+    expect(shift).not.toBeNull();
+    expect(shift?.kind).toBe("affix_erode");
+    // The collapsed one is gone; the live verb.tense.past (affix /ped/) stays.
+    expect(lang.morphology.paradigms["noun.case.acc"]).toBeUndefined();
+    expect(lang.morphology.paradigms["verb.tense.past"]).toBeDefined();
+  });
+
+  it("Phase 4a: no collapsed paradigm → no removal (live affixes untouched)", () => {
+    const lang = makeLang(); // only verb.tense.past with affix /ped/
+    const rng = makeRng("drop2");
+    const shift = maybeDropCollapsedParadigm(lang, rng, 1);
+    expect(shift).toBeNull();
     expect(Object.keys(lang.morphology.paradigms).length).toBe(1);
   });
 

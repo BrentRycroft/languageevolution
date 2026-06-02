@@ -82,6 +82,7 @@ export function defaultConfig(): SimulationConfig {
     morphology: {
       grammaticalizationProbability: 0.04,
       paradigmMergeProbability: 0.025,
+      paradigmLossProbability: 0.06,
       analogyProbability: 0.035,
       cliticizationProbability: 0.035,
       suppletionProbability: 0.015,

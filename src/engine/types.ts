@@ -1318,6 +1318,15 @@ export interface SimulationConfig {
   morphology: {
     grammaticalizationProbability: number;
     paradigmMergeProbability: number;
+    /**
+     * Evolution-realism Phase 4a: per-generation probability of DROPPING a
+     * paradigm whose affix has eroded to ∅ (closes the synthesis ratchet —
+     * paradigm count could previously only ever grow). Surface-neutral
+     * (inflect() already bails such a paradigm to the bare stem); the effect
+     * is on the synthesis target via paradigmCount. Scaled by conservatism ×
+     * Trudgill simplification at the call site. Undefined → 0 (no loss).
+     */
+    paradigmLossProbability?: number;
     analogyProbability?: number;
     cliticizationProbability?: number;
     suppletionProbability?: number;
