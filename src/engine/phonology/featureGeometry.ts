@@ -1,5 +1,5 @@
 import type { Phoneme } from "../types";
-import type { ConsonantFeatures, VowelFeatures, FeatureBundle } from "./features";
+import type { ConsonantFeatures, VowelFeatures, FeatureBundle, Place, Manner } from "./features";
 import { featuresOf } from "./features";
 
 /**
@@ -101,29 +101,137 @@ export function closestByFeatures(
   return best;
 }
 
+// ── Phase 1a (evolution-realism): type-preserving feature repair ──
+//
+// Front-to-back place ordering and an obstruent-lenition openness scale.
+// Manners ABSENT from OBSTRUENT_OPENNESS (nasal, liquid, tap, trill,
+// lateral-approximant) are sonorants OFF the lenition cline: a change can
+// only target them by EXACT manner match, never as a "nearest" lenition
+// output (which is how /b/→/m/ and /k/→/f/ corruptions arose).
+const PLACE_ORDER: Record<Place, number> = {
+  labial: 0, labiodental: 1, dental: 2, alveolar: 3, postalveolar: 4,
+  retroflex: 5, palatal: 6, velar: 7, uvular: 8, pharyngeal: 9, glottal: 10,
+};
+const OBSTRUENT_OPENNESS: Partial<Record<Manner, number>> = {
+  stop: 0,
+  affricate: 1,
+  fricative: 2,
+  "lateral-fricative": 2,
+  approximant: 3,
+  glide: 3,
+};
+
 /**
- * Phase 59 T3: when a template's preferred output isn't in the
- * inventory, repair the outputMap by replacing each unattested
- * target with the closest available phoneme by feature distance.
- * Returns null when no repair is possible (i.e. inventory has no
- * candidate of the right major class for any target).
+ * Is candidate `c` a TYPE-PRESERVING realisation of the intended change
+ * `from`→`to`? For every feature dimension the rule MOVES, `c` must move
+ * the same direction (place/manner) or reach the same value (voice);
+ * for every dimension the rule HOLDS, `c` must hold it (within a 1-step
+ * tolerance on the ordinal place/manner scales so a language lacking the
+ * exact ideal output can still solve the change in its own terms).
+ */
+function preservesChangeType(
+  from: ConsonantFeatures,
+  to: ConsonantFeatures,
+  c: ConsonantFeatures,
+): boolean {
+  // Voice: flip must be achieved; if held, must stay.
+  if (to.voice !== from.voice) {
+    if (c.voice !== to.voice) return false;
+  } else if (c.voice !== from.voice) {
+    return false;
+  }
+
+  // Manner along the obstruent-lenition cline.
+  const fO = OBSTRUENT_OPENNESS[from.manner];
+  const tO = OBSTRUENT_OPENNESS[to.manner];
+  const cO = OBSTRUENT_OPENNESS[c.manner];
+  if (tO === undefined) {
+    // Sonorant / off-cline target (nasalisation, rhotacism, …): exact only.
+    if (c.manner !== to.manner) return false;
+  } else if (cO === undefined) {
+    return false; // candidate is off-cline but the change is along it.
+  } else if (fO === undefined || tO === fO) {
+    if (cO !== tO) return false; // manner held → hold it exactly.
+  } else if (Math.sign(cO - fO) !== Math.sign(tO - fO)) {
+    return false; // manner moved → must move the same direction (no reversals).
+  }
+
+  // Place along the front→back ordering.
+  const fP = PLACE_ORDER[from.place];
+  const tP = PLACE_ORDER[to.place];
+  const cP = PLACE_ORDER[c.place];
+  if (tP === fP) {
+    if (Math.abs(cP - fP) > 1) return false; // place held (±1 tolerance).
+  } else if (tP < fP) {
+    if (cP > fP || cP < tP - 1) return false; // fronting: stay in (to−1 … from].
+  } else if (cP < fP || cP > tP + 1) {
+    return false; // backing: stay in [from … to+1).
+  }
+  return true;
+}
+
+/**
+ * Phase 1a: pick the best in-inventory TYPE-PRESERVING realisation of the
+ * intended consonant change `from`→`to`. Among directionally-valid
+ * candidates, choose the one closest to the ideal `to`. Returns null when
+ * the inventory holds no candidate that preserves the change type — the
+ * caller drops the rule rather than emit a corrupted (wrong-type) change.
+ */
+function typePreservingReplacement(
+  from: Phoneme,
+  to: Phoneme,
+  inventory: ReadonlyArray<Phoneme>,
+): Phoneme | null {
+  const fromFeats = featuresOf(from);
+  const toFeats = featuresOf(to);
+  // Only the consonant→consonant path is type-aware; vowel and
+  // cross-class targets (vocalisation, etc.) keep the legacy nearest-by-
+  // feature behaviour.
+  if (
+    !fromFeats ||
+    !toFeats ||
+    fromFeats.type !== "consonant" ||
+    toFeats.type !== "consonant"
+  ) {
+    return closestByFeatures(to, inventory, from);
+  }
+  let best: Phoneme | null = null;
+  let bestDist = Infinity;
+  for (const candidate of inventory) {
+    if (candidate === from) continue;
+    const feats = featuresOf(candidate);
+    if (!feats || feats.type !== "consonant") continue;
+    if (!preservesChangeType(fromFeats, toFeats, feats)) continue;
+    const d = bundleDistance(toFeats, feats);
+    if (d < bestDist) {
+      bestDist = d;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+/**
+ * Phase 59 T3 / Phase 1a: when a template's preferred output isn't in the
+ * inventory, repair the outputMap by replacing each unattested target with
+ * the closest available phoneme that PRESERVES the change type (lenition
+ * stays lenition, palatalisation stays palatalisation, …). Returns null
+ * when no type-preserving repair is possible, so the caller drops the rule
+ * instead of emitting a corrupted change.
  */
 export function repairOutputMapByFeatures(
   outputMap: Record<string, string>,
   inventory: ReadonlyArray<Phoneme>,
 ): Record<string, string> | null {
   const repaired: Record<string, string> = {};
-  let anyRepaired = false;
   for (const [from, to] of Object.entries(outputMap)) {
     if (to === "" || inventory.includes(to)) {
       repaired[from] = to;
       continue;
     }
-    const replacement = closestByFeatures(to, inventory, from);
+    const replacement = typePreservingReplacement(from, to, inventory);
     if (!replacement) return null;
     repaired[from] = replacement;
-    anyRepaired = true;
   }
-  void anyRepaired;
   return repaired;
 }
