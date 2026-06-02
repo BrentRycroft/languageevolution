@@ -244,7 +244,9 @@ export function splitLeaf(
       grammaticalizationStage: parentLang.grammaticalizationStage
         ? Object.fromEntries(
             Object.entries(parentLang.grammaticalizationStage).map(
-              ([k, v]) => [k, v ? { ...v } : v],
+              // Phase 4b: deep-copy the affixForm array so a daughter's bound
+              // allomorph erodes independently of its sisters' / parent's.
+              ([k, v]) => [k, v ? { ...v, affixForm: v.affixForm?.slice() } : v],
             ),
           )
         : undefined,

@@ -3,7 +3,7 @@ import { applyPhonologyToAffixes, maybeGrammaticalize, maybeMergeParadigms, mayb
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import { lexSet } from "../lexicon/access";
+import { lexSet, lexGet, lexKeys } from "../lexicon/access";
 import type { Language } from "../types";
 
 /**
@@ -60,21 +60,40 @@ describe("morphology evolution", () => {
     expect(affix[0]).toBe("f");
   });
 
-  it("grammaticalization promotes a high-frequency short word to an affix at stage 2", () => {
+  it("Phase 4b: a fresh word routes through the clitic stage (1) without truncating the lemma", () => {
     const lang = makeLang();
+    const before = new Map(lexKeys(lang).map((m) => [m, lexGet(lang, m)!.join("")]));
+    const paradigmsBefore = Object.keys(lang.morphology.paradigms).length;
     const rng = makeRng("gram");
     const shift = maybeGrammaticalize(lang, rng, 1);
     expect(shift).not.toBeNull();
-    // Phase 66 T1: meaning stays in lexicon at reduced frequency;
-    // stage 2 marks it as bound. Subsequent gens advance to stage 3
-    // (fusion) and stage 4 (loss). The legacy assertion that the
-    // meaning was removed on first fire is no longer correct.
-    if (shift?.source) {
-      const m = shift.source.meaning;
-      expect(lang.grammaticalizationStage?.[m]?.stage).toBe(2);
+    const m = shift!.source!.meaning;
+    // 4b: a fresh word becomes a CLITIC first (stage 1) — it does NOT teleport
+    // to a bound affix, so no new paradigm appears on this transition.
+    expect(lang.grammaticalizationStage?.[m]?.stage).toBe(1);
+    expect(Object.keys(lang.morphology.paradigms).length).toBe(paradigmsBefore);
+    expect(lang.wordOrigin[m]).toMatch(/^clitic:/);
+    expect(lang.grammaticalizationStage?.[m]?.affixForm).toBeDefined();
+    // 4c: the free dictionary lemma is INTACT (not slice(0,-1)'d).
+    expect(lexGet(lang, m)!.join("")).toBe(before.get(m));
+  });
+
+  it("Phase 4b: a clitic binds into a paradigm (stage 2) with a reduced bound affix", () => {
+    const lang = makeLang();
+    const rng = makeRng("gram-bind");
+    let bound: string | null = null;
+    for (let i = 0; i < 50 && !bound; i++) {
+      maybeGrammaticalize(lang, rng, 1);
+      for (const [m, st] of Object.entries(lang.grammaticalizationStage ?? {})) {
+        if (st?.stage === 2) { bound = m; break; }
+      }
     }
-    const categories = Object.keys(lang.morphology.paradigms);
-    expect(categories.length).toBeGreaterThan(1);
+    expect(bound).not.toBeNull();
+    const st = lang.grammaticalizationStage![bound!]!;
+    const pdm = lang.morphology.paradigms[st.targetCategory!];
+    expect(pdm).toBeDefined();
+    // The bound affix is the REDUCED allomorph — no longer than the free lemma.
+    expect(pdm!.affix.length).toBeLessThanOrEqual(lexGet(lang, bound!)!.length);
   });
 
   it("paradigm merge collapses identical affixes in same position", () => {

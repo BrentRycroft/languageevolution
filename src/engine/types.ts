@@ -642,6 +642,16 @@ export interface Language {
     stage: 0 | 1 | 2 | 3 | 4;
     targetCategory?: import("./morphology/types").MorphCategory;
     lastTransitionGen: number;
+    /**
+     * Evolution-realism Phase 4b/4c: the phonologically-reduced BOUND
+     * allomorph (the clitic/affix form), kept separate from the free
+     * dictionary lemma. Set when a word becomes a clitic (stage 1); used as
+     * the affix when it binds into a paradigm (stage 2); eroded further at
+     * fusion (stage 3). Previously grammaticalization used the FULL free form
+     * as the affix and fusion eroded the dictionary lemma itself (belly→bell)
+     * — corrupting a still-current word. The lemma is now never truncated.
+     */
+    affixForm?: WordForm;
   }>;
   /**
    * Per-noun gender assignment when grammar.genderCount > 0.

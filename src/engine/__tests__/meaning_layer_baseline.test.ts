@@ -194,13 +194,25 @@ const GEN0: Record<string, string> = {
 // (was a raw push that could tip a long leaf to 81 events). GEN0 unchanged (no
 // morphology at gen 0). Approved milestone re-baseline (gate = realism
 // scorecard, not byte-identity). Determinism preserved (re-run confirmed).
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 4b/4c — grammaticalization
+// cline + host-clitic reduction). Grammaticalization no longer TELEPORTS a free
+// word to a bound affix in one gen: maybeGrammaticalize now routes a fresh word
+// through the CLITIC stage (1) first and binds it into a paradigm only at a later
+// transition (stage 2), using a phonologically-reduced bound allomorph
+// (reduceToClitic) rather than the full free form. Fusion (stage 3) and
+// maybeCliticize now reduce the BOUND AFFIX, never the free dictionary lemma
+// (4c: pre-fix `form.slice(0,-1)` eroded the lemma itself, belly→bell). Only
+// germanic/tokipona/english shifted — they grammaticalize/cliticize within 30
+// gens; pie/bantu/romance are BYTE-IDENTICAL to their 4a values (no changed-path
+// firing in their 30-gen window). GEN0 unchanged. Approved milestone re-baseline;
+// determinism preserved (re-run confirmed).
 const GENN: Record<string, string> = {
   pie: "a728668c",
   bantu: "57152ba0",
   romance: "b1639983",
-  germanic: "0d773638",
-  tokipona: "39a3dd23",
-  english: "6d1b4dcc",
+  germanic: "b6413bf8",
+  tokipona: "cb85d7f7",
+  english: "eab25cd9",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {
