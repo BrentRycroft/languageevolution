@@ -134,13 +134,42 @@ const GEN0: Record<string, string> = {
 // matching 60-gen ipa_pie run drove out two LATENT final-erosion bugs (cliticize
 // 3aeae6b, grammaticalization-fusion 86e98ca) — both committed separately, both
 // byte-identical to THESE hashes (the malformation they fix is post-gen-30).
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 1b — lenition/
+// fortition counterweight + /h/ exit). Two deliberate phonology changes
+// shift every preset's gen-30 trajectory (GEN0 unchanged — no phonology at
+// gen 0): (1) lenition/voicing bias now DAMPS as the inventory's voiced-
+// obstruent share saturates (self-limiting; voiceless stops survive
+// instead of being eroded one-way — scorecard voiceless-stop onset share
+// rose across presets); (2) deletion.h_initial enabled by default and no
+// longer unstressed-only, giving /h/ an EXIT instead of being an absorbing
+// onset sink (scorecard /h/ share: romance 5.9→0%, bantu 11.5→2.1%,
+// pie 8.2→3.8%). This is an approved milestone re-baseline (see
+// docs/planning/EVOLUTION-REALISM-MILESTONE.md §1b) — the gate is the
+// realism scorecard, not byte-identity. Reproducibility-determinism is
+// preserved (same config → identical output; re-run confirmed).
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 2 — word-formation
+// coherence, 2a+2b+2c). All coinage mechanisms now require SEMANTICALLY-
+// COHERENT parts instead of random lexemes:
+//  2a compound.ts — prefers the concept's curated cross-linguistic
+//     `decomposition` (head-final kenning: breeze=small+wind, hail=hard+rain,
+//     hurricane=big+storm); refuses a sibling mashup for a decomposable
+//     target whose parts aren't lexicalised yet.
+//  2b reduplication.ts/clipping.ts — base must be a RELATED root (the
+//     mechanisms previously reduplicated/clipped a random word and filed it
+//     under an unrelated target; reduplication literally did `void target`).
+//  2c genesis/catalog.ts — dropped the fully-random pickMeanings(rng,2)
+//     fallback in the legacy spontaneous-compound rule (a second mashup
+//     generator); always requires a related pair now.
+// Every preset coining within 30 gens shifts. GEN0 unchanged (no coinage at
+// gen 0). Approved milestone re-baseline; scorecard compound decomp-match
+// rose from a meaningless 0% to 80–100%. Determinism preserved.
 const GENN: Record<string, string> = {
-  pie: "f5ffb2e6",
-  bantu: "f4938ee4",
-  romance: "092e426b",
-  germanic: "02c2297e",
-  tokipona: "2a1b6a3b",
-  english: "0adbf12e",
+  pie: "50fe9e80",
+  bantu: "a1f187ef",
+  romance: "4fb1628e",
+  germanic: "1cc5841a",
+  tokipona: "84f5cef7",
+  english: "d3175ff6",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

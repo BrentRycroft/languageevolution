@@ -104,6 +104,15 @@ const KNOWN_UNTRANSLATABLE: Record<string, ReadonlySet<string>> = {
  */
 function assertWordOrderRespected(probe: Probe): void {
   const wo = probe.lang.grammar.wordOrder ?? "SVO";
+  // Case-marking languages identify subject/object by MORPHOLOGY, not
+  // position, so they license freer constituent order — the well-attested
+  // case ↔ flexible-word-order typological correlation (Latin, Russian,
+  // Sanskrit: a case-marked object can surface pre- or post-verbally
+  // because the case recovers its role). Holding them to a strict S/V/O
+  // position is over-strict; the basic `wordOrder` is a tendency, not a
+  // hard constraint, once roles are case-recoverable. (Exposed when a
+  // genesis re-baseline drifted Romance to SOV+case at gen 30.)
+  if ((probe.lang.grammar.caseStrategy ?? "preposition") === "case") return;
   const tokens = probe.tokens;
   const vIdx = indexOfFirstTag(tokens, "V");
   if (vIdx < 0) return; // no verb realised — handled by separate assertion

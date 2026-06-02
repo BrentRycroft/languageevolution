@@ -88,6 +88,7 @@ export default defineConfig(({ command }) => ({
             // default `npm test` stays well under budget. CI / pre-push
             // runs `npm run test:slow` for the full surface.
             "**/divergence_regression.test.ts",
+            "**/realism_scorecard.test.ts",
             "**/integration_e2e.test.ts",
             "**/sprint4_realism_polish.test.ts",
             "**/rate_calibration.test.ts",
