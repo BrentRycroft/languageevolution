@@ -471,6 +471,15 @@ export interface Language {
   lexicalSpelling?: Record<Meaning, string>;
   otRanking: string[];
   lastChangeGeneration: Record<Meaning, number>;
+  /**
+   * Evolution-realism Phase 3e: per-pair recarve memory. Maps an unordered
+   * meaning-pair key (`a|b`, sorted) → the generation it was last merged or
+   * split. maybeRecarve skips a pair recarved within RECARVE_COOLDOWN gens so
+   * a colexified pair can't oscillate cold→cool→cold every few generations
+   * (real semantic recarving is a once-in-a-long-while reanalysis, not a
+   * flip-flop). Undefined → no pair has recarved yet.
+   */
+  recarveHistory?: Record<string, number>;
   stressPattern?: "initial" | "penult" | "final" | "antepenult" | "lexical";
   /**
    * Phase 26b: how the language realises the infinitive (citation form)

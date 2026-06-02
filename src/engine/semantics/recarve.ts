@@ -24,6 +24,35 @@ export interface RecarveEvent {
   newTarget?: Meaning;
 }
 
+/**
+ * Evolution-realism Phase 3e: a colexified pair that just merged (or split)
+ * cannot recarve again for this many generations. Without it, merge and split
+ * are exact inverses on the same colexWith pair, so a single pair (cold/cool,
+ * arm/hand) flip-flops merge→split→merge every few gens — a deterministic
+ * oscillation, not language change. Cross-linguistically, semantic reanalysis
+ * of a given pair is a rare once-off, so a long cooldown is the realistic gate.
+ */
+const RECARVE_COOLDOWN = 50;
+
+function pairKey(a: Meaning, b: Meaning): string {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+function recarvedRecently(
+  lang: Language,
+  a: Meaning,
+  b: Meaning,
+  generation: number,
+): boolean {
+  const last = lang.recarveHistory?.[pairKey(a, b)];
+  return last !== undefined && generation - last < RECARVE_COOLDOWN;
+}
+
+function stampRecarve(lang: Language, a: Meaning, b: Meaning, generation: number): void {
+  if (!lang.recarveHistory) lang.recarveHistory = {};
+  lang.recarveHistory[pairKey(a, b)] = generation;
+}
+
 export function maybeRecarve(
   lang: Language,
   rng: Rng,
@@ -34,9 +63,9 @@ export function maybeRecarve(
   if (rng.chance(0.55)) {
     const merged = tryMerge(lang, rng, generation);
     if (merged) return merged;
-    return trySplit(lang, rng);
+    return trySplit(lang, rng, generation);
   }
-  const split = trySplit(lang, rng);
+  const split = trySplit(lang, rng, generation);
   if (split) return split;
   return tryMerge(lang, rng, generation);
 }
@@ -51,6 +80,8 @@ function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | 
       const k = a < b ? `${a}|${b}` : `${b}|${a}`;
       if (seen.has(k)) continue;
       seen.add(k);
+      // Phase 3e: skip a pair that merged/split within the cooldown.
+      if (recarvedRecently(lang, a, b, generation)) continue;
       pairs.push([a, b]);
     }
   }
@@ -71,6 +102,7 @@ function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   });
   if (lang.suppletion) delete lang.suppletion[loser];
   recordOneSidedColexification(lang, winner, loser);
+  stampRecarve(lang, winner, loser, generation);
   return { kind: "merge", winner, loser };
 }
 
@@ -110,12 +142,14 @@ export function applyKinshipSimplification(
   return out;
 }
 
-function trySplit(lang: Language, rng: Rng): RecarveEvent | null {
+function trySplit(lang: Language, rng: Rng, generation: number): RecarveEvent | null {
   const meanings = lexKeys(lang).filter(isRegisteredConcept);
   const candidates: Array<{ source: Meaning; target: Meaning }> = [];
   for (const source of meanings) {
     for (const target of colexWith(source)) {
       if (lexHas(lang, target)) continue;
+      // Phase 3e: skip a pair that merged/split within the cooldown.
+      if (recarvedRecently(lang, source, target, generation)) continue;
       candidates.push({ source, target });
     }
   }
@@ -136,5 +170,6 @@ function trySplit(lang: Language, rng: Rng): RecarveEvent | null {
     lang.registerOf[pick.target] = reg;
   }
   lang.wordOrigin[pick.target] = `split:${pick.source}`;
+  stampRecarve(lang, pick.source, pick.target, generation);
   return { kind: "split", source: pick.source, newTarget: pick.target };
 }
