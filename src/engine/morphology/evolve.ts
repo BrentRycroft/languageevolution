@@ -704,9 +704,24 @@ export function inflectCascade(
   meaning: string,
 ): CascadeResult {
   const available = categories.filter((c) => !!lang.morphology.paradigms[c]);
+  // Phase 4d: TAM mutual exclusion. A MorphCategory is `<pos>.<axis>.<value>`
+  // (verb.tense.past, verb.tense.fut, verb.aspect.pfv, …). At most ONE value
+  // per axis may surface on a word — a verb can't be simultaneously past AND
+  // future, or perfective AND imperfective. Keep the first requested value per
+  // axis (caller order = priority) and drop later same-axis competitors BEFORE
+  // the synthesis cap, so the cap then limits how many distinct axes stack.
+  // (Lifts the narrative composer's one-per-axis stack into the core.)
+  const seenAxes = new Set<string>();
+  const oncePerAxis: MorphCategory[] = [];
+  for (const c of available) {
+    const axis = c.slice(0, c.lastIndexOf("."));
+    if (seenAxes.has(axis)) continue;
+    seenAxes.add(axis);
+    oncePerAxis.push(c);
+  }
   const synth = lang.grammar.synthesisIndex ?? 2.0;
   const cap = Math.max(1, Math.round(synth));
-  const slice = available.slice(0, cap);
+  const slice = oncePerAxis.slice(0, cap);
 
   // Phase 63: verb theme stripping. When the language declares
   // `grammar.verbThemes` (citation-form markers like Romance -aɾe /

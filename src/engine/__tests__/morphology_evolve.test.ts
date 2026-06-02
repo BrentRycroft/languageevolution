@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyPhonologyToAffixes, maybeGrammaticalize, maybeMergeParadigms, maybeDropCollapsedParadigm, inflect } from "../morphology/evolve";
+import { applyPhonologyToAffixes, maybeGrammaticalize, maybeMergeParadigms, maybeDropCollapsedParadigm, inflect, inflectCascade } from "../morphology/evolve";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
@@ -133,6 +133,29 @@ describe("morphology evolution", () => {
     const shift = maybeDropCollapsedParadigm(lang, rng, 1);
     expect(shift).toBeNull();
     expect(Object.keys(lang.morphology.paradigms).length).toBe(1);
+  });
+
+  it("Phase 4d: inflectCascade applies at most one value per TAM axis", () => {
+    const lang = makeLang();
+    lang.grammar.synthesisIndex = 3; // cap = 3: room for several distinct axes
+    lang.morphology.paradigms["verb.tense.fut"] = {
+      affix: ["s"], position: "suffix", category: "verb.tense.fut",
+    };
+    lang.morphology.paradigms["verb.aspect.pfv"] = {
+      affix: ["a"], position: "suffix", category: "verb.aspect.pfv",
+    };
+    // Request past + future (same axis) + perfective (different axis).
+    const { applied } = inflectCascade(
+      ["w", "a", "k"],
+      ["verb.tense.past", "verb.tense.fut", "verb.aspect.pfv"],
+      lang,
+      "walk",
+    );
+    // Exactly ONE tense survives (the first requested), and the aspect axis
+    // is independent — no past+future stack.
+    expect(applied.filter((c) => c.startsWith("verb.tense.")).length).toBe(1);
+    expect(applied).toContain("verb.tense.past");
+    expect(applied).toContain("verb.aspect.pfv");
   });
 
   it("inflect appends suffixes and prepends prefixes correctly", () => {
