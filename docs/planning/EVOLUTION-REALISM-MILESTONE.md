@@ -179,6 +179,29 @@ delete/rewire a legacy code path.
 that coined words read like real neologisms (no `ape = seal+piglet`).
 **Effort:** M. **Risk:** low–medium.
 
+### STATUS: DONE (2026-06-02) — 2a `2e91ea2`, 2b+2c `1bdf01c`
+
+The scorecard's compound metric was rebuilt: the old `parts.includes(m)` was 0% by
+construction (no compound puts the target itself among its parts) and measured nothing.
+Replaced with a **decomposition-MATCH rate** — of true compounds (affixes/derivations
+excluded) whose target carries a curated cross-linguistic `decomposition`, the share whose
+parts match it. Rose from a meaningless 0% to **80–100% across all presets**.
+- **2a:** `compound.ts` prefers the concept's curated `decomposition` (authentic head-final
+  kenning: breeze=small+wind, hail=hard+rain, hurricane=big+storm) via
+  `attemptConceptDecomposition`; REFUSES a sibling mashup for a decomposable target whose
+  parts aren't lexicalised yet; related-pool only for decomposition-less targets.
+- **2b:** reduplication (was `void target`) + clipping now require a RELATED base;
+  conversion already cluster-constrained (left as-is).
+- **2c:** dropped the fully-random `pickMeanings(rng,2)` fallback in the legacy
+  spontaneous-compound rule; removed the orphaned helper.
+- Collateral (single-seed RNG-reshuffle, both linguistically justified, not bug-hiding):
+  scorecard @5000yr Swadesh floor → catastrophe guard (0.1); narrative word-order invariant
+  relaxed for case-marking languages (case ↔ free-word-order universal).
+
+NB the plan's "share the curated colex/neighbor graph with Phase 3" was satisfied via the
+`decomposition` field + `relatedMeanings`/`neighborsOf`; Phase 3 will drive drift from the
+same graph.
+
 ---
 
 ## Phase 3 — Semantic-change integrity
