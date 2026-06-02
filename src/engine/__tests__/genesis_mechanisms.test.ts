@@ -4,6 +4,7 @@ import { defaultConfig } from "../config";
 import { MECHANISMS } from "../genesis/mechanisms";
 import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
+import { lexSet } from "../lexicon/access";
 
 /**
  * genesis_mechanisms.test.ts
@@ -57,10 +58,17 @@ describe("genesis mechanisms", () => {
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
-    lang.lexicon["laboratory"] = ["l", "a", "b", "o", "r", "a", "t", "o", "r", "i"];
+    // Phase 2b (evolution-realism): clipping now clips a longer word that is
+    // SEMANTICALLY RELATED to the target, not a random long lexeme. Give the
+    // body-cluster concept "head" a long form and clip it for the related
+    // target "eye" (both in the `body` cluster, so relatedMeanings links
+    // them). The old setup clipped an injected "laboratory" — a non-concept
+    // unrelated to anything — which the related-base guard now (correctly)
+    // refuses.
+    lexSet(lang, "head", ["h", "a", "u", "b", "i", "d", "a"]);
     const rng = makeRng("clip");
     const clip = MECHANISMS.find((m) => m.id === "mechanism.clipping")!;
-    const result = clip.tryCoin(lang, "lab", state.tree, rng);
+    const result = clip.tryCoin(lang, "eye", state.tree, rng);
     expect(result).not.toBeNull();
     if (!result) return;
     expect(result.form.length).toBeLessThan(6);
