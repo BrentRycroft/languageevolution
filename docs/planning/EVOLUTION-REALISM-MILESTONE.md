@@ -57,6 +57,32 @@ curve, frequency Zipf ratio, compound-coherence %, antonym-drift count.
 agent findings).
 **Effort:** S–M. **Risk:** low. Foundational — everything else measures against it.
 
+### STATUS: DONE (2026-06-01) — `src/engine/__tests__/realism_scorecard.test.ts` (RUN_SLOW)
+
+Each preset is evolved as a **single non-splitting, non-dying lineage**
+(`splitProbabilityPerGeneration = 0`, `modes.death = false`) for 200 gens (5000 yr at
+25 yr/gen), measured vs the gen-0 seed. Bands are a wide "don't regress past today"
+floor; the report prints live numbers. Measured baseline (confirms the audit):
+
+| Metric | default | pie | germanic | romance | bantu | tokipona | english | audit |
+|---|---|---|---|---|---|---|---|---|
+| Swadesh @1000yr | 79% | 61% | 43% | 59% | 36% | 83% | 98% | ~54% |
+| Whole-lex identical @1000yr | 5.3% | 8.0% | 7.5% | 3.9% | 7.2% | 9.9% | 13.2% | 5–11% |
+| /h/ onset share | 0.6% | 8.2% | 23.5% | 5.9% | 11.5% | 19.4% | 8.0% | /h/ 34% |
+| voiceless-stop p/t/k onset | 12.2% | 4.4% | 1.8% | 4.7% | 2.3% | 16.3% | 0.5% | marginal |
+| Homophony rate | 3.4% | 11.4% | 11.5% | 10.2% | 26.7% | 12.1% | 17.2% | 6–16% |
+| Synthesis / type | 3.31 poly | 4.38 poly | 3.03 poly | 3.72 poly | 4.50 poly | 1.00 isol | 2.40 fus | →poly |
+| Lexicon size ratio @5000yr | 1.42× | 2.55× | 3.55× | 4.80× | 3.88× | 6.14× | 2.89× | +12–47% |
+| Zipf rank1/rank100 (cap-pinned) | 1.00 (60%) | 1.01 (15%) | 1.01 (25%) | 1.03 (5%) | 1.01 (11%) | 1.00 (31%) | 1.34 (1%) | flat @0.95 |
+| Compound coherence | 0% | 0% | 0% | 0% | 0% | 0% | 0% | ~0% |
+| Antonym embed-cosine (mean / max) | .71/.99 | .71/.99 | .68/.99 | .70/.99 | .68/.99 | .68/.99 | .72/1.00 | cos≈.95–.99 |
+
+Notes: synthesis ratchet hits 5/7 (tokipona stays isolating, english fusional — the
+mechanism isn't universal, but Romance going polysynthetic is clearly wrong). The
+antonym embed-cosine **max ≈ 0.99 in every preset** is the audit's degeneracy made
+numerical. Compound coherence 0% across all 7 (n=61–364) is the cleanest single
+reproduction. These are the numbers phases 1–6 must move.
+
 ---
 
 ## Phase 1 — Phonology rule integrity (cheap, highest cascade)
