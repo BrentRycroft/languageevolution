@@ -248,6 +248,23 @@ distribution is directionally sane (not 77% metonymy); taboo targets are referen
 words; no recarve oscillation.
 **Effort:** M–L. **Risk:** medium.
 
+### STATUS: 3a+3b+3d+3e DONE; 3c + 3f DEFERRED (2026-06-02)
+- **3a+3b DONE (`c6ef174`):** drift draws its PRIMARY candidate from the curated
+  colex + SEMANTIC_NEIGHBORS graph (degenerate 12-dim embedding + whole-cluster
+  relatedMeanings demoted to fallbacks); a word's curated gradable antonym is
+  excluded from the candidate pool (no alive→dead drift). Scorecard antonym-drifts=0.
+- **3d DONE (`42942e3`):** taboo replacement gates on a curated dangerous-referent
+  set (death / supernatural / predator / disease / sex / in-law), not freq ≥ 0.7
+  (which wrongly hit go/take/want/see).
+- **3e DONE (`101f95a`):** per-pair recarve cooldown (`recarveHistory` + 50-gen
+  recency check in tryMerge/trySplit) kills the cold→cool→cold flip-flop.
+  Byte-identical at gen 30 (oscillation only lives in the 200-gen scorecard runs).
+- **3c DEFERRED:** directional clines (abstractness axis) — larger semantic-typology
+  change, lower urgency; logged for a later pass.
+- **3f DEFERRED:** colex-from-recorded-polysemy — analysis/UI correctness, low
+  evolution impact; logged.
+- Phase-3 gate: full `RUN_SLOW` green (1983 pass) at `101f95a`.
+
 ---
 
 ## Phase 4 — Restore the missing cycles (STRUCTURAL — the big one)

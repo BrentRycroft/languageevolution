@@ -343,6 +343,22 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
 
 ## Backlog (top = next)
 
+- [ ] **SLOW-SUITE SHARED FIXTURES (2026-06-02, user-raised — "tests are the most
+      time-consuming issue").** The full `RUN_SLOW` suite recomputes ~dozens of
+      independent multi-hundred-gen lineages from scratch, many over the SAME
+      `(preset, seed, gens)` — pure redundancy, since the engine is deterministic.
+      FIX: a memoized shared-fixture module that builds each `(preset, 200, seed)`
+      lineage ONCE and lets every metric assertion (realism_scorecard, historical,
+      proto_preservation, rate_calibration, integration_e2e, …) read from the cached
+      sim. Safe by construction (cached sim is byte-identical to what each test built
+      itself); cuts the dominant cost ~5–6× with zero coverage loss. Est. medium.
+      DECIDED 2026-06-02 (user): adopt the cheap discipline NOW — run the FULL slow
+      suite only at milestone/phase boundaries, and day-to-day gate on fast tier +
+      byte-identity (`meaning_layer`, 6×30) + only the slow files whose subsystem a
+      change touched; `vitest --changed` in watch for the inner loop. The fixture
+      refactor itself is deferred to its own committed task (do NOT fold into a realism
+      phase). See [[iterate-fast-precise-tests]].
+
 - [ ] **EVOLUTION REALISM AUDIT (2026-06-01, user-driven — "evolution doesn't feel
       right").** Diagnostic only (NO edits made); 5 parallel sub-agents each audited one
       evolution slice on the real presets with throwaway probes. Findings are
