@@ -1324,6 +1324,14 @@ export interface SimulationConfig {
     maxDistanceForRivalry: number;
     copulaLossProbability?: number;
     copulaGenesisProbability?: number;
+    /**
+     * Evolution-realism Phase 4e: base per-generation probability that a
+     * LOW-frequency content word simply falls out of use (no near-homophone
+     * rival needed). Scaled by how far below the threshold the word's
+     * frequency sits × conservatism. Balances the genesis expansion pressure
+     * so lexicon size is roughly stationary (births ≈ deaths). Undefined → 0.
+     */
+    lowFreqProbability?: number;
   };
   morphology: {
     grammaticalizationProbability: number;

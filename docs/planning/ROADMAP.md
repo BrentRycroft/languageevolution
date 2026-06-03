@@ -343,6 +343,38 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
 
 ## Backlog (top = next)
 
+- [ ] **STRATAL UR REFRESH ORDERING (2026-06-03, surfaced in evolution-realism
+      Phase 6).** Under the each-gen `lexiconURRefreshPolicy`, `refreshUR` runs
+      inside the phonology step (steps/phonology.ts:273), but `stepTaboo` /
+      `stepObsolescence` / recarve mutate word FORMS later in the same generation —
+      so a word changed by one of those after refreshUR has a stale UR until next
+      gen. phase72_defer1 "UR mirrors SR" now tolerates ≤3 such post-refresh
+      mismatches. Proper fix: invoke refreshUR at the END of the step (after all
+      form-mutating substeps) for the each-gen policy. (Also: `deleteMeaning` does
+      not currently prune `lexiconUR`, leaving a stale entry on word death — clean
+      that in the same pass.) Stratal mode is opt-in; low urgency.
+
+- [ ] **LEXICON SIZE STATIONARITY (2026-06-03, evolution-realism Phase 4e/6).**
+      Phase 4e added a low-frequency word-DEATH channel (stepObsolescence) and 6
+      lowered the EXPANSION_NEED birth pressure (0.15→0.10), but the single-lineage
+      scorecard lexicon-size ratio is still 1.5–6× (tokipona ~6×) rather than the
+      ~1.0 stationary ideal. Death only prunes freq<0.3 words while coined tier-0/1
+      concepts sit above that, and the genesis EXPANSION_NEED keeps filling in
+      BASIC_240 concepts a minimalist preset (tokipona) deliberately lacks. Needs
+      birth/death RATE calibration (and likely a per-preset cap on how much of the
+      universal concept set a language fills) to reach stationarity. Band guard
+      (<8×) holds; the ~1.0 target is aspirational.
+
+- [ ] **6a SYNTHESIS NUDGE ON BARE LINEAGES (2026-06-03).** Phase 6a's frequency
+      STABILITY (mean-reversion keeps core words above the grammaticalisation
+      freq-floor) nudged the bare single-lineage Romance scorecard synthesis from
+      2.53 (Phase 4) back to ~3.6, partially eating Phase 4's ratchet-break gain for
+      that lineage. Defensible (bare Latin can stay synthetic; the Latin→French
+      shed is schedule-driven, tested in historical.test.ts) so the scorecard guard
+      was relaxed 3.5→4.0. But if it climbs toward 4.0, revisit: either raise the
+      grammaticalisation freq-floor or strengthen the paradigm-loss/analytic-pull
+      so frequency-stability doesn't over-feed paradigm accumulation.
+
 - [ ] **STRESS-REDUCTION BOOST PROXY (2026-06-02, surfaced in evolution-realism
       Phase 5).** `stress_surface.test.ts` claimed fixed-stress languages develop
       MORE vowel-reduction than lexical-stress ones (the apply.ts 1.2× unstressed-

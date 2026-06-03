@@ -39,7 +39,15 @@ export function stepTreeSplit(
   const capPressure = config.tree.unlimitedLeaves
     ? 1
     : capSoftness(aliveLeaves.length, config.tree.maxLeaves);
-  const p = config.tree.splitProbabilityPerGeneration * capPressure * realismMultiplier(config);
+  // Phase 6d: tie split probability to POPULATION. Larger, growing speech
+  // communities fragment into dialects → daughter languages; small or shrinking
+  // ones rarely do. Scaling by population (relative to the 10k seed) ties
+  // cladogenesis to demographic growth instead of a flat per-generation
+  // coin-flip, cutting the wild split-timing variance (the audit's gen-22 vs
+  // gen-166 for the same config). Bounded so it modulates, not dominates.
+  const popFactor = Math.max(0.3, Math.min(2.5, (lang.speakers ?? 10000) / 10000));
+  const p =
+    config.tree.splitProbabilityPerGeneration * capPressure * realismMultiplier(config) * popFactor;
   if (rng.chance(p)) {
     splitLeaf(state.tree, leafId, state.generation + 1, rng, {
       worldMap: getWorldMap(config.mapMode ?? "random", config.seed),

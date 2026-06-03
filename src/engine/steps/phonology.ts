@@ -13,7 +13,7 @@ import { recordCorrespondences } from "../phonology/soundLaws";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import { literaryStabilityFor } from "../lexicon/literacy";
 import { ageAndRetire, proposeOneRule, proposePushChain, proposeMutationOf, reinforce } from "../phonology/propose";
-import { bumpFrequency, decayFrequencies } from "../lexicon/frequencyDynamics";
+import { decayFrequencies } from "../lexicon/frequencyDynamics";
 import { recordVariant, reinforceCanonical, decayAndActuate } from "../lexicon/variants";
 import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
 import { matchSites, hasAnyMatch } from "../phonology/generated";
@@ -382,7 +382,11 @@ export function stepPhonology(
     if (a !== b) {
       mutated++;
       lang.lastChangeGeneration[m] = generation;
-      bumpFrequency(lang, m, 0.04);
+      // Phase 6a: NO frequency bump on sound change. A word changing its form
+      // is not evidence it is used more often; the old +0.04 (with +0.06 per
+      // actuation below) swamped the ×0.998 decay and saturated every word at
+      // the 0.95 cap, turning "frequency" into word-age. Frequency now reflects
+      // its Zipfian rank seed, mean-reverted in decayFrequencies.
       recordVariant(lang, m, before[cid]!, generation, 0.55);
       recordVariant(lang, m, cur, generation, 0.7);
       recordInnovation(lang, m, before[cid]!, cur, generation, "phonology");
@@ -412,7 +416,8 @@ export function stepPhonology(
   ];
   for (const a of allActuations) {
     lang.lastChangeGeneration[a.meaning] = generation;
-    bumpFrequency(lang, a.meaning, 0.06);
+    // Phase 6a: actuation is a sound-change diffusion event, not a usage event —
+    // no frequency bump (see the mutation loop above).
   }
   if (allActuations.length === 1) {
     const a = allActuations[0]!;

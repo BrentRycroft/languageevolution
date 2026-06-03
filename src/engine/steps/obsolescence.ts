@@ -3,9 +3,11 @@ import { levenshtein } from "../phonology/ipa";
 import { complexityFor } from "../lexicon/complexity";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
-import { findWordsByMeaning } from "../lexicon/word";
+import { findWordsByMeaning, recordedParts } from "../lexicon/word";
 import { deleteMeaning } from "../lexicon/mutate";
 import { lexGet, lexKeys } from "../lexicon/access";
+import { tierOf } from "../lexicon/concepts";
+import { isClosedClass, posOf } from "../lexicon/pos";
 
 /**
  * Phase 21d: two meanings sharing the same Word entry are not rivals —
@@ -23,12 +25,55 @@ function shareWord(lang: Language, a: string, b: string): boolean {
   return false;
 }
 
+/**
+ * Phase 4e: low-frequency obsolescence. A content word whose usage frequency
+ * has fallen far enough simply drops out of use — no near-homophone rival
+ * required. Loss probability rises as frequency falls below LOW_FREQ_THRESHOLD.
+ * Tier-0 forager core (the Swadesh-stable vocabulary), closed-class function
+ * words, and structured compounds/derivations are protected. This is the death
+ * side of the lexical-turnover cycle: it balances the genesis EXPANSION_NEED
+ * birth pressure so the lexicon stays roughly stationary instead of only ever
+ * growing.
+ */
+const LOW_FREQ_THRESHOLD = 0.3;
+
+function maybeLowFreqObsolescence(
+  lang: Language,
+  config: SimulationConfig,
+  rng: Rng,
+  generation: number,
+): boolean {
+  const base = config.obsolescence.lowFreqProbability ?? 0;
+  if (base <= 0) return false;
+  const meanings = lexKeys(lang);
+  if (meanings.length < 1) return false;
+  const m = meanings[rng.int(meanings.length)]!;
+  // Protected: forager-core (Swadesh-stable), function words, and words with a
+  // recorded compound/derivation structure (they fade with their parts, not here).
+  if (tierOf(m) === 0) return false;
+  if (isClosedClass(posOf(m))) return false;
+  if (recordedParts(lang, m) !== null) return false;
+  const freq = lang.wordFrequencyHints[m] ?? 0.5;
+  if (freq >= LOW_FREQ_THRESHOLD) return false;
+  // Probability rises linearly as frequency drops below the threshold.
+  const p = base * ((LOW_FREQ_THRESHOLD - freq) / LOW_FREQ_THRESHOLD) * lang.conservatism;
+  if (!rng.chance(p)) return false;
+  deleteMeaning(lang, m, { generation, reason: "low-frequency-obsolescence" });
+  pushEvent(lang, {
+    generation,
+    kind: "lexical_replacement",
+    description: `lost low-frequency "${m}" (fell out of use)`,
+  });
+  return true;
+}
+
 export function stepObsolescence(
   lang: Language,
   config: SimulationConfig,
   rng: Rng,
   generation: number,
 ): void {
+  maybeLowFreqObsolescence(lang, config, rng, generation);
   const meanings = lexKeys(lang);
   if (meanings.length < 2) return;
   for (let attempt = 0; attempt < 6; attempt++) {

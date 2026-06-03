@@ -100,15 +100,16 @@ function jitterBias(
 }
 
 function pickChildCount(rng: Rng): number {
+  // Phase 6d: real cladogenesis is overwhelmingly BINARY — a parent language
+  // splits into two daughters. Hard polytomies (a clean N-way burst from one
+  // node) are the rare exception (rapid migration/conquest scattering a
+  // community simultaneously). Bias strongly toward 2 and cap the tail at 5, so
+  // family trees are mostly bifurcating instead of comb-like multifurcations.
   const r = rng.next();
-  if (r < 0.6) return 2;
-  if (r < 0.85) return 3;
-  if (r < 0.93) return 4;
-  if (r < 0.97) return 5;
-  if (r < 0.99) return 6;
-  if (r < 0.995) return 7;
-  if (r < 0.998) return 8;
-  return 9;
+  if (r < 0.85) return 2;
+  if (r < 0.95) return 3;
+  if (r < 0.985) return 4;
+  return 5;
 }
 
 export function pickFirstSplitChildCount(rng: Rng): number {

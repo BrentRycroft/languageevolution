@@ -137,7 +137,12 @@ describe("Phase 23 — high-frequency word persistence (shorter sim)", () => {
 
     let everChanged = false;
     let endChanged = false;
-    for (let i = 0; i < 100; i++) {
+    // Evolution-realism Phase 6b made high-freq core vocabulary (water is tier-0,
+    // freq ~0.88) erode much more slowly (the frequency-conservation universal),
+    // so 100 gens (2500 yr) is no longer enough for water to change for this seed.
+    // Lengthen to 250 gens (~6000 yr — the real PIE *wódr̥ → water timescale): the
+    // point of the test (a change, once made, is NOT reverted) is unchanged.
+    for (let i = 0; i < 250; i++) {
       sim.step();
       const leaves = leafIds(sim.getState().tree).filter(
         (id) => !sim.getState().tree[id]!.language.extinct,
