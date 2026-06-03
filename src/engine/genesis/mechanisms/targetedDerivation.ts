@@ -4,6 +4,8 @@ import { derivationFor } from "../../lexicon/derivation_targets";
 import { findSuffixByCategory, type DerivationalSuffix } from "../../lexicon/derivation";
 import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
 import { recordedParts } from "../../lexicon/word";
+import { posOf } from "../../lexicon/pos";
+import type { DerivationCategory } from "../../lexicon/derivation";
 
 /**
  * Targeted derivation: when the genesis loop is asked to coin a meaning M
@@ -90,7 +92,14 @@ export function attemptProductiveDerivation(
   lang: Language,
   rng: Rng,
 ): TargetedDerivationResult | null {
-  const suffixes = (lang.derivationalSuffixes ?? []).filter((s) => s.productive);
+  // Phase 5a: exclude suffixes with no category from the productive path.
+  // Bantu noun-class prefixes (ku-/mu-/ka-) get stored as derivationalSuffixes
+  // with `category===undefined` + productive; with no category they match no
+  // root-POS filter below and so were smeared onto conjunctions/adjectives.
+  // A categoryless affix has no well-defined derivation semantics — skip it.
+  const suffixes = (lang.derivationalSuffixes ?? []).filter(
+    (s) => s.productive && (s as { category?: DerivationCategory }).category !== undefined,
+  );
   if (suffixes.length === 0) return null;
 
   // Pick a random productive suffix.
@@ -121,16 +130,15 @@ export function attemptProductiveDerivation(
     if (lexHas(lang, `${m}-${suffix.tag}`)) continue;
     // Skip closed-class.
     if (m.length <= 1) continue;
-    // POS-match heuristic by simple word lists. The simulator's
-    // posOf is in lexicon/pos.ts but importing here would create a
-    // cycle; the heuristic below is good enough for the productive
-    // path.
-    const looksVerb = ["go", "see", "eat", "drink", "speak", "make", "take", "give", "run", "walk", "sleep", "write", "read", "fight", "kill", "build", "find", "lose", "throw", "catch", "hold", "carry", "bring", "send"].includes(m);
-    const looksAdj = ["big", "small", "good", "bad", "new", "old", "long", "short", "hot", "cold", "wet", "dry", "young", "happy", "sad", "free", "kind", "wise"].includes(m);
-    const looksNoun = !looksVerb && !looksAdj;
-    if (wantsVerb && !looksVerb) continue;
-    if (wantsAdj && !looksAdj) continue;
-    if (wantsNoun && !looksNoun) continue;
+    // Phase 5a: POS-match via the engine's own `posOf`, not a hardcoded
+    // English wordlist. (pos.ts imports only the Meaning type — a leaf module
+    // — so there is no import cycle; the old comment's cycle fear was unfounded.)
+    // This de-anglicises root eligibility: any preset's roots are classified by
+    // the same concept-registry POS the rest of the engine uses.
+    const pos = posOf(m);
+    if (wantsVerb && pos !== "verb") continue;
+    if (wantsAdj && pos !== "adjective") continue;
+    if (wantsNoun && pos !== "noun") continue;
     candidates.push(m);
   }
   if (candidates.length === 0) return null;

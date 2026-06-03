@@ -278,6 +278,16 @@ function maybeArticleEmergence(
   rng: Rng,
 ): MorphShift | null {
   if (lang.grammar.articlePresence !== "none") return null;
+  // Phase 5b: a typological gate, not just cultural tier. Classifier languages
+  // (Mandarin, Thai, most of MSEA/East Asian) and isolating languages mark
+  // definiteness with demonstratives/word order, not grammaticalised articles —
+  // article development is a Western-Eurasian areal trait. Don't let cultural
+  // tier alone push articles onto a classifier or strongly-isolating language.
+  if (lang.grammar.classifierSystem) return null;
+  if ((lang.grammar.synthesisIndex ?? 2.0) < 1.0 &&
+      lang.grammar.morphologicalType === "isolating") {
+    return null;
+  }
   // Need a demonstrative source — "that" is the cross-linguistically
   // dominant donor for definite articles; "this" is rarer; "the" if
   // already present (closed-class seeded) means we already half-have
@@ -830,10 +840,39 @@ const VOWEL_MUTATIONS: Record<string, string> = {
   i: "ɪ",
 };
 
-function vowelMutationOf(form: import("../types").WordForm): import("../types").WordForm | null {
+/**
+ * Phase 5d: a vowel-alternation map FOSSILISED from the language's own recorded
+ * vowel sound-changes (vowel_shift / vowel_reduction / harmony rule outputMaps),
+ * so ablaut irregulars reflect THIS language's history — a language that
+ * underwent an a→e shift gets a/e ablaut — instead of the hardcoded German
+ * i-umlaut template (foot/feet). Returns {} when no vowel change is on record;
+ * the caller then falls back to the neutral template.
+ */
+function recordedVowelMutations(lang: Language): Record<string, string> {
+  const out: Record<string, string> = {};
+  const rules = [...(lang.activeRules ?? []), ...(lang.retiredRules ?? [])];
+  for (const r of rules) {
+    if (r.family !== "vowel_shift" && r.family !== "vowel_reduction" && r.family !== "harmony") {
+      continue;
+    }
+    for (const [from, to] of Object.entries(r.outputMap)) {
+      if (from === to) continue;
+      if (!isVowelLike(from) || !isVowelLike(to)) continue;
+      if (!(from in out)) out[from] = to; // first recorded change wins
+    }
+  }
+  return out;
+}
+
+function vowelMutationOf(
+  form: import("../types").WordForm,
+  lang: Language,
+): import("../types").WordForm | null {
+  const recorded = recordedVowelMutations(lang);
+  const map = Object.keys(recorded).length > 0 ? recorded : VOWEL_MUTATIONS;
   for (let i = form.length - 1; i >= 0; i--) {
     const p = form[i]!;
-    const swap = VOWEL_MUTATIONS[p];
+    const swap = map[p];
     if (swap) {
       const out = form.slice();
       out[i] = swap;
@@ -870,7 +909,7 @@ export function maybeVowelMutationIrregular(
   if (existing) return null;
   const baseForm = lexGet(lang, meaning);
   if (!baseForm || baseForm.length < 2) return null;
-  const mutated = vowelMutationOf(baseForm);
+  const mutated = vowelMutationOf(baseForm, lang);
   if (!mutated) return null;
   if (!lang.suppletion) lang.suppletion = {};
   if (!lang.suppletion[meaning]) lang.suppletion[meaning] = {};
