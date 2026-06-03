@@ -219,6 +219,13 @@ export interface ApplyOptions {
    * Defaults to `true`. Set false for back-compat replay.
    */
   markednessBias?: boolean;
+  /**
+   * Experimental (config.modes.swadeshProtection). When explicitly false, the
+   * high-frequency erosion brake is skipped so core/high-freq vocabulary
+   * drifts at the same rate as everything else. Undefined/true → brake applies
+   * (stock behaviour, byte-identical).
+   */
+  swadeshProtection?: boolean;
   _orderedChanges?: SoundChange[];
 }
 
@@ -501,12 +508,16 @@ export function applyChangesToWord(
   // with frequency instead of switching on at a 0.85 cliff for a fixed concept
   // set, so ANY language's high-freq vocabulary is conserved (de-anglicised).
   // (SWADESH_CONTENT_CORE survives only as the SWADESH_CORE_SET analysis export.)
-  if (isClosedClassAnchor(meaning, opts.langForHomonym)) {
-    // Function words drift slowly (acquired early, rarely innovated).
-    if (freq >= 0.6) freqExponent *= 0.5;
-  } else if (isContentWord(meaning) && freq >= 0.55) {
-    // freq 0.55 → ×1.0 (no extra brake); freq 0.95 → ×0.55 (strong brake).
-    freqExponent *= Math.max(0.55, 1 - ((freq - 0.55) / 0.4) * 0.45);
+  // Experimental swadeshProtection=false skips the whole brake so core/high-
+  // freq vocabulary erodes at the same rate as rare words.
+  if (opts.swadeshProtection !== false) {
+    if (isClosedClassAnchor(meaning, opts.langForHomonym)) {
+      // Function words drift slowly (acquired early, rarely innovated).
+      if (freq >= 0.6) freqExponent *= 0.5;
+    } else if (isContentWord(meaning) && freq >= 0.55) {
+      // freq 0.55 → ×1.0 (no extra brake); freq 0.95 → ×0.55 (strong brake).
+      freqExponent *= Math.max(0.55, 1 - ((freq - 0.55) / 0.4) * 0.45);
+    }
   }
   // Phase 38d: low-freq content boost. Real low-freq vocabulary
   // churns faster than the smooth curve predicts (rare technical

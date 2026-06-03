@@ -176,6 +176,7 @@ export function prunePhonemes(
   rng: Rng,
   generation: number = 0,
   ctx: PrunePhonemesContext = {},
+  protect: boolean = true,
 ): PhonemeMerger | null {
   const inventory = lang.phonemeInventory.segmental;
   if (inventory.length < MIN_INVENTORY_TO_PRUNE) return null;
@@ -289,7 +290,7 @@ export function prunePhonemes(
       for (const raw of form) if (stripTone(raw) === candidate) { hasCand = true; break; }
       if (!hasCand) continue;
       const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
-      if (freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) continue;
+      if (protect && freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) continue;
       const projected: WordForm = form.map((raw) => {
         const tone = raw.length > stripTone(raw).length ? raw.slice(stripTone(raw).length) : "";
         const base = stripTone(raw);
@@ -329,7 +330,7 @@ export function prunePhonemes(
     }
     if (!containsCandidate) continue;
     const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
-    if (freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) {
+    if (protect && freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) {
       swadeshSkipped++;
       continue;
     }

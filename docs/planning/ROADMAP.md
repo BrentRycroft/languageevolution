@@ -343,6 +343,28 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
 
 ## Backlog (top = next)
 
+- [ ] **TRANSLATOR: invents forms for missing number / interjection / preposition
+      concepts (2026-06-03, USER-REPORTED).** When the translator detects a number,
+      interjection, or preposition that the language has NO lexeme for, it fabricates
+      a form on the fly instead of failing gracefully / falling back. Repro: type
+      `no` into the translator on the modern-English preset → returns `ngich` (should
+      be the known negator, not a coined form). User: "probably a small fix." Likely
+      a coinage/realisation fallback firing for closed-class concepts that should
+      only ever surface an existing lexeme (or a clean "unknown" marker). Find where
+      the realiser coins-on-miss for these POS classes and gate it. Cross-ref
+      [[de-anglicization]] / closed-class handling.
+
+- [ ] **TRANSLATOR TEST CORPUS — new phrases (2026-06-03, user-supplied).** Add when
+      translator work resumes (do NOT pivot now):
+      - "Where is your king?"  (interrogative + 2nd-person possessive + locative)
+      - "This land is my land, this land is your land."  (demonstrative, copula,
+        possessive, clause coordination/repetition)
+      - "I want to buy the egg"  (control verb "want" + infinitival "to buy" + def. obj)
+      - "and if I don't see you again"  (leading coord, conditional, negation, adverb)
+      - "American, do your ears work?"  (DEMONYM as a PROPER NOUN — the translator
+        should realise it however the target language forms denonyms, not as a common
+        noun; vocative + do-support question + possessive + plural subject)
+
 - [ ] **STRATAL UR REFRESH ORDERING (2026-06-03, surfaced in evolution-realism
       Phase 6).** Under the each-gen `lexiconURRefreshPolicy`, `refreshUR` runs
       inside the phonology step (steps/phonology.ts:273), but `stepTaboo` /
@@ -404,11 +426,15 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
       refactor itself is deferred to its own committed task (do NOT fold into a realism
       phase). See [[iterate-fast-precise-tests]].
 
-- [ ] **EVOLUTION REALISM AUDIT (2026-06-01, user-driven — "evolution doesn't feel
-      right").** Diagnostic only (NO edits made); 5 parallel sub-agents each audited one
-      evolution slice on the real presets with throwaway probes. Findings are
-      evidence-backed (actual evolved forms/numbers + code file:line). Awaiting user
-      go-ahead before ANY fix. **IMPLEMENTATION PLAN:
+- [x] **EVOLUTION REALISM AUDIT (2026-06-01, user-driven — "evolution doesn't feel
+      right") — RESOLVED 2026-06-03.** All 7 milestone phases landed on `auto/realism`
+      (see EVOLUTION-REALISM-MILESTONE.md STATUS blocks for per-phase commits/results).
+      Headline deltas: synthesis ratchet broken BOTH directions (Romance 3.97→2.53;
+      tokipona stays isolating); frequency cap-saturation 12.7%→0% with Swadesh
+      @1000yr→~80%; compound decomp-match 0→80–100%; antonym-drifts→0; de-anglicised
+      derivation/grammaticalisation/ablaut/brakes. Residual calibration logged above
+      (lexicon-size stationarity, 6a synthesis nudge, Zipf-ratio model limit). Original
+      diagnostic below for reference. **IMPLEMENTATION PLAN:
       docs/planning/EVOLUTION-REALISM-MILESTONE.md** (6 phases + a realism-scorecard
       harness; each phase's design, deliberate re-baseline/breakage, and success metric).
       Four CROSS-CUTTING root patterns explain most of the "doesn't feel right":

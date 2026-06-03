@@ -39,6 +39,7 @@ export function defaultConfig(): SimulationConfig {
       obsolescence: true,
       taboo: true,
       copula: true,
+      swadeshProtection: true,
     },
     // Phase 60: rebalanced rates. User reported sound changes were
     // dominating event logs while coinages, grammar drift, semantic

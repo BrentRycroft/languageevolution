@@ -378,7 +378,7 @@ export function createSimulation(
       if (config.modes.volatility) timed("volatility", () => stepVolatility(lang, nextGen, rng));
       if (config.modes.phonology) timed("phonology", () => stepPhonology(lang, config, rng, nextGen, state));
       if (config.modes.phonology && config.modes.learner) timed("learner", () => stepLearner(lang, config, rng, nextGen));
-      if (config.modes.phonology) timed("inventoryMgmt", () => stepInventoryManagement(lang, rng, nextGen));
+      if (config.modes.phonology) timed("inventoryMgmt", () => stepInventoryManagement(lang, rng, nextGen, config.modes.swadeshProtection));
       // Phase 73d D2: phonotactic profile drifts over generations
       // driven by cumulative rule firings. Runs alongside the
       // phonology stack so the daughter's cluster allowance can
