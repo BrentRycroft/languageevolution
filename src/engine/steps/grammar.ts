@@ -197,7 +197,9 @@ export function stepMorphology(
   // the word→clitic→affix→fusion→loss chain. Operates AFTER the
   // chain-starter `maybeGrammaticalize` so newly-promoted stage-2
   // meanings have to wait until next gen to fuse / die.
-  const chainShift = progressGrammaticalizationChain(lang, rng, generation);
+  // Realism #2: ride the cadence multiplier (literary brake × cascade window)
+  // so the whole cline (affix→fusion→loss) paces coherently with initiation.
+  const chainShift = progressGrammaticalizationChain(lang, rng, generation, gramMult);
   if (chainShift) {
     pushEvent(lang, {
       generation,

@@ -202,9 +202,17 @@ export function progressGrammaticalizationChain(
   lang: Language,
   rng: Rng,
   generation: number,
+  rateMultiplier: number = 1,
 ): MorphShift | null {
   if (!lang.grammaticalizationStage) return null;
-  if (!rng.chance(0.04)) return null; // ~4% per gen ≈ 1 transition every 25 gens
+  // Realism #2 (believable cadence): chain progression (affix→fusion→loss)
+  // now rides the SAME cadence multiplier as chain initiation — literary
+  // brake × grammaticalisation-cascade window — instead of a flat 4%/gen
+  // divorced from it. So a language in a morphology cascade fuses/loses its
+  // bound morphemes faster (Latin→Romance compression) and a quiet literate
+  // era slows the whole cline coherently, not just its first step.
+  // rateMultiplier defaults to 1 (legacy callers see the old ~4%/gen base).
+  if (!rng.chance(0.04 * rateMultiplier)) return null; // base ~4%/gen ≈ 1 transition every 25 gens
   const candidates: string[] = [];
   for (const [m, st] of Object.entries(lang.grammaticalizationStage)) {
     if (!st) continue;

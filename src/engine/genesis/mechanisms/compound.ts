@@ -4,6 +4,7 @@ import { neighborsOf } from "../../semantics/neighbors";
 import { complexityFor } from "../../lexicon/complexity";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
+import { langPhonotacticScore } from "../../phonology/phonotactics";
 import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
 import { attemptConceptDecomposition } from "../../lexicon/synthesis";
 import { CONCEPTS } from "../../lexicon/concepts";
@@ -40,7 +41,10 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
       const minLen = 2 + complexityFor(target);
       if (form.length < minLen) form = [...form, "ə"];
       const fit = 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
-      if (fit >= 0.25) {
+      // Realism #1: a compound seam (A+B) must not grossly violate the
+      // language's declared syllable structure; genesis.ts repairs mild
+      // cluster violations by epenthesis, so we only reject the gross cases.
+      if (fit >= 0.25 && langPhonotacticScore(lang, form) >= 0.25) {
         return {
           form,
           sources: { partMeanings: decomp.parts.map((p) => p.meaning) },
@@ -82,6 +86,8 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
     if (form.length < minLen) form = [...form, "ə"];
     const fit = 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
     if (fit < 0.25) return null;
+    // Realism #1: reject a seam that grossly violates the syllable structure.
+    if (langPhonotacticScore(lang, form) < 0.25) return null;
     return { form, sources: { partMeanings: [partA, partB] } };
   },
 };
