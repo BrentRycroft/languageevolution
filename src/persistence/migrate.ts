@@ -221,6 +221,7 @@ function coerceLatest(obj: RawObj): SavedRun | null {
       taboo: pickBool(oldModes.taboo, defaults.modes.taboo),
       copula: pickBool(oldModes.copula, defaults.modes.copula),
       swadeshProtection: pickBool(oldModes.swadeshProtection, defaults.modes.swadeshProtection),
+      tonogenesis: pickBool(oldModes.tonogenesis, defaults.modes.tonogenesis),
     },
     tree: {
       ...defaults.tree,

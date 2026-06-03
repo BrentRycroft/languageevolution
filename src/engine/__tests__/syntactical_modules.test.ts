@@ -3,6 +3,9 @@ import { SYNTACTICAL_MODULE_IDS } from "../modules/syntactical";
 import { getModule, modulesByKind } from "../modules/registry";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
+import { splitLeaf } from "../tree/split";
+import { makeRng } from "../rng";
+import type { LanguageTree } from "../types";
 
 /**
  * Phase 43e: syntactical-module verification.
@@ -99,6 +102,12 @@ describe("Phase 43e — syntactical modules", () => {
   });
 
   it("daughters inherit syntactical activeModules at split", () => {
+    // Test the inheritance MECHANISM directly via splitLeaf, rather than via a
+    // long sim run. A multi-gen run conflates inheritance with later typological
+    // drift (a daughter can legitimately drift off its inherited word order, at
+    // an RNG-stream-dependent gen) and with whether a split happens at all — both
+    // of which shift under unrelated behaviour changes. splitLeaf is the actual
+    // inheritance site (tree/split.ts: child.activeModules = new Set(parent's)).
     const cfg = {
       ...presetEnglish(),
       seed: "phase43-split",
@@ -108,18 +117,25 @@ describe("Phase 43e — syntactical modules", () => {
       ],
     };
     const sim = createSimulation(cfg);
-    // Phase 6: check inheritance CLOSE to split time. Over a long run a daughter's
-    // word order can legitimately DRIFT off SVO (its activeModules then recomputes
-    // without wordOrder/svo) — that's typological drift, not an inheritance break.
-    // 30 gens is past minGenerationsBetweenSplits (12) so a split can occur, while
-    // a freshly-split daughter hasn't yet drifted off the inherited module.
-    for (let i = 0; i < 30; i++) sim.step();
-    const state = sim.getState();
-    const leaves = Object.keys(state.tree)
-      .filter((id) => state.tree[id]!.childrenIds.length === 0 && !state.tree[id]!.language.extinct);
-    expect(leaves.length).toBeGreaterThanOrEqual(1);
-    for (const id of leaves) {
-      expect(state.tree[id]!.language.activeModules?.has("syntactical:wordOrder/svo")).toBe(true);
+    const rootLang = sim.getState().tree[sim.getState().rootId]!.language;
+    // Seeded modules are present on the root at gen 0.
+    expect(rootLang.activeModules?.has("syntactical:wordOrder/svo")).toBe(true);
+    expect(rootLang.activeModules?.has("syntactical:alignment/nom-acc")).toBe(true);
+
+    const tree: LanguageTree = {
+      "L-0": { language: rootLang, parentId: null, childrenIds: [] },
+    };
+    const childIds = splitLeaf(tree, "L-0", 5, makeRng("phase43-split-inherit"), {
+      childCount: 2,
+    });
+    expect(childIds.length).toBe(2);
+    for (const id of childIds) {
+      const child = tree[id]!.language;
+      // Each daughter inherits the parent's syntactical modules at birth …
+      expect(child.activeModules?.has("syntactical:wordOrder/svo")).toBe(true);
+      expect(child.activeModules?.has("syntactical:alignment/nom-acc")).toBe(true);
+      // … as an INDEPENDENT copy, not a shared Set reference.
+      expect(child.activeModules).not.toBe(rootLang.activeModules);
     }
   });
 });

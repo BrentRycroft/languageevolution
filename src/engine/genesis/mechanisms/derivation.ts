@@ -1,6 +1,8 @@
 import type { CoinageMechanism } from "./types";
+import type { WordForm } from "../../types";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
+import { langPhonotacticScore } from "../../phonology/phonotactics";
 import { relatedMeanings } from "../../semantics/clusters";
 import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
 
@@ -30,26 +32,42 @@ export const MECHANISM_DERIVATION: CoinageMechanism = {
         : lexKeys(lang)[rng.int(lexKeys(lang).length)];
     if (!base) return null;
     const baseForm = lexGet(lang, base)!;
-    // Prefer the language's own productive derivational affixes
-    // (Phase 49+); fall back to inflectional suffix paradigms; if
-    // neither exists, refuse to coin rather than imprint a foreign
-    // default.
+    // Realism #1 (productivity hierarchies; language-agnostic affix order):
+    // derivation must follow the language's OWN affix typology, not assume a
+    // suffix. A prefixing language (grammar.affixPosition === "prefix") derives
+    // with a prefix (Bantu-style ki-, mu-); a suffixing one with a suffix
+    // (Latin -tor, English -er). Pre-fix this filtered to suffixes only, so
+    // prefixing languages either never derived or imprinted a foreign suffix.
+    const position = lang.grammar.affixPosition;
+    // Prefer the language's own productive derivational affixes (Phase 49+);
+    // fall back to inflectional paradigm affixes in the SAME position; if
+    // neither exists, refuse to coin rather than imprint a foreign default.
     const derivPool = (lang.derivationalSuffixes ?? [])
-      .filter((s) => s.productive && (s.position ?? "suffix") === "suffix")
+      .filter((s) => s.productive && (s.position ?? "suffix") === position)
       .map((s) => s.affix);
     const paradigmPool = Object.values(lang.morphology.paradigms)
-      .filter((p) => p && p.position === "suffix")
+      .filter((p) => p && p.position === position)
       .map((p) => p!.affix);
     const affixPool = derivPool.length > 0 ? derivPool : paradigmPool;
     if (affixPool.length === 0) return null;
     const affix = affixPool[rng.int(affixPool.length)]!;
     if (baseForm.length + affix.length > 10) return null;
-    const form = [...baseForm, ...affix];
+    const form: WordForm =
+      position === "prefix" ? [...affix, ...baseForm] : [...baseForm, ...affix];
     const fit = 0.5 * phonotacticFit(form, lang) + 0.5 * otFit(form, lang);
     if (fit < 0.25) return null;
+    // Realism #1 (new words respect the language's syllable structure): reject
+    // a derived form that grossly violates the declared phonotactic profile
+    // (e.g. a CV-only language whose affix seam produces an illegal cluster).
+    // genesis.ts repairs mild violations by epenthesis post-hoc; refusing the
+    // gross cases keeps the seam honest so the repair stays light.
+    if (langPhonotacticScore(lang, form) < 0.25) return null;
     return {
       form,
-      sources: { partMeanings: [base], via: `-${affix.join("")}` },
+      sources: {
+        partMeanings: [base],
+        via: position === "prefix" ? `${affix.join("")}-` : `-${affix.join("")}`,
+      },
     };
   },
 };

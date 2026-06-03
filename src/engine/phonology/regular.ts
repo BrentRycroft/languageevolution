@@ -1,6 +1,13 @@
 import type { Language, Lexicon, Meaning, SoundChange, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isFormLegal } from "./wordShape";
+import {
+  introducesViolation,
+  violatesProfile,
+  repairToProfile,
+  pickEpentheticVowel,
+  PERMISSIVE_PROFILE,
+} from "./phonotactics";
 import { lexGet, lexKeys } from "../lexicon/access";
 import { conceptIdFor } from "../lexicon/conceptIdentity";
 
@@ -36,6 +43,13 @@ export function applyOneRegularChange(
   // interactions where `probabilityFor` can stay > 0 across many
   // applications without `after === form` triggering.
   const MAX_PER_MEANING_PASSES = 10;
+  // Ask #4: the regular law respects the language's evolving syllable
+  // structure. When the law's output newly violates the profile, epenthesis
+  // repairs it where possible (the attested "sound law triggers a repair"
+  // pattern); where repair fails the law is blocked for that word. The
+  // profile read here is the SAME structure Lane B reads when building words.
+  const profile = lang.phonotacticProfile ?? PERMISSIVE_PROFILE;
+  const epentheticVowel = pickEpentheticVowel(lang);
   for (const m of lexKeys(lang)) {
     const original = lexGet(lang, m)!;
     let form = original;
@@ -44,7 +58,16 @@ export function applyOneRegularChange(
       const after = picked.apply(form, rng);
       if (after === form || after.join("") === form.join("")) break;
       if (!isFormLegal(m, after as WordForm)) break;
-      form = after as WordForm;
+      let accepted = after as WordForm;
+      if (introducesViolation(form, accepted, profile)) {
+        const repaired = repairToProfile(accepted, profile, epentheticVowel);
+        if (!violatesProfile(repaired, profile) && isFormLegal(m, repaired)) {
+          accepted = repaired;
+        } else {
+          break;
+        }
+      }
+      form = accepted;
     }
     if (form.length === 0) {
       dropped.push(m);

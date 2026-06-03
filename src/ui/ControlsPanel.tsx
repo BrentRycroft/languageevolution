@@ -261,6 +261,23 @@ export function ControlsPanel() {
           erodes, merges, and dies like any other word — watch Swadesh retention
           fall. Toggling mid-run takes effect immediately.
         </div>
+        <Toggle
+          label="Tonogenesis (experimental)"
+          value={config.modes.tonogenesis ?? false}
+          onChange={(v) => updateModes({ tonogenesis: v })}
+        />
+        <div
+          style={{
+            fontSize: "var(--fs-1)",
+            color: "var(--muted)",
+            marginTop: 2,
+          }}
+        >
+          Experimental, off by default. On: a language can undergo tonogenesis —
+          a non-tonal → tonal regime shift triggered when an attested
+          conditioning contrast (e.g. coda/onset voicing) is lost. Off: tone
+          regimes only come from a preset's seed.
+        </div>
       </Section>
 
       <details style={{ marginTop: 8 }}>

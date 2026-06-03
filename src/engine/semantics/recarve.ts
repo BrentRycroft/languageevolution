@@ -34,6 +34,16 @@ export interface RecarveEvent {
  */
 const RECARVE_COOLDOWN = 50;
 
+/**
+ * LANE-C — strength of the frequency-retention skip on mergers (see
+ * tryMerge). A pair's merger is skipped with probability `loserFreq ×
+ * MERGE_RETENTION_STRENGTH`, so a colexified pair whose weaker member is
+ * still high-frequency (≈0.85 skip) survives, while a pair with a rare
+ * loser (≈0.07 skip) merges almost freely. < 1 so a core sense can still
+ * occasionally lose a merger over deep time.
+ */
+const MERGE_RETENTION_STRENGTH = 0.85;
+
 function pairKey(a: Meaning, b: Meaning): string {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
 }
@@ -91,6 +101,15 @@ function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   const fb = lang.wordFrequencyHints[b] ?? 0.4;
   const winner = fa > fb ? a : fa < fb ? b : a < b ? a : b;
   const loser = winner === a ? b : a;
+  // LANE-C — frequency-retention on merger (Zipf / entrenchment): a
+  // well-entrenched high-frequency sense resists being absorbed and erased.
+  // Skip the merger with probability proportional to the LOSER's frequency,
+  // so colexified pairs whose weaker member is still common stay distinct
+  // (two frequent senses collapsing into one is rare), while low-frequency
+  // losers merge freely. The draw is APPENDED after the pair-selection draw
+  // above; it consumes the event when it fires (anti-runaway-merger).
+  const loserFreq = winner === a ? fb : fa;
+  if (rng.chance(loserFreq * MERGE_RETENTION_STRENGTH)) return null;
   // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
   // Phase 72d-2 (defer-1a): pass merger context so meaningHistory
   // records the pathway loser → winner. Reverse translation /

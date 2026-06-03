@@ -41,11 +41,15 @@ describe("Phase 67 T1 — stress-pattern surface effects", () => {
     expect(soundChanges(lexConfig, "stress-cmp")).toBeGreaterThan(0);
   });
 
-  it("stressPattern is preserved on the seeded language", () => {
+  it("seedStressPattern is wired through to the seeded language", () => {
+    // The invariant is that the seed config's stress pattern is applied to the
+    // proto-language. Asserting it survives a generation of evolution is
+    // RNG-fragile: stress-system drift is a legitimate change and (under the
+    // realism-overhaul RNG stream) a penult→antepenult shift can fire on gen 1.
+    // So we check the SEED wiring at gen 0, not post-evolution stability.
     const config = presetEnglish();
     config.seedStressPattern = "penult";
     const sim = createSimulation({ ...config, seed: "stress-init" });
-    sim.step();
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
     expect(lang.stressPattern).toBe("penult");
   });

@@ -22,7 +22,7 @@ import { lexGet, lexHas, lexKeys } from "../lexicon/access";
 // drift protection was redundant with Phase 24c's frequency-direction
 // split (high-freq content words are already conservative via
 // freqInput = 1 - freq), and not accurate to real etymology.
-import { CONCEPT_IDS, tierOf, type Tier } from "../lexicon/concepts";
+import { CONCEPT_IDS, tierOf, zipfFrequencyFor, type Tier } from "../lexicon/concepts";
 import { recordColexification } from "./colexification";
 import { BASIC_240 } from "../lexicon/basic240";
 
@@ -56,6 +56,17 @@ const EXPANSION_IDS_BY_TIER: ReadonlyMap<Tier, readonly string[]> = (() => {
   return m;
 })();
 
+/**
+ * LANE-C — strength of the Zipfian frequency-retention skip in
+ * driftOneMeaning. A meaning is passed over for drift with probability
+ * `frequency × RETENTION_STRENGTH`, so the most frequent core meanings
+ * (freq≈0.93) are skipped ~84% of the time while peripheral meanings
+ * (freq≈0.1) are skipped ~9% of the time. < 1 so even a top-frequency
+ * meaning can still drift occasionally (PIE *méh₂tēr DID shift senses
+ * across families), preserving deep-time turnover.
+ */
+const RETENTION_STRENGTH = 0.9;
+
 export type SemanticShiftKind =
   | "metonymy"
   | "metaphor"
@@ -78,6 +89,13 @@ export function classifyShift(
   rng?: { next: () => number },
   fromRegister?: "high" | "low",
   lang?: Language,
+  // LANE-C: optional source frequency in [0,1]. When supplied, biases the
+  // direction of generality-changing shifts (Traugott: high-frequency,
+  // general words tend to BROADEN; rare, specific words NARROW) and seeds a
+  // weak baseline evaluative drift (the pejoration bias, below). Optional and
+  // guarded so the no-freq callers (incl. the classifyShift unit test) keep
+  // byte-identical behaviour.
+  fromFreq?: number,
 ): SemanticShiftKind {
   const cFrom = clusterOf(from);
   const cTo = clusterOf(to);
@@ -91,8 +109,33 @@ export function classifyShift(
   if (complexityDelta >= 1) weights.broadening = 2.5;
   if (similarity >= 0.45) weights.metonymy = (weights.metonymy ?? 0) + 1.5;
   weights.metaphor = (weights.metaphor ?? 0) + 1;
-  if (fromRegister === "high") weights.amelioration = 1.2;
-  if (fromRegister === "low") weights.pejoration = 1.2;
+  // LANE-C — pejoration asymmetry (Traugott & Dasher; Ullmann): evaluative
+  // semantic change is heavily skewed NEGATIVE cross-linguistically (silly
+  // holy→foolish, knave boy→villain, villain farmhand→criminal, vulgar
+  // common→crude). Register still modulates — a "high"-register word can
+  // ameliorate, a "low"-register word pejorates harder — but pejoration is
+  // the more probable evaluative outcome even at neutral register, so it
+  // carries a small baseline weight that amelioration does not.
+  if (fromRegister === "high") {
+    weights.amelioration = 1.2;
+    weights.pejoration = (weights.pejoration ?? 0) + 0.6;
+  } else if (fromRegister === "low") {
+    weights.pejoration = (weights.pejoration ?? 0) + 1.6;
+  } else if (fromFreq !== undefined) {
+    // Neutral register but frequency known: a weak negative baseline so
+    // some evaluative drift occurs without a register tag (the attested
+    // default direction).
+    weights.pejoration = (weights.pejoration ?? 0) + 0.5;
+  }
+  // LANE-C — frequency-conditioned generality (Traugott): bias the
+  // direction of the generality shift by the source's corpus frequency.
+  // Common, schematic words generalise (broaden); rare, specific words
+  // restrict (narrow). Only nudges weights that the complexity heuristic
+  // already opened, so it sharpens rather than overrides it.
+  if (fromFreq !== undefined) {
+    if (weights.broadening !== undefined) weights.broadening += fromFreq;
+    if (weights.narrowing !== undefined) weights.narrowing += 1 - fromFreq;
+  }
 
   if (!rng) {
     let bestKind: SemanticShiftKind = "metaphor";
@@ -144,6 +187,18 @@ export function driftOneMeaning(
       if (isClosedClass(posOf(m))) continue;
       const reg = lang.registerOf?.[m];
       if (reg === "high" && rng.chance(0.5)) continue;
+      // LANE-C — Zipfian frequency-retention law (Pagel, Atkinson & Meade
+      // 2007; Zipf): the rate of semantic (and lexical) change is inversely
+      // proportional to a word's corpus frequency. High-frequency core
+      // meanings are the slowest to shift; rare words turn over fast. The
+      // drift loop previously took the FIRST eligible shuffled meaning with
+      // no frequency weighting, so "water"/"eat" were as likely to drift as
+      // a tier-3 rarity. Skip a candidate with probability proportional to
+      // its frequency (≈0.85 for the core, ≈0.1 for the periphery), falling
+      // through to the next shuffled meaning. The RNG draw is APPENDED after
+      // the high-register draw above to keep the per-step draw order local.
+      const freqHint = lang.wordFrequencyHints[m] ?? zipfFrequencyFor(m);
+      if (rng.chance(freqHint * RETENTION_STRENGTH)) continue;
       // Phase 26e: removed Swadesh-coreness drift-skip. The coreness-
       // based protection was redundant with Phase 24c's frequency-
       // direction split (high-freq content words are already conservative
@@ -193,7 +248,7 @@ export function driftOneMeaning(
       if (strict && targetOccupied) continue;
       const form = lexGet(lang, m)!;
       if (!isFormLegal(target, form)) continue;
-      const kind = classifyShift(m, target, rng, lang.registerOf?.[m], lang);
+      const kind = classifyShift(m, target, rng, lang.registerOf?.[m], lang, freqHint);
       // Phase 73e: a PROTECTED source meaning (be/eat/go/…) cannot be dropped
       // by deleteMeaning's Phase-71b guard. Pre-fix, drift still copied its
       // form to `target` and reported polysemous:false while the guard silently

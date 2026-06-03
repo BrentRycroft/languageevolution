@@ -40,6 +40,7 @@ export function defaultConfig(): SimulationConfig {
       taboo: true,
       copula: true,
       swadeshProtection: true,
+      tonogenesis: false,
     },
     // Phase 60: rebalanced rates. User reported sound changes were
     // dominating event logs while coinages, grammar drift, semantic
@@ -71,7 +72,11 @@ export function defaultConfig(): SimulationConfig {
       driftProbabilityPerGeneration: 0.12,
     },
     semantics: {
-      driftProbabilityPerGeneration: 0.10,
+      // Realism overhaul #5 (cross-layer cadence): semantic change was the most
+      // starved layer (~12 drift events vs ~300 phonology over 120 gens), worsened
+      // by Lane C's frequency-retention skip. Lifted 0.10→0.16 so meaning change
+      // is a visible, comparable channel rather than a rarity.
+      driftProbabilityPerGeneration: 0.16,
       recarveProbabilityPerGeneration: 0.015,
     },
     obsolescence: {
@@ -82,7 +87,9 @@ export function defaultConfig(): SimulationConfig {
       lowFreqProbability: 0.04,
     },
     morphology: {
-      grammaticalizationProbability: 0.04,
+      // Realism overhaul #5: grammaticalization was a starved channel (~5-8
+      // events / 120 gens); modest lift toward parity with the other layers.
+      grammaticalizationProbability: 0.06,
       paradigmMergeProbability: 0.025,
       paradigmLossProbability: 0.06,
       analogyProbability: 0.035,
