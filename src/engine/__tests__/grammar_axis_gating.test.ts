@@ -39,15 +39,36 @@ describe("Phase 73c Phase 1 — grammaticalisedAxes gating", () => {
     expect(filtered).not.toContain("verb.aspect.hab");
   });
 
-  it("unsetting grammaticalisedAxes restores the legacy unfiltered pathway", () => {
+  it("Phase 5b: unset axes DERIVE the gate from the language's typology", () => {
     const sim = createSimulation(defaultConfig());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
     lang.grammar.grammaticalisedAxes = undefined;
+    // A PERMISSIVE typology (marks tense; aspect undeclared so that axis is
+    // ungated) derives axes that allow the full motion pathway — the old
+    // "unfiltered" behaviour now follows from a tense-marking, aspect-open
+    // typology rather than from the gate being off.
+    lang.grammar.tenseMarking = "both";
+    lang.grammar.aspectSystem = undefined;
     const targets = pathwayTargetsForLang("motion", lang);
     expect(targets).toContain("verb.tense.fut");
     expect(targets).toContain("verb.aspect.prosp");
     expect(targets).toContain("verb.aspect.pfv");
     expect(targets).toContain("verb.aspect.ipfv");
+  });
+
+  it("Phase 5b: an isolating typology (no tense, no case) gates those pathways out", () => {
+    const sim = createSimulation(defaultConfig());
+    const lang = sim.getState().tree[sim.getState().rootId]!.language;
+    lang.grammar.grammaticalisedAxes = undefined;
+    lang.grammar.tenseMarking = "none";
+    lang.grammar.hasCase = false;
+    // No declared axes set; the derived gate must drop tense + case targets.
+    const motion = pathwayTargetsForLang("motion", lang);
+    expect(motion).not.toContain("verb.tense.fut");
+    const allTargets = (["motion", "possession", "location", "existence"] as const).flatMap(
+      (t) => pathwayTargetsForLang(t, lang),
+    );
+    expect(allTargets.some((c) => c.startsWith("noun.case."))).toBe(false);
   });
 
   it("maybeGrammaticalize honours the gate — gated paradigms never get seeded", () => {

@@ -1,12 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   attemptTargetedDerivation,
+  attemptProductiveDerivation,
   recordDerivationChain,
 } from "../genesis/mechanisms/targetedDerivation";
 import {
   categoriesForTier,
   seedDerivationalSuffixes,
   findSuffixByCategory,
+  type DerivationalSuffix,
 } from "../lexicon/derivation";
 import { derivationFor, DERIVATION_TARGETS } from "../lexicon/derivation_targets";
 import { makeRng } from "../rng";
@@ -189,6 +191,36 @@ describe("attemptTargetedDerivation", () => {
       { affix: ["n", "ə", "s"], tag: "-ness", category: "abstractNoun" },
     ];
     expect(attemptTargetedDerivation(lang, "water", makeRng("td-4"))).toBeNull();
+  });
+
+  it("Phase 5a: productive derivation picks roots by posOf, not an English wordlist", () => {
+    const lang = makeLang({
+      culturalTier: 2,
+      lexicon: { eat: ["a", "t"], water: ["w", "a"], stone: ["t", "o"] },
+    });
+    // One productive AGENTIVE suffix (wants a VERB root). Of the three roots
+    // only `eat` is a verb by posOf — water/stone are nouns. The derivation
+    // must land on the verb, classified by the engine's POS, not a wordlist.
+    lang.derivationalSuffixes = [
+      { affix: ["e", "r"], tag: "-er", category: "agentive", productive: true },
+    ];
+    const result = attemptProductiveDerivation(lang, makeRng("5a-pos"));
+    expect(result).not.toBeNull();
+    expect(result!.rootMeaning).toBe("eat");
+  });
+
+  it("Phase 5a: a categoryless suffix (Bantu noun-class prefix bug) is excluded", () => {
+    const lang = makeLang({
+      culturalTier: 2,
+      lexicon: { eat: ["a", "t"], because: ["b", "o"] },
+    });
+    // A productive affix with NO category — the shape ku-/mu-/ka- get stored as.
+    // It must never be reached by the productive path (no smearing onto roots).
+    const categoryless = {
+      affix: ["m", "u"], tag: "mu-", productive: true, position: "prefix",
+    } as unknown as DerivationalSuffix;
+    lang.derivationalSuffixes = [categoryless];
+    expect(attemptProductiveDerivation(lang, makeRng("5a-cat"))).toBeNull();
   });
 
   it("recordDerivationChain populates wordOriginChain with from/via", () => {

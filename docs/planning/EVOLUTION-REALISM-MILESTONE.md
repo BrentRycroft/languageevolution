@@ -375,6 +375,33 @@ hardcoded i-umlaut-shaped map.
 presets don't spontaneously grow fusional case; no `because-mu-` artifacts.
 **Effort:** M. **Risk:** medium (the import-cycle resolution in 5a needs care).
 
+### STATUS: 5a+5b+5d DONE; 5c FOLDED INTO 6a (2026-06-03)
+- **5a DONE:** `attemptProductiveDerivation` chooses roots by the engine's `posOf`
+  (the "import cycle" was a phantom — `pos.ts` imports only the Meaning type), and
+  excludes `category===undefined` suffixes (the Bantu noun-class ku-/mu-/ka- shape)
+  from the productive path. Lock tests added.
+- **5b DONE:** `pathwayTargetsForLang` now derives `grammaticalisedAxes` from the
+  language's CURRENT grammar when not explicitly declared (the gate was opt-in and
+  never wired), so an isolating language (tenseMarking="none", hasCase=false) can no
+  longer grammaticalise IE case/tense/mood. Plus a typological article gate
+  (classifier / strongly-isolating languages don't grow articles from cultural tier
+  alone). Scorecard: Bantu synthesis 4.50→3.83 as its spurious case grammaticalisation
+  is curbed; tokipona stays isolating (0.93).
+- **5d DONE:** ablaut/umlaut irregulars (`maybeVowelMutationIrregular`,
+  `proposeAblautEmergence`) draw their vowel alternation from the language's OWN
+  recorded vowel sound-changes (vowel_shift/reduction/harmony rule outputMaps),
+  falling back to the cross-linguistic template only when none is on record.
+- **5c FOLDED INTO 6a:** the Swadesh/coreness brake (`SWADESH_CONTENT_CORE`) and
+  `DEFAULT_FREQUENCY_HINTS` both derive from the SAME 89-entry English table (even
+  `frequencyClass` is `inferFrequencyClass(frequencyFor())`), so de-anglicising the
+  brake requires broadening the frequency table to all 707 concepts — which is exactly
+  6a's Zipfian-by-rank rebuild. Doing it in isolation would be throwaway; coordinated
+  in 6a.
+- **Phase-5 gate:** full `RUN_SLOW` GREEN (1991 pass, 0 fail — no reconciliation).
+  Surfaced + logged a PRE-EXISTING issue: `stress_surface`'s fixed>lexical reduction
+  claim was cherry-picked (aggregate 15 vs 23 is backwards) — test now asserts the
+  robust truth; see ROADMAP "stress-reduction boost proxy".
+
 ---
 
 ## Phase 6 — Recalibrate rates (LAST — tuning after mechanisms are fixed)

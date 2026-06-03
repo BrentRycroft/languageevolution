@@ -149,9 +149,16 @@ export function pathwayTargetsForLang(
   tag: SemanticTag,
   lang: Pick<Language, "grammar">,
 ): MorphCategory[] {
-  const axes = lang.grammar.grammaticalisedAxes;
+  // Phase 5b: gate pathway targets on the language's grammaticalised axes,
+  // DERIVED from its current typology when not explicitly declared. The gate
+  // was opt-in and `grammaticalisedAxes` was never set anywhere, so isolating
+  // languages (tenseMarking="none", hasCase=false) grew IE case/tense/mood from
+  // the universal pathway map. Deriving on-demand from `grammar` makes the gate
+  // always-on and follows each daughter's OWN typology with no construction
+  // wiring — an isolating language whose grammar says tense:[]/case:[] can no
+  // longer grammaticalise those axes (it stays isolating without a pathway).
+  const axes = lang.grammar.grammaticalisedAxes ?? deriveGrammaticalisedAxes(lang.grammar);
   const targets = pathwayTargets(tag);
-  if (!axes) return targets;
   return targets.filter((cat) => isCategoryAllowed(cat, axes));
 }
 

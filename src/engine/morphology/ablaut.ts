@@ -49,10 +49,33 @@ const COMMON_ALTERNATIONS: ReadonlyArray<[string, string]> = [
 ];
 
 /**
- * Look at a verb's stem vowels; return the first vowel and a
- * cross-linguistically plausible alternant. Returns null if the
- * verb has no vowel or none of the standard alternations are
- * applicable to its inventory.
+ * Phase 5d: vowel alternations the language has actually RECORDED via its
+ * vowel sound-changes (vowel_shift / vowel_reduction / harmony rule outputMaps).
+ * Real strong verbs freeze an ancient sound change into a paradigm, so an
+ * ablaut class should reflect THIS language's history rather than a fixed
+ * IE-ablaut template. Empty when no vowel change is on record.
+ */
+function recordedAlternations(lang: Language): Map<string, string> {
+  const out = new Map<string, string>();
+  const rules = [...(lang.activeRules ?? []), ...(lang.retiredRules ?? [])];
+  for (const r of rules) {
+    if (r.family !== "vowel_shift" && r.family !== "vowel_reduction" && r.family !== "harmony") {
+      continue;
+    }
+    for (const [from, to] of Object.entries(r.outputMap)) {
+      if (from === to || !isVowel(from) || !isVowel(to)) continue;
+      if (!out.has(from)) out.set(from, to);
+    }
+  }
+  return out;
+}
+
+/**
+ * Look at a verb's stem vowels; return the first vowel and a plausible
+ * alternant. Phase 5d: PREFER an alternation fossilised from the language's own
+ * recorded vowel sound-changes; fall back to the cross-linguistic template only
+ * when the language has no vowel change on record. Returns null if the verb has
+ * no vowel or no applicable alternation whose alternant is in the inventory.
  */
 function pickAlternation(
   lang: Language,
@@ -61,9 +84,22 @@ function pickAlternation(
 ): [string, string] | null {
   const form = lexGet(lang, meaning);
   if (!form) return null;
-  // Find the first stem vowel that participates in any standard
-  // alternation pattern AND whose alternant is in the inventory.
   const inventory = new Set(lang.phonemeInventory.segmental);
+
+  // Phase 5d: recorded sound-change alternations take precedence.
+  const recorded = recordedAlternations(lang);
+  if (recorded.size > 0) {
+    const recCands: Array<[string, string]> = [];
+    for (const raw of form) {
+      const v = stripTone(raw);
+      if (!isVowel(v)) continue;
+      const alt = recorded.get(v);
+      if (alt && inventory.has(alt)) recCands.push([v, alt]);
+    }
+    if (recCands.length > 0) return recCands[rng.int(recCands.length)] ?? null;
+  }
+
+  // Fallback: cross-linguistically common template alternations.
   const candidates: Array<[string, string]> = [];
   for (const raw of form) {
     const v = stripTone(raw);

@@ -206,13 +206,29 @@ const GEN0: Record<string, string> = {
 // gens; pie/bantu/romance are BYTE-IDENTICAL to their 4a values (no changed-path
 // firing in their 30-gen window). GEN0 unchanged. Approved milestone re-baseline;
 // determinism preserved (re-run confirmed).
+// GENN re-baselined 2026-06-02 (evolution-realism Phase 5 — de-anglicise
+// behaviour, 5a+5b+5d). Three agnosticism fixes shift every preset's gen-30
+// trajectory: (5a) productive derivation chooses roots by the engine's posOf,
+// not a hardcoded English verb/adjective wordlist, and excludes categoryless
+// (Bantu noun-class prefix) suffixes from the productive path; (5b) the
+// grammaticalisation pathway gate is now ALWAYS-ON, derived from each language's
+// own typology (`deriveGrammaticalisedAxes`) when not explicitly declared, so an
+// isolating language no longer grows IE case/tense/mood — plus a typological
+// article-emergence gate (classifier / strongly-isolating languages don't
+// grammaticalise articles from cultural tier alone); (5d) ablaut/umlaut
+// irregulars now draw their vowel alternation from the language's OWN recorded
+// vowel sound-changes (vowel_shift/reduction/harmony outputMaps), not a fixed
+// German i-umlaut template. GEN0 unchanged. (5c — concept-registry-driven
+// conservation brakes — folded into Phase 6a, where the frequency table is
+// rebuilt; both flow from the same 89-entry DEFAULT_FREQUENCY_HINTS source.)
+// Approved milestone re-baseline (gate = scorecard); determinism preserved.
 const GENN: Record<string, string> = {
-  pie: "a728668c",
-  bantu: "57152ba0",
-  romance: "b1639983",
-  germanic: "b6413bf8",
-  tokipona: "cb85d7f7",
-  english: "eab25cd9",
+  pie: "5717c46e",
+  bantu: "9b186a28",
+  romance: "d14542a3",
+  germanic: "e1fa7cae",
+  tokipona: "656a0097",
+  english: "5711cebd",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

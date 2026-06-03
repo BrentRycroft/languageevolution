@@ -343,6 +343,19 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
 
 ## Backlog (top = next)
 
+- [ ] **STRESS-REDUCTION BOOST PROXY (2026-06-02, surfaced in evolution-realism
+      Phase 5).** `stress_surface.test.ts` claimed fixed-stress languages develop
+      MORE vowel-reduction than lexical-stress ones (the apply.ts 1.2× unstressed-
+      position boost, Phase 67 T1). It passed only on a cherry-picked single seed;
+      aggregated over 6 seeds the event-log count is actually 15 (fixed) vs 23
+      (lexical) — BACKWARDS. The test now asserts only the robust truth (both
+      regimes reduce) and logs this. OPEN QUESTION: is the 1.2× boost mis-wired /
+      outweighed, or is the event-log-description count just too noisy a proxy
+      (events cap at 80; not all reductions log a matching description)? Decide
+      with a DIRECT measure (e.g. count unstressed-vowel reductions in the forms,
+      or instrument the rule-application rate) before trusting the directional
+      claim. Pre-existing (boost mechanism untouched by Phase 5).
+
 - [ ] **SLOW-SUITE SHARED FIXTURES (2026-06-02, user-raised — "tests are the most
       time-consuming issue").** The full `RUN_SLOW` suite recomputes ~dozens of
       independent multi-hundred-gen lineages from scratch, many over the SAME
