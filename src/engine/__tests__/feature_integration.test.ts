@@ -175,7 +175,11 @@ describe("cross-feature integration", () => {
       };
       const rng = makeRng("suff-evol");
       let mutated = false;
-      for (let i = 0; i < 200 && !mutated; i++) {
+      // Realism overhaul #6 demoted the per-word actuation rate (×0.3), so the
+      // same lenition takes proportionally more generations to surface on the
+      // suffix. The intent — affixes drift WITH the phonology — is unchanged;
+      // the window is widened to keep observing it under the slower per-word rate.
+      for (let i = 0; i < 800 && !mutated; i++) {
         stepPhonology(lang, config, rng, i + 1, state);
         if (lang.derivationalSuffixes![0]!.affix[0] === "f") mutated = true;
       }
