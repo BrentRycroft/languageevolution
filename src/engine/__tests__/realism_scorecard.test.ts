@@ -405,6 +405,19 @@ describe("realism scorecard (RUN_SLOW)", () => {
       // Lexicon size ratio (worst today: tokipona 6.14×). TARGET (P4e): ~1.0.
       expect(sizeRatio).toBeGreaterThan(0.5);
       expect(sizeRatio).toBeLessThan(8);
+
+      // ── Phase 4: synthesis ratchet broken — BOTH directions must occur ──
+      // The audit's two worst one-way cases: Toki Pona drifted 0.2→2.48 (an
+      // isolating language going synthetic) and Romance 2.0→4.0 (Latin→French
+      // should SHED morphology, not pile it on). After Phase 4a/4b/4c they sit
+      // at ~0.9 and ~2.5. Lock each below the over-synthesised state it used to
+      // reach (generous margins — regression guards, not the tight target).
+      if (preset.id === "tokipona" && synth !== undefined) {
+        expect(synth, "tokipona stays isolating (no synthesis runaway)").toBeLessThan(2.5);
+      }
+      if (preset.id === "romance" && synth !== undefined) {
+        expect(synth, "Romance can shed morphology (not deep-polysynthetic)").toBeLessThan(3.5);
+      }
     });
   }
 });

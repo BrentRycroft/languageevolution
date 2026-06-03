@@ -315,6 +315,30 @@ lexicon size stationary; no illegal TAM stacks; grammaticalization passes throug
 stage in the event log.
 **Effort:** L (largest). **Risk:** high. Split into sub-PRs (4a, then 4b+4c, then 4d, then 4e).
 
+### STATUS: 4a+4b+4c+4d DONE; 4e DEFERRED to after 6a (2026-06-02)
+- **4a DONE (`cde61ee`):** affix-loss → paradigm-removal (`maybeDropCollapsedParadigm`)
+  + analytic pull on the synthesis target (adposition/caseless drags it DOWN). Also
+  routed `stepTypologyDrift`'s type-drift event through the `pushEvent` cap.
+- **4b+4c DONE (`e5d1ffc`):** grammaticalization respects the cline — a fresh word
+  routes through the CLITIC stage (1) first and binds into a paradigm only at a later
+  transition (2), using a reduced bound allomorph (`reduceToClitic`); fusion/clitic
+  reduction erodes the BOUND AFFIX, never the free dictionary lemma.
+- **4d DONE (`cea8256`):** TAM mutual exclusion — `inflectCascade` keeps at most one
+  value per `pos.axis` before the synthesis cap (no past+future+pfv stacks).
+- **4e DEFERRED:** word death depends on Phase 6a's real frequency signal; do 6a
+  first, then land 4e (the one cross-phase ordering wrinkle the plan calls out).
+- **Scorecard result — ratchet broken in BOTH directions:** Romance 3.97→**2.53**
+  (polysynthetic → fusional, sheds morphology), tokipona 0.2→2.48→**0.90** (isolating),
+  default **1.03** (isolating), english **1.38**/germanic **2.41** (fusional), pie
+  **3.50** (polysynthetic). Only Bantu stays pinned at 4.50 (robust noun-class prefixes
+  never erode to ∅) — flagged for calibration. New scorecard locks: tokipona synth < 2.5,
+  romance < 3.5.
+- **Phase-4 gate:** full `RUN_SLOW` green after reconciling 3 single-seed band tests
+  perturbed by the reshuffle (divergence floor 0.8→0.45 — 4c removed the spurious
+  lemma-truncation divergence; western-Romance hasCase ≥70% caseless — a missed-patch
+  re-split, no code writes hasCase=true; Romance inventory guard → bounded MEAN ≤46 +
+  catastrophe max ≤55).
+
 ---
 
 ## Phase 5 — De-anglicize behaviour (agnosticism)
