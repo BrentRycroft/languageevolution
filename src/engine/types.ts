@@ -1302,6 +1302,15 @@ export interface SimulationConfig {
      * byte-identical baselines are unaffected when left on.
      */
     swadeshProtection: boolean;
+    /**
+     * Experimental (realism overhaul §2 / §4 ask #7). When true, the
+     * tonogenesis mechanism may fire: a language-level non-tonal → tonal
+     * regime shift driven by an attested conditioning environment (loss of a
+     * coda/onset voicing or aspiration contrast → pitch split). Default false
+     * (off) — the historical mechanism fired far too often, so it is now
+     * strictly opt-in. Read via `?? false`. Wired by the Phonology lane.
+     */
+    tonogenesis: boolean;
   };
   phonology: {
     globalRate: number;
