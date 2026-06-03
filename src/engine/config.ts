@@ -78,6 +78,7 @@ export function defaultConfig(): SimulationConfig {
       maxDistanceForRivalry: 1,
       copulaLossProbability: 0.012,
       copulaGenesisProbability: 0.008,
+      lowFreqProbability: 0.04,
     },
     morphology: {
       grammaticalizationProbability: 0.04,

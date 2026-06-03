@@ -222,13 +222,28 @@ const GEN0: Record<string, string> = {
 // conservation brakes — folded into Phase 6a, where the frequency table is
 // rebuilt; both flow from the same 89-entry DEFAULT_FREQUENCY_HINTS source.)
 // Approved milestone re-baseline (gate = scorecard); determinism preserved.
+// GENN re-baselined 2026-06-03 (evolution-realism Phase 6 — recalibrate rates,
+// 6a+4e+6b+6d, + folded 5c). Frequency is no longer change-event accumulation:
+// (6a) every concept gets a Zipfian-by-rank SEED frequency from its registry
+// tier (the agnostic replacement for the 89-entry English DEFAULT_FREQUENCY_HINTS
+// — the 5c broadening), the sound-change frequency bumps (+0.04 mutation, +0.06
+// actuation) are GONE, and decayFrequencies now mean-reverts toward that seed
+// instead of decaying toward zero — so hints stop saturating at the 0.95 cap
+// (scorecard cap-pinned 12.7%→0%) and core Swadesh retention lands ~80%/1000yr.
+// (6b) the high-frequency erosion brake is now GRADUATED in frequency, replacing
+// the discrete hardcoded SWADESH_CONTENT_CORE ×0.6 list (also the 5c
+// de-anglicisation of the brake). (4e) a low-frequency word-DEATH channel in
+// stepObsolescence (tier-0/closed-class protected) consumes rng draws. (6d)
+// split probability ×popFactor + binary-biased pickChildCount (85%→2) reshape
+// the tree. All six presets shift; GEN0 unchanged (no dynamics at gen 0).
+// Approved milestone re-baseline (gate = scorecard); determinism preserved.
 const GENN: Record<string, string> = {
-  pie: "5717c46e",
-  bantu: "9b186a28",
-  romance: "d14542a3",
-  germanic: "e1fa7cae",
-  tokipona: "656a0097",
-  english: "5711cebd",
+  pie: "edc6570b",
+  bantu: "8bf74abc",
+  romance: "9e9c4ad6",
+  germanic: "b1be7ef7",
+  tokipona: "ab0bee33",
+  english: "a24a3ee6",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

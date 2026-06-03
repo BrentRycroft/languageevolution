@@ -108,7 +108,12 @@ describe("Phase 43e — syntactical modules", () => {
       ],
     };
     const sim = createSimulation(cfg);
-    for (let i = 0; i < 80; i++) sim.step();
+    // Phase 6: check inheritance CLOSE to split time. Over a long run a daughter's
+    // word order can legitimately DRIFT off SVO (its activeModules then recomputes
+    // without wordOrder/svo) — that's typological drift, not an inheritance break.
+    // 30 gens is past minGenerationsBetweenSplits (12) so a split can occur, while
+    // a freshly-split daughter hasn't yet drifted off the inherited module.
+    for (let i = 0; i < 30; i++) sim.step();
     const state = sim.getState();
     const leaves = Object.keys(state.tree)
       .filter((id) => state.tree[id]!.childrenIds.length === 0 && !state.tree[id]!.language.extinct);

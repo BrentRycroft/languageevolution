@@ -1,8 +1,10 @@
 # Evolution Realism Milestone — implementation plan
 
-Status: **PLAN ONLY** (no code changed). Source of findings: the 5-agent evolution
-audit (2026-06-01), captured in ROADMAP.md "EVOLUTION REALISM AUDIT". This doc turns
-those findings into a phased, verifiable milestone. The user has pre-authorized
+Status: **COMPLETE** (2026-06-03) — all 7 phases (0–6) landed on `auto/realism`.
+Deferred sub-items (logged, not blocking): 1c inventory-drain, 3c directional clines,
+3f colex-from-polysemy. Each phase's STATUS block below records its commits, scorecard
+deltas, and any reconciliation. Source of findings: the 5-agent evolution audit
+(2026-06-01), captured in ROADMAP.md "EVOLUTION REALISM AUDIT". The user pre-authorized
 "breaking what impedes" (re-baselines, mechanism replacement) as part of the milestone.
 
 ---
@@ -433,6 +435,40 @@ toward 2 so hard polytomies are the exception.
 **Verify (scorecard):** Swadesh retention ~80%/millennium and monotonic; Zipfian frequency
 (rank-1/rank-100 ≫ 1); high-freq erosion ≪ low-freq; split timing low-variance.
 **Effort:** M. **Risk:** medium (calibration is iterative — use the scorecard to converge).
+
+### STATUS: 6a+6b+6c+6d + 4e DONE (2026-06-03) — MILESTONE COMPLETE
+- **6a DONE:** frequency is no longer change-event accumulation. `zipfFrequencyFor`
+  seeds EVERY concept a Zipfian-by-rank frequency from its registry tier (the
+  agnostic replacement for the 89-entry English `DEFAULT_FREQUENCY_HINTS` — also
+  the **5c broadening**); the sound-change frequency bumps (+0.04 mutation, +0.06
+  actuation, phonology.ts) are GONE; `decayFrequencies` mean-reverts toward the
+  seed instead of decaying to zero. **Scorecard: cap-pinned 12.7%→0%** (saturation
+  eliminated — the audit's core complaint) and Swadesh @1000yr → ~80% for most
+  presets. KNOWN LIMIT: the Zipf rank1/rank100 ratio stays ~1.0 because the top-100
+  words are all tier-0 core (which must stay high-freq for Swadesh retention) — a
+  true token-frequency Zipfian needs per-concept usage data the sim doesn't model.
+- **6b DONE:** the high-frequency erosion brake is now GRADUATED in frequency,
+  replacing the discrete hardcoded `SWADESH_CONTENT_CORE` ×0.6 list (the **5c
+  de-anglicisation of the brake** — the list survives only as the analysis-only
+  `SWADESH_CORE_SET` export).
+- **6c DONE (via 6a/6b):** core-vocab erosion now lands ~80%/1000yr for most
+  presets (the audit's near-0%/5kyr is fixed); `globalRate` left at 0.05 — 6a/6b's
+  frequency+brake redesign did the calibration. (A couple presets stay conservative
+  — english 99% — acceptable; per-preset variance isn't a globalRate lever.)
+- **6d DONE:** split probability ×popFactor (ties cladogenesis to population growth,
+  cutting the gen-22-vs-gen-166 variance) + binary-biased `pickChildCount` (85%→2,
+  tail capped at 5) so family trees are bifurcating, not comb-like multifurcations.
+- **4e DONE:** low-frequency word-DEATH channel in `stepObsolescence` (tier-0 core /
+  closed-class / structured-compound protected) + EXPANSION_NEED birth pressure
+  0.15→0.10 — the lexical-turnover death side. Lexicon size moved toward stationary
+  (still 1.5–6× — full stationarity is a logged calibration backlog item).
+- **Phase-6 gate:** full `RUN_SLOW` GREEN after reconciling 5 single-seed band/proxy
+  tests perturbed by the frequency+tree reshuffle (water now too stable to change in
+  100 gens → 250; closed-class<content drift → multi-seed aggregate; stratal UR/SR
+  → bulk-mirror ≥80% + ordering backlog; stress reduction-count proxy retired →
+  sanity check + backlog; syntactical module-inherit checked nearer split). Backlog:
+  lexicon-size stationarity; 6a bare-lineage synthesis nudge; stratal UR ordering;
+  stress-reduction proxy.
 
 ---
 

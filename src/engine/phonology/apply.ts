@@ -494,12 +494,19 @@ export function applyChangesToWord(
   // shows closed-class moves too. The brakes still hold direction
   // (closed-class strictly < content) but stop hard-locking high-
   // freq vocabulary out of the convergence-divergence balance.
-  if (freq >= 0.85) {
-    if (SWADESH_CONTENT_CORE.has(meaning)) {
-      freqExponent *= 0.6;
-    } else if (isClosedClassAnchor(meaning, opts.langForHomonym)) {
-      freqExponent *= 0.5;
-    }
+  // Phase 6b + 5c: GRADUATED high-frequency brake driven by the word's actual
+  // (now Zipfian — Phase 6a) frequency, not membership in a hardcoded English
+  // Swadesh list. High-freq core vocabulary erodes dramatically slower than rare
+  // words (the frequency-conservation universal); the brake now scales smoothly
+  // with frequency instead of switching on at a 0.85 cliff for a fixed concept
+  // set, so ANY language's high-freq vocabulary is conserved (de-anglicised).
+  // (SWADESH_CONTENT_CORE survives only as the SWADESH_CORE_SET analysis export.)
+  if (isClosedClassAnchor(meaning, opts.langForHomonym)) {
+    // Function words drift slowly (acquired early, rarely innovated).
+    if (freq >= 0.6) freqExponent *= 0.5;
+  } else if (isContentWord(meaning) && freq >= 0.55) {
+    // freq 0.55 → ×1.0 (no extra brake); freq 0.95 → ×0.55 (strong brake).
+    freqExponent *= Math.max(0.55, 1 - ((freq - 0.55) / 0.4) * 0.45);
   }
   // Phase 38d: low-freq content boost. Real low-freq vocabulary
   // churns faster than the smooth curve predicts (rare technical

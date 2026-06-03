@@ -15,6 +15,7 @@ import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
 import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
+import { zipfFrequencyFor } from "../lexicon/concepts";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
 import { assignAllGenders } from "../morphology/gender";
@@ -237,6 +238,17 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // which all assume conceptIds is populated. Mints in preset insertion order,
   // so the downstream lexKeys gloss sequence is byte-identical.
   rekeyLexiconToConceptIds(rootLang);
+  // Phase 6a: give EVERY content concept a Zipfian-by-rank seed frequency (by
+  // concept tier), not just the ~89 in seedFrequencyHints. Without this most
+  // words fell back to a flat 0.5 default, so the content/function + Swadesh
+  // brakes had no real frequency signal for non-core vocabulary and the
+  // distribution couldn't be Zipfian. Explicit seedFrequencyHints (and the
+  // closed-class anchors poured in below) keep precedence — this only fills gaps.
+  for (const m of lexKeys(rootLang)) {
+    if (rootLang.wordFrequencyHints[m] === undefined) {
+      rootLang.wordFrequencyHints[m] = zipfFrequencyFor(m);
+    }
+  }
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
   rootLang.lexicalCapacity = initialLexicalCapacity(rootLang);
   seedNativeProvenance(rootLang);

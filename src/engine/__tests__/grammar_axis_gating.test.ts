@@ -6,7 +6,9 @@ import { maybeGrammaticalize } from "../morphology/evolve";
 import {
   deriveGrammaticalisedAxes,
   pathwayTargetsForLang,
+  PATHWAYS,
 } from "../semantics/grammaticalization";
+import type { SemanticTag } from "../semantics/grammaticalization";
 
 /**
  * Phase 73c Tier C Phase 1 — grammaticalisedAxes gates the pathway map.
@@ -65,7 +67,8 @@ describe("Phase 73c Phase 1 — grammaticalisedAxes gating", () => {
     // No declared axes set; the derived gate must drop tense + case targets.
     const motion = pathwayTargetsForLang("motion", lang);
     expect(motion).not.toContain("verb.tense.fut");
-    const allTargets = (["motion", "possession", "location", "existence"] as const).flatMap(
+    // Across EVERY pathway tag, a caseless language is offered no noun.case target.
+    const allTargets = (Object.keys(PATHWAYS) as SemanticTag[]).flatMap(
       (t) => pathwayTargetsForLang(t, lang),
     );
     expect(allTargets.some((c) => c.startsWith("noun.case."))).toBe(false);

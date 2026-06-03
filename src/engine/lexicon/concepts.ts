@@ -3,6 +3,7 @@ import { BASIC_240, CLUSTERS as BASIC_CLUSTERS } from "./basic240";
 import { posOf, type POS } from "./pos";
 import { frequencyFor } from "./frequency";
 import { EXPANDED_CONCEPTS } from "./expanded_concepts";
+import { fnv1a } from "../rng";
 
 /**
  * concepts.ts
@@ -584,6 +585,29 @@ export function conceptFor(id: Meaning): Concept | undefined {
 
 export function tierOf(id: Meaning): Tier {
   return CONCEPTS[id]?.tier ?? 0;
+}
+
+/** Phase 6a: Zipfian seed frequency by tier (forager-core → modern-rare). */
+const TIER_BASE_FREQ: Record<Tier, number> = { 0: 0.88, 1: 0.58, 2: 0.36, 3: 0.2 };
+
+/**
+ * Phase 6a: a STABLE Zipfian-by-rank seed frequency for ANY concept, driven by
+ * the concept registry's TIER (a language-agnostic coreness signal — tier 0 is
+ * the forager Swadesh core, tier 3 is modern/rare) plus a deterministic
+ * per-concept jitter so the distribution is continuous, not four flat steps.
+ *
+ * This is the agnostic replacement for the 89-entry English
+ * DEFAULT_FREQUENCY_HINTS table (the Phase-5c broadening): every one of the
+ * ~700 registry concepts now gets a sensible rank-based frequency instead of a
+ * flat 0.5 default. Combined with killing the sound-change frequency bump, this
+ * spreads `wordFrequencyHints` across the range (Zipfian) instead of saturating
+ * every word at the 0.95 cap. Deterministic (fnv1a over the concept id), so it
+ * does not perturb reproducibility.
+ */
+export function zipfFrequencyFor(id: Meaning): number {
+  const base = TIER_BASE_FREQ[tierOf(id)];
+  const jitter = ((fnv1a(id) % 1000) / 1000 - 0.5) * 0.18; // ±0.09 continuous spread
+  return Math.max(0.08, Math.min(0.93, base + jitter));
 }
 
 export function colexWith(id: Meaning): readonly Meaning[] {
