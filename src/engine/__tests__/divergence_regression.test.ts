@@ -97,8 +97,14 @@ describe("Phase 23/23b — divergence regression (shared sim, multi-assertion)",
   it("sister daughters diverge from each other (pairwise Δ ≥ 0.8)", () => {
     if (langs.length < 2) return; // skip if no tree split happened
     const pw = pairwiseMeanDistance(langs, seedLex);
-    // Pre-fix: 0.33. Post-fix: 1.3–1.7. Floor at 0.8.
-    expect(pw).toBeGreaterThan(0.8);
+    // Pre-fix: 0.33 (degenerate clones). Evolution-realism Phase 4c removed a
+    // SPURIOUS divergence source — cliticization used to truncate each sister's
+    // free dictionary lemma differently (form.slice(0,-1)), inflating pairwise
+    // lexical distance; the old 0.8 floor was calibrated WITH that bug. Sisters
+    // now diverge only via genuine sound change + drift + TypologicalDirection,
+    // landing ~0.55. Floor at 0.45 — still well above the 0.33 degenerate-clone
+    // baseline, so a real convergence collapse still fails.
+    expect(pw).toBeGreaterThan(0.45);
   });
 
   it("mean word length stays within 25% of the seed (no over-erosion)", () => {

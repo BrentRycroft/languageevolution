@@ -19,7 +19,7 @@ import { lexGet } from "../lexicon/access";
  */
 
 describe("Phase 66 T1 — grammaticalization multi-step chains", () => {
-  it("first grammaticalisation does NOT delete the source meaning; sets stage 2", () => {
+  it("Phase 4b: first grammaticalisation routes the source through the clitic chain, keeping it in the lexicon", () => {
     const sim = createSimulation({ ...presetEnglish(), seed: "gc-stage2" });
     sim.step();
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
@@ -35,40 +35,41 @@ describe("Phase 66 T1 — grammaticalization multi-step chains", () => {
       return;
     }
     const m = shift.source.meaning;
-    // Source meaning is still in lexicon (Phase 66 T1 keeps it).
+    // 4c: source meaning is still in lexicon (clitic stage keeps it, lemma intact).
     expect(lexGet(lang, m)).toBeDefined();
-    expect(lang.grammaticalizationStage?.[m]?.stage).toBe(2);
-    // Frequency was reduced.
-    expect(lang.wordFrequencyHints[m]).toBeLessThan(0.6);
+    // 4b: it enters the cline at the clitic stage (1) or, if a prior clitic was
+    // bound, the bound-affix stage (2) — never deleted or teleported past both.
+    const stage = lang.grammaticalizationStage?.[m]?.stage;
+    expect(stage === 1 || stage === 2).toBe(true);
+    // Frequency was reduced as the lexeme bleaches.
+    expect(lang.wordFrequencyHints[m]).toBeLessThan(0.7);
   });
 
-  it("progressGrammaticalizationChain advances stage 2 → 3 → 4 over time", () => {
+  it("Phase 4b: a bound affix advances stage 2 → 3 → 4 over time", () => {
     const sim = createSimulation({ ...presetEnglish(), seed: "gc-progress" });
     sim.step();
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
     const rng = makeRng("gc-progress-trigger");
-    // Promote a meaning to stage 2.
-    let shift = null;
-    for (let i = 0; i < 200; i++) {
-      shift = maybeGrammaticalize(lang, rng, 1.0);
-      if (shift?.source) break;
+    // Drive a meaning all the way to stage 2 (clitic, then bind into a paradigm).
+    let m: string | null = null;
+    for (let i = 0; i < 400 && !m; i++) {
+      maybeGrammaticalize(lang, rng, 1.0);
+      for (const [mm, st] of Object.entries(lang.grammaticalizationStage ?? {})) {
+        if (st?.stage === 2) { m = mm; break; }
+      }
     }
-    if (!shift?.source) return;
-    const m = shift.source.meaning;
+    if (!m) return; // no candidate reached the bound-affix stage — skip
     expect(lang.grammaticalizationStage![m]!.stage).toBe(2);
 
-    // Now advance via progressGrammaticalizationChain at cooldown
-    // 5 + force probability via a deterministic 1.0 caller mock.
-    // The function uses internal RNG-gated 4%; bypass by retrying.
+    // Now advance via progressGrammaticalizationChain (internal 4% gate; retry).
     let advanced = false;
-    for (let g = 100; g < 300 && !advanced; g++) {
+    for (let g = 100; g < 400 && !advanced; g++) {
       progressGrammaticalizationChain(lang, rng, g);
       const cur = lang.grammaticalizationStage![m]?.stage;
       if (cur && cur > 2) advanced = true;
     }
     expect(advanced).toBe(true);
-    // Either stage 3 (still in lexicon, form possibly shorter) or
-    // stage 4 (deleted).
+    // Either stage 3 (still in lexicon, affix reduced) or stage 4 (deleted).
     const stage = lang.grammaticalizationStage![m]?.stage;
     expect([3, 4]).toContain(stage);
   });

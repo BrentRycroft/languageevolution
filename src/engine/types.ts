@@ -471,6 +471,15 @@ export interface Language {
   lexicalSpelling?: Record<Meaning, string>;
   otRanking: string[];
   lastChangeGeneration: Record<Meaning, number>;
+  /**
+   * Evolution-realism Phase 3e: per-pair recarve memory. Maps an unordered
+   * meaning-pair key (`a|b`, sorted) → the generation it was last merged or
+   * split. maybeRecarve skips a pair recarved within RECARVE_COOLDOWN gens so
+   * a colexified pair can't oscillate cold→cool→cold every few generations
+   * (real semantic recarving is a once-in-a-long-while reanalysis, not a
+   * flip-flop). Undefined → no pair has recarved yet.
+   */
+  recarveHistory?: Record<string, number>;
   stressPattern?: "initial" | "penult" | "final" | "antepenult" | "lexical";
   /**
    * Phase 26b: how the language realises the infinitive (citation form)
@@ -633,6 +642,16 @@ export interface Language {
     stage: 0 | 1 | 2 | 3 | 4;
     targetCategory?: import("./morphology/types").MorphCategory;
     lastTransitionGen: number;
+    /**
+     * Evolution-realism Phase 4b/4c: the phonologically-reduced BOUND
+     * allomorph (the clitic/affix form), kept separate from the free
+     * dictionary lemma. Set when a word becomes a clitic (stage 1); used as
+     * the affix when it binds into a paradigm (stage 2); eroded further at
+     * fusion (stage 3). Previously grammaticalization used the FULL free form
+     * as the affix and fusion eroded the dictionary lemma itself (belly→bell)
+     * — corrupting a still-current word. The lemma is now never truncated.
+     */
+    affixForm?: WordForm;
   }>;
   /**
    * Per-noun gender assignment when grammar.genderCount > 0.
@@ -1309,6 +1328,15 @@ export interface SimulationConfig {
   morphology: {
     grammaticalizationProbability: number;
     paradigmMergeProbability: number;
+    /**
+     * Evolution-realism Phase 4a: per-generation probability of DROPPING a
+     * paradigm whose affix has eroded to ∅ (closes the synthesis ratchet —
+     * paradigm count could previously only ever grow). Surface-neutral
+     * (inflect() already bails such a paradigm to the bare stem); the effect
+     * is on the synthesis target via paradigmCount. Scaled by conservatism ×
+     * Trudgill simplification at the call site. Undefined → 0 (no loss).
+     */
+    paradigmLossProbability?: number;
     analogyProbability?: number;
     cliticizationProbability?: number;
     suppletionProbability?: number;

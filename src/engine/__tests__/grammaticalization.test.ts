@@ -51,7 +51,7 @@ describe("grammaticalization pathways", () => {
     }
   });
 
-  it("records the source meaning + pathway on the resulting paradigm", () => {
+  it("records the source meaning + pathway on the paradigm once a clitic binds (stage 2)", () => {
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
@@ -60,11 +60,21 @@ describe("grammaticalization pathways", () => {
     delete lang.morphology.paradigms["noun.case.loc"];
     delete lang.morphology.paradigms["noun.case.dat"];
     delete lang.morphology.paradigms["noun.case.inst"];
-    const shift = maybeGrammaticalize(lang, makeRng("back-loc"), 1.0);
-    expect(shift).not.toBeNull();
-    if (!shift || !shift.source) return;
-    const p = lang.morphology.paradigms[shift.source.category];
-    expect(p?.source?.meaning).toBe(shift.source.meaning);
-    expect(p?.source?.pathway).toBe(shift.source.pathway);
+    // Phase 4b: a paradigm is created only when a clitic BINDS (stage 1 → 2),
+    // not on the first (cliticising) transition. Drive the cline until some
+    // word reaches the bound-affix stage, then check ITS paradigm metadata.
+    const rng = makeRng("back-loc");
+    let bound: ReturnType<typeof maybeGrammaticalize> = null;
+    for (let i = 0; i < 200 && !bound; i++) {
+      const shift = maybeGrammaticalize(lang, rng, 1.0);
+      if (shift?.source && lang.grammaticalizationStage?.[shift.source.meaning]?.stage === 2) {
+        bound = shift;
+      }
+    }
+    expect(bound).not.toBeNull();
+    if (!bound?.source) return;
+    const p = lang.morphology.paradigms[bound.source.category];
+    expect(p?.source?.meaning).toBe(bound.source.meaning);
+    expect(p?.source?.pathway).toBe(bound.source.pathway);
   });
 });

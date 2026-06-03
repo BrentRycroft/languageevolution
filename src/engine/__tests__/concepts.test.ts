@@ -171,4 +171,26 @@ describe("re-carving", () => {
     const ev = maybeRecarve(lang, rng, 1);
     expect(ev).toBeNull();
   });
+
+  it("Phase 3e: a recently-recarved pair is skipped (cooldown)", () => {
+    // Same setup as the merge test above, where arm↔hand merges and arm is
+    // deleted. Here the pair is pre-stamped as recarved at gen 0; within the
+    // RECARVE_COOLDOWN window the same pair must NOT recarve again, so arm
+    // survives instead of being merged away. This locks the anti-oscillation
+    // guard (cold→cool→cold flip-flop) at the unit level.
+    const lang = testLang({
+      lexicon: { arm: ["a", "r", "m"], hand: ["h", "a", "n", "d"] },
+      wordFrequencyHints: { arm: 0.6, hand: 0.85 },
+      recarveHistory: { "arm|hand": 0 }, // key is sorted: arm < hand
+    });
+    const rng = makeRng("merge-seed");
+    const ev = maybeRecarve(lang, rng, 1, 10); // 10 - 0 = 10 < cooldown (50)
+    // The arm↔hand merge is blocked — both survive.
+    expect(lexHas(lang, "arm")).toBe(true);
+    expect(lexHas(lang, "hand")).toBe(true);
+    // If anything fired, it cannot be the arm/hand merge.
+    if (ev && ev.kind === "merge") {
+      expect([ev.winner, ev.loser]).not.toContain("arm");
+    }
+  });
 });

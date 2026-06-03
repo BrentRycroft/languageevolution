@@ -2,6 +2,7 @@ import type { Morphology, MorphCategory, Paradigm } from "./types";
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargetsForLang } from "../semantics/grammaticalization";
+import type { SemanticTag } from "../semantics/grammaticalization";
 import { posOf, isClosedClass } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
@@ -54,6 +55,24 @@ export function applyPhonologyToAffixes(
       pdm.ablautMap = next;
     }
   }
+}
+
+/**
+ * Evolution-realism Phase 4b/4c: derive the phonologically-reduced BOUND
+ * allomorph (clitic/affix) of a free form. A clitic is an unstressed, reduced
+ * fragment of its source — the tail survives in a suffixing language, the head
+ * in a prefixing one. Grow the window from the bound edge until it contains a
+ * syllabic nucleus so the allomorph is pronounceable. This is what binds into a
+ * paradigm — the free dictionary lemma is left intact.
+ */
+function reduceToClitic(form: WordForm, position: "prefix" | "suffix"): WordForm {
+  if (form.length <= 2) return form.slice();
+  const fromEnd = position === "suffix";
+  for (let len = 2; len <= form.length; len++) {
+    const slice = fromEnd ? form.slice(form.length - len) : form.slice(0, len);
+    if (slice.some((p) => isSyllabic(p))) return slice;
+  }
+  return form.slice();
 }
 
 export function maybeGrammaticalize(
@@ -116,46 +135,58 @@ export function maybeGrammaticalize(
   if (candidates.length === 0) return null;
 
   const chosen = candidates[rng.int(candidates.length)]!;
-  const pdm: Paradigm = {
-    affix: chosen.form.slice(),
-    position: lang.grammar.affixPosition,
-    category: chosen.target,
-    source: { meaning: chosen.meaning, pathway: chosen.tag },
-  };
-  lang.morphology.paradigms[chosen.target] = pdm;
   const candidate = chosen.meaning;
-
-  // Phase 66 T1: stage tracking. Pre-Phase-66 the meaning was
-  // deleted from the lexicon the moment its first grammaticalisation
-  // fired (line 115 `deleteMeaning(lang, candidate)`). That made
-  // chained pathways (Latin habere → aux → synthetic perfect →
-  // zero) impossible — the source vanished after step 1. Now we
-  // mark the meaning at stage 2 (bound affix, paradigm registered)
-  // but keep it in the lexicon at reduced frequency so subsequent
-  // calls to `progressGrammaticalizationChain` can advance it
-  // through stages 3 (fusion) and 4 (loss).
   if (!lang.grammaticalizationStage) lang.grammaticalizationStage = {};
+  const existing = lang.grammaticalizationStage[candidate];
+
+  // Phase 4b: respect the grammaticalization cline (free → clitic → affix →
+  // fusion → loss). Pre-4b a high-freq word TELEPORTED straight to a bound
+  // affix in one gen, with the FULL free form as the affix. Now it must pass
+  // through the clitic stage first; binding into a paradigm is a LATER
+  // stage-transition that uses the reduced bound allomorph.
+  if (existing?.stage === 1) {
+    // ── stage 1 → 2: bind the clitic into a paradigm ──
+    const target = chosen.target;
+    if (lang.morphology.paradigms[target]) return null; // slot already filled
+    const affix = (existing.affixForm ?? reduceToClitic(chosen.form, lang.grammar.affixPosition)).slice();
+    const pdm: Paradigm = {
+      affix,
+      position: lang.grammar.affixPosition,
+      category: target,
+      source: { meaning: candidate, pathway: chosen.tag },
+    };
+    lang.morphology.paradigms[target] = pdm;
+    existing.stage = 2;
+    existing.targetCategory = target;
+    existing.lastTransitionGen = 0;
+    if (lang.wordFrequencyHints[candidate] !== undefined) {
+      lang.wordFrequencyHints[candidate] = Math.max(0.1, lang.wordFrequencyHints[candidate]! * 0.5);
+    }
+    return {
+      kind: "grammaticalization",
+      description: `"${candidate}" (${chosen.tag}) → ${target} ${pdm.position} /${affix.join("")}/ [stage 2]`,
+      source: { meaning: candidate, pathway: chosen.tag, category: target },
+    };
+  }
+
+  // ── stage 0 → 1: free word becomes a clitic (no paradigm yet) ──
+  const affixForm = reduceToClitic(chosen.form, lang.grammar.affixPosition);
   lang.grammaticalizationStage[candidate] = {
-    stage: 2,
+    stage: 1,
     targetCategory: chosen.target,
-    lastTransitionGen: 0, // caller patches via progressGrammaticalizationChain
+    affixForm,
+    lastTransitionGen: 0,
   };
-  // Reduce the surface form's frequency so its lexical use fades
-  // gradually (real grammaticalised verbs see steep frequency drop).
+  if (!lang.wordOrigin) lang.wordOrigin = {};
+  lang.wordOrigin[candidate] = `clitic:${chosen.tag}`;
+  // Clitics lose stress and frequency-as-a-lexeme as they bleach.
   if (lang.wordFrequencyHints[candidate] !== undefined) {
-    lang.wordFrequencyHints[candidate] = Math.max(
-      0.1,
-      lang.wordFrequencyHints[candidate]! * 0.5,
-    );
+    lang.wordFrequencyHints[candidate] = Math.max(0.1, lang.wordFrequencyHints[candidate]! * 0.6);
   }
   return {
     kind: "grammaticalization",
-    description: `"${candidate}" (${chosen.tag}) → ${chosen.target} ${pdm.position} /${chosen.form.join("")}/ [stage 2]`,
-    source: {
-      meaning: candidate,
-      pathway: chosen.tag,
-      category: chosen.target,
-    },
+    description: `"${candidate}" (${chosen.tag}) → clitic /${affixForm.join("")}/ [stage 1]`,
+    source: { meaning: candidate, pathway: chosen.tag, category: chosen.target },
   };
 }
 
@@ -189,22 +220,26 @@ export function progressGrammaticalizationChain(
   st.lastTransitionGen = generation;
 
   if (newStage === 3) {
-    // Fusion: the form's surface drops a phoneme (final-segment
-    // erosion). Lexicon form shrinks; the paradigm version is
-    // already affixed and stays. Like cliticization, the erosion must
-    // not delete the word's only syllable nucleus (which would yield an
-    // unpronounceable cluster) — skip the shrink if it would, the stage
-    // still advances.
-    const form = lexGet(lang, chosen);
-    if (form && form.length > 1) {
-      const eroded = form.slice(0, -1);
-      if (eroded.some((p) => isSyllabic(p))) {
-        lexSet(lang, chosen, eroded);
+    // Phase 4c: fusion reduces the BOUND AFFIX (the unstressed allomorph in the
+    // host+clitic unit), NOT the free dictionary lemma. Pre-4c this did
+    // `lexSet(lang, chosen, form.slice(0,-1))`, eroding the still-current free
+    // word itself (belly→bell→bel) — corrupting the lexeme. Now the paradigm's
+    // affix erodes a phoneme (keeping a nucleus); the lemma is untouched.
+    const target = st.targetCategory;
+    const pdm = target ? lang.morphology.paradigms[target] : undefined;
+    if (pdm && pdm.affix.length > 1) {
+      const eroded = pdm.affix.slice(0, -1);
+      if (eroded.some((p) => isSyllabic(p)) || eroded.length >= 1) pdm.affix = eroded;
+      if (pdm.variants) {
+        for (const v of pdm.variants) {
+          if (v.affix.length > 1) v.affix = v.affix.slice(0, -1);
+        }
       }
     }
+    if (st.affixForm && st.affixForm.length > 1) st.affixForm = st.affixForm.slice(0, -1);
     return {
       kind: "grammaticalization",
-      description: `"${chosen}" → fused [stage 3] (form shortened to /${(lexGet(lang, chosen) ?? []).join("")}/)`,
+      description: `"${chosen}" → fused [stage 3] (affix reduced to /${(pdm?.affix ?? []).join("")}/)`,
       source: {
         meaning: chosen,
         pathway: "chain-fusion",
@@ -434,7 +469,7 @@ export function maybeCliticize(
   if (!rng.chance(probability)) return null;
   const meanings = lexKeys(lang);
   if (meanings.length === 0) return null;
-  type Cand = { m: string; tag: string; form: WordForm };
+  type Cand = { m: string; tag: SemanticTag; form: WordForm };
   const candidates: Cand[] = [];
   for (const m of meanings) {
     const tag = semanticTagOf(m);
@@ -448,21 +483,28 @@ export function maybeCliticize(
   }
   if (candidates.length === 0) return null;
   const chosen = candidates[rng.int(candidates.length)]!;
-  const next = chosen.form.slice(0, -1);
-  if (next.length < 2) return null;
-  // Cliticization erodes the final phoneme, but it must not delete the
-  // word's only syllable nucleus — that yields an unpronounceable cluster
-  // (e.g. PIE "run" /dər/-like → "dd"). Decline if the eroded form has no
-  // syllabic peak (vowel or syllabic resonant), same as the length guard.
-  if (!next.some((p) => isSyllabic(p))) return null;
-  // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
-  setLexiconForm(lang, chosen.m, next, { bornGeneration: 0, origin: `clitic:${chosen.tag}` });
+  // Phase 4c: cliticization marks the word as a stage-1 CLITIC with a reduced
+  // bound allomorph (reduceToClitic), feeding the grammaticalization cline.
+  // Pre-4c it did `form.slice(0,-1)` and wrote that back to the lexicon,
+  // ERODING THE FREE DICTIONARY LEMMA itself (belly→/kʷefoː/-style corruption).
+  // The free word is now left intact; only the bound allomorph is recorded.
+  if (lang.grammaticalizationStage?.[chosen.m]) return null; // already in chain
+  const affixForm = reduceToClitic(chosen.form, lang.grammar.affixPosition);
+  if (affixForm.length < 1) return null;
+  const target = pathwayTargetsForLang(chosen.tag, lang)[0];
+  if (!lang.grammaticalizationStage) lang.grammaticalizationStage = {};
+  lang.grammaticalizationStage[chosen.m] = {
+    stage: 1,
+    targetCategory: target,
+    affixForm,
+    lastTransitionGen: 0,
+  };
   lang.wordOrigin[chosen.m] = `clitic:${chosen.tag}`;
   lang.wordFrequencyHints[chosen.m] = 0.45;
   return {
     meaning: chosen.m,
     from: chosen.form.join(""),
-    to: next.join(""),
+    to: affixForm.join(""),
     pathway: chosen.tag,
   };
 }
@@ -489,6 +531,39 @@ export function maybeMergeParadigms(
     }
   }
   return null;
+}
+
+/**
+ * Evolution-realism Phase 4a: drop a paradigm whose affix (and every variant)
+ * has eroded to ∅. Such a paradigm marks nothing — `inflect()` already bails it
+ * to the bare stem (paradigmHasOnlyEmptyAffixes guard) — but it lingered in
+ * `lang.morphology.paradigms` forever, so paradigm count, hence the synthesis
+ * target (`0.8 + 0.2*paradigmCount`), could only ever GROW. That one-way
+ * ratchet made every lineage drift polysynthetic and made the Latin→French
+ * analytic direction impossible. Removing the collapsed paradigm is SURFACE-
+ * NEUTRAL (same bare-stem output) but lets synthesis fall on the next
+ * stepTypologyDrift. This is the affix-loss → paradigm-removal channel that
+ * `paradigmHasOnlyEmptyAffixes`'s comment deferred to "a separate concern".
+ */
+export function maybeDropCollapsedParadigm(
+  lang: Language,
+  rng: Rng,
+  probability: number,
+): MorphShift | null {
+  if (!rng.chance(probability)) return null;
+  const collapsed = (Object.keys(lang.morphology.paradigms) as MorphCategory[]).filter(
+    (c) => {
+      const p = lang.morphology.paradigms[c];
+      return p != null && paradigmHasOnlyEmptyAffixes(p);
+    },
+  );
+  if (collapsed.length === 0) return null;
+  const cat = collapsed[rng.int(collapsed.length)]!;
+  delete lang.morphology.paradigms[cat];
+  return {
+    kind: "affix_erode",
+    description: `paradigm lost: ${cat} (affix eroded to ∅)`,
+  };
 }
 
 export function maybeSplitParadigm(
@@ -629,9 +704,24 @@ export function inflectCascade(
   meaning: string,
 ): CascadeResult {
   const available = categories.filter((c) => !!lang.morphology.paradigms[c]);
+  // Phase 4d: TAM mutual exclusion. A MorphCategory is `<pos>.<axis>.<value>`
+  // (verb.tense.past, verb.tense.fut, verb.aspect.pfv, …). At most ONE value
+  // per axis may surface on a word — a verb can't be simultaneously past AND
+  // future, or perfective AND imperfective. Keep the first requested value per
+  // axis (caller order = priority) and drop later same-axis competitors BEFORE
+  // the synthesis cap, so the cap then limits how many distinct axes stack.
+  // (Lifts the narrative composer's one-per-axis stack into the core.)
+  const seenAxes = new Set<string>();
+  const oncePerAxis: MorphCategory[] = [];
+  for (const c of available) {
+    const axis = c.slice(0, c.lastIndexOf("."));
+    if (seenAxes.has(axis)) continue;
+    seenAxes.add(axis);
+    oncePerAxis.push(c);
+  }
   const synth = lang.grammar.synthesisIndex ?? 2.0;
   const cap = Math.max(1, Math.round(synth));
-  const slice = available.slice(0, cap);
+  const slice = oncePerAxis.slice(0, cap);
 
   // Phase 63: verb theme stripping. When the language declares
   // `grammar.verbThemes` (citation-form markers like Romance -aɾe /

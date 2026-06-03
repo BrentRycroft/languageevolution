@@ -248,6 +248,23 @@ distribution is directionally sane (not 77% metonymy); taboo targets are referen
 words; no recarve oscillation.
 **Effort:** M–L. **Risk:** medium.
 
+### STATUS: 3a+3b+3d+3e DONE; 3c + 3f DEFERRED (2026-06-02)
+- **3a+3b DONE (`c6ef174`):** drift draws its PRIMARY candidate from the curated
+  colex + SEMANTIC_NEIGHBORS graph (degenerate 12-dim embedding + whole-cluster
+  relatedMeanings demoted to fallbacks); a word's curated gradable antonym is
+  excluded from the candidate pool (no alive→dead drift). Scorecard antonym-drifts=0.
+- **3d DONE (`42942e3`):** taboo replacement gates on a curated dangerous-referent
+  set (death / supernatural / predator / disease / sex / in-law), not freq ≥ 0.7
+  (which wrongly hit go/take/want/see).
+- **3e DONE (`101f95a`):** per-pair recarve cooldown (`recarveHistory` + 50-gen
+  recency check in tryMerge/trySplit) kills the cold→cool→cold flip-flop.
+  Byte-identical at gen 30 (oscillation only lives in the 200-gen scorecard runs).
+- **3c DEFERRED:** directional clines (abstractness axis) — larger semantic-typology
+  change, lower urgency; logged for a later pass.
+- **3f DEFERRED:** colex-from-recorded-polysemy — analysis/UI correctness, low
+  evolution impact; logged.
+- Phase-3 gate: full `RUN_SLOW` green (1983 pass) at `101f95a`.
+
 ---
 
 ## Phase 4 — Restore the missing cycles (STRUCTURAL — the big one)
@@ -297,6 +314,30 @@ occur (Romance can shed morphology); isolating presets stay isolating without a 
 lexicon size stationary; no illegal TAM stacks; grammaticalization passes through a clitic
 stage in the event log.
 **Effort:** L (largest). **Risk:** high. Split into sub-PRs (4a, then 4b+4c, then 4d, then 4e).
+
+### STATUS: 4a+4b+4c+4d DONE; 4e DEFERRED to after 6a (2026-06-02)
+- **4a DONE (`cde61ee`):** affix-loss → paradigm-removal (`maybeDropCollapsedParadigm`)
+  + analytic pull on the synthesis target (adposition/caseless drags it DOWN). Also
+  routed `stepTypologyDrift`'s type-drift event through the `pushEvent` cap.
+- **4b+4c DONE (`e5d1ffc`):** grammaticalization respects the cline — a fresh word
+  routes through the CLITIC stage (1) first and binds into a paradigm only at a later
+  transition (2), using a reduced bound allomorph (`reduceToClitic`); fusion/clitic
+  reduction erodes the BOUND AFFIX, never the free dictionary lemma.
+- **4d DONE (`cea8256`):** TAM mutual exclusion — `inflectCascade` keeps at most one
+  value per `pos.axis` before the synthesis cap (no past+future+pfv stacks).
+- **4e DEFERRED:** word death depends on Phase 6a's real frequency signal; do 6a
+  first, then land 4e (the one cross-phase ordering wrinkle the plan calls out).
+- **Scorecard result — ratchet broken in BOTH directions:** Romance 3.97→**2.53**
+  (polysynthetic → fusional, sheds morphology), tokipona 0.2→2.48→**0.90** (isolating),
+  default **1.03** (isolating), english **1.38**/germanic **2.41** (fusional), pie
+  **3.50** (polysynthetic). Only Bantu stays pinned at 4.50 (robust noun-class prefixes
+  never erode to ∅) — flagged for calibration. New scorecard locks: tokipona synth < 2.5,
+  romance < 3.5.
+- **Phase-4 gate:** full `RUN_SLOW` green after reconciling 3 single-seed band tests
+  perturbed by the reshuffle (divergence floor 0.8→0.45 — 4c removed the spurious
+  lemma-truncation divergence; western-Romance hasCase ≥70% caseless — a missed-patch
+  re-split, no code writes hasCase=true; Romance inventory guard → bounded MEAN ≤46 +
+  catastrophe max ≤55).
 
 ---
 
