@@ -146,6 +146,42 @@ export function langPhonotacticScore(
 }
 
 /**
+ * Ask #4: does `form` exceed any of the profile's hard cluster limits?
+ * This is the binary well-formedness predicate the sound-change gate
+ * uses (distinct from the gradient `phonotacticScore`). A profile with
+ * `strictness <= 0` never reports a violation (anything-goes language).
+ */
+export function violatesProfile(
+  form: WordForm,
+  profile: PhonotacticProfile,
+): boolean {
+  if (form.length === 0) return false;
+  if (profile.strictness <= 0) return false;
+  return (
+    onsetClusterLen(form) > profile.maxOnset ||
+    codaClusterLen(form) > profile.maxCoda ||
+    maxMedialCluster(form) > profile.maxCluster
+  );
+}
+
+/**
+ * Ask #4: would changing `before` → `after` INTRODUCE a phonotactic
+ * violation that wasn't already there? Sound change is gated on this:
+ * a rule whose output newly breaks the language's syllable structure is
+ * blocked (or repaired) — but a rule that merely preserves a
+ * pre-existing violation (or reduces it) is admissible. Sonority
+ * sequencing / phonotactic well-formedness (Clements 1990; Blevins).
+ */
+export function introducesViolation(
+  before: WordForm,
+  after: WordForm,
+  profile: PhonotacticProfile,
+): boolean {
+  if (profile.strictness <= 0) return false;
+  return violatesProfile(after, profile) && !violatesProfile(before, profile);
+}
+
+/**
  * Phase 67 T3: phonotactic repair. Walks the form and breaks up
  * onset / coda / medial clusters that exceed the profile's limits,
  * inserting an epenthetic vowel between the offending consonants.

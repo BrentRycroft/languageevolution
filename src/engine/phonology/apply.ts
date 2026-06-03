@@ -9,6 +9,13 @@ import { soundChangeSensitivity } from "../lexicon/expressive";
 // pitár, Latin pater). Removing the modifier lets Swadesh content words
 // participate in the same frequency-based dynamics as ordinary content.
 import { isFormLegal, repairSyllabicity } from "./wordShape";
+import {
+  introducesViolation,
+  violatesProfile,
+  repairToProfile,
+  pickEpentheticVowel,
+  PERMISSIVE_PROFILE,
+} from "./phonotactics";
 import { stressClass, type StressPattern } from "./stress";
 import { isVowel } from "./ipa";
 import { featuresOf } from "./features";
@@ -219,6 +226,22 @@ export interface ApplyOptions {
    * Defaults to `true`. Set false for back-compat replay.
    */
   markednessBias?: boolean;
+  /**
+   * Ask #4 (realism overhaul §4): pass the language so candidate sound-
+   * change outputs can be gated by its evolving syllable structure
+   * (`phonotacticProfile`). A change whose output would NEWLY violate the
+   * profile (an illegal onset / coda / medial cluster for this language)
+   * is first repaired by epenthesis; if repair fails, the application is
+   * rejected with probability scaled by `profile.strictness`. This is the
+   * SAME structure Lane B reads when building words, so coined and evolved
+   * forms obey one shared constraint. Without `langForPhonotactics` the
+   * gate is skipped (back-compat / replay determinism).
+   *
+   * Linguistic basis: phonotactic well-formedness — sound changes that
+   * would produce illicit syllables are blocked or trigger repair
+   * (epenthesis / deletion), the cross-linguistically attested response.
+   */
+  langForPhonotactics?: Pick<Language, "phonotacticProfile" | "phonemeInventory">;
   /**
    * Experimental (config.modes.swadeshProtection). When explicitly false, the
    * high-frequency erosion brake is skipped so core/high-freq vocabulary
@@ -731,6 +754,30 @@ export function applyChangesToWord(
         if (drop > OT_REJECT_THRESHOLD) {
           const rejectP = Math.min(0.85, drop * OT_REJECT_GAIN);
           if (rng.chance(rejectP)) break;
+        }
+      }
+      // Ask #4: syllable-structure gate. A candidate that would NEWLY
+      // violate the language's evolving phonotactic profile (an illegal
+      // onset/coda/medial cluster) is first repaired by epenthesis; if
+      // the repair restores well-formedness it is accepted in place of
+      // the raw candidate, else the change is rejected with probability
+      // = profile.strictness. Skipped when no profile is supplied.
+      if (opts.langForPhonotactics) {
+        const profile =
+          opts.langForPhonotactics.phonotacticProfile ?? PERMISSIVE_PROFILE;
+        if (introducesViolation(current, next, profile)) {
+          const epenthetic = pickEpentheticVowel(
+            opts.langForPhonotactics as Language,
+          );
+          const repaired = repairToProfile(next, profile, epenthetic);
+          if (
+            !violatesProfile(repaired, profile) &&
+            isFormLegal(meaning, repaired)
+          ) {
+            current = repaired;
+            continue;
+          }
+          if (rng.chance(profile.strictness)) break;
         }
       }
       current = next;

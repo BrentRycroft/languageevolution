@@ -8,6 +8,7 @@ import { rateMultiplier, speakerFactor, isolationFactor, realismMultiplier } fro
 import { vitalityRateMultiplier } from "../steps/tree";
 import { applyOneRegularChange } from "../phonology/regular";
 import { maybeSpreadTone } from "../phonology/tone_spread";
+import { maybeTonogenesis } from "../phonology/tonogenesis";
 import { stepToneSandhi } from "../phonology/sandhi";
 import { recordCorrespondences } from "../phonology/soundLaws";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
@@ -44,6 +45,21 @@ const AREAL_WAVE_BAND = 80;
 const AREAL_MAX_AGE = 30;
 
 const PROPOSAL_CADENCE = 8;
+
+// Ask #6: actuation rebalance — Neogrammarian regularity. Sound laws are
+// exceptionless and sweep the whole lexicon (the COMMON path); lexically-
+// conditioned / per-word change is the slower, RARER secondary mode
+// (lexical diffusion). The two config knobs were near-equal numerically
+// but structurally inverted — `phonology.globalRate` rolls PER WORD (×N
+// dice/gen) while `phonology_lawful.regularChangeProbability` rolls ONCE
+// per language/gen. These structural scalers re-weight the emphasis
+// without editing the orchestrator-owned config values:
+//   - the per-word path is DEMOTED (its rolls become rarer), and
+//   - the regular/global path is PROMOTED (multiple sweep attempts/gen).
+// Final magnitudes are calibrated at integration; see the agent report
+// for the recommended config values.
+const PER_WORD_ACTUATION_SCALE = 0.3;
+const REGULAR_SWEEP_ATTEMPTS_PER_GEN = 3;
 
 export function stepPhonology(
   lang: Language,
@@ -224,7 +240,12 @@ export function stepPhonology(
     if (!Number.isFinite(strataMult) || strataMult <= 0) strataMult = 1;
   }
   const opts = {
-    globalRate: config.phonology.globalRate * realismMultiplier(config),
+    // Ask #6: demote the per-word actuation path (lexical diffusion is
+    // the slower, rarer secondary mode). PER_WORD_ACTUATION_SCALE < 1.
+    globalRate:
+      config.phonology.globalRate *
+      realismMultiplier(config) *
+      PER_WORD_ACTUATION_SCALE,
     weights: lang.changeWeights,
     rateMultiplier: mult * strataMult,
     frequencyHints: lang.wordFrequencyHints,
@@ -244,6 +265,11 @@ export function stepPhonology(
     // collisions with unrelated words. Default ON; per-language
     // tunable via `lang.homonymInhibition`.
     langForHomonym: lang,
+    // Ask #4: hand the lang to apply.ts so candidate outputs are gated
+    // by its evolving syllable structure (phonotacticProfile) — a change
+    // producing an illegal cluster for this language is repaired or
+    // rejected. Same structure Lane B reads when building words.
+    langForPhonotactics: lang,
     // Experimental: when config.modes.swadeshProtection is off, skip the
     // high-frequency erosion brake (core vocabulary drifts freely).
     swadeshProtection: config.modes.swadeshProtection,
@@ -487,7 +513,14 @@ export function stepPhonology(
     }
   }
 
-  if (rng.chance(config.phonology_lawful.regularChangeProbability)) {
+  // Ask #6: promote the regular/global (exceptionless sweep) path — the
+  // COMMON actuation mode under Neogrammarian regularity. Roll it
+  // REGULAR_SWEEP_ATTEMPTS_PER_GEN times per generation so a whole-lexicon
+  // sound law is markedly more likely to fire than any single per-word
+  // change. Each attempt is an independent chance on the existing config
+  // probability.
+  for (let attempt = 0; attempt < REGULAR_SWEEP_ATTEMPTS_PER_GEN; attempt++) {
+    if (!rng.chance(config.phonology_lawful.regularChangeProbability)) continue;
     // Phase 27.1: snapshot inventory before applyOneRegularChange so
     // we can revert if the rule introduces a phoneme that wasn't
     // previously in the inventory while we're already over target.
@@ -532,6 +565,25 @@ export function stepPhonology(
   // retired. Phoneme pruning now lives entirely in
   // stepInventoryHomeostasis (which uses functional-load-aware
   // selection and pressure-scaled attempt counts).
+
+  // Ask #7: tonogenesis as a language-level regime shift, gated behind
+  // config.modes.tonogenesis (default false → byte-identical no-op). When
+  // ON, a non-tonal language with a robust word-final coda voicing
+  // contrast may transphonologise it into a pitch contrast (Haudricourt).
+  // The cascade flips the language non-tonal → tonal; refreshInventory
+  // reclassifies the regime so the maintenance machinery (tone spread /
+  // sandhi) below takes over from the next generation.
+  if (config.modes.tonogenesis ?? false) {
+    const tono = maybeTonogenesis(lang, rng);
+    if (tono) {
+      refreshInventory(lang);
+      pushEvent(lang, {
+        generation,
+        kind: "sound_change",
+        description: `tonogenesis: coda voicing contrast → pitch split on ${tono.toned} word${tono.toned === 1 ? "" : "s"} (${tono.lowered} low, ${tono.raised} high); language now tonal`,
+      });
+    }
+  }
 
   const spread = maybeSpreadTone(lang, rng, 0.02);
   if (spread > 0) {
