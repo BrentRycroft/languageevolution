@@ -146,7 +146,11 @@ export function disambiguateCoreCollisions(
   lang: Language,
   rng: Rng,
   generation: number,
+  protect: boolean = true,
 ): number {
+  // Experimental: when core-vocabulary protection is off, let core homophones
+  // persist instead of perturbing them apart.
+  if (!protect) return 0;
   let total = 0;
   for (let pass = 0; pass < 3; pass++) {
     const resolved = disambiguateCoreCollisionsOnce(lang, rng, generation);

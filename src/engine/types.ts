@@ -1293,6 +1293,15 @@ export interface SimulationConfig {
     obsolescence: boolean;
     taboo: boolean;
     copula: boolean;
+    /**
+     * Experimental. When false, removes the special protections that keep
+     * high-frequency / core ("Swadesh") vocabulary stable: the phonological
+     * erosion brake, the high-freq pruning skip, the tier-0 obsolescence
+     * shield, and the core-homophone repair pass. Core words then erode,
+     * merge, and die like any other word. Default true — stock behaviour, so
+     * byte-identical baselines are unaffected when left on.
+     */
+    swadeshProtection: boolean;
   };
   phonology: {
     globalRate: number;

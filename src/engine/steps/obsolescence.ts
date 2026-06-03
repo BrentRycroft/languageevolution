@@ -50,7 +50,9 @@ function maybeLowFreqObsolescence(
   const m = meanings[rng.int(meanings.length)]!;
   // Protected: forager-core (Swadesh-stable), function words, and words with a
   // recorded compound/derivation structure (they fade with their parts, not here).
-  if (tierOf(m) === 0) return false;
+  // Experimental swadeshProtection=false drops the tier-0 (core) shield so core
+  // words can fall out of use like any other low-frequency word.
+  if (config.modes.swadeshProtection !== false && tierOf(m) === 0) return false;
   if (isClosedClass(posOf(m))) return false;
   if (recordedParts(lang, m) !== null) return false;
   const freq = lang.wordFrequencyHints[m] ?? 0.5;

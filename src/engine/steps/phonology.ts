@@ -244,6 +244,9 @@ export function stepPhonology(
     // collisions with unrelated words. Default ON; per-language
     // tunable via `lang.homonymInhibition`.
     langForHomonym: lang,
+    // Experimental: when config.modes.swadeshProtection is off, skip the
+    // high-frequency erosion brake (core vocabulary drifts freely).
+    swadeshProtection: config.modes.swadeshProtection,
     // Phase 1b (evolution-realism): voiced-obstruent saturation, computed
     // once per leaf, damps lenition/voicing bias as the inventory fills
     // with voiced obstruents (self-limiting onset distribution).

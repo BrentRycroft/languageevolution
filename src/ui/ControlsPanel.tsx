@@ -244,6 +244,23 @@ export function ControlsPanel() {
           value={config.modes.copula}
           onChange={(v) => updateModes({ copula: v })}
         />
+        <Toggle
+          label="Core-vocab (Swadesh) protection"
+          value={config.modes.swadeshProtection ?? true}
+          onChange={(v) => updateModes({ swadeshProtection: v })}
+        />
+        <div
+          style={{
+            fontSize: "var(--fs-1)",
+            color: "var(--muted)",
+            marginTop: 2,
+          }}
+        >
+          Experimental. On (default): high-frequency core "Swadesh" words resist
+          sound change, phoneme merger, loss, and homophony. Off: core vocabulary
+          erodes, merges, and dies like any other word — watch Swadesh retention
+          fall. Toggling mid-run takes effect immediately.
+        </div>
       </Section>
 
       <details style={{ marginTop: 8 }}>

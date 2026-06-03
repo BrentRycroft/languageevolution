@@ -177,6 +177,7 @@ function runHomeostasis(
   lang: Language,
   rng: Rng,
   generation: number,
+  protect: boolean = true,
 ): boolean {
   // Phase 39a: drift the target itself (rare).
   driftPhonemeTarget(lang, rng);
@@ -201,7 +202,7 @@ function runHomeostasis(
   if (pressure <= 0) {
     // Under-or-at target: low maintenance rate.
     if (!rng.chance(BASE_PRUNE_PROB * pruneIntensity * 2)) return false;
-    const merger = prunePhonemes(lang, rng, generation, pruneCtx);
+    const merger = prunePhonemes(lang, rng, generation, pruneCtx, protect);
     if (merger) {
       anyMerger = true;
       pushEvent(lang, {
@@ -222,7 +223,7 @@ function runHomeostasis(
   const mergers: Array<{ from: string; to: string; affected: number }> = [];
   for (let i = 0; i < maxAttempts; i++) {
     if (!rng.chance(pruneIntensity)) break;
-    const merger = prunePhonemes(lang, rng, generation, pruneCtx);
+    const merger = prunePhonemes(lang, rng, generation, pruneCtx, protect);
     if (!merger) break;
     anyMerger = true;
     mergers.push({ from: merger.from, to: merger.to, affected: merger.affectedWords });
@@ -257,6 +258,7 @@ export function stepInventoryManagement(
   lang: Language,
   rng: Rng,
   generation: number,
+  swadeshProtection: boolean = true,
 ): void {
   runPhonotacticRepair(lang, rng, generation);
   // Phase 34 Tranche 34a: recompose transparent compounds before
@@ -289,14 +291,14 @@ export function stepInventoryManagement(
       description: `univerbation: "${univ.meaning}" < ${univ.parts.join(" + ")}`,
     });
   }
-  const merged = runHomeostasis(lang, rng, generation);
+  const merged = runHomeostasis(lang, rng, generation, swadeshProtection);
   // Phase 32 Tranche 32a: end-of-step core-collision repair. Walks
   // the lexicon for cases where 2+ high-frequency Swadesh meanings
   // (≥ 0.85 freq, content POS) share a surface form and perturbs all
   // but the highest-frequency one to break the homophony. Pre-Phase-
   // 32 default preset surveys showed mother=water, foot=good,
   // moon=see all collapsed in a single 60-gen run.
-  const resolved = disambiguateCoreCollisions(lang, rng, generation);
+  const resolved = disambiguateCoreCollisions(lang, rng, generation, swadeshProtection);
   if (resolved > 0) {
     pushEvent(lang, {
       generation,
