@@ -59,7 +59,11 @@ const PROPOSAL_CADENCE = 8;
 // Final magnitudes are calibrated at integration; see the agent report
 // for the recommended config values.
 const PER_WORD_ACTUATION_SCALE = 0.3;
-const REGULAR_SWEEP_ATTEMPTS_PER_GEN = 3;
+// #5 integration calibration: trimmed 3→2. Three whole-lexicon sweeps/gen made
+// phonology dominate every other layer ~7-25× in the event log (the user's
+// "sound change dominates" complaint); 2 keeps regular ≫ per-word (#6) while
+// bringing total phonology cadence down toward the morphology/semantics layers.
+const REGULAR_SWEEP_ATTEMPTS_PER_GEN = 2;
 
 export function stepPhonology(
   lang: Language,

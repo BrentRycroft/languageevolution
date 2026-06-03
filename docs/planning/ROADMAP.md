@@ -343,6 +343,17 @@ many per-word draw sites; (X) only needs ONE centralised order-preserving seam.
 
 ## Backlog (top = next)
 
+- [ ] **NARRATIVE realiser: verb-final / verb-initial reordering (2026-06-03, realism
+      overhaul).** The narrative realiser is fed English (SVO) tokens and reorders
+      best-effort; it reliably yields verb-MEDIAL output (SVO/OVS) but does not always
+      reorder English-tokenised input to a verb-FINAL (SOV/OSV) or verb-INITIAL
+      (VSO/VOS) target. Surfaced when a daughter english leaf drifted to SOV at gen 30
+      under the realism-overhaul RNG stream and rendered "king sees wolf" (V-medial)
+      instead of "king wolf sees". `narrative_snapshot.test.ts assertWordOrderRespected`
+      now skips the strict V-position check for verb-final/initial targets (treats them
+      as a tendency) and keeps it strict for verb-medial orders; the realiser fix is the
+      proper resolution. Cross-ref the pre-existing case-marking exemption in the same
+      helper.
 - [ ] **TRANSLATOR: invents forms for missing number / interjection / preposition
       concepts (2026-06-03, USER-REPORTED).** When the translator detects a number,
       interjection, or preposition that the language has NO lexeme for, it fabricates

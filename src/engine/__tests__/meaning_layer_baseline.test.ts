@@ -237,13 +237,32 @@ const GEN0: Record<string, string> = {
 // split probability ×popFactor + binary-biased pickChildCount (85%→2) reshape
 // the tree. All six presets shift; GEN0 unchanged (no dynamics at gen 0).
 // Approved milestone re-baseline (gate = scorecard); determinism preserved.
+// GENN re-baselined 2026-06-03 (REALISM OVERHAUL — Lanes A/B/C + #5 calibration).
+// All six presets' gen-30 trajectories shift; GEN0 unchanged (no dynamics at gen 0).
+// Approved milestone re-baseline — the gate is the realism scorecard (7/7 green),
+// not byte-identity; reproducibility-determinism is preserved (same config →
+// identical output; re-run confirmed). The deliberate behaviour changes:
+//  Lane A (phonology): (#4) sound change is now gated by each language's evolving
+//    syllable structure (phonotacticProfile) — an output that newly violates the
+//    onset/coda/cluster limits is epenthesis-repaired or rejected; (#6) actuation
+//    rebalanced so the regular/global exceptionless sweep is the common path and
+//    per-word/lexical change is rare (per-word globalRate ×0.3; regular sweep ×2/gen).
+//    (#7 tonogenesis is OFF by default → no effect on these hashes.)
+//  Lane B (morphology): derivation respects the language's own affix position and
+//    rejects seams that grossly violate its syllable structure; grammaticalisation
+//    chain progression rides the same cadence as initiation.
+//  Lane C (semantics): semantic drift is frequency-retentive (high-frequency core
+//    meanings shift slowest; the merger path protects high-frequency senses), plus
+//    a pejoration-asymmetric, frequency-conditioned classifyShift.
+//  #5 calibration: semantic drift 0.10→0.16 and grammaticalization 0.04→0.06 lift
+//    the previously-starved morphology/semantics layers toward the phonology cadence.
 const GENN: Record<string, string> = {
-  pie: "edc6570b",
-  bantu: "8bf74abc",
-  romance: "9e9c4ad6",
-  germanic: "b1be7ef7",
-  tokipona: "ab0bee33",
-  english: "a24a3ee6",
+  pie: "375c6311",
+  bantu: "c66ad754",
+  romance: "2bf9cafe",
+  germanic: "a9c30e8c",
+  tokipona: "f643b40c",
+  english: "d4f8b2bd",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {
