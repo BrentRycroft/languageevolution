@@ -73,3 +73,17 @@ export function cosineFixed(a: Vec, b: Vec): number {
   if (na === 0 || nb === 0) return 0;
   return dot / (na * nb);
 }
+
+/** Componentwise difference a − b. Integer-exact. */
+export function subVecs(a: Vec, b: Vec): Vec {
+  const out = new Int32Array(VEC_DIM);
+  for (let i = 0; i < VEC_DIM; i++) out[i] = a[i]! - b[i]!;
+  return out;
+}
+
+/** Componentwise rounded mean: round(v[i] / n). Deterministic. `n` must be ≥ 1. */
+export function roundDivVec(v: Vec, n: number): Vec {
+  const out = new Int32Array(VEC_DIM);
+  for (let i = 0; i < VEC_DIM; i++) out[i] = Math.round(v[i]! / n);
+  return out;
+}

@@ -3,6 +3,7 @@ import {
   VEC_DIM, VEC_SCALE, LEXICAL_DIMS, GRAMMATICAL_DIMS,
   zeroVec, fromFloats, toFloats,
   sumVecs, dotFixed, distanceSq, cosineFixed,
+  subVecs, roundDivVec,
 } from "../vec";
 
 describe("vec — fixed-point representation", () => {
@@ -57,5 +58,23 @@ describe("vec — integer arithmetic", () => {
   it("cosineFixed ~1 for parallel, ~0 for orthogonal (readout only)", () => {
     expect(cosineFixed(fromFloats([1, 0, 0]), fromFloats([3, 0, 0]))).toBeCloseTo(1, 5);
     expect(cosineFixed(fromFloats([1, 0, 0]), fromFloats([0, 1, 0]))).toBeCloseTo(0, 5);
+  });
+});
+
+describe("vec — subtraction + integer mean", () => {
+  it("subVecs is componentwise a − b, integer-exact", () => {
+    const d = subVecs(fromFloats([3, 1, 0]), fromFloats([1, 2, 0]));
+    expect(d[0]).toBe(2 * VEC_SCALE);
+    expect(d[1]).toBe(-1 * VEC_SCALE);
+    expect(d[2]).toBe(0);
+  });
+  it("roundDivVec computes a rounded componentwise mean (deterministic)", () => {
+    const sum = sumVecs([fromFloats([1, 0, 0]), fromFloats([2, 0, 0])]);
+    const mean = roundDivVec(sum, 2);
+    expect(mean[0]).toBe(Math.round((3 * VEC_SCALE) / 2));
+  });
+  it("roundDivVec by 1 is identity", () => {
+    const v = fromFloats([0.7, -0.3, 0]);
+    expect(Array.from(roundDivVec(v, 1))).toEqual(Array.from(v));
   });
 });
