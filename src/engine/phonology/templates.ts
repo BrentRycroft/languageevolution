@@ -543,6 +543,60 @@ const VOWEL_ROUNDING: RuleTemplate = {
   },
 };
 
+// Lane A (phonology-expand): glide ↔ vowel alternation as a generative
+// family. The prevocalic GLIDING direction (high vowel in hiatus → glide,
+// the "jod") is cleanly expressible with the generated-rule context
+// vocabulary (`after: vowel`); the coda VOCALISATION direction is covered
+// by the hand-written catalog (its "not before a vowel" context is not in
+// the generated context grammar). Since /j/ romanises to "y", a fired
+// gliding rule is exactly the surface i→y the user expected to see.
+const PREVOCALIC_GLIDING: RuleTemplate = {
+  id: "glide.prevocalic_gliding",
+  family: "glide",
+  propose(lang) {
+    const inv = new Set(lang.phonemeInventory.segmental);
+    const map: Record<string, string> = {};
+    if (inv.has("i")) map.i = "j";
+    if (inv.has("u")) map.u = "w";
+    if (inv.has("y")) map.y = "ɥ";
+    if (Object.keys(map).length === 0) return null;
+    return {
+      family: "glide",
+      templateId: this.id,
+      description: "High vowels glide before another vowel (hiatus → jod)",
+      from: { type: "vowel", height: "high" },
+      context: { after: { type: "vowel" } },
+      outputMap: map,
+    };
+  },
+};
+
+const LIQUID_DISSIMILATION: RuleTemplate = {
+  id: "dissimilation.liquid",
+  family: "dissimilation",
+  propose(lang) {
+    const inv = new Set(lang.phonemeInventory.segmental);
+    const map: Record<string, string> = {};
+    // r ↔ l swap-by-dissimilation: whichever liquid the language has,
+    // dissimilate it toward the other.
+    if (inv.has("r") && inv.has("l")) {
+      map.r = "l";
+    } else if (inv.has("r") && inv.has("ɾ")) {
+      map.r = "ɾ";
+    } else {
+      return null;
+    }
+    return {
+      family: "dissimilation",
+      templateId: this.id,
+      description: "A liquid dissimilates next to another liquid",
+      from: { type: "consonant" },
+      context: { after: { type: "consonant", manner: "trill" } },
+      outputMap: map,
+    };
+  },
+};
+
 export function chainFillConsonant(
   lang: Language,
   empty: ConsonantFeatures,
@@ -581,6 +635,8 @@ export const TEMPLATES: readonly RuleTemplate[] = [
   VOICING_ASSIM_CLUSTER,
   CLUSTER_EPENTHESIS_PLACEHOLDER,
   VOWEL_ROUNDING,
+  PREVOCALIC_GLIDING,
+  LIQUID_DISSIMILATION,
 ];
 
 export const TEMPLATES_BY_FAMILY: Record<RuleFamily, RuleTemplate[]> =

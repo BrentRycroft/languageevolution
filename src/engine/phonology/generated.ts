@@ -155,6 +155,10 @@ function familyToCategory(family: RuleFamily): SoundChange["category"] {
       return "metathesis";
     case "tone":
       return "voicing";
+    case "glide":
+      return "vocalization";
+    case "dissimilation":
+      return "dissimilation";
   }
 }
 
