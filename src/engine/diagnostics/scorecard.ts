@@ -398,6 +398,9 @@ export function lexiconLifecycle(lang: Language): {
       births++;
       deaths++;
     } else if (e.kind === "merger") deaths++;
+    // Lane B: a pure word death (disuse obsolescence / near-homophone retirement)
+    // — counts on the death side only, balancing the coinage birth side.
+    else if (e.kind === "lexical_loss") deaths++;
   }
   // balance = deaths / births → ~1.0 is a stationary replacement cycle.
   return { births, deaths, balance: births === 0 ? NaN : deaths / births };

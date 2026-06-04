@@ -157,6 +157,12 @@ export interface LanguageEvent {
     | "areal"
     | "creolization"
     | "lexical_replacement"
+    // Lane B (lexicon lifecycle): a pure word DEATH — a low-relevancy
+    // (low-frequency, disused) lexeme fell out of use with no replacement
+    // form coined, or a near-homophone rival was retired. Distinct from
+    // lexical_replacement (which is a death AND a birth: an eroded form
+    // swapped for a fresh one). The scorecard counts this as a death only.
+    | "lexical_loss"
     | "productivity"
     | "suppletion"
     | "merger"

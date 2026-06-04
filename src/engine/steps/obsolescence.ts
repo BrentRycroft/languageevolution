@@ -26,26 +26,40 @@ function shareWord(lang: Language, a: string, b: string): boolean {
 }
 
 /**
- * Phase 4e: low-frequency obsolescence. A content word whose usage frequency
- * has fallen far enough simply drops out of use — no near-homophone rival
- * required. Loss probability rises as frequency falls below LOW_FREQ_THRESHOLD.
- * Tier-0 forager core (the Swadesh-stable vocabulary), closed-class function
- * words, and structured compounds/derivations are protected. This is the death
- * side of the lexical-turnover cycle: it balances the genesis EXPANSION_NEED
- * birth pressure so the lexicon stays roughly stationary instead of only ever
- * growing.
+ * Lane B (lexicon lifecycle, MEGA-OVERHAUL #7/#9): disuse obsolescence. A content
+ * word whose usage frequency has fallen far enough simply drops out of use — no
+ * near-homophone rival required. Loss probability rises as frequency falls below
+ * LOW_FREQ_THRESHOLD. This is the DEATH side of the lexical-turnover cycle: it
+ * balances the (now communicative-need-driven) coinage birth pressure so the
+ * lexicon reaches a STATIONARY size EMERGENTLY — there is no target number.
+ *
+ * Closed-class function words and structured compounds/derivations are protected
+ * (the latter fade with their parts, not here). Tier-0 forager core is protected
+ * ONLY while swadeshProtection is on (a SEPARATE step removes that shield); the
+ * (now-working) disuse signal makes core vocab stable emergently via frequency.
+ *
+ * Lane B change vs Phase 4e: (a) the disuse channel now runs ONE ATTEMPT PER
+ * ~SCALE words per generation instead of a single global sample, so the death
+ * rate scales with lexicon size and can balance the size-scaled birth rate;
+ * (b) the threshold was raised so genuinely disused words (frequency drifting
+ * toward the discard floor) are reliably reclaimed; (c) it emits a dedicated
+ * `lexical_loss` event (a pure death) rather than `lexical_replacement` (which
+ * the scorecard double-counts as birth+death).
  */
-const LOW_FREQ_THRESHOLD = 0.3;
+const LOW_FREQ_THRESHOLD = 0.32;
 
-function maybeLowFreqObsolescence(
+/** One disuse-death ATTEMPT is made per this many lexemes, each generation. */
+const DISUSE_ATTEMPT_PER_LEXEMES = 60;
+
+function attemptDisuseDeath(
   lang: Language,
   config: SimulationConfig,
   rng: Rng,
   generation: number,
+  meanings: readonly string[],
 ): boolean {
   const base = config.obsolescence.lowFreqProbability ?? 0;
   if (base <= 0) return false;
-  const meanings = lexKeys(lang);
   if (meanings.length < 1) return false;
   const m = meanings[rng.int(meanings.length)]!;
   // Protected: forager-core (Swadesh-stable), function words, and words with a
@@ -57,13 +71,16 @@ function maybeLowFreqObsolescence(
   if (recordedParts(lang, m) !== null) return false;
   const freq = lang.wordFrequencyHints[m] ?? 0.5;
   if (freq >= LOW_FREQ_THRESHOLD) return false;
-  // Probability rises linearly as frequency drops below the threshold.
-  const p = base * ((LOW_FREQ_THRESHOLD - freq) / LOW_FREQ_THRESHOLD) * lang.conservatism;
+  // Probability rises as frequency drops below the threshold. The multiplier
+  // sharpens the gradient so words near the discard floor die quickly while
+  // words just under the threshold mostly survive (relevancy, not a cliff).
+  const depth = (LOW_FREQ_THRESHOLD - freq) / LOW_FREQ_THRESHOLD;
+  const p = base * 4 * depth * lang.conservatism;
   if (!rng.chance(p)) return false;
   deleteMeaning(lang, m, { generation, reason: "low-frequency-obsolescence" });
   pushEvent(lang, {
     generation,
-    kind: "lexical_replacement",
+    kind: "lexical_loss",
     description: `lost low-frequency "${m}" (fell out of use)`,
   });
   return true;
@@ -75,7 +92,13 @@ export function stepObsolescence(
   rng: Rng,
   generation: number,
 ): void {
-  maybeLowFreqObsolescence(lang, config, rng, generation);
+  // Run the disuse-death channel proportionally to lexicon size so the death
+  // rate tracks the (size-scaled) birth rate → emergent stationarity.
+  const lexemes = lexKeys(lang);
+  const disuseAttempts = Math.max(1, Math.round(lexemes.length / DISUSE_ATTEMPT_PER_LEXEMES));
+  for (let i = 0; i < disuseAttempts; i++) {
+    attemptDisuseDeath(lang, config, rng, generation, lexKeys(lang));
+  }
   const meanings = lexKeys(lang);
   if (meanings.length < 2) return;
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -101,9 +124,12 @@ export function stepObsolescence(
       generation,
       reason: "homonym-resolution",
     });
+    // Lane B: this is a pure word DEATH (a near-homophone rival retired). Emit
+    // `lexical_loss` so the scorecard's birth/death balance counts it, instead of
+    // the old `semantic_drift` kind which the lifecycle diagnostic ignored.
     pushEvent(lang, {
       generation,
-      kind: "semantic_drift",
+      kind: "lexical_loss",
       description: `retired "${loser}" (near-homophone of "${winner}")`,
     });
     return;
