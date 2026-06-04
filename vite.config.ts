@@ -48,7 +48,12 @@ export default defineConfig(({ command }) => ({
           /\.(?:js|css|wasm|bin|json|map)$/,
         ],
         globPatterns: ["**/*.{js,css,html,svg,png,ico,webp,woff,woff2}"],
-        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        // Raised 2→6 MiB: the MEGA overhaul bundles two sizeable baked data assets —
+        // the GloVe-50 meaning embedding (~360 KB) and the Provinces.png province raster
+        // (~1 MB base64) — pushing the main chunk past the default 2 MiB precache cap.
+        // (Follow-up perf: lazy-load the province raster as its own chunk so the initial
+        // bundle shrinks; see provinceRaster.ts.)
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
     }),
   ],
