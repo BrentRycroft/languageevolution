@@ -259,13 +259,22 @@ const GEN0: Record<string, string> = {
 //    a pejoration-asymmetric, frequency-conditioned classifyShift.
 //  #5 calibration: semantic drift 0.10→0.16 and grammaticalization 0.04→0.06 lift
 //    the previously-starved morphology/semantics layers toward the phonology cadence.
+// GENN re-baselined 2026-06-04 (MEGA-overhaul — hybrid readout-axes ACTIVATED). The
+// continuous-meaning model's interpretable valence axis now biases evaluative drift:
+// classifyShift scales a source's pejoration weight by 1+0.3·valence (amelioration by the
+// inverse), so "good"-flavoured words pejorate more readily than already-negative ones
+// (the attested directional asymmetry). This tips some metaphor/metonymy↔pejoration
+// outcomes, shifting each preset's gen-30 trajectory. GEN0 unchanged (no drift at gen 0);
+// the register/freq-free classifyShift unit callers are untouched (they never open the
+// evaluative weights). Reproducibility-determinism preserved (same config → identical
+// output; re-run confirmed). Approved follow-up to the meaning-model activation.
 const GENN: Record<string, string> = {
-  pie: "375c6311",
-  bantu: "c66ad754",
-  romance: "2bf9cafe",
-  germanic: "a9c30e8c",
-  tokipona: "f643b40c",
-  english: "d4f8b2bd",
+  pie: "7994bc5a",
+  bantu: "b57da5ea",
+  romance: "69befd8d",
+  germanic: "74cecf10",
+  tokipona: "3377db8f",
+  english: "7423ad6d",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {
