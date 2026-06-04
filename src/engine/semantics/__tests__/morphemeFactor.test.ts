@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fromFloats, distanceSq } from "../vec";
+import { fromFloats, distanceSq, subVecs, sumVecs, roundDivVec } from "../vec";
 import { factorizeMorphemes, type Decomp } from "../morphemeFactor";
 
 describe("morphemeFactor — factorizeMorphemes", () => {
@@ -13,18 +13,32 @@ describe("morphemeFactor — factorizeMorphemes", () => {
     expect(distanceSq(wordPoints.get("behind")!, fromFloats([1, 0.5, 0]))).toBe(0);
   });
   it("a multi-occurrence affix is the rounded mean of its residuals (least-squares)", () => {
+    const teach = fromFloats([1, 0, 0]);
+    const bake = fromFloats([2, 0, 0]);
+    const teacherAnchor = fromFloats([1, 0.5, 0]);
+    const bakerAnchor = fromFloats([2, 0.3, 0]);
     const roots = new Map([
-      ["teach", fromFloats([1, 0, 0])],
-      ["bake", fromFloats([2, 0, 0])],
+      ["teach", teach],
+      ["bake", bake],
     ]);
     const decomps: Decomp[] = [
-      { word: "teacher", wordAnchor: fromFloats([1, 0.5, 0]), parts: ["teach", "-er"] },
-      { word: "baker", wordAnchor: fromFloats([2, 0.3, 0]), parts: ["bake", "-er"] },
+      { word: "teacher", wordAnchor: teacherAnchor, parts: ["teach", "-er"] },
+      { word: "baker", wordAnchor: bakerAnchor, parts: ["bake", "-er"] },
     ];
     const { morphemes, wordPoints } = factorizeMorphemes({ roots, affixIds: new Set(["-er"]), decomps });
-    expect(Array.from(morphemes.get("-er")!)).toEqual(Array.from(fromFloats([0, 0.4, 0])));
-    expect(distanceSq(wordPoints.get("teacher")!, fromFloats([1, 0.4, 0]))).toBe(0);
-    expect(distanceSq(wordPoints.get("teacher")!, fromFloats([1, 0.5, 0]))).toBeGreaterThan(0);
+    // The affix is the rounded mean of the two residuals. Compute the expectation with the
+    // SAME quantized arithmetic the solver uses (sum the already-quantized residuals, then
+    // round-divide) — NOT by re-quantizing the float 0.4, which differs by one fixed-point
+    // unit (round(3277/2)=1639 vs round(0.4*4096)=1638).
+    const expectedAffix = roundDivVec(
+      sumVecs([subVecs(teacherAnchor, teach), subVecs(bakerAnchor, bake)]),
+      2,
+    );
+    expect(Array.from(morphemes.get("-er")!)).toEqual(Array.from(expectedAffix));
+    // Composition invariant: the word point IS teach + affix.
+    expect(Array.from(wordPoints.get("teacher")!)).toEqual(Array.from(sumVecs([teach, expectedAffix])));
+    // Reconstruction vs the word's own anchor is nonzero — the least-squares residual.
+    expect(distanceSq(wordPoints.get("teacher")!, teacherAnchor)).toBeGreaterThan(0);
   });
   it("pure compounds (all roots) compose with no affix to solve", () => {
     const roots = new Map([
