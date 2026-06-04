@@ -477,7 +477,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
     }
   },
   togglePlay: () => set((s) => ({ playing: !s.playing })),
-  setSpeed: (s) => set({ speed: s }),
   reset: () => {
     const { config } = get();
     const nextConfig = { ...config, seed: makeRandomSeed() };
