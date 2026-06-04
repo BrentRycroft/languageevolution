@@ -46,6 +46,12 @@ function aliveLeavesOf(buildPreset: () => ReturnType<typeof presetEnglish>): {
 function lexiconAgreesWithWords(lang: Language): { ok: true } | { ok: false; meaning?: string; reason: string } {
   if (!lang.words) return { ok: true }; // pre-migration save
   for (const m of lexKeys(lang)) {
+    // Bound morphemes (affixes — incl. reanalysed-template tags like
+    // "-oːl.reanalysed") legitimately live in the lexicon (via lexSet) but have
+    // NO standalone word; they surface only as part of a host word. Exclude them
+    // from the lexicon↔words agreement invariant, matching the `isLexeme`
+    // exclusion used elsewhere (scorecard / size metrics).
+    if (lang.boundMorphemes?.has(m) || m.startsWith("-")) continue;
     const form = lexGet(lang, m);
     if (!form) continue;
     const key = formKeyOf(form);
