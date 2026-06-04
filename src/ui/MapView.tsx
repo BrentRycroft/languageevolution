@@ -7,6 +7,11 @@ import { formatForm } from "../engine/phonology/display";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 import type { Language, LanguageNode, LanguageTree } from "../engine/types";
 import { lexGet, lexHas, lexSize } from "../engine/lexicon/access";
+import {
+  paintProvinces, provinceAtRaster, rgba, hslRgba,
+  PROVINCE_RASTER_W, PROVINCE_RASTER_H,
+} from "./provinceRaster";
+import { IS_SEA, PROVINCE_COUNT } from "../engine/geo/provincesData";
 
 /**
  * MapView.tsx
@@ -74,19 +79,27 @@ export function MapView() {
   });
 
   const drag = useRef<{ startX: number; startY: number; vx: number; vy: number } | null>(null);
+  const movedRef = useRef(false);
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.button !== 0) return;
     (e.target as Element).setPointerCapture(e.pointerId);
     drag.current = { startX: e.clientX, startY: e.clientY, vx: view.x, vy: view.y };
+    movedRef.current = false;
   };
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d) {
+      // Province mode: hover hit-test (polygon modes get hover from MapCellShape).
+      if (worldMap.kind === "province") {
+        const id = provinceAtClient(e.clientX, e.clientY);
+        setHoverCell(id >= 0 ? id : null);
+      }
+      return;
+    }
     const dx = e.clientX - d.startX;
     const dy = e.clientY - d.startY;
-    const baseVx = d.vx;
-    const baseVy = d.vy;
-    setView((v) => ({ ...v, x: baseVx + dx, y: baseVy + dy }));
+    if (dx * dx + dy * dy > 16) movedRef.current = true;
+    setView((v) => ({ ...v, x: d.vx + dx, y: d.vy + dy }));
   };
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
     drag.current = null;
@@ -95,6 +108,13 @@ export function MapView() {
     } catch {
     }
   };
+  const onMapClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (worldMap.kind !== "province" || movedRef.current) return;
+    const id = provinceAtClient(e.clientX, e.clientY);
+    if (id < 0) return;
+    const ownerId = ownership[id];
+    if (ownerId) selectLanguage(ownerId);
+  };
   const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     e.preventDefault();
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
@@ -102,6 +122,7 @@ export function MapView() {
   };
 
   const cellFills = useMemo(() => {
+    if (worldMap.kind === "province") return [] as string[];
     const out: string[] = new Array(worldMap.cells.length);
     for (let i = 0; i < worldMap.cells.length; i++) {
       const cell = worldMap.cells[i]!;
@@ -121,6 +142,41 @@ export function MapView() {
     }
     return out;
   }, [worldMap, ownership, tree]);
+
+  // Province mode renders the baked raster as one tinted <image> (owner colour per
+  // province) rather than thousands of SVG polygons. Repaint only when ownership moves.
+  const provinceImg = useMemo(() => {
+    if (worldMap.kind !== "province") return null;
+    const table = new Uint32Array(PROVINCE_COUNT);
+    for (let i = 0; i < PROVINCE_COUNT; i++) {
+      const ownerId = ownership[i];
+      const lang = ownerId ? tree[ownerId]?.language : undefined;
+      if (lang) {
+        const hue = fnv1a(ownerId!) % 360;
+        const extinct = lang.extinct ?? false;
+        const tier = lang.culturalTier ?? 0;
+        table[i] = hslRgba(hue, extinct ? 6 : 30 + tier * 10, extinct ? 30 : 50 - tier * 4);
+      } else {
+        table[i] = IS_SEA[i] === 1 ? rgba(21, 41, 60) : rgba(61, 74, 46);
+      }
+    }
+    return paintProvinces(table);
+  }, [worldMap.kind, ownership, tree]);
+
+  // Screen pixel → world coords (inverse of project), for province hover/click.
+  const unproject = (clientX: number, clientY: number) => {
+    const rect = containerRef.current?.querySelector("svg")?.getBoundingClientRect();
+    const lx = clientX - (rect?.left ?? 0);
+    const ly = clientY - (rect?.top ?? 0);
+    return {
+      x: (lx - size.w / 2 - view.x) / scale + cx,
+      y: (ly - size.h / 2 - view.y) / scale + cy,
+    };
+  };
+  const provinceAtClient = (clientX: number, clientY: number): number => {
+    const { x, y } = unproject(clientX, clientY);
+    return provinceAtRaster(x, y);
+  };
 
   const [hoverCell, setHoverCell] = useState<number | null>(null);
   const [showBilingual, setShowBilingual] = useState(true);
@@ -227,6 +283,7 @@ export function MapView() {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onClick={onMapClick}
         onWheel={onWheel}
         style={{
           background: "#0f1f2e",
@@ -238,24 +295,41 @@ export function MapView() {
         }}
       >
         {}
-        {worldMap.cells.map((cell, i) => (
-          <MapCellShape
-            key={cell.id}
-            cell={cell}
-            fill={cellFills[i]!}
-            ownerId={ownership[cell.id]}
-            ownership={ownership}
-            project={project}
-            onHover={setHoverCell}
-            onClick={(langId) => {
-              if (langId) selectLanguage(langId);
-            }}
-            isOwnerSelected={
-              ownership[cell.id] !== undefined &&
-              ownership[cell.id] === selectedLangId
-            }
-          />
-        ))}
+        {worldMap.kind === "province" && provinceImg ? (
+          (() => {
+            const tl = project(0, 0);
+            return (
+              <image
+                href={provinceImg}
+                x={tl.px}
+                y={tl.py}
+                width={PROVINCE_RASTER_W * scale}
+                height={PROVINCE_RASTER_H * scale}
+                preserveAspectRatio="none"
+                style={{ imageRendering: "pixelated" }}
+              />
+            );
+          })()
+        ) : (
+          worldMap.cells.map((cell, i) => (
+            <MapCellShape
+              key={cell.id}
+              cell={cell}
+              fill={cellFills[i]!}
+              ownerId={ownership[cell.id]}
+              ownership={ownership}
+              project={project}
+              onHover={setHoverCell}
+              onClick={(langId) => {
+                if (langId) selectLanguage(langId);
+              }}
+              isOwnerSelected={
+                ownership[cell.id] !== undefined &&
+                ownership[cell.id] === selectedLangId
+              }
+            />
+          ))
+        )}
         {bilingualEdges.length > 0 && (
           <g pointerEvents="none">
             {bilingualEdges.map((e, i) => {
