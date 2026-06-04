@@ -87,7 +87,10 @@ const GEN0: Record<string, string> = {
   romance: "28661e99",
   germanic: "442a10cb",
   tokipona: "963106db",
-  english: "77c30563",
+  // english re-baselined: "behind" now carries an explicit be-+hind structure, and the
+  // hind base + be- prefix were added to the seed lexicon (decomposability). Other
+  // presets unchanged.
+  english: "baf6d800",
 };
 // RE-BASELINED 2026-05-31 (B1-Y — content-addressed per-concept RNG). ALL SIX
 // presets shifted, as expected and intended: sound change in apply.ts now draws
