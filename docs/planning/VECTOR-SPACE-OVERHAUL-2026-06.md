@@ -1,9 +1,8 @@
 # Vector-Space-Native Overhaul — Roadmap (2026-06)
 
-Status: **DRAFT for review.** This is the overview roadmap (per user request "whole roadmap
-first"). It decomposes the 6 ideas into tracks, sequences them, and surfaces the decisions
-that must be made before any track gets a detailed spec. Each track will get its own
-spec → plan → implementation cycle later. Nothing here is implemented yet.
+Status: **Overview roadmap — all 6 design decisions LOCKED (2026-06-04, see §9).** Ready to
+spec Track A. It decomposes the 6 ideas into tracks, sequences them, and records the resolved
+decisions. Each track gets its own spec → plan → implementation cycle. Nothing implemented yet.
 
 Supersedes nothing; extends the meaning-model work locked in the MEGA overhaul
 (`docs/planning/MEGA-OVERHAUL-2026-06.md`, continuous semantic space + hybrid readout-axes).
@@ -89,13 +88,12 @@ model + translator work just shipped — those are the seam).
 - UI: the Dictionary already shows nearest words + axes; extend to show homonym sets and
   morpheme composition.
 
-**Open decision A1 (THE crux — see §6): the compositional model.** How literally do morpheme
-vectors "add up" to a word's meaning?
+**A1 → RESOLVED (b) own additive space** (§9): morpheme vectors are *defined* so they sum
+exactly to known words; affixes get learned operation-vectors. Composition is exact.
 
-**Open decision A2: polysemy vs homonymy.** Is a polysemous word ONE lexeme with a *broad
-region*, or multiple near-points sharing a form? (Homonyms = *distant* points sharing a
-form — that part is settled.) Recommended: polysemy = one lexeme, one point, with the
-*nearest several anchors* read out as its senses; homonymy = separate lexemes.
+**A2 → RESOLVED point + spread/region** (§9): a lexeme is a point + a breadth scalar; senses
+= anchors within the region; broadening/narrowing move the spread. Homonyms = separate
+lexemes sharing a form (distant points).
 
 **Risk.** Biggest re-baseline ever; migration of all 6 presets; determinism story must be
 rebuilt (same config → identical output preserved, but every locked hash moves).
@@ -122,11 +120,9 @@ pre-named concept.
    the *residual* vector needed to complete the composition. This grows the morpheme
    inventory organically.
 
-**Replaces/augments** today's concept-id-driven genesis. Determinism: all new draws appended
-after existing ones, seeded.
-
-**Open decision B1:** does gap-driven generation *replace* concept-driven coinage entirely,
-or run alongside it (concept-driven for "named" needs, gap-driven for organic growth)?
+**B1 → RESOLVED: pure gap-driven, replaces concept-driven coinage** (§9). Determinism: all
+new draws appended after existing ones, seeded. The translator no longer coins on demand —
+a missing concept resolves to the nearest existing word (grounding rung already shipped).
 
 ---
 
@@ -159,9 +155,10 @@ realistic.**
 `inventoryManagement` actively pull inventories toward a per-tier number. Remove it and let
 inventory size emerge from merger/split balance.
 > ⚠️ **Risk flagged:** that homeostasis was *added because inventories ran away* (one prune
-> vs 5+ additions per gen). Removing it without a replacement bound may reintroduce runaway
-> growth. **Open decision D1:** accept fully-emergent sizes, or keep a *soft* entropy/functional-load
-> bound (not a hard target)?
+> vs 5+ additions per gen). **D1 → RESOLVED: emergent via functional load** (§9) — no target
+> number, but low-functional-load phonemes merge + distinctiveness limits packing, so size is
+> bounded by real pressure. This makes the Track-D rate calibration (#2) load-bearing: merge
+> and split rates must balance or size drifts.
 
 **#2 — calibrate + root/affix asymmetry.**
 - Tune rates so a sound change is an *occasional* event at 25 yr/step (today
@@ -172,8 +169,10 @@ inventory size emerge from merger/split balance.
   frequency**: stressed root syllables resist lenition/deletion; unstressed affixal
   syllables lenite and drop. This needs morpheme boundaries (from A/C) to know which
   segments are affixal → **D interacts with A/C here.**
-- **Open decision D2:** build a real stress/prosody model, or approximate prominence by
-  `morpheme-position + frequency` (cheaper, ~80% of the realism)?
+- **D2 → RESOLVED: full stress/prosody model** (§9). Weight-sensitive metrical stress with
+  placement + shift; lenition/deletion conditioned on stress. Large enough to be its own
+  **sub-project D-prosody** with its own spec; bonus payoff is stress-driven vowel reduction
+  (→ schwa), the real engine behind much attested change.
 
 **Folds in the pre-existing red.** `frequency_direction.test.ts` (RUN_SLOW) currently fails
 (held=1/8) — the *high-freq-content-words-drift-less* property. It is **already red on HEAD**
@@ -189,11 +188,13 @@ incorporation) into the space so they compose like lexical morphemes.
 
 **Caveat (correction).** Distributional vectors capture *lexical/derivational* meaning well
 but *inflectional/grammatical* meaning (tense, case, agreement) poorly — "PAST" or
-"ERGATIVE" doesn't have a clean distributional position. **Open decision E1:** represent
-grammatical morphemes in the *same* space (accepting fuzziness), or with a *separate*
-feature representation that the composition machinery treats specially? Recommend: lexical &
-derivational morphemes in-space; inflectional features kept as today and *attached* to
-lexeme points rather than embedded. Defer until A/B prove the model.
+"ERGATIVE" doesn't have a clean distributional position.
+
+**E1 → RESOLVED: orthogonal grammatical dimensions** (§9). Because A1=(b) lets us build the
+space, reserve dimensions for grammatical features (tense/aspect/case/…) orthogonal to the
+lexical-semantic dimensions. A PAST morpheme is a unit vector on the tense axis; vector sum
+combines lexical meaning + grammar cleanly, and the lexical-anchor readout stays unpolluted.
+Still **Wave 3 / exploratory** — validated only after A/B prove the model out.
 
 ---
 
@@ -206,10 +207,11 @@ Wave 1 (serial, foundational):
 Wave 2 (parallel, after A's schema is fixed):
   Track B — gap-driven compositional generation
   Track C — preset morphemization  ← AGENTS (one per preset)
-  Track D — sound-change recalibration (can also start earlier; syncs with C for boundaries)
+  Track D — sound-change recalibration + D-prosody sub-project (full stress model)
+            (can start earlier; syncs with C for morpheme boundaries)
 
 Wave 3 (exploratory):
-  Track E — grammar in the space
+  Track E — grammar in the space (orthogonal grammatical dimensions)
 ```
 
 User's stated working model (endorsed): **serial backend coding for the foundational pieces
@@ -217,38 +219,41 @@ User's stated working model (endorsed): **serial backend coding for the foundati
 
 ---
 
-## 9. Open decisions (resolve these before spec-ing Track A)
+## 9. Decisions — RESOLVED 2026-06-04
 
-**A1 — Compositional model (the single biggest decision).** How do morpheme vectors combine
-into a word's meaning?
-- **(a) Raw distributional additivity** — `word ≈ mean/sum of morpheme GloVe vectors`.
-  *Pro:* reuse the shipped embedding, zero new data. *Con:* GloVe is only *approximately*
-  additive (king−man+woman≈queen is real but noisy); "compose morphemes to fill a gap" will
-  be unreliable — most sums miss.
-- **(b) Own additive-by-construction space** *(recommended)* — define morpheme vectors so
-  that, for known words, `Σ morphemes = word` exactly (factorize each preset's words into
-  morpheme vectors via a constrained solve, seeded from GloVe for the roots). *Pro:*
-  composition is exact; gap-filling is well-defined; morphemization (C) has a precise target.
-  *Con:* we must *build* the factorization (per-language solve); more upfront work.
-- **(c) Hybrid + tolerance** — GloVe positions for words/anchors (display, drift, translation)
-  + a learned residual so morpheme sums approximate word positions within ε; a composition is
-  "valid" if it lands within ε of the target. *Pro:* balances reuse and composability. *Con:*
-  most moving parts.
+All six locked via the planning Q&A. These are now design constraints, not open questions.
 
-  → Recommendation: **(b) or (c).** (a) is the cheapest but I think it won't actually deliver
-  "morphemes add up to the word" reliably enough to drive gap-filling. **This is the decision
-  I most need from you.**
+- **A1 — Compositional model → (b) OWN ADDITIVE-BY-CONSTRUCTION SPACE.** Define morpheme
+  vectors so that, for known words, `Σ morphemes = word` exactly (per-language constrained
+  factorization, seeded from GloVe for roots; affixes get learned "operation" vectors).
+  Composition is exact → gap-filling (B) and agent morphemization (C) have precise targets.
+  GloVe stays as the anchor readout for display/translation. Irregulars/suppletion get a
+  non-compositional escape hatch.
 
-**A2 — Polysemy vs homonymy representation** (see §3). Recommend: polysemy = one lexeme/one
-point (multi-anchor readout); homonymy = separate lexemes sharing a form.
+- **A2 — Polysemy → POINT + SPREAD (REGION).** A lexeme is a point plus a breadth scalar;
+  senses = anchors within the region. Broadening grows the spread, narrowing shrinks it,
+  metaphor moves the point — wiring the existing drift kinds to a real representation.
+  Homonymy stays separate lexemes sharing a form (distant points).
 
-**B1 — Does gap-driven generation replace or coexist with concept-driven coinage?** (§4)
+- **B1 — Coinage → PURE GAP-DRIVEN (replace concept-driven).** All coinage is the language
+  organically filling an empty region. **Consequence (accepted):** the translator never
+  coins a requested word on demand — a missing concept maps to the nearest existing word
+  (the grounding rung already shipped). Words exist because the *language* needed them.
 
-**D1 — After removing the phoneme target, keep a soft bound or accept emergent sizes?** (§6)
+- **D1 — Inventory bound → EMERGENT VIA FUNCTIONAL LOAD.** Remove the per-tier target number;
+  low-functional-load phonemes merge, sound change adds, distinctiveness limits packing —
+  size finds its own level. Requires the Track-D rate calibration to keep merge/split balanced.
 
-**D2 — Real stress/prosody model, or approximate prominence by morpheme-position + frequency?** (§6)
+- **D2 — Erosion driver → FULL STRESS/PROSODY MODEL.** Weight-sensitive metrical stress with
+  placement + shift; lenition/deletion conditioned on stress (unstressed affixes erode,
+  stressed roots resist). **This is large enough to be its own sub-project under Track D**
+  (D-prosody) with its own spec; bonus payoff is stress-driven vowel reduction → schwa.
 
-**E1 — Grammatical morphemes: same space or separate feature representation?** (§7)
+- **E1 — Grammar → ORTHOGONAL GRAMMATICAL DIMENSIONS.** Because A1=(b) lets us build the
+  space, reserve dimensions for grammatical features (tense/aspect/case/…) orthogonal to the
+  lexical-semantic dimensions. A PAST morpheme is a unit vector on the tense axis; vector
+  sum cleanly combines lexical meaning + grammar. Still validated only after A/B prove out
+  (Track E stays Wave 3 / exploratory).
 
 ---
 
