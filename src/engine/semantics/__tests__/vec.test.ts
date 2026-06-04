@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { VEC_DIM, VEC_SCALE, LEXICAL_DIMS, GRAMMATICAL_DIMS, zeroVec, fromFloats, toFloats } from "../vec";
-import { sumVecs, dotFixed, distanceSq, cosineFixed } from "../vec";
+import {
+  VEC_DIM, VEC_SCALE, LEXICAL_DIMS, GRAMMATICAL_DIMS,
+  zeroVec, fromFloats, toFloats,
+  sumVecs, dotFixed, distanceSq, cosineFixed,
+} from "../vec";
 
 describe("vec — fixed-point representation", () => {
   it("dimensionality is 50 lexical + 8 grammatical = 58", () => {

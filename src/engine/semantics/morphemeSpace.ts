@@ -33,8 +33,18 @@ export function compositionError(point: Vec, morphemePoints: readonly Vec[]): nu
  * Greedy search for a small morpheme combination whose composed point is nearest `target`.
  * At each step it adds the morpheme that most reduces the (integer) squared distance, up to
  * `maxParts`, stopping when nothing improves. Ties at the same minimal distance are broken
- * by a seeded RNG so the result is deterministic. O(maxParts · |inventory|) — fine as a
- * primitive; Track B can optimise. This is the engine of necessity-driven coinage.
+ * by a seeded RNG so the result is deterministic. This is the engine of necessity-driven
+ * coinage (Track B).
+ *
+ * A morpheme MAY be selected more than once — the primitive imposes no distinctness policy,
+ * because repetition is a legitimate compose (reduplication / intensives). The CALLER
+ * (Track B) decides whether to constrain it (e.g. pass a deduplicated inventory). Returns
+ * `[]` for an empty inventory or a `target` already at the origin (nothing improves on the
+ * zero composition).
+ *
+ * Cost: O(maxParts² · |inventory|) — each of the `maxParts` steps rescans the inventory and
+ * re-sums the growing partial composition. Fine as a primitive at these scales; Track B can
+ * optimise (incremental sums / a `used` set) when it wires this into the hot path.
  */
 export function nearestComposition(
   target: Vec,

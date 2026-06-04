@@ -53,4 +53,14 @@ describe("morphemeSpace — nearestComposition (gap-filler used by Track B)", ()
     const b = nearestComposition(fromFloats([2, 2, 0]), inventory, 2, "seed-1").map((m) => m.id);
     expect(a).toEqual(b);
   });
+  it("returns [] for an empty inventory", () => {
+    expect(nearestComposition(fromFloats([2, 0, 0]), [], 3, "s")).toEqual([]);
+  });
+  it("returns [] when the target is already at the origin", () => {
+    expect(nearestComposition(fromFloats([0, 0, 0]), inventory, 3, "s")).toEqual([]);
+  });
+  it("MAY select a morpheme more than once (reduplication is allowed by the primitive)", () => {
+    const got = nearestComposition(fromFloats([4, 0, 0]), [morph("fire", [2, 0, 0])], 2, "s");
+    expect(got.map((m) => m.id)).toEqual(["fire", "fire"]); // 2×fire reaches [4,0,0] exactly
+  });
 });

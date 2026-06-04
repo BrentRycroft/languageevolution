@@ -48,7 +48,7 @@ export function sumVecs(vs: readonly Vec[]): Vec {
   return out;
 }
 
-/** Integer dot product. Safe in a JS number. */
+/** Dot product over fixed-point integers (accumulated in a JS float64, exact for all reachable inputs). */
 export function dotFixed(a: Vec, b: Vec): number {
   let d = 0;
   for (let i = 0; i < VEC_DIM; i++) d += a[i]! * b[i]!;
