@@ -198,12 +198,23 @@ export function realiseSentence(
     };
   });
 
+  // A SYNTHESISED imperative addressee ("make" → imperative "you", supplied by the
+  // parser because the input had no overt subject) is never realised as an overt
+  // pronoun: imperatives drop the 2nd-person subject near-universally, and a bare
+  // citation verb should surface as just the verb, not "you make(s)". This is
+  // independent of grammar.prodrop — it's a property of the imperative construction
+  // and of the subject being invented rather than spoken.
+  const imperativeAddresseeDrop =
+    s.predicate.verb.mood === "imperative" &&
+    s.subject.head.synthesized === true &&
+    s.subject.head.isPronoun === true;
   const dropSubject =
-    prodrop &&
-    s.subject.head.isPronoun &&
-    !!lang.morphology.paradigms[
-      `verb.person.${s.subject.head.person ?? "3"}${s.subject.head.number}` as MorphCategory
-    ];
+    imperativeAddresseeDrop ||
+    (prodrop &&
+      s.subject.head.isPronoun &&
+      !!lang.morphology.paradigms[
+        `verb.person.${s.subject.head.person ?? "3"}${s.subject.head.number}` as MorphCategory
+      ]);
   const subjectFinal = dropSubject ? [] : subject;
 
   // Phase 46a-migration: order-tokens stage. Each wordOrder module
