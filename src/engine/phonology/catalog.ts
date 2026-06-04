@@ -23,6 +23,23 @@ import {
 const CLICKS = ["ǀ", "ǃ", "ǂ", "ǁ"] as const;
 const VOICELESS = ALL_VOICELESS_CONSONANTS;
 
+// Lane A (phonology-expand): lookup tables for the new context-sensitive
+// rules added at the end of CATALOG.
+//
+// Regressive voicing assimilation: a voiceless obstruent → its voiced
+// counterpart before a voiced obstruent.
+const REGRESSIVE_VOICE: Record<string, Phoneme> = {
+  p: "b", t: "d", k: "g", s: "z", f: "v", ʃ: "ʒ", tʃ: "dʒ", θ: "ð", x: "ɣ",
+};
+// Yod-coalescence: coronal + /j/ fuse into the matching palatal.
+const YOD_COALESCE: Record<string, Phoneme> = {
+  t: "tʃ", d: "dʒ", s: "ʃ", z: "ʒ", n: "ɲ", l: "ʎ",
+};
+// Intervocalic spirantisation of voiced stops (Western Romance lenition).
+const INTERVOC_SPIRANT: Record<string, Phoneme> = {
+  b: "β", d: "ð", g: "ɣ",
+};
+
 type Mapping = readonly (readonly [Phoneme, Phoneme])[];
 
 function countSites(
@@ -1564,6 +1581,269 @@ export const CATALOG: SoundChange[] = [
     0.05,
     "Deaspiration of voiced aspirates: PIE breathy *bʰ/*dʰ/*gʰ collapse to plain b/d/g (Italic, Celtic, Germanic via Grimm). Real path of attestation in IE descendants.",
   ),
+
+  // ── Lane A (phonology-expand): glide ↔ vowel syllabicity alternation ──
+  //
+  // The user's "I never see j→y": no i↔j or u↔w alternation existed
+  // anywhere. These are two faces of one pervasive process —
+  //   VOCALISATION: a glide in a non-onset (coda / post-vocalic) slot
+  //     drops its consonantal status and surfaces as the matching high
+  //     vowel  (/aj/ → /ai/, /aw/ → /au/ — Romance, English offglides).
+  //   GLIDING (jod): a high vowel in hiatus (immediately before another
+  //     vowel) tightens to the matching glide  (Latin fīlia → Spanish
+  //     hija /j/, vidua → viuda /w/ — the classic "jod"). Note /j/
+  //     romanises to "y", so this IS the surface "j→y" the user wanted.
+  //
+  // /j/ is a palatal glide, /i,y/ high front vowels; /w,ɥ/ labial(-ised)
+  // glides, /u,y/ high back/front-round vowels.
+  {
+    id: "vocalization.glide_to_vowel_coda",
+    frequency: "common",
+    rationale: "Coda/post-vocalic glides vocalise to the matching high vowel (Latin → Romance offglides, English /aɪ/ /aʊ/, French /j/→/i/).",
+    label: "j/w/ɥ → i/u/y / V_ (non-prevocalic)",
+    category: "vocalization",
+    description:
+      "A glide vocalises to its matching high vowel when it is NOT a prevocalic onset — i.e. after a vowel and not immediately before another vowel (coda / diphthong offglide). /j/→/i/, /w/→/u/, /ɥ/→/y/.",
+    triggers: ["j", "w", "ɥ"],
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 0; i < w.length; i++) {
+        const p = w[i]!;
+        if (p !== "j" && p !== "w" && p !== "ɥ") continue;
+        const prev = i > 0 ? w[i - 1]! : undefined;
+        const next = i + 1 < w.length ? w[i + 1]! : undefined;
+        if (!prev || !isVowel(stripTone(prev))) continue; // needs a vocalic nucleus to its left
+        if (next && isVowel(stripTone(next))) continue; // prevocalic onset → stays a glide
+        n++;
+      }
+      return 1 - Math.pow(1 - 0.07, n);
+    },
+    apply: (word, rng) => {
+      const GLIDE_TO_VOWEL: Record<string, Phoneme> = { j: "i", w: "u", ɥ: "y" };
+      const sites: number[] = [];
+      for (let i = 0; i < word.length; i++) {
+        const p = word[i]!;
+        if (p !== "j" && p !== "w" && p !== "ɥ") continue;
+        const prev = i > 0 ? word[i - 1]! : undefined;
+        const next = i + 1 < word.length ? word[i + 1]! : undefined;
+        if (!prev || !isVowel(stripTone(prev))) continue;
+        if (next && isVowel(stripTone(next))) continue;
+        sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = GLIDE_TO_VOWEL[word[idx]!]!;
+      return out;
+    },
+    enabledByDefault: true,
+    baseWeight: 1,
+  },
+  {
+    id: "gliding.vowel_to_glide_prevocalic",
+    frequency: "common",
+    rationale: "High vowels in hiatus glide to the matching approximant (the Romance 'jod': Latin fīlia → Spanish hija, vidua → viuda); cross-linguistically pervasive hiatus resolution.",
+    label: "i/u/y → j/w/ɥ / _V (hiatus)",
+    category: "vocalization",
+    description:
+      "A high vowel immediately before another vowel (hiatus) tightens to the matching glide — the 'jod'. /i/→/j/, /u/→/w/, /y/→/ɥ/. Since /j/ romanises to \"y\", this surfaces as the i→y the user expected to see.",
+    triggers: ["i", "u", "y"],
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 0; i < w.length - 1; i++) {
+        const p = stripTone(w[i]!);
+        if (p !== "i" && p !== "u" && p !== "y") continue;
+        if (hasLength(w[i]!)) continue; // long vowels resist gliding
+        if (!isVowel(stripTone(w[i + 1]!))) continue;
+        // Needs a syllable nucleus to its left OR be word-initial onset of
+        // a fresh syllable — either way the glide forms an onset to the
+        // following vowel. Require the left neighbour to be a consonant or
+        // word edge so we don't glide the FIRST half of a falling diphthong.
+        const left = i > 0 ? w[i - 1]! : undefined;
+        if (left && isVowel(stripTone(left))) continue;
+        n++;
+      }
+      return 1 - Math.pow(1 - 0.05, n);
+    },
+    apply: (word, rng) => {
+      const VOWEL_TO_GLIDE: Record<string, Phoneme> = { i: "j", u: "w", y: "ɥ" };
+      const sites: number[] = [];
+      for (let i = 0; i < word.length - 1; i++) {
+        const p = stripTone(word[i]!);
+        if (p !== "i" && p !== "u" && p !== "y") continue;
+        if (hasLength(word[i]!)) continue;
+        if (!isVowel(stripTone(word[i + 1]!))) continue;
+        const left = i > 0 ? word[i - 1]! : undefined;
+        if (left && isVowel(stripTone(left))) continue;
+        sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = VOWEL_TO_GLIDE[stripTone(word[idx]!)]!;
+      return out;
+    },
+    enabledByDefault: true,
+    baseWeight: 1,
+  },
+
+  // ── Lane A: dissimilation (was entirely unencoded) ──
+  {
+    id: "dissimilation.liquid",
+    frequency: "rare",
+    rationale: "Liquid dissimilation r…r → l…r (Latin peregrīnus → Spanish peligro, arbor → árbol) is sporadic but solidly attested across Romance and beyond.",
+    label: "r…r → l…r (liquid dissim.)",
+    category: "dissimilation",
+    description:
+      "When two /r/ occur in a word, the first dissimilates to /l/ (Latin peregrīnus → Spanish peligro). Avoids the OCP violation of identical liquids.",
+    triggers: ["r"],
+    probabilityFor: (w) => {
+      let rCount = 0;
+      for (const p of w) if (p === "r") rCount++;
+      return rCount >= 2 ? 0.05 : 0;
+    },
+    apply: (word) => {
+      let rCount = 0;
+      for (const p of word) if (p === "r") rCount++;
+      if (rCount < 2) return word;
+      const out = word.slice();
+      for (let i = 0; i < out.length; i++) {
+        if (out[i] === "r") {
+          out[i] = "l";
+          break; // dissimilate the FIRST of the pair
+        }
+      }
+      return out;
+    },
+    enabledByDefault: true,
+    baseWeight: 0.5,
+  },
+
+  // ── Lane A: more assimilation contexts ──
+  {
+    id: "assimilation.regressive_voicing",
+    frequency: "common",
+    rationale: "Regressive voicing assimilation in obstruent clusters — Russian, Polish, Sanskrit, French liaison; one of the commonest cluster assimilations.",
+    label: "[-voi obstr] → [+voi] / _[+voi obstr]",
+    category: "assimilation",
+    description:
+      "A voiceless obstruent voices when immediately followed by a voiced obstruent (regressive voicing assimilation): p→b, t→d, k→g, s→z, f→v before b/d/g/z/v/ʒ/dʒ.",
+    triggers: ["p", "t", "k", "s", "f", "ʃ", "tʃ", "θ", "x"],
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 0; i < w.length - 1; i++) {
+        if (REGRESSIVE_VOICE[w[i]!] && VOICED_OBSTRUENTS.has(w[i + 1]!)) n++;
+      }
+      return 1 - Math.pow(1 - 0.08, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length - 1; i++) {
+        if (REGRESSIVE_VOICE[word[i]!] && VOICED_OBSTRUENTS.has(word[i + 1]!)) sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = REGRESSIVE_VOICE[word[idx]!]!;
+      return out;
+    },
+    enabledByDefault: true,
+    baseWeight: 1,
+  },
+  {
+    id: "assimilation.yod_coalescence",
+    frequency: "common",
+    rationale: "Yod-coalescence /tj/→/tʃ/, /dj/→/dʒ/, /sj/→/ʃ/, /zj/→/ʒ/ (English nature, soldier; Latin → Romance -tj-/-sj-); a pervasive coronal+jod palatalisation.",
+    label: "Cj → palatal / t,d,s,z + j",
+    category: "palatalization",
+    description:
+      "Yod-coalescence: a coronal obstruent fuses with a following /j/ into the matching palatal. /tj/→/tʃ/, /dj/→/dʒ/, /sj/→/ʃ/, /zj/→/ʒ/, /nj/→/ɲ/, /lj/→/ʎ/.",
+    triggers: ["t", "d", "s", "z", "n", "l"],
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 0; i < w.length - 1; i++) {
+        if (YOD_COALESCE[w[i]!] && w[i + 1] === "j") n++;
+      }
+      return 1 - Math.pow(1 - 0.08, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 0; i < word.length - 1; i++) {
+        if (YOD_COALESCE[word[i]!] && word[i + 1] === "j") sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = YOD_COALESCE[word[idx]!]!;
+      out.splice(idx + 1, 1); // the /j/ is absorbed
+      return out;
+    },
+    enabledByDefault: true,
+    baseWeight: 1,
+  },
+
+  // ── Lane A: context-sensitive lenition / fortition across vowel envs ──
+  {
+    id: "lenition.intervocalic_voiced_stop_to_fricative",
+    frequency: "common",
+    rationale: "Intervocalic spirantisation of voiced stops b/d/g → β/ð/ɣ is the canonical Western Romance lenition (Spanish, Catalan, Sardinian).",
+    label: "b/d/g → β/ð/ɣ / V_V",
+    category: "lenition",
+    positionBias: "internal",
+    description:
+      "Voiced stops spirantise between vowels: b→β, d→ð, g→ɣ (Spanish lobo [β], nada [ð], lago [ɣ]). The most characteristic Romance intervocalic lenition.",
+    triggers: ["b", "d", "g"],
+    probabilityFor: (w) => {
+      let n = 0;
+      for (let i = 1; i < w.length - 1; i++) {
+        if (!INTERVOC_SPIRANT[w[i]!]) continue;
+        if (isVowel(stripTone(w[i - 1]!)) && isVowel(stripTone(w[i + 1]!))) n++;
+      }
+      return 1 - Math.pow(1 - 0.07, n);
+    },
+    apply: (word, rng) => {
+      const sites: number[] = [];
+      for (let i = 1; i < word.length - 1; i++) {
+        if (!INTERVOC_SPIRANT[word[i]!]) continue;
+        if (isVowel(stripTone(word[i - 1]!)) && isVowel(stripTone(word[i + 1]!))) sites.push(i);
+      }
+      if (sites.length === 0) return word;
+      const idx = sites[rng.int(sites.length)]!;
+      const out = word.slice();
+      out[idx] = INTERVOC_SPIRANT[word[idx]!]!;
+      return out;
+    },
+    enabledByDefault: true,
+    baseWeight: 1,
+  },
+  {
+    id: "fortition.glide_to_obstruent_initial",
+    frequency: "ordinary",
+    rationale: "Word-initial glide hardening (j→dʒ/ʒ, w→v/gʷ) — Romance (Latin iam → Italian già), Germanic; the fortition counterpart to coda vocalisation.",
+    label: "j/w → dʒ/v / #_",
+    category: "fortition",
+    positionBias: "initial",
+    description:
+      "Word-initial glides fortify to obstruents: /j/→/dʒ/, /w/→/v/ (Latin iuvenis → Italian giovane; Latin w → Romance v). The onset counterpart of coda vocalisation.",
+    triggers: ["j", "w"],
+    probabilityFor: (w) => {
+      if (w.length < 2) return 0;
+      const first = w[0]!;
+      if (first !== "j" && first !== "w") return 0;
+      if (!isVowel(stripTone(w[1]!))) return 0;
+      return 0.04;
+    },
+    apply: (word) => {
+      if (word.length < 2) return word;
+      const first = word[0]!;
+      if ((first !== "j" && first !== "w") || !isVowel(stripTone(word[1]!))) return word;
+      const out = word.slice();
+      out[0] = first === "j" ? "dʒ" : "v";
+      return out;
+    },
+    enabledByDefault: true,
+    baseWeight: 0.7,
+  },
 ];
 
 const FRONT_VOWEL_SET: ReadonlySet<string> = new Set([

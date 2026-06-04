@@ -47,7 +47,12 @@ export type SoundChangeCategory =
   | "inventory"
   | "retroflex"
   | "delabialisation"
-  | "deaspiration";
+  | "deaspiration"
+  // Lane A (phonology-expand): glide↔vowel syllabicity alternation
+  // (i↔j, u↔w — jod gliding + vocalisation) and consonant/vowel
+  // dissimilation (liquid r…r → l…r, etc.).
+  | "vocalization"
+  | "dissimilation";
 
 export type PositionBias = "initial" | "final" | "internal" | "any";
 
