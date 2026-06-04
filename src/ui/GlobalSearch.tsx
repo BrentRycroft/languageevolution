@@ -6,6 +6,7 @@ import { leafIds } from "../engine/tree/split";
 import { useDebounced } from "./hooks/useDebounced";
 import { SearchIcon } from "./icons";
 import { lexEntries } from "../engine/lexicon/access";
+import { prettyGloss } from "../engine/lexicon/word";
 
 /**
  * GlobalSearch.tsx
@@ -63,7 +64,11 @@ export function GlobalSearch({
         // but display the form via the active script (so romanized users
         // see romanized hits).
         const ipa = formToString(form).toLowerCase();
-        if (m.toLowerCase().includes(q) || ipa.includes(q)) {
+        if (
+          m.toLowerCase().includes(q) ||
+          prettyGloss(m).toLowerCase().includes(q) ||
+          ipa.includes(q)
+        ) {
           out.push({
             langId: lid,
             langName: node.language.name,
@@ -146,7 +151,7 @@ export function GlobalSearch({
                 onMouseEnter={() => setFocusIndex(i)}
                 onClick={() => jump(h)}
               >
-                <span className="global-search-meaning">{h.meaning}</span>
+                <span className="global-search-meaning" title={prettyGloss(h.meaning) !== h.meaning ? `concept id: ${h.meaning}` : undefined}>{prettyGloss(h.meaning)}</span>
                 <span className="global-search-form">{h.form}</span>
                 <span className="global-search-lang">{h.langName}</span>
               </button>

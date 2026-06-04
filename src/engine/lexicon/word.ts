@@ -5,6 +5,7 @@ import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { lexGet, lexHas, lexEntries } from "./access";
 import { conceptIdFor } from "./conceptIdentity";
+import { CONCEPT_IDS } from "./concepts";
 
 /**
  * Stable join key for a phonemic form. Two words with the same key are
@@ -184,6 +185,132 @@ export function glossLemma(lang: Language, meaning: string): string {
   return tags.length > 0
     ? `${base}-${tags.map((t) => t.toUpperCase()).join(".")}`
     : meaning;
+}
+
+// --- prettyGloss (Lane C1, display-only) ----------------------------------
+//
+// Concept IDs in basic240 / expanded_concepts carry a trailing disambiguation
+// segment so two senses that share an English spelling stay distinct keys
+// (`answer-action` the verb vs `answer-noun` the noun; `calf-animal` the young
+// cow vs `calf-leg` the body part). These segments are engine plumbing, never
+// meant for the eye. `prettyGloss` renders a clean human-readable label for the
+// Dictionary/Lexicon UI. It is pure, deterministic, and never touches the sim —
+// the stored concept IDs are unchanged.
+
+/** Part-of-speech tag suffixes → a parenthetical POS marker. */
+const POS_SUFFIX: Readonly<Record<string, string>> = {
+  v: "v.",
+  verb: "v.",
+  action: "v.",
+  n: "n.",
+  noun: "n.",
+  abst: "n.",
+  abstract: "n.",
+  adj: "adj.",
+};
+
+/**
+ * Domain / category disambiguation suffixes. These are pure category tags
+ * appended to an already-meaningful base purely to keep two homographs in
+ * distinct concept IDs (`calf-animal` vs `calf-leg`, `bear-ish`, `date-fruit`,
+ * `iron-age`). They are stripped from the label — silently when the base is
+ * unambiguous, kept as a parenthetical clarifier when two ids share a base
+ * (see `ambiguousBases`).
+ *
+ * Deliberately TIGHT: only genuine semantic-domain / register tags belong
+ * here. Real compound heads (`-bulb` in `light-bulb`, `-card` in
+ * `credit-card`, `-cream` in `ice-cream`, `-minister` in `prime-minister`)
+ * are NOT tags — those ids are multi-word lexemes and pass through with their
+ * hyphens intact.
+ */
+const DOMAIN_SUFFIX: ReadonlySet<string> = new Set([
+  // semantic domain / sense category
+  "animal", "fruit", "tree", "plant", "veg", "bird", "goat", "fire",
+  "weather", "earth", "water", "mineral", "metal", "stone", "tool",
+  "instrument", "food", "cooked", "meat", "pork", "fat", "broth", "dish",
+  "clothing", "clothes", "shoe", "textile", "art", "music", "sport", "game",
+  "magic", "money", "coin", "finance", "trade", "tax", "econ", "law",
+  "political", "mil", "medical", "mental", "health", "drug", "chem", "bio",
+  "physics", "physical", "theory", "data", "computer", "software", "online",
+  "digital", "modern", "electric", "machine", "mechanical", "radio",
+  "traffic", "rail", "sense", "emotion", "quality", "state", "balance",
+  "precise", "tally", "direction", "marker", "season", "named", "celsius",
+  "purple", "abst", "iron", "age", "time", "person", "prof", "relative",
+  "council", "king", "high", "formal", "public", "passage", "recorded",
+  "pair", "rein", "soul", "leg", "skin", "eye", "hand", "foot", "mouth",
+  "organ", "head", "wrist", "work", "care", "ish",
+]);
+
+let _ambiguousBases: Set<string> | null = null;
+
+/**
+ * Lazily compute the set of bases that appear on more than one concept ID
+ * (after dropping the disambiguation suffix). For these, the suffix carries
+ * meaning the user needs — `market-day` vs `market-square` — so the label
+ * keeps it as a parenthetical. Memoised; derived purely from the concept
+ * registry so it is deterministic and independent of any language state.
+ */
+function ambiguousBases(): Set<string> {
+  if (_ambiguousBases) return _ambiguousBases;
+  const seen = new Map<string, number>();
+  for (const id of CONCEPT_IDS) {
+    const parsed = parseConceptId(id);
+    if (parsed.suffix === null) continue; // no disambiguator → not a collision source
+    seen.set(parsed.base, (seen.get(parsed.base) ?? 0) + 1);
+  }
+  const ambiguous = new Set<string>();
+  for (const [base, count] of seen) if (count > 1) ambiguous.add(base);
+  _ambiguousBases = ambiguous;
+  return ambiguous;
+}
+
+/**
+ * Split a concept ID into `{ base, suffix }`, where `suffix` is the trailing
+ * disambiguation/POS segment IFF it is a recognised tag. Returns
+ * `suffix: null` for plain words and for genuine multi-word lexemes whose
+ * final segment is a real word (`mother-in-law`, `ice-cream`,
+ * `prime-minister`) — those must pass through with their hyphens intact.
+ */
+function parseConceptId(id: string): { base: string; suffix: string | null } {
+  const dash = id.lastIndexOf("-");
+  if (dash <= 0 || dash === id.length - 1) return { base: id, suffix: null };
+  // Multi-word lexemes joined by a function word — `mother-in-law`,
+  // `court-of-law` — are real labels, not base+tag. The final segment
+  // happens to collide with a domain suffix (`law`), so guard against it.
+  const base = id.slice(0, dash);
+  if (base.endsWith("-in") || base.endsWith("-of")) {
+    return { base: id, suffix: null };
+  }
+  const tail = id.slice(dash + 1);
+  if (tail in POS_SUFFIX || DOMAIN_SUFFIX.has(tail)) {
+    return { base, suffix: tail };
+  }
+  return { base: id, suffix: null };
+}
+
+/**
+ * Lane C1: render a concept ID as a clean human-readable gloss for the UI.
+ *
+ *   bear-ish       → "bear"            (silent strip, base unique)
+ *   hoe-tool       → "hoe"
+ *   date-fruit     → "date"
+ *   answer-action  → "answer (v.)"     (POS tag → parenthetical)
+ *   answer-noun    → "answer (n.)"
+ *   number-abst    → "number (n.)"
+ *   market-day     → "market (day)"    (ambiguous base → keep clarifier)
+ *   mother-in-law  → "mother-in-law"   (real lexeme, untouched)
+ *
+ * Display-only and deterministic — no RNG, no language state. Two distinct
+ * ids never collapse to the same label: POS tags always disambiguate, and a
+ * shared domain base keeps its suffix as a parenthetical.
+ */
+export function prettyGloss(conceptId: string): string {
+  const { base, suffix } = parseConceptId(conceptId);
+  if (suffix === null) return conceptId;
+  const pos = POS_SUFFIX[suffix];
+  if (pos) return `${base} (${pos})`;
+  // Domain suffix: strip silently unless the base is shared by another id.
+  return ambiguousBases().has(base) ? `${base} (${suffix})` : base;
 }
 
 /**

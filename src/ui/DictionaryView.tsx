@@ -3,6 +3,7 @@ import { useSimStore } from "../state/store";
 import { posOf } from "../engine/lexicon/pos";
 import { verbCitationForm } from "../engine/morphology/citation";
 import { CONCEPTS, tierOf, TIER_LABELS } from "../engine/lexicon/concepts";
+import { prettyGloss } from "../engine/lexicon/word";
 import { formatForm } from "../engine/phonology/display";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
@@ -32,8 +33,13 @@ export function DictionaryView() {
   const rows = useMemo(() => {
     if (!lang) return [];
     const meanings = lexKeys(lang);
+    const q = search.toLowerCase();
     const filtered = search
-      ? meanings.filter((m) => m.toLowerCase().includes(search.toLowerCase()))
+      ? meanings.filter(
+          (m) =>
+            m.toLowerCase().includes(q) ||
+            prettyGloss(m).toLowerCase().includes(q),
+        )
       : meanings;
     const data = filtered.map((m) => {
       const origin = lang.wordOrigin?.[m];
@@ -58,6 +64,7 @@ export function DictionaryView() {
       }
       return {
         meaning: m,
+        gloss: prettyGloss(m),
         form: displayForm,
         pos,
         cluster: CONCEPTS[m]?.cluster ?? "—",
@@ -66,9 +73,9 @@ export function DictionaryView() {
         isLoan,
       };
     });
-    if (sortBy === "meaning") data.sort((a, b) => a.meaning.localeCompare(b.meaning));
-    else if (sortBy === "pos") data.sort((a, b) => a.pos.localeCompare(b.pos) || a.meaning.localeCompare(b.meaning));
-    else if (sortBy === "tier") data.sort((a, b) => a.tier - b.tier || a.meaning.localeCompare(b.meaning));
+    if (sortBy === "meaning") data.sort((a, b) => a.gloss.localeCompare(b.gloss));
+    else if (sortBy === "pos") data.sort((a, b) => a.pos.localeCompare(b.pos) || a.gloss.localeCompare(b.gloss));
+    else if (sortBy === "tier") data.sort((a, b) => a.tier - b.tier || a.gloss.localeCompare(b.gloss));
     return data;
   }, [lang, search, sortBy, script]);
 
@@ -124,8 +131,8 @@ export function DictionaryView() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.meaning}>
-                <td>
-                  {r.meaning}
+                <td title={r.gloss !== r.meaning ? `concept id: ${r.meaning}` : undefined}>
+                  {r.gloss}
                   {r.isLoan && (
                     <span
                       className="t-accent"
