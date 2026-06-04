@@ -103,8 +103,6 @@ function Section({
 
 export function ControlsPanel() {
   const config = useSimStore((s) => s.config);
-  const speed = useSimStore((s) => s.speed);
-  const setSpeed = useSimStore((s) => s.setSpeed);
   const updateModes = useSimStore((s) => s.updateModes);
   const updatePhonology = useSimStore((s) => s.updatePhonology);
   const updateTree = useSimStore((s) => s.updateTree);
@@ -131,18 +129,6 @@ export function ControlsPanel() {
 
       <Section title="Evolution speed" defaultOpen>
         <EvolutionSpeedPicker />
-      </Section>
-
-      <Section title="Playback" defaultOpen>
-        <Slider
-          label="Speed (steps/sec)"
-          value={speed}
-          min={1}
-          max={30}
-          step={1}
-          onChange={setSpeed}
-          format={(v) => `${v}/s`}
-        />
       </Section>
 
       <Section title="Seed" defaultOpen>

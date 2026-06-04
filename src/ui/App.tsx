@@ -100,7 +100,6 @@ function PanelSkeleton() {
 
 export function App() {
   const playing = useSimStore((s) => s.playing);
-  const speed = useSimStore((s) => s.speed);
   const togglePlay = useSimStore((s) => s.togglePlay);
   const step = useSimStore((s) => s.step);
   const stepN = useSimStore((s) => s.stepN);
@@ -113,7 +112,6 @@ export function App() {
   );
 
   const rafRef = useRef<number | null>(null);
-  const lastRef = useRef<number>(0);
 
   const [controlsOpen, setControlsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("tree");
@@ -155,32 +153,28 @@ export function App() {
     toggleHelp: () => setHelpOpen((h) => !h),
   });
 
+  // Lane H (2026-06): Play is a continuous MAX-RATE loop. There is no
+  // steps/sec throttle — each animation frame advances the simulation
+  // one generation, so it runs as fast as the browser can render
+  // (frame-paced, so the UI stays responsive and nothing is skipped).
+  // The separate "Evolution speed" picker still controls per-step
+  // change magnitude; this only governs wall-clock playback rate.
   useEffect(() => {
     if (!playing) {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
       return;
     }
-    const intervalMs = 1000 / speed;
-    const MAX_STEPS_PER_FRAME = 5;
-    const loop = (ts: number) => {
-      if (!lastRef.current) lastRef.current = ts;
-      let iters = 0;
-      while (ts - lastRef.current >= intervalMs && iters < MAX_STEPS_PER_FRAME) {
-        useSimStore.getState().step();
-        lastRef.current += intervalMs;
-        iters++;
-      }
-      if (iters >= MAX_STEPS_PER_FRAME) lastRef.current = ts;
+    const loop = () => {
+      useSimStore.getState().step();
       rafRef.current = requestAnimationFrame(loop);
     };
-    lastRef.current = 0;
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-  }, [playing, speed]);
+  }, [playing]);
 
   return (
     <div className="app">
