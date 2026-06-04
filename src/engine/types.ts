@@ -1516,7 +1516,7 @@ export interface SimulationConfig {
   useWorker?: boolean;
   preset?: string;
   evolutionSpeed?: string;
-  mapMode?: "random" | "earth";
+  mapMode?: "random" | "earth" | "province";
   originCellId?: number;
   /**
    * Phase 70 T1: Historical Mode (HOI4-style soft-railroad). When

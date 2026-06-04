@@ -85,7 +85,56 @@ export function tickTerritory(
     node.language.territory!.cells = cells.filter((c) => c !== target);
   }
   lang.territory.cells.push(target);
+  // Province map (Provinces.png): provinces are ~7x finer than the Earth/random
+  // Voronoi grids, so a single-cell claim per growth tick would leave every
+  // language a speck. On a successful tick, deterministically flood a batch of
+  // bordering EMPTY land provinces (terra nullius spreads fast; conquest of an
+  // occupied province stays one-at-a-time above). The batch is sized so the
+  // claimed FRACTION of the map per generation matches the coarser maps. Gated on
+  // kind==="province" so Earth/random keep their byte-identical RNG sequence.
+  if (map.kind === "province") {
+    const batch = Math.max(1, Math.round(map.cells.length / 600));
+    expandIntoEmptyLand(lang, tree, map, batch - 1);
+  }
   lang.coords = territoryCentroid(map, lang.territory.cells);
+}
+
+/**
+ * Deterministically claim up to `budget` empty land provinces bordering this
+ * language's territory (breadth-first from the current cells, neighbours visited in
+ * ascending id order — no RNG). "Empty" = not owned by any living language and not
+ * ocean. Used by province-mode territory growth for continental-scale spread.
+ */
+function expandIntoEmptyLand(
+  lang: Language,
+  tree: LanguageTree,
+  map: WorldMap,
+  budget: number,
+): void {
+  if (budget <= 0 || !lang.territory) return;
+  const occupied = new Set<number>();
+  for (const id of Object.keys(tree)) {
+    const l = tree[id]!.language;
+    if (l.extinct) continue;
+    for (const c of l.territory?.cells ?? []) occupied.add(c);
+  }
+  const queue = lang.territory.cells.slice();
+  let claimed = 0;
+  for (let qi = 0; qi < queue.length && claimed < budget; qi++) {
+    const cell = map.cells[queue[qi]!];
+    if (!cell) continue;
+    const ns = cell.neighbours.slice().sort((a, b) => a - b);
+    for (const n of ns) {
+      if (claimed >= budget) break;
+      if (occupied.has(n)) continue;
+      const nb = map.cells[n];
+      if (!nb || nb.biome === "ocean") continue;
+      occupied.add(n);
+      lang.territory.cells.push(n);
+      queue.push(n);
+      claimed++;
+    }
+  }
 }
 
 export function partitionTerritory(
@@ -189,6 +238,41 @@ export function nearestLandCell(map: WorldMap, p: { x: number; y: number }): num
     }
   }
   return best;
+}
+
+/**
+ * Geographic fragmentation of a territory: how broken-up the language's land is.
+ * Returns the size ratio of the SECOND-largest connected component to the whole
+ * (0 = one connected blob; →0.5 = split into two equal halves). Connectivity is
+ * over the language's own cells via map adjacency, so an ocean strait or a wedge of
+ * another language's land that severs the territory raises fragmentation. This is the
+ * geographic "reason" that drives a split: isolation-by-distance → dialect divergence
+ * → cladogenesis, rather than a flat per-generation dice roll.
+ */
+export function territoryFragmentation(map: WorldMap, cells: readonly number[]): number {
+  if (cells.length < 2) return 0;
+  const own = new Set(cells);
+  const seen = new Set<number>();
+  const sizes: number[] = [];
+  for (const start of cells) {
+    if (seen.has(start)) continue;
+    let size = 0;
+    const stack = [start];
+    seen.add(start);
+    while (stack.length > 0) {
+      const id = stack.pop()!;
+      size++;
+      const cell = map.cells[id];
+      if (!cell) continue;
+      for (const n of cell.neighbours) {
+        if (own.has(n) && !seen.has(n)) { seen.add(n); stack.push(n); }
+      }
+    }
+    sizes.push(size);
+  }
+  if (sizes.length < 2) return 0;
+  sizes.sort((a, b) => b - a);
+  return sizes[1]! / cells.length;
 }
 
 export function arealShareAffinity(
