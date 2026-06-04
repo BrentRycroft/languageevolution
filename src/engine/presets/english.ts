@@ -842,6 +842,13 @@ export function presetEnglish(): SimulationConfig {
     // fossilisation. Real-world: many of these started transparent
     // (Old English compound) and gradually fossilised (modern
     // "lord" < hlafweard, "daisy" < dæges-ēage = "day's eye").
+    // MEGA overhaul: English near-synonym doublets — "make" can also surface as
+    // create / craft / build. The alternates compete with the primary in narrative +
+    // translation and may specialise or fall out of use over a run (real synonymy
+    // turnover: OE "weorþan" lost to "become").
+    seedAltForms: {
+      make: [["k", "ɹ", "i", "e", "j", "t"], ["k", "ɹ", "æ", "f", "t"], ["b", "ɪ", "l", "d"]],
+    },
     seedCompounds: {
       // All parts must already exist in seedLexicon. Validated at
       // language birth via addCompound which falls back to the bare

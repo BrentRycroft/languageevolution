@@ -1546,6 +1546,16 @@ export interface SimulationConfig {
    */
   seedColexification?: Record<Meaning, Meaning[]>;
   /**
+   * MEGA overhaul: preset-declared SYNONYMS / lexical doublets — the inverse of
+   * colexification (one meaning carrying several forms, rather than one form spanning
+   * several meanings). Materialised onto `lang.altForms` at birth, where the alternates
+   * compete with the primary form for use in narrative + translation and are pruned if
+   * they fall out of use. Lets a preset open with real doublets: PIE water *wódr̥ +
+   * *akʷ- (aqua), English make / create / craft / build.
+   * Example: `seedAltForms: { water: [["a", "kʷ"]] }`.
+   */
+  seedAltForms?: Record<Meaning, WordForm[]>;
+  /**
    * Phase 36 Tranche 36b: opt the proto language into a Bantu-style
    * noun-class system. When true, `assignAllNounClasses` runs at
    * language birth and the realiser inflects every noun with its

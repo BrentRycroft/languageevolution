@@ -264,6 +264,17 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       rootLang.colexifiedAs[winner] = absorbed.slice();
     }
   }
+  // MEGA overhaul: seed SYNONYMS / lexical doublets (the inverse of colexification —
+  // one meaning carrying several forms). Only attach to meanings the language actually
+  // has a primary form for; the alternates then compete in narrative + translation.
+  if (config.seedAltForms) {
+    rootLang.altForms = rootLang.altForms ?? {};
+    for (const [meaning, forms] of Object.entries(config.seedAltForms)) {
+      if (!lexHas(rootLang, meaning)) continue;
+      const valid = forms.filter((f) => f.length > 0).map((f) => f.slice());
+      if (valid.length > 0) rootLang.altForms[meaning] = valid;
+    }
+  }
   // Phase 70 T1: tag the proto-language so Historical Mode milestones
   // targeting role "proto" find a leaf to nudge. Skipped when
   // Historical Mode is off — leaves the field undefined.
