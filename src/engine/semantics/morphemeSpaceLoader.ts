@@ -18,7 +18,7 @@ export interface LoadedMorphemeSpace {
 export function loadMorphemeSpace(): LoadedMorphemeSpace {
   const morphemes: Morpheme[] = MORPHEME_SPACE.morphemes.map((m) => ({
     id: m.id,
-    form: [],
+    form: [], // no phonological form baked in Plan 2 — Plan 3 wires forms from the lexicon.
     point: toVec(m.point),
     type: m.type as Morpheme["type"],
   }));

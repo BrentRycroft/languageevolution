@@ -38,7 +38,7 @@ export function factorizeMorphemes(input: FactorInput): FactorResult {
     const affixes = d.parts.filter((p) => input.affixIds.has(p));
     if (affixes.length === 0) continue;
     if (affixes.length > 1) {
-      throw new Error(`factorize: "${d.word}" stacks ${affixes.length} affixes (v1 supports ≤ 1)`);
+      throw new Error(`factorize: "${d.word}" stacks ${affixes.length} affixes (v1 supports at most 1)`);
     }
     const affix = affixes[0]!;
     const rootPts: Vec[] = [];

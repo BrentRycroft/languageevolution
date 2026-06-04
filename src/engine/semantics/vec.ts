@@ -81,7 +81,10 @@ export function subVecs(a: Vec, b: Vec): Vec {
   return out;
 }
 
-/** Componentwise rounded mean: round(v[i] / n). Deterministic. `n` must be ≥ 1. */
+/**
+ * Componentwise rounded mean: round(v[i] / n). Deterministic — uses JS `Math.round`
+ * (round-half-toward-+∞), so it is identical on every platform; `n` must be ≥ 1.
+ */
 export function roundDivVec(v: Vec, n: number): Vec {
   const out = new Int32Array(VEC_DIM);
   for (let i = 0; i < VEC_DIM; i++) out[i] = Math.round(v[i]! / n);

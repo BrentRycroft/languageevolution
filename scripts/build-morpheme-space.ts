@@ -18,6 +18,9 @@ const roots = new Map<string, Vec>();
 const affixIds = new Set<string>();
 const decomps: Decomp[] = [];
 const partsByWord = new Map<string, string[]>();
+// Assumes each root / word meaning is in the GloVe-50 vocab so embed() returns a real
+// anchor (not a zero/hash fallback). Holds for the authored English set; Track C, which
+// morphemizes the full vocabulary, will need to handle out-of-vocab anchors explicitly.
 const addRoot = (m: string) => { if (!roots.has(m)) roots.set(m, fromFloats(embed(m))); };
 
 for (const [word, c] of Object.entries(compounds)) {
