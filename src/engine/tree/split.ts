@@ -8,6 +8,7 @@ import type { Rng } from "../rng";
 import { lexicalCapacity } from "../lexicon/tier";
 import { getModule } from "../modules/registry";
 import { rebuildFormKeyIndex } from "../lexicon/word";
+import { buildMorphemeInventory } from "../morphology/morphemeInventory";
 import { partitionTerritory } from "../geo/territory";
 import type { WorldMap } from "../geo/map";
 import { leafIds } from "./leafIds";
@@ -331,6 +332,13 @@ export function splitLeaf(
             primarySenseIndex: w.primarySenseIndex,
             bornGeneration: w.bornGeneration,
             origin: w.origin,
+            // Lane D (morphology encoding): carry the structural etymology
+            // onto the daughter so a complex word still knows its parts
+            // after a split. Shallow-cloned (parts array copied) so the
+            // daughter's record is independent of the parent's.
+            morphStructure: w.morphStructure
+              ? { ...w.morphStructure, parts: w.morphStructure.parts?.slice() }
+              : undefined,
           }))
         : undefined,
     };
@@ -354,6 +362,15 @@ export function splitLeaf(
   // clone — build a fresh form-key index against the new refs.
   for (const child of children) {
     if (child.words) rebuildFormKeyIndex(child);
+  }
+  // Lane D (morphology encoding): the morpheme inventory is a derived view.
+  // Rebuild it per daughter from its own inherited records (compounds,
+  // boundMorphemes, derivationalSuffixes, lexicon) so each daughter has an
+  // inventory consistent with its own forms after the split.
+  for (const child of children) {
+    if (parentLang.morphemeInventory) {
+      child.morphemeInventory = buildMorphemeInventory(child);
+    }
   }
   // Phase 73d Tier D Phase D1: assign each daughter a latent
   // typological direction vector with anti-correlation against

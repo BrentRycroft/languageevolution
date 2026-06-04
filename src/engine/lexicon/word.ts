@@ -1,4 +1,4 @@
-import type { Language, Meaning, Word, WordSense, WordForm } from "../types";
+import type { Language, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
 import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
@@ -452,6 +452,40 @@ export function syncLexiconFromWords(lang: Language): void {
 }
 
 /**
+ * Lane D (morphology encoding): reconstruct a `WordMorphStructure` for a
+ * (rebuilt) Word from the language's RECORDED compound/derivation parts,
+ * so seed-time structure survives the `syncWordsFromLexicon` rebuild
+ * (ROADMAP §144). Reads `lang.compounds[m].parts` — never the gloss
+ * string. A part that is a bound morpheme (`lang.boundMorphemes`) marks
+ * the entry as a `derivation` (base = the content part, affix = the bound
+ * key); otherwise it is a `compound` (parts in order). Returns undefined
+ * when none of the word's meanings carries a recorded structure.
+ *
+ * When a form carries several meanings (homonymy/colexification), the
+ * first meaning with a recorded structure wins — deterministic in the
+ * meaning ordering the caller already established.
+ */
+function seedMorphStructureFor(
+  lang: Language,
+  meanings: Meaning[],
+): WordMorphStructure | undefined {
+  if (!lang.compounds) return undefined;
+  for (const meaning of meanings) {
+    const compound = lang.compounds[meaning];
+    if (!compound || compound.parts.length < 2) continue;
+    const parts = compound.parts;
+    const bound = lang.boundMorphemes;
+    const affixPart = bound ? parts.find((p) => bound.has(p)) : undefined;
+    if (affixPart) {
+      const base = parts.find((p) => p !== affixPart);
+      return { origin: "derivation", base, affix: affixPart };
+    }
+    return { origin: "compound", parts: parts.slice() };
+  }
+  return undefined;
+}
+
+/**
  * Inverse of `syncLexiconFromWords`. Builds `lang.words` from the
  * meaning-keyed `lexicon` (and existing `colexifiedAs` if present).
  * Idempotent: re-running on a language with `words` already populated is
@@ -506,12 +540,21 @@ export function syncWordsFromLexicon(
           ? (lang.wordOrigin![meaning] as string)
           : undefined,
     }));
+    // Lane D (morphology encoding): close the seed-time morphStructure gap
+    // (ROADMAP §144). addCompound / addDerivation record structure on
+    // lang.compounds BEFORE this rebuild runs, but write morphStructure onto
+    // the Word via setLexiconForm — a no-op while lang.words is undefined at
+    // seed init. So a seeded compound/derivation lost its Word.morphStructure
+    // until now. Re-derive it from the recorded parts here so a seeded complex
+    // word knows its constituents from gen 0. Read from records, not the gloss.
+    const morphStructure = seedMorphStructureFor(lang, meanings);
     lang.words.push({
       form,
       formKey: formKeyOf(form),
       senses,
       primarySenseIndex: 0,
       bornGeneration,
+      morphStructure,
     });
   }
   // Phase 29 Tranche 1e: build the form-key index alongside the
