@@ -520,6 +520,10 @@ export function presetPIE(): SimulationConfig {
     // of storing duplicate forms so the concept space reflects PIE, not the
     // English split (winners keep the form; absorbed senses resolve via colex).
     seedColexification: { tree: ["wood"], eye: ["face"], meat: ["flesh"] },
+    // MEGA overhaul: real PIE doublets — water is *wódr̥ (the seedLexicon form) AND
+    // *akʷ- "aqua" (source of Latin aqua). Both forms compete; one may win, fossilise,
+    // or specialise over a run, as *akʷ- did in the Italic branch.
+    seedAltForms: { water: [["a", "kʷ"]] },
     seedMorphology: MORPHOLOGY,
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 0,

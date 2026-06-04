@@ -106,7 +106,6 @@ interface SimStore {
   config: SimulationConfig;
   state: SimulationState;
   playing: boolean;
-  speed: number;
   selectedLangId: string | null;
   selectedMeaning: Meaning | null;
   timelineMeanings: Meaning[];
@@ -152,7 +151,6 @@ interface SimStore {
    */
   runUntilNextEvent: (maxGens?: number) => number;
   togglePlay: () => void;
-  setSpeed: (s: number) => void;
   reset: () => void;
   resetRatesToDefaults: () => void;
   updateConfig: (patch: Partial<SimulationConfig>) => void;
@@ -340,7 +338,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
   config: initialConfig,
   state: initial.state,
   playing: false,
-  speed: 4,
   selectedLangId: initial.state.rootId,
   selectedMeaning: "water",
   timelineMeanings: ["water"],
@@ -480,7 +477,6 @@ export const useSimStore = create<SimStore>((set, get) => ({
     }
   },
   togglePlay: () => set((s) => ({ playing: !s.playing })),
-  setSpeed: (s) => set({ speed: s }),
   reset: () => {
     const { config } = get();
     const nextConfig = { ...config, seed: makeRandomSeed() };

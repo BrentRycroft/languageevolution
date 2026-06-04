@@ -7,6 +7,8 @@ import {
   type WorldMap,
 } from "../engine/geo/map";
 import { makeRng } from "../engine/rng";
+import { paintProvinces, provinceAtRaster, rgba } from "./provinceRaster";
+import { IS_SEA, PROVINCE_COUNT } from "../engine/geo/provincesData";
 
 /**
  * WorldMapPicker.tsx
@@ -31,7 +33,7 @@ export function WorldMapPicker() {
     config.originCellId ?? null,
   );
 
-  const setMode = (next: "random" | "earth") => {
+  const setMode = (next: "random" | "earth" | "province") => {
     updateConfig({ mapMode: next, originCellId: undefined });
     setOriginId(null);
   };
@@ -68,11 +70,22 @@ export function WorldMapPicker() {
         >
           Earth-shape
         </button>
+        <button
+          role="tab"
+          aria-selected={mode === "province"}
+          className={mode === "province" ? "active" : ""}
+          onClick={() => setMode("province")}
+          title="Detailed province map (≈3,900 provinces) — geography drives spread & splits"
+        >
+          Provinces
+        </button>
       </div>
       <div className="label-line">
         {mode === "random"
           ? "A unique continent generated from your seed. Same seed → same continent."
-          : "Stylised Earth outline. Each preset has a suggested starting region."}
+          : mode === "earth"
+            ? "Stylised Earth outline. Each preset has a suggested starting region."
+            : "Detailed province map: ~3,900 provinces. Pick a starting province to seed the first language."}
       </div>
 
       <MapPreview
@@ -120,6 +133,44 @@ function MapPreview({ worldMap, originId, onClick }: MapPreviewProps) {
     px: (x - worldMap.bounds.minX) * scaleX,
     py: (y - worldMap.bounds.minY) * scaleY,
   });
+
+  // Province mode: render the baked raster as one <image> (3,900 polygons would be
+  // a mess of overlapping bbox rects), and hit-test clicks back to a province id.
+  const provinceImg = useMemo(() => {
+    if (worldMap.kind !== "province") return null;
+    const table = new Uint32Array(PROVINCE_COUNT);
+    for (let i = 0; i < PROVINCE_COUNT; i++) {
+      table[i] = IS_SEA[i] === 1 ? rgba(29, 58, 85) : rgba(61, 74, 46);
+    }
+    return paintProvinces(table);
+  }, [worldMap.kind]);
+
+  if (worldMap.kind === "province" && provinceImg) {
+    const pickProvince = (e: React.MouseEvent<SVGSVGElement>) => {
+      const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+      const rx = (e.clientX - rect.left) / scaleX;
+      const ry = (e.clientY - rect.top) / scaleY;
+      const id = provinceAtRaster(rx, ry);
+      if (id >= 0 && IS_SEA[id] !== 1) onClick(id);
+    };
+    return (
+      <div
+        ref={containerRef}
+        style={{
+          width: W, height: H, border: "1px solid var(--border)",
+          borderRadius: "var(--r-2)", background: "#0f1f2e", overflow: "hidden", userSelect: "none",
+        }}
+      >
+        <svg width={W} height={H} style={{ display: "block", cursor: "pointer" }} onClick={pickProvince}>
+          <image href={provinceImg} x={0} y={0} width={W} height={H} preserveAspectRatio="none" />
+          {originId !== null && worldMap.cells[originId] && (
+            <CrosshairAt point={project(worldMap.cells[originId]!.centroid.x, worldMap.cells[originId]!.centroid.y)} />
+          )}
+        </svg>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}

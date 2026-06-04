@@ -1,5 +1,6 @@
 import { Delaunay, Voronoi } from "d3-delaunay";
 import { fnv1a, makeRng, type Rng } from "../rng";
+import { PROVINCE_COUNT, CX, CY, BBOX, IS_SEA, NEIGHBOURS, RASTER_W, RASTER_H } from "./provincesData";
 
 /**
  * map.ts
@@ -22,7 +23,7 @@ export interface MapCell {
 export interface WorldMap {
   cells: MapCell[];
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
-  kind: "random" | "earth";
+  kind: "random" | "earth" | "province";
 }
 
 const MAP_WIDTH = 1000;
@@ -299,6 +300,44 @@ export function generateEarthMap(): WorldMap {
 // random mode. Per-preset historical placement will reappear as an
 // opt-in "historical mode" in a future phase.
 
+/**
+ * Build the WorldMap from the baked Provinces.png data (one MapCell per province).
+ * Geometry comes straight from `provincesData.ts`: centroids/bbox in display-raster
+ * coordinates, full-resolution border adjacency, colour-inferred land/sea. There is
+ * no randomness — it's a fixed real-world-style map shared by every seed. The display
+ * raster itself (RASTER_B64) is loaded only by the renderer, not here.
+ */
+export function generateProvinceMap(): WorldMap {
+  const cells: MapCell[] = new Array(PROVINCE_COUNT);
+  for (let i = 0; i < PROVINCE_COUNT; i++) {
+    const sea = IS_SEA[i] === 1;
+    const [x0, y0, x1, y1] = BBOX[i]!;
+    cells[i] = {
+      id: i,
+      centroid: { x: CX[i]!, y: CY[i]! },
+      // Province fills are painted from the raster; bbox corners give vertex-consuming
+      // code (and the SVG fallback) a cheap polygon.
+      vertices: [
+        { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
+      ],
+      neighbours: NEIGHBOURS[i] as number[],
+      elevation: sea ? 0 : 0.5,
+      biome: sea ? "ocean" : "lowland",
+    };
+  }
+  for (const cell of cells) {
+    if (cell.biome === "ocean") continue;
+    for (const n of cell.neighbours) {
+      if (cells[n]?.biome === "ocean") { cell.isCoast = true; break; }
+    }
+  }
+  return {
+    cells,
+    bounds: { minX: 0, minY: 0, maxX: RASTER_W, maxY: RASTER_H },
+    kind: "province",
+  };
+}
+
 export function randomLandCell(map: WorldMap, rng: Rng): number | null {
   const land = map.cells.filter((c) => c.biome !== "ocean");
   if (land.length === 0) return null;
@@ -307,8 +346,13 @@ export function randomLandCell(map: WorldMap, rng: Rng): number | null {
 
 const RANDOM_CACHE = new Map<string, WorldMap>();
 let EARTH_CACHE: WorldMap | null = null;
+let PROVINCE_CACHE: WorldMap | null = null;
 
-export function getWorldMap(mode: "random" | "earth", seed: string): WorldMap {
+export function getWorldMap(mode: "random" | "earth" | "province", seed: string): WorldMap {
+  if (mode === "province") {
+    if (!PROVINCE_CACHE) PROVINCE_CACHE = generateProvinceMap();
+    return PROVINCE_CACHE;
+  }
   if (mode === "earth") {
     if (!EARTH_CACHE) EARTH_CACHE = generateEarthMap();
     return EARTH_CACHE;

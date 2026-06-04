@@ -65,6 +65,14 @@ const PER_WORD_ACTUATION_SCALE = 0.3;
 // bringing total phonology cadence down toward the morphology/semantics layers.
 const REGULAR_SWEEP_ATTEMPTS_PER_GEN = 2;
 
+// MEGA overhaul: decrease the overall sound-change cadence FURTHER (the user's
+// standing "sound change still dominates" note). This is a single uniform scale on the
+// per-language per-generation rate `mult`, so it trims BOTH the regular-sweep and
+// per-word paths proportionally (preserving the regular ≫ per-word balance from #6)
+// and rebalances the event mix toward grammar / morphology / semantics. 0.75 ≈ a 25%
+// reduction on top of the earlier 3→2 sweep trim.
+const PHONOLOGY_RATE_SCALE = 0.75;
+
 export function stepPhonology(
   lang: Language,
   config: SimulationConfig,
@@ -111,6 +119,7 @@ export function stepPhonology(
   // rules, this saves ~12 × O(R log R) sorts per gen.
   const orderedChanges = sortByPriority(changes);
   const mult =
+    PHONOLOGY_RATE_SCALE *
     rateMultiplier(generation, lang.id) *
     lang.conservatism *
     speakerFactor(lang.speakers) *

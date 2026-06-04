@@ -2,10 +2,11 @@
 
 Roadmap for the user's "MEGA UPDATE IDEAS" directive (2026-06-03) plus the
 additional gaps found in a fresh code + UI investigation. Built on `auto/realism`
-(HEAD 73abe86). This is the **design/spec**; execution follows after user approval
-via worktrees + parallel Opus 4.8 agents, integrated back onto `auto/realism`.
+(HEAD d5f836f). This is the **design/spec**; execution follows via worktrees +
+parallel Opus 4.8 agents, integrated back onto `auto/realism`.
 
-> Status: DRAFT — awaiting user review. No implementation has started.
+> Status: Decisions LOCKED (see §0, §4). Repo relocated to `C:\dev\languageevolution`
+> (out of OneDrive). No lane implementation has started — Wave 0 is next.
 
 ---
 
@@ -29,11 +30,19 @@ via worktrees + parallel Opus 4.8 agents, integrated back onto `auto/realism`.
 - **#16 word count → HARD 1000-word floor for all presets except Toki Pona.** Not a
   soft target. This is the largest content effort and a major determinism-rebaseline
   source; the registry expands to support it (Lane E).
-- **#4/#8 meaning model → FULL many-to-many meaning↔word GRAPH rearchitecture.**
-  Replace the ~1:1 `ConceptId→WordForm` store with first-class polysemy + synonymy.
-  This is **foundational** — the lexicon shape Lanes B/D/E/F build on — so it is
-  promoted to an early **serial** milestone (Lane C0), on the scale of the prior
-  concept-rekey. Behavioral colex/synonymy/gloss work (Lane C1) follows it.
+- **#4/#8 meaning model → CONTINUOUS SEMANTIC SPACE (Model A), shipped statistical
+  embedding, hybrid readout-axes.** Replace the discrete `ConceptId→WordForm`
+  identity: a word's meaning becomes a **position/region in a dense semantic vector
+  space**; English words are **anchors** (a coordinate system, not the meaning).
+  Synonymy = nearby points, polysemy/colexification = a broad region over several
+  anchors, drift = the point moving — so many-to-many emerges from geometry (this
+  REPLACES, not extends, the earlier "concept graph" idea). The space is sourced from
+  a **shipped, permissively-licensed, quantized embedding** trimmed to our anchor set;
+  layered with a few **named readout-axes** (valence, abstractness, animacy,
+  intensity…) computed as projections through the space, used for interpretation /
+  scorecard / drift-classification, with **drift-biasing opt-in per axis**. Reversible
+  to pure-dense for free (axes are derived readouts). Foundational + **serial**
+  (Lane C0), scale ≈ the prior concept-rekey.
 - **#1 Swadesh protection → removed entirely** (no GUI toggle kept); rely on emergent
   frequency retention.
 - **Determinism:** same-seed reproducibility within a build stays REQUIRED; only
@@ -104,6 +113,10 @@ byte-identity determinism gate. Typology locks are scattered across many
   thin determinism-reproducibility check (same seed twice ⇒ identical) as a
   diagnostic.
 **Principle:** measurement spine first; everything else proves itself against it.
+**Calibration philosophy (user 2026-06-03):** a check going red may mean the
+PRE-EXISTING preferred value is wrong for the new system — not that the new change is
+wrong. Decide what's actually correct first, then adjust the check OR the code (tests
+are tools, not ground truth).
 **Risk:** must not lose genuine regression coverage silently — fold before delete;
 keep a deprecation list in the doc.
 
@@ -111,6 +124,10 @@ keep a deprecation list in the doc.
 **Covers:** #2 (slower sound change), #3 (rebalance toward grammar/morph/sem), #5
 (stop "law-stacking"; allow counter-feeding/chain shifts), #6 (j↔y + inventory
 diversity), #17 (audit hidden per-preset drivers).
+**FRAMING (user 2026-06-03):** the missing j↔y is a SYMPTOM — many attested change
+types simply aren't encoded/reachable. The job is to make the FULL space of attested
+sound-change types possible (broaden the catalog + the generative rule system), NOT to
+bolt on individual rules. Fix the system, not the symptom.
 **Findings (verified):**
 - Two actuation paths both *append, never interact*: per-word (`apply.ts:494`,
   demoted by `PER_WORD_ACTUATION_SCALE=0.3` `steps/phonology.ts:61`) and the
@@ -174,23 +191,39 @@ scorecard's retention diagnostic guards against over/under-erosion.
 **Scorecard rows:** lexicon-size stationarity (ratio→~1.0), birth/death balance,
 frequency→usage correlation, Swadesh retention still ~80%/millennium *emergently*.
 
-### Lane C0 — Meaning↔word GRAPH rearchitecture  [serial, FOUNDATIONAL; Wave 0.5]
-**Covers:** #4/#8 (full rearchitecture, per user decision §0.3).
-**Why foundational:** B/D/E/F all read/write the lexicon; doing the graph flip first
-avoids re-working every lane. Scale ≈ the prior concept-rekey (ROADMAP §258).
-**Findings:** store is currently `Record<ConceptId, WordForm>` (one form per concept,
-post concept-rekey). Colex graph + `recordedParts` + `glossLemma` exist but the data
-model is 1:1.
-**Changes:**
-- Replace the 1:1 store with a **many-to-many meaning↔word graph**: a meaning can be
-  expressed by multiple words (synonymy, each with a **relevancy** weight); a word can
-  carry multiple meanings (polysemy/colexification) first-class.
-- Thread the new shape through the determinism hot path (`apply.ts` lexicon access),
-  the access seam (`lexicon/access.ts`), persistence/migration, and the UI.
-- One reviewed determinism re-baseline; reproducibility preserved.
-**Risk:** highest-blast-radius engine change in the overhaul. Serial; gated by the
-scorecard + a reproducibility check. Likely self-delegating (Opus sub-agents for
-store/access, hot-path, persistence, UI).
+### Lane C0 — Continuous semantic-space meaning model (Model A)  [serial, FOUNDATIONAL; Wave 0.5]
+**Covers:** #4/#8 (per user decision §0.3 — continuous vector space, NOT a discrete graph).
+**Why foundational:** the meaning representation is the lexicon's identity layer;
+B/D/E/F all build on it. Do it first to avoid re-working every lane. Scale ≈ the prior
+concept-rekey (ROADMAP §258), arguably larger.
+**Findings:** store is `Record<ConceptId, WordForm>` (post concept-rekey); "meaning" IS
+an English gloss → a word can only ever mean exactly one English word. `semantics/
+embeddings.ts` has a 12-dim in-house embedding but it is degenerate (antonyms cos≈0.99,
+audit B) — unusable as the space.
+**Design:**
+- **Substrate:** a word's meaning = a dense vector (point/region) in an N-dim space.
+  English ANCHOR words have fixed positions = the coordinate system / measuring stick.
+  A word's vector need not equal any anchor (de-anglicized by construction).
+- **Space source:** ship a permissively-licensed (GloVe/fastText) embedding, quantize
+  to int (determinism), trim to the anchor set we actually use (bundle-size control).
+  Distances in fixed-point so reproducibility holds across platforms.
+- **Hybrid readout-axes:** ~4–6 named directions (valence, abstractness, animacy,
+  intensity, …) computed as projections from pole anchors. Used for interpretation,
+  UI, scorecard diagnostics, and drift classification. **Biasing is opt-in per axis**
+  (steer drift along an attested cline only where the realism compass names one).
+  Collapsible to pure-dense for free.
+- **Behaviors that fall out of geometry:** synonymy (nearby words), polysemy /
+  colexification (one word's region spans several anchors), drift (vector moves),
+  relevancy (a word's pull on a meaning region). Lane C1 tunes these.
+- **Plumbing:** thread vector-meaning through the access seam (`lexicon/access.ts`),
+  the determinism hot path (`apply.ts`), genesis/drift/recarve, the translator
+  (nearest-anchor grounding), persistence/migration, and the UI (nearest-anchor
+  display + axis readouts).
+**De-risk:** prototype on ONE preset first (validate the feel + determinism) before
+the engine-wide flip. One reviewed re-baseline; reproducibility preserved.
+**Risk:** highest-blast-radius change in the overhaul. Serial, self-delegating (Opus
+sub-agents: embedding pipeline+quantization, access/hot-path, drift/genesis,
+translator+UI, persistence). Gated by the scorecard + a reproducibility check.
 
 ### Lane C1 — Colexification, synonymy behavior, glosses  [parallel-safe; after C0]
 **Covers:** #4 (raise colexification + synonymy spread), #8 (fuzzy meaning↔word),
@@ -206,7 +239,9 @@ Dictionary/Lexicon UI bypasses them.
 - Drive drift + coinage from the **colexification/neighbor graph**; raise
   colexification rate (#4) and **populate synonym sets with relevancy** so a meaning
   surfaces multiple competing words ranked by relevancy.
-- Fix the embedding so drift has direction (polarity dimension; antonyms separate).
+- Use the C0 readout-axes to give drift DIRECTION (attested clines: subjectification,
+  abstraction, pejoration>amelioration) so it stops wandering to opposites; antonyms
+  now separate in the real embedding.
 - **Glosses (#10):** (a) cheap display fix — a `prettyGloss(conceptId)` that strips
   `-ish/-v/-n/-action/-animal/-tool/-fruit/-time…` disambiguators and renders e.g.
   `bear-ish`→"bear (quality)", used by `DictionaryView.tsx`/`LexiconView.tsx`;
@@ -255,7 +290,7 @@ share.
 
 ### Lane F — Translator rewrite (pivot / interlingua)  [parallel-safe]
 **Covers:** #18 (rewrite on a "google-translate"/pivot basis; use the test phrases),
-ROADMAP closed-class coinage bug ("no"→"ngich").
+ROADMAP closed-class coinage bug ("no"→"ngich"), bare-verb conjugation bug (2026-06-03).
 **Findings (verified live):** "I want to buy the egg" → **failed to parse**, fell to
 word-by-word, **dropped the object "egg"**, scrambled to "i buy want to", left
 "want" unresolved. ARCHITECTURE confirms the realiser is still on a **legacy English
@@ -268,6 +303,9 @@ as a pivot precursor.
   case, agreement, adpositions). Replace the English-IR realiser path.
 - Closed-class **no-coin**: numbers/interjections/prepositions/negators surface an
   existing lexeme or a clean "unknown" marker — never a fabricated form.
+- **Bare verb → citation/infinitive** (2026-06-03): entering a verb like "make" yields
+  the target's citation form (best lemma equivalent), NOT a conjugated "you makings"
+  and NOT prefixed with "to". A role frame with no subject ⇒ no agreement/aspect.
 - Fold the user's **test phrases** into the scorecard (Lane 0).
 **Principle:** translation = source-semantics → target-grammar generation, not
 English-string reshuffling.
@@ -314,6 +352,21 @@ one **stays**.
 (rAF/idle-driven), reset/step/fast-forward unchanged. Keep "Evolution speed."
 **Scorecard rows:** n/a (UI) — manual play-session check.
 
+### Lane I — Romanization / IPA-rendering correctness  [small but HIGH priority; Wave 0]
+**Covers:** (2026-06-03, USER-REPORTED) — long vowels (e.g. long schwa əː) are dropped
+by the romanizer and some words render to EMPTY → they don't show at all; a word that
+starts/ends with a vowel must surface a character.
+**Findings:** `orthography.ts` romanizes phoneme-by-phoneme; likely has no mapping for
+vowel LENGTH and some vowels → empty output → vanished words. (Earlier: `/j/`→"y",
+vowel `/y/`→"y".)
+**Changes:** audit the FULL IPA→display map for completeness — every phoneme in
+`features.ts` (incl. length-marked and nasal vowels) must romanize to a non-empty
+glyph; never emit an empty form; guarantee vowel-initial/final forms render a char.
+**Principle:** the surface form is the user's whole window into a language — it must
+never silently drop a segment or vanish.
+**Scorecard rows:** zero empty/vanished surface forms; round-trip coverage of every
+inventory phoneme.
+
 ---
 
 ## 3. Additional improvements found in investigation (user ask #24)
@@ -340,8 +393,9 @@ one **stays**.
 
 1. **#16 word count → HARD 1000 floor, all presets except Toki Pona.** (Was: phased
    target.) Registry expands to support it; Lane E scope grows accordingly.
-2. **#4/#8 meaning model → FULL many-to-many graph rearchitecture** (Lane C0,
-   foundational/serial). (Was: lightweight first.)
+2. **#4/#8 meaning model → CONTINUOUS SEMANTIC SPACE (Model A) · shipped statistical
+   embedding · hybrid readout-axes (biasing opt-in per axis)** (Lane C0,
+   foundational/serial). Replaces the discrete-concept/graph idea entirely.
 3. **#1 Swadesh protection → removed entirely** (no GUI toggle kept).
 4. **Determinism → same-seed reproducibility required**; byte-identity-vs-baseline
    demoted to perf diagnostic.
@@ -355,8 +409,8 @@ re-baseline is taken once up front or incrementally per lane.
 ## 5. Sequencing summary
 
 ```
-Wave 0   (serial):   repo move · worktree infra · Lane 0 scorecard · Lane H max-speed Play
-Wave 0.5 (serial):   Lane C0 meaning↔word GRAPH rearchitecture (foundational, self-delegating)
+Wave 0   (serial):   repo move ✓ · worktree infra · Lane 0 scorecard · Lane H max-speed Play · Lane I romanization
+Wave 0.5 (serial):   Lane C0 continuous semantic-space meaning model (Model A, self-delegating)
 Wave 1   (parallel): Lane A phonology · Lane B lexicon lifecycle · Lane D morphology
 Wave 1.5 (parallel): Lane C1 colex/synonymy/glosses (after B+C0)
 Wave 2   (parallel): Lane E presets — HARD 1000 floor (per-preset sub-agents) · Lane F translator
@@ -368,3 +422,40 @@ and E/F consume it. Sequenced serial-first to avoid re-working every lane.
 
 Integration after every lane: cherry-pick/merge → resolve conflicts → run the
 Simulation Scorecard to preferred values → commit to `auto/realism` (local only).
+
+---
+
+## 6. Execution progress (live)
+
+**Landed + fast-tier green** (auto/realism):
+- **Lane 0 Scorecard** (aa7f3e2) — live; already quantifies the gaps (translator
+  corpus: "if I don't see you" 0% / "American ears" 50% / "want to buy egg" 67%;
+  colexification 0%; antonym-cosine 0.71). It is the gate going forward.
+- **Lane H max-speed Play + Lane I romanization** (7c37cc4, +b426637 fixup) —
+  steps/sec slider gone; no word renders empty.
+- **Lane B lexicon lifecycle** (0543cc6, +e878e5b test reconciliation) — exogenous
+  ~1800 target removed; `default` stationary at 1.23× with birth-from-need +
+  disuse-death + relevancy drift. Reconciled phase_29 (bound-morpheme invariant
+  exclusion) + phase72 B13 (multi-seed speaker-conservation).
+
+**Deferred to HANDS-ON (agents could not do these):**
+- **Lane G province map** — agent misunderstood the bitmap task; do the
+  Provinces.png parse (unique colour = province, border adjacency, ocean detection)
+  directly.
+- **Lane C0 continuous embedding** — agent died early twice (53s/96s). The
+  embedding-pipeline + quantization is foundational and nuanced; do it hands-on.
+
+**Lane B chunk-2 (calibration, NEXT for B):** minimalist presets still over-grow
+(tokipona 5.8×, bantu 3.65×) because REGISTRY_FILL_CAP is **tier-scaled** and
+minimalist languages still advance cultural tiers → their cap balloons (tier-3 ≈
+0.55 × full registry ≈ 990). Fix: make the cap reflect a language's NATURAL size
+(seed-relative), or add a per-preset lexical-minimalism parameter, so Toki Pona
+stays small. Also: bantu's disuse-death produced 0 deaths in 100 gens — verify the
+disuse signal reaches all presets' vocabulary.
+
+**Agent-dispatch learnings:** `run_in_background:true` curtails implementation
+agents (they return in <100s having done nothing — worktree auto-cleaned).
+FOREGROUND parallel agents run to full budget; they still truncate mid-task, so the
+integrator (me) finishes + verifies + cherry-picks. Concrete, well-bounded lanes
+(scorecard, UI, lexicon) are agent-tractable; nuanced/foundational ones (map,
+embedding) are not — take those hands-on.

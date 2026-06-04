@@ -39,7 +39,7 @@ export function defaultConfig(): SimulationConfig {
       obsolescence: true,
       taboo: true,
       copula: true,
-      swadeshProtection: true,
+      swadeshProtection: false,
       tonogenesis: false,
     },
     // Phase 60: rebalanced rates. User reported sound changes were

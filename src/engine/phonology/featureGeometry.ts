@@ -170,6 +170,46 @@ function preservesChangeType(
   return true;
 }
 
+// ── Vowel-space type preservation ──
+//
+// A vowel change NAMES a direction along the height/backness/round axes
+// (raising, lowering, fronting, backing, rounding). When the ideal output
+// is absent the substitute must move the SAME direction on every axis the
+// rule moves, and HOLD (±1 ordinal step) every axis it keeps — otherwise a
+// "raising" rule could be repaired into a lowering, a "fronting" into a
+// backing, etc. (the vowel analogue of the k→f / b→m corruption).
+function preservesVowelChangeType(
+  from: VowelFeatures,
+  to: VowelFeatures,
+  c: VowelFeatures,
+): boolean {
+  const fH = HEIGHT_ORDER.indexOf(from.height);
+  const tH = HEIGHT_ORDER.indexOf(to.height);
+  const cH = HEIGHT_ORDER.indexOf(c.height);
+  if (tH === fH) {
+    if (Math.abs(cH - fH) > 1) return false; // height held (±1 tolerance).
+  } else if (Math.sign(cH - fH) !== Math.sign(tH - fH)) {
+    return false; // height moved → must move the same direction.
+  }
+
+  const fB = BACKNESS_ORDER.indexOf(from.backness);
+  const tB = BACKNESS_ORDER.indexOf(to.backness);
+  const cB = BACKNESS_ORDER.indexOf(c.backness);
+  if (tB === fB) {
+    if (Math.abs(cB - fB) > 1) return false; // backness held (±1 tolerance).
+  } else if (Math.sign(cB - fB) !== Math.sign(tB - fB)) {
+    return false; // backness moved → must move the same direction.
+  }
+
+  // Rounding: flip must be achieved; if held, must stay.
+  if (to.round !== from.round) {
+    if (c.round !== to.round) return false;
+  } else if (c.round !== from.round) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Phase 1a: pick the best in-inventory TYPE-PRESERVING realisation of the
  * intended consonant change `from`→`to`. Among directionally-valid
@@ -184,24 +224,52 @@ function typePreservingReplacement(
 ): Phoneme | null {
   const fromFeats = featuresOf(from);
   const toFeats = featuresOf(to);
-  // Only the consonant→consonant path is type-aware; vowel and
-  // cross-class targets (vocalisation, etc.) keep the legacy nearest-by-
-  // feature behaviour.
-  if (
-    !fromFeats ||
-    !toFeats ||
-    fromFeats.type !== "consonant" ||
-    toFeats.type !== "consonant"
-  ) {
+  if (!fromFeats || !toFeats) return null;
+
+  // Cross-class targets (glide↔vowel: vocalisation /j/→/i/, gliding
+  // /i/→/j/, /w/↔/u/, etc.) preserve the syllabicity TOGGLE: the
+  // substitute must be in the same MAJOR CLASS as the intended `to`
+  // (a vocalisation must land on a vowel, a gliding on a glide) and be
+  // the nearest such by feature distance. closestByFeatures already
+  // filters to `to`'s class, so this keeps "vocalisation stays a
+  // vocalisation" without corrupting it into an arbitrary consonant.
+  if (fromFeats.type !== toFeats.type) {
     return closestByFeatures(to, inventory, from);
   }
+
+  // Vowel → vowel: direction-preserving along the height/backness/round
+  // axes (raising stays raising, fronting stays fronting).
+  if (fromFeats.type === "vowel" && toFeats.type === "vowel") {
+    let bestV: Phoneme | null = null;
+    let bestVDist = Infinity;
+    for (const candidate of inventory) {
+      if (candidate === from) continue;
+      const feats = featuresOf(candidate);
+      if (!feats || feats.type !== "vowel") continue;
+      if (!preservesVowelChangeType(fromFeats, toFeats, feats)) continue;
+      const d = bundleDistance(toFeats, feats);
+      if (d < bestVDist) {
+        bestVDist = d;
+        bestV = candidate;
+      }
+    }
+    return bestV;
+  }
+
+  // Consonant → consonant: direction-preserving along the place/manner/
+  // voice axes.
+  if (fromFeats.type !== "consonant" || toFeats.type !== "consonant") {
+    return null;
+  }
+  const fromCons = fromFeats;
+  const toCons = toFeats;
   let best: Phoneme | null = null;
   let bestDist = Infinity;
   for (const candidate of inventory) {
     if (candidate === from) continue;
     const feats = featuresOf(candidate);
     if (!feats || feats.type !== "consonant") continue;
-    if (!preservesChangeType(fromFeats, toFeats, feats)) continue;
+    if (!preservesChangeType(fromCons, toCons, feats)) continue;
     const d = bundleDistance(toFeats, feats);
     if (d < bestDist) {
       bestDist = d;

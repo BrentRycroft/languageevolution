@@ -300,6 +300,10 @@ const CATEGORY_PRIORITY: Record<SoundChange["category"], number> = {
   fortition: 0.5,
   delabialisation: 1.4,
   deaspiration: 1.4,
+  // Lane A (phonology-expand): glide↔vowel alternation orders with the
+  // vocalic processes; dissimilation is marked and low-priority.
+  vocalization: 1.3,
+  dissimilation: 0.9,
 };
 
 /**
@@ -338,6 +342,11 @@ const CATEGORY_NATURAL_BIAS: Record<SoundChange["category"], number> = {
   inventory: 0.4,
   delabialisation: 1.2,
   deaspiration: 1.2,
+  // Lane A (phonology-expand): glide↔vowel alternation is an ordinary,
+  // pervasive process (jod gliding, hiatus resolution, coda
+  // vocalisation). Dissimilation is typologically marked / sporadic.
+  vocalization: 1.1,
+  dissimilation: 0.6,
 };
 
 // ── Phase 1b (evolution-realism): self-limiting lenition/voicing ──

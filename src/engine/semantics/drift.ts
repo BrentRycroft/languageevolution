@@ -246,7 +246,12 @@ export function driftOneMeaning(
       if (target === m) continue;
       const targetOccupied = lexHas(lang, target);
       if (strict && targetOccupied) continue;
-      const form = lexGet(lang, m)!;
+      // `m` is a lexicon key, but the key set can include bound morphemes / affix
+      // entries (lexicon-lifecycle + morphology lanes) that have no standalone form.
+      // Those aren't driftable content words — skip rather than crash isFormLegal on
+      // an undefined form. (Was an unsafe `!` assertion.)
+      const form = lexGet(lang, m);
+      if (!form) continue;
       if (!isFormLegal(target, form)) continue;
       const kind = classifyShift(m, target, rng, lang.registerOf?.[m], lang, freqHint);
       // Phase 73e: a PROTECTED source meaning (be/eat/go/…) cannot be dropped

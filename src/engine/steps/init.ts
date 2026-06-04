@@ -24,6 +24,7 @@ import { classifyLexicon } from "../morphology/inflectionClass";
 import { isToneBearing, toneOf, MID } from "../phonology/tone";
 import { addCompound, addDerivation } from "../lexicon/compound";
 import { assignAllNounClasses } from "../lexicon/nounClass";
+import { buildMorphemeInventory } from "../morphology/morphemeInventory";
 
 /**
  * Phase 39a: count the unique phonemes across a seed lexicon. Used to
@@ -263,6 +264,17 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       rootLang.colexifiedAs[winner] = absorbed.slice();
     }
   }
+  // MEGA overhaul: seed SYNONYMS / lexical doublets (the inverse of colexification —
+  // one meaning carrying several forms). Only attach to meanings the language actually
+  // has a primary form for; the alternates then compete in narrative + translation.
+  if (config.seedAltForms) {
+    rootLang.altForms = rootLang.altForms ?? {};
+    for (const [meaning, forms] of Object.entries(config.seedAltForms)) {
+      if (!lexHas(rootLang, meaning)) continue;
+      const valid = forms.filter((f) => f.length > 0).map((f) => f.slice());
+      if (valid.length > 0) rootLang.altForms[meaning] = valid;
+    }
+  }
   // Phase 70 T1: tag the proto-language so Historical Mode milestones
   // targeting role "proto" find a leaf to nudge. Skipped when
   // Historical Mode is off — leaves the field undefined.
@@ -424,6 +436,13 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // No behavior change: `lexicon` remains the source of truth until
   // 21b+ wire writers through `addWord`/`removeSense`.
   syncWordsFromLexicon(rootLang, 0);
+  // Lane D (morphology encoding): build the first-class morpheme inventory
+  // from the now-populated lexicon + the recorded compound / derivation /
+  // bound-morpheme structure. Runs AFTER syncWordsFromLexicon so the
+  // seed-time morphStructure has landed on the Words and the lexicon forms
+  // are final. Daughters inherit a clone at split (tree/split.ts) and can
+  // rebuild from their own records.
+  rootLang.morphemeInventory = buildMorphemeInventory(rootLang);
   const mapMode = config.mapMode ?? "random";
   const worldMap = getWorldMap(mapMode, config.seed);
   let originId: number | null =

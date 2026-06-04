@@ -624,6 +624,8 @@ const LEXICON: Lexicon = {
   high: ["h", "a", "j"],
   low: ["l", "o"],
   far: ["f", "a", "ɹ"],
+  // "hind" (rear/back, as in "hind legs") — the base of "behind"; see seedDerivations.
+  hind: ["h", "a", "j", "n", "d"],
   // Phase 36 Tranche 36f: bound derivational morphemes. These flow
   // through phonological evolution like any other lexicon entry; the
   // seedCompounds map below references them as suffixed parts. Marked
@@ -641,6 +643,8 @@ const LEXICON: Lexicon = {
   "pre-": ["p", "ɹ", "iː"],
   "mis-": ["m", "ɪ", "s"],
   "over-": ["o", "v", "ə", "ɹ"],
+  // Phase MEGA: locative/perfective "be-" (OE bī "by"): be+hind, be+fore, be+side.
+  "be-": ["b", "ɪ"],
   // Phase 47 T3: negational prefixes. Fire only on rung 5 (after
   // non-negational synthesis returned null), so "unhappy" only
   // surfaces when "happy" has no antonym in the lexicon. Synthesis
@@ -659,7 +663,7 @@ const BOUND_MORPHEMES = new Set<string>([
   "-er.agt", "-ness", "-dom", "-ship", "-hood",
   // Phase 47 T2: prefixes for on-demand synthesis
   // (re-build, pre-think, mis-take, over-do).
-  "re-", "pre-", "mis-", "over-",
+  "re-", "pre-", "mis-", "over-", "be-",
   // Phase 47 T3: negational prefixes (rung 5 — rare path).
   "un-", "dis-", "non-", "in-",
 ]);
@@ -842,6 +846,13 @@ export function presetEnglish(): SimulationConfig {
     // fossilisation. Real-world: many of these started transparent
     // (Old English compound) and gradually fossilised (modern
     // "lord" < hlafweard, "daisy" < dæges-ēage = "day's eye").
+    // MEGA overhaul: English near-synonym doublets — "make" can also surface as
+    // create / craft / build. The alternates compete with the primary in narrative +
+    // translation and may specialise or fall out of use over a run (real synonymy
+    // turnover: OE "weorþan" lost to "become").
+    seedAltForms: {
+      make: [["k", "ɹ", "i", "e", "j", "t"], ["k", "ɹ", "æ", "f", "t"], ["b", "ɪ", "l", "d"]],
+    },
     seedCompounds: {
       // All parts must already exist in seedLexicon. Validated at
       // language birth via addCompound which falls back to the bare
@@ -878,6 +889,14 @@ export function presetEnglish(): SimulationConfig {
       freedom: { parts: ["free", "-dom"] },
       friendship: { parts: ["friend", "-ship"] },
       childhood: { parts: ["child", "-hood"] },
+    },
+    // MEGA overhaul: modern-English decomposability — "behind" is recorded as the
+    // be- prefix (OE bī "by") + "hind" base, so the morpheme inventory / etymology view
+    // see be+hind rather than an opaque root. The recomposed form bɪ+hajnd = bɪhajnd
+    // matches the seedLexicon "behind", so the surface is unchanged — only its
+    // structure is now explicit.
+    seedDerivations: {
+      behind: { base: "hind", affix: "be-", position: "prefix" },
     },
     seedBoundMorphemes: BOUND_MORPHEMES,
     seedPhonemeTarget: 44,

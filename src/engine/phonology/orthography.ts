@@ -2,6 +2,7 @@ import type { Language, Phoneme, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { stripTone } from "./tone";
 import { lexGet, lexKeys } from "../lexicon/access";
+import { featuresOf } from "./features";
 
 /**
  * orthography.ts
@@ -89,6 +90,50 @@ export const DEFAULT_ORTHOGRAPHY: Record<Phoneme, string> = {
   "iː": "ee",
   "oː": "o",
   "uː": "oo",
+  // Lane I (2026-06): the IPA-2020 pulmonic consonants and cardinal
+  // vowels added in Phase 48 (features.ts T6/T7) had no romanization,
+  // so they fell through to the raw IPA glyph and were then stripped by
+  // sanitizeLatin → EMPTY surface forms (vanished words). Every one
+  // gets an explicit conventional Latin spelling here. The
+  // feature-based fallback in romanize() is the final safety net for
+  // anything still unmapped (e.g. length/nasal variants).
+  "ɥ": "y",
+  "c": "ky",
+  "ɟ": "gy",
+  "ɢ": "g",
+  "ɱ": "m",
+  "ɴ": "ng",
+  "ʙ": "br",
+  "ⱱ": "v",
+  "ɽ": "r",
+  "ɸ": "f",
+  "ç": "h",
+  "ʝ": "y",
+  "χ": "kh",
+  "ʁ": "r",
+  "ʕ": "a",
+  "ɦ": "h",
+  "ɬ": "hl",
+  "ɮ": "lh",
+  "ʋ": "v",
+  "ɻ": "r",
+  "ɰ": "w",
+  "ɭ": "l",
+  "ʎ": "ly",
+  "ʟ": "l",
+  "ɓ": "b",
+  "ɗ": "d",
+  "ʄ": "j",
+  "ɠ": "g",
+  "ʛ": "g",
+  "ɘ": "e",
+  "ɵ": "o",
+  "ɤ": "u",
+  "ɞ": "oe",
+  "ɜ": "e",
+  "ɐ": "a",
+  "ɶ": "oe",
+  "ä": "a",
 };
 
 const DIPHTHONG_COMBINE_MEDIAL: Record<string, string> = {
@@ -181,6 +226,114 @@ function sanitizeLatin(s: string): string {
   return out;
 }
 
+// Lane I (2026-06): feature-based last-resort glyph. Used when a phoneme
+// has no entry in the per-language or default orthography map (and its
+// length-stripped base also has none). Without this, romanize() fell
+// through to the raw IPA string, which sanitizeLatin then deleted —
+// producing EMPTY surface forms and words that vanished from the UI.
+// Every phoneme — including length-marked, nasal, and syllabic
+// segments not yet in the explicit map — gets a sensible non-empty
+// Latin letter here, derived from its phonological features.
+const VOWEL_LETTER_BY_BACKHEIGHT: Record<string, string> = {
+  "high-front": "i",
+  "high-central": "i",
+  "high-back": "u",
+  "mid-high-front": "e",
+  "mid-high-central": "e",
+  "mid-high-back": "o",
+  "mid-front": "e",
+  "mid-central": "e",
+  "mid-back": "o",
+  "mid-low-front": "e",
+  "mid-low-central": "e",
+  "mid-low-back": "o",
+  "low-front": "a",
+  "low-central": "a",
+  "low-back": "a",
+};
+
+const CONSONANT_LETTER_BY_PLACE: Record<string, string> = {
+  labial: "p",
+  labiodental: "f",
+  dental: "t",
+  alveolar: "t",
+  postalveolar: "s",
+  retroflex: "r",
+  palatal: "y",
+  velar: "k",
+  uvular: "k",
+  pharyngeal: "h",
+  glottal: "h",
+};
+
+function glyphFromFeatures(f: ReturnType<typeof featuresOf>): string | undefined {
+  if (!f) return undefined;
+  if (f.type === "vowel") {
+    return VOWEL_LETTER_BY_BACKHEIGHT[`${f.height}-${f.backness}`] ?? "a";
+  }
+  // consonant
+  if (f.manner === "nasal") {
+    return f.place === "velar" || f.place === "uvular" ? "ng" : f.place === "palatal" ? "ny" : "n";
+  }
+  if (f.manner === "lateral-approximant" || f.manner === "lateral-fricative") return "l";
+  if (f.manner === "trill" || f.manner === "tap" || f.manner === "liquid") return "r";
+  return CONSONANT_LETTER_BY_PLACE[f.place] ?? "h";
+}
+
+// Combining marks + length + modifier-letter diacritics that may sit on
+// a base segment (combining tilde for nasal vowels, ː for length, the
+// ̩/̥ syllabic/voiceless marks, etc.). Stripping these recovers the core
+// segment so we can still spell e.g. /ɛ̃ː/ via /ɛ/.
+const SEGMENT_DIACRITICS = /[̀-ͯʰ-˿ːˑ]/g;
+
+function featureFallbackGlyph(base: Phoneme): string {
+  const direct = glyphFromFeatures(featuresOf(base));
+  if (direct) return direct;
+  // Strip secondary diacritics and retry against the explicit map and
+  // feature table on the recovered core (e.g. /ɛ̃/, /ɛ̃ː/ → /ɛ/ → "e").
+  const core = base.replace(SEGMENT_DIACRITICS, "");
+  if (core && core !== base) {
+    const mapped = DEFAULT_ORTHOGRAPHY[core as Phoneme];
+    if (mapped !== undefined) return mapped;
+    const viaFeatures = glyphFromFeatures(featuresOf(core as Phoneme));
+    if (viaFeatures) return viaFeatures;
+    const coreLatin = sanitizeLatin(core);
+    if (coreLatin.length > 0) return coreLatin;
+  }
+  // No features at all (truly unknown segment): keep any Latin-safe
+  // characters, else emit a visible placeholder so nothing vanishes.
+  const kept = sanitizeLatin(base);
+  return kept.length > 0 ? kept : "'";
+}
+
+/**
+ * Resolve a single phoneme `base` (tone already stripped) to a
+ * guaranteed-non-empty Latin glyph. Order: per-language override →
+ * default map → (length-stripped) base in either map → feature-based
+ * fallback. The final fallback can never return "" so a word can never
+ * lose a segment or render empty.
+ */
+function glyphFor(base: Phoneme, lang: Language): string {
+  const direct = lang.orthography[base] ?? DEFAULT_ORTHOGRAPHY[base];
+  if (direct !== undefined) return direct;
+  // Preserve the historical identity path: phonemes that are already
+  // plain Latin letters (p b t d k g f v s z h l r m n w …) or
+  // precomposed accented/nasal vowels (á ã ē …) used to fall through to
+  // the raw glyph and survive sanitizeLatin unchanged. Keep that exact
+  // behaviour so only genuinely-dropped segments change.
+  const selfLatin = sanitizeLatin(base);
+  if (selfLatin.length > 0 && selfLatin === base) return base;
+  // Length-marked vowels (əː, ɛː, ɪː, …) and other ː-suffixed segments
+  // that the explicit maps only cover in their short form: reuse the
+  // short-form spelling rather than dropping the whole segment.
+  if (base.endsWith("ː")) {
+    const short = base.slice(0, -1);
+    const shortGlyph = lang.orthography[short] ?? DEFAULT_ORTHOGRAPHY[short];
+    if (shortGlyph !== undefined) return shortGlyph;
+  }
+  return featureFallbackGlyph(base);
+}
+
 export function romanize(form: WordForm, lang: Language, meaning?: string): string {
   // Word-level lexical spelling override: if the language has frozen a
   // historical spelling for this meaning, use it verbatim. Models the
@@ -211,7 +364,7 @@ export function romanize(form: WordForm, lang: Language, meaning?: string): stri
       }
     }
 
-    const letter = lang.orthography[base] ?? DEFAULT_ORTHOGRAPHY[base] ?? base;
+    const letter = glyphFor(base, lang);
     if (diacritic && letter.length > 0) {
       out += letter.charAt(0) + diacritic + letter.slice(1);
     } else {

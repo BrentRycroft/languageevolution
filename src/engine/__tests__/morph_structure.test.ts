@@ -12,14 +12,31 @@ import { translateSentence } from "../translator/sentence";
  */
 
 describe("Phase 53 T4 — Word.morphStructure populated by genesis + translator", () => {
-  it("seeded forms in fresh simulations don't have morphStructure (set by genesis only)", () => {
+  it("seeded COMPLEX forms carry morphStructure at gen 0; plain forms don't", () => {
+    // Lane D (morphology encoding) re-baseline: pre-Lane-D this test
+    // asserted ZERO morphStructure on seed entries ("set by genesis
+    // only"), because seed-time structure was dropped by the
+    // syncWordsFromLexicon rebuild (ROADMAP §144). Lane D chunk 1 closes
+    // that gap: a seeded compound/derivation (English daylight = day+light,
+    // kingdom = king+-dom) now carries Word.morphStructure from gen 0.
+    // PLAIN seed roots still carry none — so the assertion flips from
+    // "zero total" to "only the recorded compounds/derivations".
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree["L-0"]!.language;
     // Fresh seed lexicon should have plenty of words.
     expect(lang.words!.length).toBeGreaterThan(50);
-    // None coined yet — no morphStructure on seed entries.
     const withStructure = lang.words!.filter((w) => !!w.morphStructure);
-    expect(withStructure.length).toBe(0);
+    // English seeds compounds + derivations → some structured entries.
+    expect(withStructure.length).toBeGreaterThan(0);
+    // Every structured seed entry traces to a recorded compound/derivation;
+    // plain roots (no recorded parts) stay unstructured.
+    for (const w of withStructure) {
+      const hasRecord = w.senses.some((s) => !!lang.compounds?.[s.meaning]);
+      expect(hasRecord, `${w.senses[0]?.meaning} structure came from a record`).toBe(true);
+    }
+    // A plain root carries no structure.
+    const day = lang.words!.find((w) => w.senses.some((s) => s.meaning === "day"));
+    expect(day!.morphStructure).toBeUndefined();
   });
 
   it.skip("after a 30-gen run, the structural-etymology pipeline produces morphStructure on at least some coinages", () => {

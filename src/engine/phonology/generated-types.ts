@@ -18,7 +18,11 @@ export type RuleFamily =
   | "harmony"
   | "deletion"
   | "metathesis"
-  | "tone";
+  | "tone"
+  // Lane A (phonology-expand): glide↔vowel syllabicity alternation
+  // (i↔j, u↔w) and consonant/vowel dissimilation.
+  | "glide"
+  | "dissimilation";
 
 export interface RuleContext {
   before?: FeatureQuery | "#" | "any";

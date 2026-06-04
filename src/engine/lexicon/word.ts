@@ -1,10 +1,11 @@
-import type { Language, Meaning, Word, WordSense, WordForm } from "../types";
+import type { Language, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
 import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { lexGet, lexHas, lexEntries } from "./access";
 import { conceptIdFor } from "./conceptIdentity";
+import { CONCEPT_IDS } from "./concepts";
 
 /**
  * Stable join key for a phonemic form. Two words with the same key are
@@ -172,18 +173,172 @@ export function peelDerivation(
   return { base, tags };
 }
 
+/** Leipzig-style derivation categories that may surface as `.cat` scaffolding. */
+const DERIVATION_TAGS: ReadonlySet<string> = new Set([
+  "agt", "tbef", "abs", "ptcp", "adj", "inst", "cmp", "dim", "neg", "fem", "action",
+]);
+
+/**
+ * Final guarantee that a gloss carries no raw affix scaffolding. `peelDerivation`
+ * resolves keys whose affixes the language still tracks in `boundMorphemes`; but a
+ * key coined by an affix that has since been LOST (dropped from boundMorphemes by
+ * later drift) can't be peeled and would otherwise leak its scaffolding — a doubled
+ * hyphen `--` (prefix-formed key) or a trailing `.category` tag. Collapse the doubled
+ * hyphen and lift any trailing recognised `.category` into an uppercase tag, so the
+ * caption is always clean even when the morpheme record is gone.
+ */
+function sanitizeGlossKey(s: string): string {
+  let out = s.replace(/--+/g, "-");
+  const lifted: string[] = [];
+  let m = out.match(/[.·]([a-z]+)$/);
+  while (m && DERIVATION_TAGS.has(m[1]!)) {
+    lifted.unshift(m[1]!.toUpperCase());
+    out = out.slice(0, m.index).replace(/-+$/, "");
+    m = out.match(/[.·]([a-z]+)$/);
+  }
+  out = out.replace(/-+$/, "");
+  return lifted.length > 0 ? `${out}-${lifted.join(".")}` : out;
+}
+
 /**
  * Format a (possibly derived) meaning as a clean flat gloss lemma:
  * `build-tér.agt` → `build-AGT`. Plain words pass through unchanged. Thin
  * formatter over `peelDerivation` for caption/back-translation contexts that
  * want a single string (vs the narrative interlinear, which keeps the tag in a
- * separate gloss field).
+ * separate gloss field). `sanitizeGlossKey` is the safety net for keys whose
+ * forming affix is no longer in `boundMorphemes` (peelDerivation can't reach them).
  */
 export function glossLemma(lang: Language, meaning: string): string {
   const { base, tags } = peelDerivation(lang, meaning);
   return tags.length > 0
-    ? `${base}-${tags.map((t) => t.toUpperCase()).join(".")}`
-    : meaning;
+    ? `${sanitizeGlossKey(base)}-${tags.map((t) => t.toUpperCase()).join(".")}`
+    : sanitizeGlossKey(meaning);
+}
+
+// --- prettyGloss (Lane C1, display-only) ----------------------------------
+//
+// Concept IDs in basic240 / expanded_concepts carry a trailing disambiguation
+// segment so two senses that share an English spelling stay distinct keys
+// (`answer-action` the verb vs `answer-noun` the noun; `calf-animal` the young
+// cow vs `calf-leg` the body part). These segments are engine plumbing, never
+// meant for the eye. `prettyGloss` renders a clean human-readable label for the
+// Dictionary/Lexicon UI. It is pure, deterministic, and never touches the sim —
+// the stored concept IDs are unchanged.
+
+/** Part-of-speech tag suffixes → a parenthetical POS marker. */
+const POS_SUFFIX: Readonly<Record<string, string>> = {
+  v: "v.",
+  verb: "v.",
+  action: "v.",
+  n: "n.",
+  noun: "n.",
+  abst: "n.",
+  abstract: "n.",
+  adj: "adj.",
+};
+
+/**
+ * Domain / category disambiguation suffixes. These are pure category tags
+ * appended to an already-meaningful base purely to keep two homographs in
+ * distinct concept IDs (`calf-animal` vs `calf-leg`, `bear-ish`, `date-fruit`,
+ * `iron-age`). They are stripped from the label — silently when the base is
+ * unambiguous, kept as a parenthetical clarifier when two ids share a base
+ * (see `ambiguousBases`).
+ *
+ * Deliberately TIGHT: only genuine semantic-domain / register tags belong
+ * here. Real compound heads (`-bulb` in `light-bulb`, `-card` in
+ * `credit-card`, `-cream` in `ice-cream`, `-minister` in `prime-minister`)
+ * are NOT tags — those ids are multi-word lexemes and pass through with their
+ * hyphens intact.
+ */
+const DOMAIN_SUFFIX: ReadonlySet<string> = new Set([
+  // semantic domain / sense category
+  "animal", "fruit", "tree", "plant", "veg", "bird", "goat", "fire",
+  "weather", "earth", "water", "mineral", "metal", "stone", "tool",
+  "instrument", "food", "cooked", "meat", "pork", "fat", "broth", "dish",
+  "clothing", "clothes", "shoe", "textile", "art", "music", "sport", "game",
+  "magic", "money", "coin", "finance", "trade", "tax", "econ", "law",
+  "political", "mil", "medical", "mental", "health", "drug", "chem", "bio",
+  "physics", "physical", "theory", "data", "computer", "software", "online",
+  "digital", "modern", "electric", "machine", "mechanical", "radio",
+  "traffic", "rail", "sense", "emotion", "quality", "state", "balance",
+  "precise", "tally", "direction", "marker", "season", "named", "celsius",
+  "purple", "abst", "iron", "age", "time", "person", "prof", "relative",
+  "council", "king", "high", "formal", "public", "passage", "recorded",
+  "pair", "rein", "soul", "leg", "skin", "eye", "hand", "foot", "mouth",
+  "organ", "head", "wrist", "work", "care", "ish",
+]);
+
+let _ambiguousBases: Set<string> | null = null;
+
+/**
+ * Lazily compute the set of bases that appear on more than one concept ID
+ * (after dropping the disambiguation suffix). For these, the suffix carries
+ * meaning the user needs — `market-day` vs `market-square` — so the label
+ * keeps it as a parenthetical. Memoised; derived purely from the concept
+ * registry so it is deterministic and independent of any language state.
+ */
+function ambiguousBases(): Set<string> {
+  if (_ambiguousBases) return _ambiguousBases;
+  const seen = new Map<string, number>();
+  for (const id of CONCEPT_IDS) {
+    const parsed = parseConceptId(id);
+    if (parsed.suffix === null) continue; // no disambiguator → not a collision source
+    seen.set(parsed.base, (seen.get(parsed.base) ?? 0) + 1);
+  }
+  const ambiguous = new Set<string>();
+  for (const [base, count] of seen) if (count > 1) ambiguous.add(base);
+  _ambiguousBases = ambiguous;
+  return ambiguous;
+}
+
+/**
+ * Split a concept ID into `{ base, suffix }`, where `suffix` is the trailing
+ * disambiguation/POS segment IFF it is a recognised tag. Returns
+ * `suffix: null` for plain words and for genuine multi-word lexemes whose
+ * final segment is a real word (`mother-in-law`, `ice-cream`,
+ * `prime-minister`) — those must pass through with their hyphens intact.
+ */
+function parseConceptId(id: string): { base: string; suffix: string | null } {
+  const dash = id.lastIndexOf("-");
+  if (dash <= 0 || dash === id.length - 1) return { base: id, suffix: null };
+  // Multi-word lexemes joined by a function word — `mother-in-law`,
+  // `court-of-law` — are real labels, not base+tag. The final segment
+  // happens to collide with a domain suffix (`law`), so guard against it.
+  const base = id.slice(0, dash);
+  if (base.endsWith("-in") || base.endsWith("-of")) {
+    return { base: id, suffix: null };
+  }
+  const tail = id.slice(dash + 1);
+  if (tail in POS_SUFFIX || DOMAIN_SUFFIX.has(tail)) {
+    return { base, suffix: tail };
+  }
+  return { base: id, suffix: null };
+}
+
+/**
+ * Lane C1: render a concept ID as a clean human-readable gloss for the UI.
+ *
+ *   bear-ish       → "bear"            (silent strip, base unique)
+ *   hoe-tool       → "hoe"
+ *   date-fruit     → "date"
+ *   answer-action  → "answer (v.)"     (POS tag → parenthetical)
+ *   answer-noun    → "answer (n.)"
+ *   number-abst    → "number (n.)"
+ *   market-day     → "market (day)"    (ambiguous base → keep clarifier)
+ *   mother-in-law  → "mother-in-law"   (real lexeme, untouched)
+ *
+ * Display-only and deterministic — no RNG, no language state. Two distinct
+ * ids never collapse to the same label: POS tags always disambiguate, and a
+ * shared domain base keeps its suffix as a parenthetical.
+ */
+export function prettyGloss(conceptId: string): string {
+  const { base, suffix } = parseConceptId(conceptId);
+  if (suffix === null) return conceptId;
+  const pos = POS_SUFFIX[suffix];
+  if (pos) return `${base} (${pos})`;
+  // Domain suffix: strip silently unless the base is shared by another id.
+  return ambiguousBases().has(base) ? `${base} (${suffix})` : base;
 }
 
 /**
@@ -452,6 +607,40 @@ export function syncLexiconFromWords(lang: Language): void {
 }
 
 /**
+ * Lane D (morphology encoding): reconstruct a `WordMorphStructure` for a
+ * (rebuilt) Word from the language's RECORDED compound/derivation parts,
+ * so seed-time structure survives the `syncWordsFromLexicon` rebuild
+ * (ROADMAP §144). Reads `lang.compounds[m].parts` — never the gloss
+ * string. A part that is a bound morpheme (`lang.boundMorphemes`) marks
+ * the entry as a `derivation` (base = the content part, affix = the bound
+ * key); otherwise it is a `compound` (parts in order). Returns undefined
+ * when none of the word's meanings carries a recorded structure.
+ *
+ * When a form carries several meanings (homonymy/colexification), the
+ * first meaning with a recorded structure wins — deterministic in the
+ * meaning ordering the caller already established.
+ */
+function seedMorphStructureFor(
+  lang: Language,
+  meanings: Meaning[],
+): WordMorphStructure | undefined {
+  if (!lang.compounds) return undefined;
+  for (const meaning of meanings) {
+    const compound = lang.compounds[meaning];
+    if (!compound || compound.parts.length < 2) continue;
+    const parts = compound.parts;
+    const bound = lang.boundMorphemes;
+    const affixPart = bound ? parts.find((p) => bound.has(p)) : undefined;
+    if (affixPart) {
+      const base = parts.find((p) => p !== affixPart);
+      return { origin: "derivation", base, affix: affixPart };
+    }
+    return { origin: "compound", parts: parts.slice() };
+  }
+  return undefined;
+}
+
+/**
  * Inverse of `syncLexiconFromWords`. Builds `lang.words` from the
  * meaning-keyed `lexicon` (and existing `colexifiedAs` if present).
  * Idempotent: re-running on a language with `words` already populated is
@@ -506,12 +695,21 @@ export function syncWordsFromLexicon(
           ? (lang.wordOrigin![meaning] as string)
           : undefined,
     }));
+    // Lane D (morphology encoding): close the seed-time morphStructure gap
+    // (ROADMAP §144). addCompound / addDerivation record structure on
+    // lang.compounds BEFORE this rebuild runs, but write morphStructure onto
+    // the Word via setLexiconForm — a no-op while lang.words is undefined at
+    // seed init. So a seeded compound/derivation lost its Word.morphStructure
+    // until now. Re-derive it from the recorded parts here so a seeded complex
+    // word knows its constituents from gen 0. Read from records, not the gloss.
+    const morphStructure = seedMorphStructureFor(lang, meanings);
     lang.words.push({
       form,
       formKey: formKeyOf(form),
       senses,
       primarySenseIndex: 0,
       bornGeneration,
+      morphStructure,
     });
   }
   // Phase 29 Tranche 1e: build the form-key index alongside the

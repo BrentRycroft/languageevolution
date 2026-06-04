@@ -2,7 +2,7 @@ import type { Language, SimulationConfig, SimulationState, LanguageTree } from "
 import { leafIds, splitLeaf } from "../tree/split";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
-import { releaseTerritory } from "../geo/territory";
+import { releaseTerritory, territoryFragmentation } from "../geo/territory";
 import { getWorldMap } from "../geo/map";
 import { realismMultiplier } from "../phonology/rate";
 
@@ -46,11 +46,23 @@ export function stepTreeSplit(
   // coin-flip, cutting the wild split-timing variance (the audit's gen-22 vs
   // gen-166 for the same config). Bounded so it modulates, not dominates.
   const popFactor = Math.max(0.3, Math.min(2.5, (lang.speakers ?? 10000) / 10000));
-  const p =
+  const worldMap = getWorldMap(config.mapMode ?? "random", config.seed);
+  let p =
     config.tree.splitProbabilityPerGeneration * capPressure * realismMultiplier(config) * popFactor;
+  // Province map: make cladogenesis geographically REASON-driven instead of a flat
+  // coin-flip. A language whose territory has fractured into disconnected components
+  // (severed by ocean or another language's land) is ripe to split along that fault;
+  // a single compact blob rarely does, beyond a mild dialect-continuum pressure once
+  // it sprawls. Gated on province mode so Earth/random keep their tuned RNG sequence.
+  if (worldMap.kind === "province") {
+    const cells = lang.territory?.cells ?? [];
+    const frag = territoryFragmentation(worldMap, cells);
+    const geoFactor = 0.6 + 5 * frag + Math.min(1, cells.length / 200) * 0.6;
+    p *= geoFactor;
+  }
   if (rng.chance(p)) {
     splitLeaf(state.tree, leafId, state.generation + 1, rng, {
-      worldMap: getWorldMap(config.mapMode ?? "random", config.seed),
+      worldMap,
     });
   }
 }

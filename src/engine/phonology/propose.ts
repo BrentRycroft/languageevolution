@@ -38,6 +38,10 @@ export const DEFAULT_RULE_BIAS: Record<RuleFamily, number> = {
   deletion: 1,
   metathesis: 0.6,
   tone: 0.6,
+  // Lane A (phonology-expand): glide↔vowel alternation is ordinary;
+  // dissimilation is typologically marked / sporadic.
+  glide: 1,
+  dissimilation: 0.5,
 };
 
 /**

@@ -996,6 +996,14 @@ function translateFragment(
       case "AUX":
         continue;
       case "DET": {
+        // Polar / quantificational "no" is NOT a thing to coin a fresh determiner
+        // lexeme for ("no"→"ngich"). Cross-linguistically negative "no/none" reuses
+        // the clausal NEGATOR morpheme (Latin non, Russian net/ne…), so render it
+        // with the language's existing negator rather than inventing a word.
+        if (tok.lemma === "no") {
+          emitClosedClass("not", "DET", "neg");
+          continue;
+        }
         const isArticle = tok.lemma === "the" || tok.lemma === "a" || tok.lemma === "an";
         if (isArticle && articlePresence === "none") continue;
         // Phase 39j: prefix-merged / suffix-merged FUSE the article into

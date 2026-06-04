@@ -149,7 +149,10 @@ describe("cross-feature integration", () => {
       const rng = makeRng("supp-evol");
       lang.changeWeights = { "lenition.p_to_f": 5 };
       let mutated = false;
-      for (let i = 0; i < 200 && !mutated; i++) {
+      // Cap raised 200→1500: the MEGA overhaul trimmed the sound-change cadence
+      // (PHONOLOGY_RATE_SCALE), so lenition takes more generations to reach the
+      // suppletive form — but it still does. The loop early-exits on mutation.
+      for (let i = 0; i < 1500 && !mutated; i++) {
         stepPhonology(lang, config, rng, i + 1, state);
         const supp = lang.suppletion?.["go"]?.["verb.tense.past"];
         if (supp && !supp.includes("p")) mutated = true;

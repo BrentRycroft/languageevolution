@@ -1,8 +1,8 @@
 import type { Language, LanguageTree, Meaning } from "../types";
 import { SEMANTIC_CLUSTERS, clusterOf } from "../semantics/clusters";
 import { BASIC_240 } from "../lexicon/basic240";
-import { CONCEPT_IDS, CONCEPTS, tierOf, type Tier } from "../lexicon/concepts";
-import { EXPANSION_NEED_BASELINE } from "../constants";
+import { CONCEPT_IDS, CONCEPTS, conceptsAtOrBelow, tierOf, type Tier } from "../lexicon/concepts";
+import { EXPANSION_NEED_BASELINE, REGISTRY_FILL_CAP } from "../constants";
 import { leafIds } from "../tree/split";
 import { isClosedClass, posOf } from "../lexicon/pos";
 import { lexGet, lexHas } from "../lexicon/access";
@@ -57,6 +57,19 @@ export function lexicalNeed(
   const basicSet = BASIC_240 as readonly Meaning[];
   const basicSetLookup = new Set(basicSet);
   const seedLengths = opts.seedLengths;
+
+  // Lane B: per-language registry-fill cap. A language only fills a fraction
+  // (REGISTRY_FILL_CAP[tier]) of the concepts at or below its cultural tier; once
+  // that ceiling is reached the faint EXPANSION_NEED_BASELINE "this slot exists"
+  // pull is switched OFF, so further growth must come from genuine communicative
+  // need (recent topics, sister presence, cluster coverage). This replaces the old
+  // "fill the whole CONCEPT_IDS registry → ~1800 words" exogenous target with an
+  // emergent, tier-scaled ceiling: a minimalist / early-tier culture stays small.
+  const accessible = conceptsAtOrBelow(tier).length;
+  const fillCap = Math.round(REGISTRY_FILL_CAP[tier] * accessible);
+  let lexCount = 0;
+  for (const m of CONCEPT_IDS) if (lexHas(lang, m)) lexCount++;
+  const belowFillCap = lexCount < fillCap;
   for (const m of CONCEPT_IDS) {
     if (lexHas(lang, m)) {
       // Phase 24: existing meanings get a shrinkage-based replacement
@@ -89,14 +102,26 @@ export function lexicalNeed(
     let score = 0;
     const cl = clusterOf(m) ?? CONCEPTS[m]?.cluster;
     if (cl && basicSetLookup.has(m)) {
+      // Basic-vocabulary gaps: pressure to round out an under-covered core
+      // semantic cluster (this is real communicative need — a language that has
+      // "dog" but not "wolf" feels the gap). Unchanged.
       const info = clusterCounts[cl];
       if (info && info.total > 0) {
         const coverage = info.have / info.total;
         score += Math.max(0, 1 - coverage) * 0.6;
       }
-    } else if (!basicSetLookup.has(m)) {
+    } else if (!basicSetLookup.has(m) && belowFillCap) {
+      // Lane B: the faint "this registry slot exists" expansion pull ONLY applies
+      // while the language is below its tier-scaled registry-fill cap. At/above the
+      // cap this term is zero — non-basic growth must then come entirely from the
+      // communicative-need signals below (topics, sisters), so the lexicon settles
+      // at an emergent ceiling instead of marching toward the whole registry.
       score += EXPANSION_NEED_BASELINE;
     }
+    // Communicative need: sister-language presence. A concept many living sisters
+    // already lexicalise is one this speech community is likely to need too
+    // (shared cultural/areal pressure). This is NOT gated by the fill cap — a
+    // sister actually using a word is real pressure regardless of registry fill.
     let sistersWithIt = 0;
     for (const s of sisters) {
       if (lexHas(s, m)) sistersWithIt++;
@@ -104,6 +129,8 @@ export function lexicalNeed(
     if (sisters.length > 0) {
       score += (sistersWithIt / sisters.length) * 0.4;
     }
+    // Communicative need: a concept appearing in recent topics/events is under
+    // active discourse pressure. Ungated (real usage trumps the cap).
     if (recentTopics.has(m)) score += 0.2;
 
     out[m] = score * (lang.conservatism ?? 1);
