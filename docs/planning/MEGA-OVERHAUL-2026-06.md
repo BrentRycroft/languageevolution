@@ -422,3 +422,40 @@ and E/F consume it. Sequenced serial-first to avoid re-working every lane.
 
 Integration after every lane: cherry-pick/merge → resolve conflicts → run the
 Simulation Scorecard to preferred values → commit to `auto/realism` (local only).
+
+---
+
+## 6. Execution progress (live)
+
+**Landed + fast-tier green** (auto/realism):
+- **Lane 0 Scorecard** (aa7f3e2) — live; already quantifies the gaps (translator
+  corpus: "if I don't see you" 0% / "American ears" 50% / "want to buy egg" 67%;
+  colexification 0%; antonym-cosine 0.71). It is the gate going forward.
+- **Lane H max-speed Play + Lane I romanization** (7c37cc4, +b426637 fixup) —
+  steps/sec slider gone; no word renders empty.
+- **Lane B lexicon lifecycle** (0543cc6, +e878e5b test reconciliation) — exogenous
+  ~1800 target removed; `default` stationary at 1.23× with birth-from-need +
+  disuse-death + relevancy drift. Reconciled phase_29 (bound-morpheme invariant
+  exclusion) + phase72 B13 (multi-seed speaker-conservation).
+
+**Deferred to HANDS-ON (agents could not do these):**
+- **Lane G province map** — agent misunderstood the bitmap task; do the
+  Provinces.png parse (unique colour = province, border adjacency, ocean detection)
+  directly.
+- **Lane C0 continuous embedding** — agent died early twice (53s/96s). The
+  embedding-pipeline + quantization is foundational and nuanced; do it hands-on.
+
+**Lane B chunk-2 (calibration, NEXT for B):** minimalist presets still over-grow
+(tokipona 5.8×, bantu 3.65×) because REGISTRY_FILL_CAP is **tier-scaled** and
+minimalist languages still advance cultural tiers → their cap balloons (tier-3 ≈
+0.55 × full registry ≈ 990). Fix: make the cap reflect a language's NATURAL size
+(seed-relative), or add a per-preset lexical-minimalism parameter, so Toki Pona
+stays small. Also: bantu's disuse-death produced 0 deaths in 100 gens — verify the
+disuse signal reaches all presets' vocabulary.
+
+**Agent-dispatch learnings:** `run_in_background:true` curtails implementation
+agents (they return in <100s having done nothing — worktree auto-cleaned).
+FOREGROUND parallel agents run to full budget; they still truncate mid-task, so the
+integrator (me) finishes + verifies + cherry-picks. Concrete, well-bounded lanes
+(scorecard, UI, lexicon) are agent-tractable; nuanced/foundational ones (map,
+embedding) are not — take those hands-on.
