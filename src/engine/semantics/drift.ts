@@ -3,8 +3,9 @@ import type { Rng } from "../rng";
 import { neighborsOf } from "./neighbors";
 import { relatedMeanings, clusterOf } from "./clusters";
 import { nearestMeanings, embed, cosine } from "./embeddings";
+import { axisBias } from "./readoutAxes";
 import { areAntonyms } from "./antonyms";
-import { colexWith } from "../lexicon/concepts";
+import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS, isClosedClass, posOf } from "../lexicon/pos";
@@ -66,6 +67,16 @@ const EXPANSION_IDS_BY_TIER: ReadonlyMap<Tier, readonly string[]> = (() => {
  * across families), preserving deep-time turnover.
  */
 const RETENTION_STRENGTH = 0.9;
+
+/**
+ * MEGA-overhaul (hybrid readout-axes): strength of the valence-axis bias on evaluative
+ * drift. The source's position on the embedding's valence axis (≈ −1 … +1) scales its
+ * pejoration weight by `1 + VALENCE_DRIFT_BIAS·valence` (and amelioration by the inverse),
+ * so "good"-flavoured words pejorate more readily than already-negative ones — the
+ * attested directional asymmetry. Modest, so it sharpens the register/frequency tendency
+ * rather than overriding it.
+ */
+const VALENCE_DRIFT_BIAS = 0.3;
 
 export type SemanticShiftKind =
   | "metonymy"
@@ -135,6 +146,25 @@ export function classifyShift(
   if (fromFreq !== undefined) {
     if (weights.broadening !== undefined) weights.broadening += fromFreq;
     if (weights.narrowing !== undefined) weights.narrowing += 1 - fromFreq;
+  }
+
+  // MEGA-overhaul (hybrid readout-axes ACTIVATED): give evaluative drift a DIRECTION from
+  // the embedding's valence axis. Pejoration is the dominant evaluative cline, and a
+  // positively-valenced source ("good"-flavoured) has the most room to fall — so its
+  // pejoration weight scales UP and its amelioration DOWN; an already-negative source
+  // resists further pejoration. This turns the interpretable readout-axes layer from an
+  // inert readout into a real bias on the dense-space drift (the "hybrid" half of the
+  // meaning model). It only touches the evaluative weights the register/frequency
+  // heuristics already opened — so it sharpens an existing tendency rather than inventing
+  // drift, and stays a no-op for the register/freq-free classifyShift unit callers (which
+  // never set these weights).
+  if (isRegisteredConcept(from)) {
+    if (weights.pejoration !== undefined) {
+      weights.pejoration *= axisBias(from, "valence", VALENCE_DRIFT_BIAS, true);
+    }
+    if (weights.amelioration !== undefined) {
+      weights.amelioration *= axisBias(from, "valence", -VALENCE_DRIFT_BIAS, true);
+    }
   }
 
   if (!rng) {

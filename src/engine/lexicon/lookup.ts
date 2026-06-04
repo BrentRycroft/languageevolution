@@ -11,6 +11,7 @@ import {
   attemptClusterComposition,
 } from "./synthesis";
 import { lexGet, lexHas } from "./access";
+import { nearestLexicalisedMeaning } from "../semantics/embeddings";
 
 /**
  * Phase 52 T1: lexicon-lookup abstraction layer.
@@ -205,6 +206,25 @@ export function lookupFormWithResolution(
           glossNote: `↔ ${partner}`,
         };
       }
+    }
+  }
+  // Rung 7c (MEGA-overhaul, continuous meaning model): nearest-anchor grounding.
+  // Before coining a brand-new form, reuse the semantically CLOSEST word the language
+  // already has — cosine over the shipped distributional embedding. A missing concept
+  // surfaces as the nearest real lexeme (river→water, glad→happy) instead of an invented
+  // form, but only when something genuinely close exists (SEMANTIC_GROUNDING_THRESHOLD);
+  // otherwise it falls through to coinage below. Gated behind `allowFallback` so read-only
+  // callers keep their prior behaviour, and it only substitutes an EXISTING word (no write,
+  // no coinage event). Resolution reuses "colex" (a related existing word); the `≈` gloss
+  // note distinguishes an embedding-grounded stand-in from a recorded colexification.
+  if (allowFallback && !FALLBACK_SKIP.has(meaning)) {
+    const grounded = nearestLexicalisedMeaning(lang, meaning);
+    if (grounded) {
+      return {
+        form: lexGet(lang, grounded.meaning)!.slice(),
+        resolution: "colex",
+        glossNote: `≈ ${grounded.meaning}`,
+      };
     }
   }
   // Rung 8 (Phase 50 T3 + Phase 51 T1): graceful fallback — coin a

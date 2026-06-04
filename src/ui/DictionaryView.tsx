@@ -7,8 +7,10 @@ import { prettyGloss } from "../engine/lexicon/word";
 import { formatForm } from "../engine/phonology/display";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
-import type { Language } from "../engine/types";
+import type { Language, Meaning } from "../engine/types";
 import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
+import { embed, cosine } from "../engine/semantics/embeddings";
+import { readoutProfile, READOUT_AXES, type ReadoutAxis } from "../engine/semantics/readoutAxes";
 
 /**
  * DictionaryView.tsx
@@ -24,6 +26,7 @@ export function DictionaryView() {
   const script = useSimStore((s) => s.displayScript);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"meaning" | "pos" | "tier">("meaning");
+  const [selected, setSelected] = useState<Meaning | null>(null);
 
   const lang: Language | null = (() => {
     const id = selectedLangId ?? state.rootId;
@@ -88,6 +91,15 @@ export function DictionaryView() {
       <DictionaryHeader lang={lang} entryCount={lexSize(lang)} />
       <GrammarCard lang={lang} />
 
+      {selected && (
+        <SemanticProfile
+          lang={lang}
+          meaning={selected}
+          script={script}
+          onClose={() => setSelected(null)}
+        />
+      )}
+
       <div className="row-8 items-center flex-wrap" style={{ marginTop: 12 }}>
         <input
           type="search"
@@ -130,7 +142,17 @@ export function DictionaryView() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.meaning}>
+              <tr
+                key={r.meaning}
+                onClick={() => setSelected(r.meaning)}
+                className={selected === r.meaning ? "is-selected" : undefined}
+                style={{
+                  cursor: "pointer",
+                  background:
+                    selected === r.meaning ? "var(--panel-2)" : undefined,
+                }}
+                title="Show semantic profile"
+              >
                 <td title={r.gloss !== r.meaning ? `concept id: ${r.meaning}` : undefined}>
                   {r.gloss}
                   {r.isLoan && (
@@ -155,6 +177,149 @@ export function DictionaryView() {
           <div className="section-empty">No entries match this filter.</div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * MEGA-overhaul (meaning model = continuous space): make the embedding visible.
+ * For a selected word, show its nearest neighbours *in this language* (cosine over the
+ * shipped distributional embedding) and its interpretable readout-axis profile — the two
+ * faces of the hybrid model (dense space + named axes) the project settled on.
+ */
+function SemanticProfile({
+  lang,
+  meaning,
+  script,
+  onClose,
+}: {
+  lang: Language;
+  meaning: Meaning;
+  script: "ipa" | "roman" | "both";
+  onClose: () => void;
+}) {
+  const data = useMemo(() => {
+    const target = embed(meaning, lang);
+    const nearest = lexKeys(lang)
+      .filter((k) => k !== meaning)
+      .map((k) => ({ m: k, s: cosine(target, embed(k, lang)) }))
+      .filter((x) => x.s > 0.2)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 8);
+    const axes = readoutProfile(meaning);
+    return { nearest, axes };
+  }, [lang, meaning]);
+
+  const selfForm = lexGet(lang, meaning);
+
+  return (
+    <div
+      style={{
+        marginTop: 8,
+        padding: "10px 14px",
+        border: "1px solid var(--accent)",
+        borderRadius: "var(--r-2)",
+        background: "var(--panel-2)",
+      }}
+    >
+      <div className="row-8 items-center" style={{ justifyContent: "space-between" }}>
+        <div className="row-8 items-center">
+          <strong>{prettyGloss(meaning)}</strong>
+          {selfForm && (
+            <span className="mono t-muted">
+              {formatForm(selfForm, lang, script, meaning)}
+            </span>
+          )}
+          <span className="t-muted fs-1">semantic profile</span>
+        </div>
+        <button
+          type="button"
+          className="fs-1 t-muted"
+          onClick={onClose}
+          aria-label="Close semantic profile"
+          style={{ background: "none", border: "none", cursor: "pointer" }}
+        >
+          ✕
+        </button>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 16,
+          marginTop: 10,
+        }}
+      >
+        <div>
+          <div className="label-line" style={{ marginBottom: 6 }}>
+            nearest words in {lang.name}
+          </div>
+          {data.nearest.length === 0 && (
+            <div className="t-muted fs-1">no close neighbours in this lexicon.</div>
+          )}
+          {data.nearest.map(({ m, s }) => {
+            const f = lexGet(lang, m);
+            return (
+              <div key={m} className="row-8 items-center fs-1" style={{ padding: "1px 0" }}>
+                <span style={{ flex: 1 }}>{prettyGloss(m)}</span>
+                {f && <span className="mono t-muted">{formatForm(f, lang, script, m)}</span>}
+                <span className="t-accent" style={{ width: 38, textAlign: "right" }}>
+                  {(s * 100).toFixed(0)}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div>
+          <div className="label-line" style={{ marginBottom: 6 }}>
+            semantic axes
+          </div>
+          {(Object.keys(READOUT_AXES) as ReadoutAxis[]).map((axis) => (
+            <AxisBar key={axis} axis={axis} value={data.axes[axis]} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AxisBar({ axis, value }: { axis: ReadoutAxis; value: number }) {
+  const [pos, neg] = READOUT_AXES[axis];
+  const v = Math.max(-1, Math.min(1, value));
+  const pct = Math.abs(v) * 50; // half-width fill from the centre
+  return (
+    <div className="row-8 items-center fs-1" style={{ padding: "2px 0" }}>
+      <span className="t-muted" style={{ width: 78 }} title={`${axis}: ${pos} ↔ ${neg}`}>
+        {axis}
+      </span>
+      <div
+        style={{
+          position: "relative",
+          flex: 1,
+          height: 8,
+          background: "var(--panel)",
+          borderRadius: 4,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "var(--border)" }} />
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            background: v >= 0 ? "var(--accent)" : "var(--danger)",
+            left: v >= 0 ? "50%" : `${50 - pct}%`,
+            width: `${pct}%`,
+          }}
+        />
+      </div>
+      <span className="mono t-muted" style={{ width: 36, textAlign: "right" }}>
+        {v >= 0 ? "+" : ""}
+        {v.toFixed(2)}
+      </span>
     </div>
   );
 }
