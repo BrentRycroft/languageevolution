@@ -21,10 +21,15 @@ export function zeroVec(): Vec {
   return new Int32Array(VEC_DIM);
 }
 
-/** Quantize float components into the lexical dims (grammatical dims stay zero). */
+/**
+ * Quantize float components into the LEXICAL dims (grammatical dims always stay zero).
+ * Capped at LEXICAL_DIMS so a longer-than-50 input can never bleed into the reserved
+ * grammatical dims — those are set only by their dedicated mechanism (Track E), never via
+ * this GloVe→lexical converter.
+ */
 export function fromFloats(floats: readonly number[]): Vec {
   const v = new Int32Array(VEC_DIM);
-  const n = Math.min(floats.length, VEC_DIM);
+  const n = Math.min(floats.length, LEXICAL_DIMS);
   for (let i = 0; i < n; i++) v[i] = Math.round(floats[i]! * VEC_SCALE);
   return v;
 }

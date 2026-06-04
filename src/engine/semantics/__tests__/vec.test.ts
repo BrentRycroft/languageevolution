@@ -20,6 +20,12 @@ describe("vec — fixed-point representation", () => {
     expect(v[2]).toBe(Math.round(0.5 * VEC_SCALE));
     expect(v[VEC_DIM - 1]).toBe(0);
   });
+  it("fromFloats never writes the grammatical dims, even for >50-length input", () => {
+    const longInput = new Array(VEC_DIM).fill(1); // 58 ones — would bleed past lexical if uncapped
+    const v = fromFloats(longInput);
+    for (let i = LEXICAL_DIMS; i < VEC_DIM; i++) expect(v[i]).toBe(0);
+    expect(v[LEXICAL_DIMS - 1]).toBe(VEC_SCALE); // last lexical dim still filled
+  });
   it("toFloats round-trips within quantization error", () => {
     const f = toFloats(fromFloats([0.123, -2.5, 3.14159]));
     expect(f[0]).toBeCloseTo(0.123, 3);
