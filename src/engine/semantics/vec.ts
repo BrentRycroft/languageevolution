@@ -1,0 +1,92 @@
+/**
+ * vec.ts — fixed-point vector substrate for the vector-space-native meaning model.
+ *
+ * A meaning/morpheme position is an Int32Array of VEC_DIM components, each = round(value
+ * × VEC_SCALE). Integer storage + integer arithmetic make every distance and ranking
+ * decision byte-identical across platforms (the project's determinism invariant). Int32
+ * (not Int16) gives composition headroom so sums of several morpheme vectors never
+ * overflow. The first LEXICAL_DIMS dims mirror the shipped GloVe-50 space; the trailing
+ * GRAMMATICAL_DIMS are reserved (zero-filled) for Track E and unused until then.
+ */
+
+export const VEC_SCALE = 4096; // 2^12 fixed-point scale
+export const LEXICAL_DIMS = 50; // GloVe-50
+export const GRAMMATICAL_DIMS = 8; // reserved for Track E
+export const VEC_DIM = LEXICAL_DIMS + GRAMMATICAL_DIMS; // 58
+
+export type Vec = Int32Array;
+
+/** A zero vector of the full dimensionality. */
+export function zeroVec(): Vec {
+  return new Int32Array(VEC_DIM);
+}
+
+/**
+ * Quantize float components into the LEXICAL dims (grammatical dims always stay zero).
+ * Capped at LEXICAL_DIMS so a longer-than-50 input can never bleed into the reserved
+ * grammatical dims — those are set only by their dedicated mechanism (Track E), never via
+ * this GloVe→lexical converter.
+ */
+export function fromFloats(floats: readonly number[]): Vec {
+  const v = new Int32Array(VEC_DIM);
+  const n = Math.min(floats.length, LEXICAL_DIMS);
+  for (let i = 0; i < n; i++) v[i] = Math.round(floats[i]! * VEC_SCALE);
+  return v;
+}
+
+/** Dequantize to floats (display / interop only — never for ranking decisions). */
+export function toFloats(v: Vec): number[] {
+  const out = new Array<number>(v.length);
+  for (let i = 0; i < v.length; i++) out[i] = v[i]! / VEC_SCALE;
+  return out;
+}
+
+/** Componentwise sum (additive composition). Integer-exact. */
+export function sumVecs(vs: readonly Vec[]): Vec {
+  const out = new Int32Array(VEC_DIM);
+  for (const v of vs) for (let i = 0; i < VEC_DIM; i++) out[i]! += v[i]!;
+  return out;
+}
+
+/** Dot product over fixed-point integers (accumulated in a JS float64, exact for all reachable inputs). */
+export function dotFixed(a: Vec, b: Vec): number {
+  let d = 0;
+  for (let i = 0; i < VEC_DIM; i++) d += a[i]! * b[i]!;
+  return d;
+}
+
+/** Squared Euclidean distance — integer-exact. USE THIS for all ranking/argmax. */
+export function distanceSq(a: Vec, b: Vec): number {
+  let s = 0;
+  for (let i = 0; i < VEC_DIM; i++) {
+    const diff = a[i]! - b[i]!;
+    s += diff * diff;
+  }
+  return s;
+}
+
+/** Cosine similarity. Float output — for human-readable readout ONLY, never ranking. */
+export function cosineFixed(a: Vec, b: Vec): number {
+  const dot = dotFixed(a, b);
+  const na = Math.sqrt(dotFixed(a, a));
+  const nb = Math.sqrt(dotFixed(b, b));
+  if (na === 0 || nb === 0) return 0;
+  return dot / (na * nb);
+}
+
+/** Componentwise difference a − b. Integer-exact. */
+export function subVecs(a: Vec, b: Vec): Vec {
+  const out = new Int32Array(VEC_DIM);
+  for (let i = 0; i < VEC_DIM; i++) out[i] = a[i]! - b[i]!;
+  return out;
+}
+
+/**
+ * Componentwise rounded mean: round(v[i] / n). Deterministic — uses JS `Math.round`
+ * (round-half-toward-+∞), so it is identical on every platform; `n` must be ≥ 1.
+ */
+export function roundDivVec(v: Vec, n: number): Vec {
+  const out = new Int32Array(VEC_DIM);
+  for (let i = 0; i < VEC_DIM; i++) out[i] = Math.round(v[i]! / n);
+  return out;
+}
