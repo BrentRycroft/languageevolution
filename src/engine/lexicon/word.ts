@@ -173,18 +173,46 @@ export function peelDerivation(
   return { base, tags };
 }
 
+/** Leipzig-style derivation categories that may surface as `.cat` scaffolding. */
+const DERIVATION_TAGS: ReadonlySet<string> = new Set([
+  "agt", "tbef", "abs", "ptcp", "adj", "inst", "cmp", "dim", "neg", "fem", "action",
+]);
+
+/**
+ * Final guarantee that a gloss carries no raw affix scaffolding. `peelDerivation`
+ * resolves keys whose affixes the language still tracks in `boundMorphemes`; but a
+ * key coined by an affix that has since been LOST (dropped from boundMorphemes by
+ * later drift) can't be peeled and would otherwise leak its scaffolding — a doubled
+ * hyphen `--` (prefix-formed key) or a trailing `.category` tag. Collapse the doubled
+ * hyphen and lift any trailing recognised `.category` into an uppercase tag, so the
+ * caption is always clean even when the morpheme record is gone.
+ */
+function sanitizeGlossKey(s: string): string {
+  let out = s.replace(/--+/g, "-");
+  const lifted: string[] = [];
+  let m = out.match(/[.·]([a-z]+)$/);
+  while (m && DERIVATION_TAGS.has(m[1]!)) {
+    lifted.unshift(m[1]!.toUpperCase());
+    out = out.slice(0, m.index).replace(/-+$/, "");
+    m = out.match(/[.·]([a-z]+)$/);
+  }
+  out = out.replace(/-+$/, "");
+  return lifted.length > 0 ? `${out}-${lifted.join(".")}` : out;
+}
+
 /**
  * Format a (possibly derived) meaning as a clean flat gloss lemma:
  * `build-tér.agt` → `build-AGT`. Plain words pass through unchanged. Thin
  * formatter over `peelDerivation` for caption/back-translation contexts that
  * want a single string (vs the narrative interlinear, which keeps the tag in a
- * separate gloss field).
+ * separate gloss field). `sanitizeGlossKey` is the safety net for keys whose
+ * forming affix is no longer in `boundMorphemes` (peelDerivation can't reach them).
  */
 export function glossLemma(lang: Language, meaning: string): string {
   const { base, tags } = peelDerivation(lang, meaning);
   return tags.length > 0
-    ? `${base}-${tags.map((t) => t.toUpperCase()).join(".")}`
-    : meaning;
+    ? `${sanitizeGlossKey(base)}-${tags.map((t) => t.toUpperCase()).join(".")}`
+    : sanitizeGlossKey(meaning);
 }
 
 // --- prettyGloss (Lane C1, display-only) ----------------------------------
