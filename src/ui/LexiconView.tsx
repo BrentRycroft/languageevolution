@@ -7,6 +7,7 @@ import { useDebounced } from "./hooks/useDebounced";
 import { ScriptPicker } from "./ScriptPicker";
 import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
+import { prettyGloss } from "../engine/lexicon/word";
 import { lexGet } from "../engine/lexicon/access";
 
 /**
@@ -82,7 +83,11 @@ export function LexiconView() {
   const meanings = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     let filtered = q
-      ? allMeanings.filter((m) => m.toLowerCase().includes(q))
+      ? allMeanings.filter(
+          (m) =>
+            m.toLowerCase().includes(q) ||
+            prettyGloss(m).toLowerCase().includes(q),
+        )
       : allMeanings.slice();
     if (sort === "alpha") {
       filtered.sort();
@@ -361,8 +366,9 @@ export function LexiconView() {
                     className="meaning"
                     data-meaning={meaning}
                     onClick={() => selectMeaning(meaning)}
+                    title={prettyGloss(meaning) !== meaning ? `concept id: ${meaning}` : undefined}
                   >
-                    {meaning}
+                    {prettyGloss(meaning)}
                     {(() => {
                       // Phase 30 Tranche 30i: inflection-class badge
                       // sourced from the root proto's classification
