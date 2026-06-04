@@ -24,6 +24,7 @@ import { classifyLexicon } from "../morphology/inflectionClass";
 import { isToneBearing, toneOf, MID } from "../phonology/tone";
 import { addCompound, addDerivation } from "../lexicon/compound";
 import { assignAllNounClasses } from "../lexicon/nounClass";
+import { buildMorphemeInventory } from "../morphology/morphemeInventory";
 
 /**
  * Phase 39a: count the unique phonemes across a seed lexicon. Used to
@@ -424,6 +425,13 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // No behavior change: `lexicon` remains the source of truth until
   // 21b+ wire writers through `addWord`/`removeSense`.
   syncWordsFromLexicon(rootLang, 0);
+  // Lane D (morphology encoding): build the first-class morpheme inventory
+  // from the now-populated lexicon + the recorded compound / derivation /
+  // bound-morpheme structure. Runs AFTER syncWordsFromLexicon so the
+  // seed-time morphStructure has landed on the Words and the lexicon forms
+  // are final. Daughters inherit a clone at split (tree/split.ts) and can
+  // rebuild from their own records.
+  rootLang.morphemeInventory = buildMorphemeInventory(rootLang);
   const mapMode = config.mapMode ?? "random";
   const worldMap = getWorldMap(mapMode, config.seed);
   let originId: number | null =

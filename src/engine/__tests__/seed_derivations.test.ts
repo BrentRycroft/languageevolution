@@ -28,10 +28,16 @@ describe("meaning-layer A1a — seedDerivations / addDerivation (word = base + a
     expect(lang.compounds?.["test-ruler"]?.parts).toEqual(["king", "-tér.agt"]);
     const word = lang.words?.find((w) => w.senses.some((s) => s.meaning === "test-ruler"));
     expect(word, "a Word carries the 'test-ruler' sense").toBeTruthy();
-    // NB: the morphStructure etymology TAG on the Word does not survive seed-init
-    // (syncWordsFromLexicon rebuilds words after the seed-compound/derivation step,
-    // dropping it — a PRE-EXISTING limitation that affects seedCompounds equally).
-    // Exposing seed-time morphology on the Word is a Stage-B follow-up.
+    // Lane D (morphology encoding) closed the ROADMAP §144 gap: the
+    // morphStructure etymology now SURVIVES seed-init. syncWordsFromLexicon
+    // re-derives it from the recorded parts (lang.compounds), so a seeded
+    // derivation knows its base + affix from gen 0. ('-tér.agt' isn't in this
+    // PIE proto's boundMorphemes, so it's recorded as a transparent compound
+    // of [king, -tér.agt] rather than a base/affix derivation — either way the
+    // structure is now on the Word.)
+    expect(word!.morphStructure, "seed-time structure persists onto the Word").toBeDefined();
+    expect(word!.morphStructure!.parts ?? [word!.morphStructure!.base, word!.morphStructure!.affix])
+      .toContain("king");
   });
 
   it("prefix position prepends the affix", () => {

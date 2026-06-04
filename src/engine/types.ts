@@ -847,6 +847,19 @@ export interface Language {
    */
   boundMorphemes?: Set<Meaning>;
   /**
+   * Lane D (morphology encoding): first-class per-language MORPHEME
+   * INVENTORY — the roots + bound affixes a language builds words from,
+   * as queryable entries. Derived (not authoritative): populated from
+   * the recorded structure (`compounds` records + `boundMorphemes` +
+   * `derivationalSuffixes`) by `buildMorphemeInventory`
+   * (`morphology/morphemeInventory.ts`). Lets a word's decomposition be
+   * read from records — each constituent is a real inventory entry with
+   * a form, meaning, category, and productivity — rather than parsed out
+   * of the gloss string. Undefined until built; rebuilt at language
+   * birth after the seed lexicon + compound/derivation records exist.
+   */
+  morphemeInventory?: MorphemeInventory;
+  /**
    * Phase 36 Tranche 36b: Bantu-style noun-class assignment per
    * meaning. Class 1-8. Singular/plural classes are paired; the
    * realiser picks the plural counterpart when number === "pl".
@@ -1068,6 +1081,52 @@ export interface WordMorphStructure {
   donorLanguageId?: string;
   /** For borrow / calque: meaning in the donor language. */
   donorMeaning?: Meaning;
+}
+
+/**
+ * Lane D (morphology encoding): category of a morpheme-inventory entry.
+ *
+ *   - `root`: a free, content-bearing morpheme (a standalone lexeme that
+ *     can also serve as a constituent of compounds/derivations).
+ *   - `affix`: a bound derivational morpheme (prefix or suffix) — a
+ *     member of `lang.boundMorphemes`. Inflectional paradigm affixes live
+ *     in `lang.morphology.paradigms`, not here.
+ */
+export type MorphemeCategory = "root" | "affix";
+
+/**
+ * Lane D (morphology encoding): one entry in a language's morpheme
+ * inventory — a root or bound affix as a first-class, queryable unit.
+ *
+ * `meaning` is the entry's lexical key (a gloss / ConceptId-resolvable
+ * Meaning); `form` is its current surface form read from the lexicon, so
+ * the inventory stays a derived view (rebuild after sound change rather
+ * than hand-mutating). `productivity` is a coarse 0..1 signal: affixes
+ * read it from `derivationalSuffixes[].productive`; roots default to 1
+ * (a free root is always available to compose). The inventory is
+ * populated from RECORDED structure, so a word's constituents resolve to
+ * these entries instead of being re-parsed from the gloss string.
+ */
+export interface MorphemeEntry {
+  /** Lexical key of the morpheme (the `boundMorphemes` key for affixes). */
+  meaning: Meaning;
+  /** Current surface form, copied from `lang.lexicon` at build time. */
+  form: WordForm;
+  category: MorphemeCategory;
+  /** For affixes: which side of the stem it attaches to. */
+  position?: "prefix" | "suffix";
+  /** Coarse availability for composition, 0 (dormant) .. 1 (fully productive). */
+  productivity: number;
+}
+
+/**
+ * Lane D (morphology encoding): a language's morpheme inventory, keyed
+ * by morpheme meaning for O(1) constituent lookup. A `Word`'s recorded
+ * parts (`lang.compounds[m].parts`) resolve into these entries so
+ * decomposition is data, not a gloss-string split.
+ */
+export interface MorphemeInventory {
+  entries: Record<Meaning, MorphemeEntry>;
 }
 
 export interface FormVariant {
