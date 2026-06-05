@@ -12,6 +12,7 @@ import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
 import { embed, cosine } from "../engine/semantics/embeddings";
 import { readoutProfile, READOUT_AXES, type ReadoutAxis } from "../engine/semantics/readoutAxes";
 import { morphemeBreakdown } from "../engine/semantics/morphemeSpaceLoader";
+import { homonymsOf } from "../engine/semantics/homonyms";
 
 /**
  * DictionaryView.tsx
@@ -209,7 +210,8 @@ function SemanticProfile({
       .slice(0, 8);
     const axes = readoutProfile(meaning);
     const breakdown = morphemeBreakdown(meaning);
-    return { nearest, axes, breakdown };
+    const homonyms = homonymsOf(lang, meaning);
+    return { nearest, axes, breakdown, homonyms };
   }, [lang, meaning]);
 
   const selfForm = lexGet(lang, meaning);
@@ -255,6 +257,29 @@ function SemanticProfile({
                 {i > 0 && <span className="t-muted">+</span>}
                 <span>{prettyGloss(p)}</span>
                 {pf && <span className="mono t-muted">{formatForm(pf, lang, script, p)}</span>}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {data.homonyms.length > 0 && (
+        <div
+          className="row-8 items-center fs-1"
+          style={{ marginTop: 8, flexWrap: "wrap" }}
+        >
+          <span
+            className="label-line"
+            title="same form, distant meaning — distinct words that merely sound alike"
+          >
+            homonyms
+          </span>
+          {data.homonyms.map((h) => {
+            const hf = lexGet(lang, h);
+            return (
+              <span key={h} className="row-4 items-center">
+                <span>{prettyGloss(h)}</span>
+                {hf && <span className="mono t-muted">{formatForm(hf, lang, script, h)}</span>}
               </span>
             );
           })}
