@@ -470,6 +470,35 @@ export function presetRomance(): SimulationConfig {
       // scarecrow = fear + bird (cf. Italian spaventapasseri = spaventa + passeri)
       scarecrow: { parts: ["fear", "bird"] },
     },
+    // Track C etymologies (append-only, engine-INERT): a word's historical
+    // morphological/semantic ancestry, recorded in lang.etymology and read ONLY
+    // by the Dictionary — determinism-neutral. Every word AND every part below
+    // is a seedLexicon key (silent-drop rule); entries already carrying a
+    // seedCompound are excluded. Same ancestry model as English mountain←big+stone.
+    seedEtymologies: {
+      // hearth ← fire: Latin focus IS the fireplace/hearth; it later generalised
+      // to "fire" itself across Romance (focus > It. fuoco, Sp. fuego, Fr. feu).
+      // The hearth is lexically the seat of the household fire. (Latin focus.)
+      hearth: { parts: ["fire"] },
+      // winter ← season: hībernum [tempus] "the wintry season" — the cold span
+      // of the year; lexicalised from the season noun. (Latin hībernum tempus.)
+      winter: { parts: ["season"] },
+      // summer ← season: aestās/aestīvum [tempus] "the warm season"; the warm
+      // span of the year, anchored to the season noun. (Latin aestīvum tempus.)
+      summer: { parts: ["season"] },
+      // husband ← man: Vulgar Latin marītus is the household's adult male — the
+      // married man, paired to mulier "wife". Ancestry to "man". (Latin marītus.)
+      husband: { parts: ["man"] },
+      // wife ← woman: Vulgar Latin generalised mulier "woman" to "wife"; the two
+      // senses colexify across Romance (It./Sp. moglie/mujer). (Latin mulier.)
+      wife: { parts: ["woman"] },
+      // morning ← day: māne is the dawn portion of the day-cycle; the daypart
+      // that opens the day (It. mane, Sp. mañana < māne). (Latin māne.)
+      morning: { parts: ["day"] },
+      // evening ← day: sēra [hōra] "the late [hour]" is the daypart that closes
+      // the day-cycle (It. sera, Fr. soir < sēra). (Latin sēra hōra.)
+      evening: { parts: ["day"] },
+    },
     // Phase 73e de-anglicization: Latin/Romance caro = flesh/meat (carne) and
     // infante = child/baby. Declare these colexifications instead of duplicate
     // forms.

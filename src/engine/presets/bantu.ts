@@ -344,6 +344,25 @@ export function presetBantu(): SimulationConfig {
       // fisherman = person + fish (mutu + insui — "person of fish")
       fisherman: { parts: ["person", "fish"] },
     },
+    // Track C (engine-INERT etymological ancestry, Dictionary-only): genuinely
+    // analyzable proto-Bantu decompositions whose word AND every part are seeded
+    // lexicon keys. Distinct from seedCompounds above (those mint NEW agent-noun
+    // keys); here every word is an EXISTING primitive that is historically
+    // composite. Determinism-neutral — never read by the simulation.
+    seedEtymologies: {
+      // woman = child + wife (mwana + mke — Swahili mwanamke "female offspring"; -ke/mke is the female marker)
+      woman: { parts: ["child", "wife"] },
+      // daughter = child + wife (mwana + mke — "female child", same -ke female marker as woman)
+      daughter: { parts: ["child", "wife"] },
+      // man = child + husband (mwana + -ume → mwanaume "male offspring"; the *-dúmé male root surfaces standalone as husband mume)
+      man: { parts: ["child", "husband"] },
+      // bull = cow + husband (ɲombe dume "male bovine"; indume carries the same *-dúmé male root as husband)
+      bull: { parts: ["cow", "husband"] },
+      // honey = bee (bu- mass-class + *-júkí "bee" → bujuki; honey is literally the bee-substance)
+      honey: { parts: ["bee"] },
+      // hill = mountain (ikilima — class-7 diminutive of the *-dìmà "mountain" root that gives mulima)
+      hill: { parts: ["mountain"] },
+    },
     seedMorphology: MORPHOLOGY,
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 1,
