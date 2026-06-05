@@ -1,8 +1,19 @@
 # Vector-Space-Native Overhaul — Roadmap (2026-06)
 
-Status: **Overview roadmap — all 6 design decisions LOCKED (2026-06-04, see §9).** Ready to
-spec Track A. It decomposes the 6 ideas into tracks, sequences them, and records the resolved
-decisions. Each track gets its own spec → plan → implementation cycle. Nothing implemented yet.
+Status: **Overview roadmap — all 6 design decisions LOCKED (2026-06-04, see §9).** It decomposes
+the 6 ideas into tracks, sequences them, and records the resolved decisions. Each track gets its
+own spec → plan → implementation cycle.
+
+**Progress (2026-06-05):**
+- **Track A — DONE** (continuous meaning model: fixed-point vectors, morpheme space, `lexPoint` +
+  gliding, homonyms, grounding; Dictionary + translator surfaced). Plans 1–9.
+- **Track C — DONE** (`TRACK-C-SPEC-preset-morphemization.md`): per-language point+live-form
+  morpheme accessors (`languageMorphemes`/`wordMorphemes`) + all 6 presets morphemized via the
+  determinism-neutral `seedEtymologies` field. **Ran before B** (B's coiner needs per-preset
+  morphemes-with-forms). Key finding: morphological-structure enrichment can't route through
+  `lang.compounds` without re-baselining a preset; use the engine-inert `lang.etymology`.
+- **Track B — NEXT** (gap-driven compositional generation): consumes `languageMorphemes(lang)`.
+- Tracks D, E — not started.
 
 Supersedes nothing; extends the meaning-model work locked in the MEGA overhaul
 (`docs/planning/MEGA-OVERHAUL-2026-06.md`, continuous semantic space + hybrid readout-axes).

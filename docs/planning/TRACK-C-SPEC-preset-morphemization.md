@@ -5,8 +5,10 @@
 > **Sequencing note (2026-06-05):** the user chose to run **Track C before Track B** — Track B's
 > compositional coinage needs per-language morphemes *with forms*, which Track C produces.
 
-Status: **DECISIONS LOCKED (2026-06-05).** Architecture = **runtime, not baked** (revised 2026-06-05;
-see §3.0). Ready to decompose into plans (C0 backend → C1–C6 agent-per-preset → C-final).
+Status: **COMPLETE (2026-06-05).** Architecture = **runtime, not baked** (§3.0). Shipped as C0
+(accessors + Dictionary), C0b (`seedEtymologies` inert field), C1–C6 (all 6 presets enriched by
+agents), C-final (cross-preset verification). Commits `95643e1` → `9c2d3e5`. Determinism firewall
+intact; 173 preset/narrative tests + the Track C suite green. See §12 for the completion record.
 
 ---
 
@@ -202,3 +204,38 @@ Presets: **english, pie, germanic, romance, bantu, tokipona.** Each agent:
 - **Stale cached inventory.** `lang.morphemeInventory` is built once at init; Track C's accessors
   derive from the **live** lexicon (not the cached snapshot) so they stay current. (Whether Track B
   rebuilds the cached snapshot on coinage is a Track B decision.)
+
+---
+
+## 12. Completion record (2026-06-05)
+
+**Delivered**
+- **C0** (`95643e1`, `997cc96`): `semantics/languageMorphemes.ts` — `languageMorphemes(lang)` (all
+  open-class content roots with `lexPoint` points + live `lexGet` forms; bound morphemes as
+  zero-point affixes) and `wordMorphemes(lang, meaning)` (a word's ordered composition, live).
+  Dictionary "morphemes" row switched from the English-only baked `morphemeBreakdown` to
+  `wordMorphemes(activeLang, …)`.
+- **C0b** (`b6735fd`): `seedEtymologies` config field → the engine-INERT `lang.etymology`
+  (registered in `PER_MEANING_FIELDS`, deep-cloned). `wordMorphemes` falls back to it.
+- **C1–C6** (`9c2d3e5`): all six presets enriched with cited etymologies (english 13, romance 7,
+  bantu 6, tokipona 4, pie 3, germanic 2 — 35 total).
+- **C-final** (`9c2d3e5`): `preset_etymologies.test.ts` proves every entry resolves through
+  `wordMorphemes` (no silent drops) + spot checks.
+
+**Key finding (institutional knowledge).** Enrichment **cannot** route through `seedCompounds`/
+`seedDerivations`/`lang.compounds`: a word's "has recorded parts" status changes ~7 subsystems
+(derivation eligibility, taboo, obsolescence, reanalysis, neighbour + frequency bootstrap, coinage),
+shifting the RNG stream and **re-baselining the preset** (verified — one recorded decomposition
+diverged all forms over 25 gens). The inert `lang.etymology` field sidesteps this.
+
+**Success criteria (§11 C) — met under the forms-only model.** Every preset is morpheme-encoded
+(`seedCompounds` + `seedEtymologies`, surfaced via `wordMorphemes`); points are the universal
+anchors (trivially within ε); forms are preserved (no recomposition → stay phonotactically legal);
+Toki Pona's existing compounds are untouched (+4 inert etymologies); determinism is unchanged.
+
+**Caveat / possible polish.** Sparse presets (pie, romance) yield single-morpheme *ancestry* claims
+(person←earth, winter←season) rather than binary compositions — valid etymology, but the Dictionary
+"morphemes" row shows them as a one-item list. A future polish could relabel etymology-sourced rows
+("from") vs compound-sourced rows ("morphemes").
+
+**Next:** Track B (gap-driven compositional generation) consumes `languageMorphemes(lang)`.
