@@ -515,6 +515,21 @@ export function presetPIE(): SimulationConfig {
     seedCompounds: {
       master: { parts: ["house", "husband"] },
     },
+    // Track C etymologies (engine-INERT, display-only). PIE is overwhelmingly
+    // monomorphemic, so only a FEW words decompose into TWO separately-seeded
+    // concepts; the rest are roots. Every word + part below is a seedLexicon key.
+    seedEtymologies: {
+      // *dems-pótnih₂ "lady/mistress of the house" = *dem- (house) + feminine of
+      // *pótis (husband). The exact feminine counterpart of master = *dem-pótis
+      // above; the preset's own master comment names this analysis of wife.
+      wife: { parts: ["house", "husband"] },
+      // *dʰǵʰm̥mō "earthling, earthly one" ← *dʰéǵʰōm (earth) — the PIE word for
+      // human as "the one of the earth" (cf. Latin homō, Old English guma).
+      person: { parts: ["earth"] },
+      // *deywós "celestial one, sky-dweller → god" ← *dyew- (the bright sky / day),
+      // the same root the seedLexicon gives for sky and day. Vrddhi derivative.
+      god: { parts: ["sky"] },
+    },
     // Phase 73e de-anglicization: PIE colexifies attested pairs — *dóru =
     // tree/wood, *h₃ekʷ- = eye/face, *mēms- = flesh/meat. Declare them instead
     // of storing duplicate forms so the concept space reflects PIE, not the

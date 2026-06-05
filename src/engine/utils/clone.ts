@@ -68,6 +68,11 @@ export function cloneLanguage(lang: Language): Language {
     localNeighbors: Object.fromEntries(
       Object.entries(lang.localNeighbors).map(([k, v]) => [k, v.slice()]),
     ),
+    etymology: lang.etymology
+      ? Object.fromEntries(
+          Object.entries(lang.etymology).map(([k, v]) => [k, v.slice()]),
+        )
+      : undefined,
     wordOrigin: { ...lang.wordOrigin },
     activeRules: (lang.activeRules ?? []).map((r) => ({
       ...r,

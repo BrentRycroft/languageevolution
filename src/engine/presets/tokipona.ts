@@ -273,6 +273,22 @@ export function presetTokipona(): SimulationConfig {
       // city = land + home (ma tomo — "land of homes"), distinct from village (ma).
       city: { parts: ["earth", "home"] },
     },
+    // Track C (preset morphemization): engine-INERT etymological ancestry for
+    // a handful of words whose Toki Pona realisation is a canonical community
+    // compound phrase but whose surface form here is a single colexified root.
+    // Recorded for Dictionary display only — read by NO simulation subsystem,
+    // so determinism-neutral. Every word AND every part is an existing lexicon
+    // key (silently dropped at init otherwise); none duplicate seedCompounds.
+    seedEtymologies: {
+      // friend = child + good (jan pona — "good person", the canonical Toki Pona phrase for friend)
+      friend: { parts: ["child", "good"] },
+      // sea = water + big (telo suli — "big water", the standard phrase for sea/ocean)
+      sea: { parts: ["water", "big"] },
+      // night = time + black (tenpo pimeja — "dark time", the standard phrase for night)
+      night: { parts: ["time", "black"] },
+      // star = sun + small (suno lili — "small light", the common phrase for star)
+      star: { parts: ["sun", "small"] },
+    },
     // Phase 46a-migration: Toki Pona is extreme-isolating — no case,
     // no articles, no inflection, no agreement, no derivation. Activate
     // only the typological minimum + reduplication-driven plural marking.

@@ -389,6 +389,20 @@ export function presetGermanic(): SimulationConfig {
       // seabird = sea + bird
       seabird: { parts: ["sea", "bird"] },
     },
+    // Track C (preset etymologies, append-only): morphological ancestry recorded
+    // in the engine-INERT `lang.etymology` field (Dictionary-only; determinism-
+    // neutral). Each word AND every part is an existing lexicon key, and none
+    // duplicates a seedCompounds entry. Kept deliberately small: the lexicon is
+    // Swadesh-style monomorphemic vocabulary, so very few words decompose into
+    // parts that are THEMSELVES seeded keys (the silent-drop / faithfulness rule).
+    seedEtymologies: {
+      // woman = wife + man (West-Germanic *wīf-mann "woman-person"; OE wīfmann,
+      // the standard etymology of "woman"; both *wībą and *mann- are seeded).
+      woman: { parts: ["wife", "man"] },
+      // wing ← feather (PGmc *feþrą "wing" is the same *feþr- stem as *feþrō
+      // "feather"; the lexicon encodes both as f-e-θ-ɾ-X — transparent ancestry).
+      wing: { parts: ["feather"] },
+    },
     // Phase 73e de-anglicization: Proto-Germanic *flaiski = flesh/meat (cf.
     // German Fleisch). Declare the colexification instead of a duplicate form.
     seedColexification: { meat: ["flesh"] },

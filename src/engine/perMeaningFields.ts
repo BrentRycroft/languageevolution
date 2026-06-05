@@ -166,6 +166,15 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     purgeOnDelete: true,
     description: "Track A plan 7 glided meaning positions (plan 7)",
   },
+  // Track C: engine-inert etymological ancestry (Record<Meaning, Meaning[]>).
+  // Deep-clone-entries so daughters get independent part arrays; purged on
+  // meaning delete so stale ancestry doesn't accumulate for retired meanings.
+  {
+    key: "etymology",
+    inherit: "deep-clone-entries",
+    purgeOnDelete: true,
+    description: "Track C preset-morphemization etymological ancestry (display-only)",
+  },
 ];
 
 /**

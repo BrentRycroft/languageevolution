@@ -340,6 +340,14 @@ export interface Language {
   morphology: import("./morphology/types").Morphology;
   localNeighbors: Record<Meaning, string[]>;
   /**
+   * Track C (preset morphemization): engine-INERT etymological ancestry — a word's morphological
+   * decomposition for DISPLAY / composition reference only (`wordMorphemes` falls back to this when
+   * a word has no live `compounds` entry). Seeded from `seedEtymologies`. Deliberately read by NO
+   * simulation subsystem (drift, coinage, derivation, taboo, obsolescence) so recording it is
+   * determinism-neutral — contrast `compounds`, whose presence changes those subsystems' behaviour.
+   */
+  etymology?: Record<Meaning, Meaning[]>;
+  /**
    * Phase 41a: per-language active-module set. Modules in this set
    * have their `step` and `realise` hooks called; modules outside
    * the set are skipped entirely (the perf win).
@@ -1541,6 +1549,21 @@ export interface SimulationConfig {
     affix: Meaning;
     position?: "prefix" | "suffix";
   }>;
+  /**
+   * Track C (preset morphemization): preset-declared ETYMOLOGIES — a previously-atomic
+   * word's morphological ancestry, recorded WITHOUT recomposing its surface form. Unlike
+   * `seedCompounds`/`seedDerivations` (which recompose the form from parts and drift it), an
+   * etymology preserves the word's own `seedLexicon` form and is fossilized from birth, so it is
+   * determinism-neutral (updateCompounds skips fossilized entries before any RNG draw and
+   * recomposeCompound returns null for them). Used to surface a word's composition in the
+   * Dictionary and give Track B reference morphemes for words whose synchronic form is NOT a live
+   * composition (English "breakfast" ← break+fast — opaque now, but historically transparent).
+   * The word and all parts must be in `seedLexicon`; ignored if the meaning already has a
+   * compound/derivation entry.
+   *
+   * Example: `seedEtymologies: { breakfast: { parts: ["break", "fast"] } }`.
+   */
+  seedEtymologies?: Record<Meaning, { parts: Meaning[] }>;
   /**
    * Phase 36 Tranche 36f: bound-morpheme set. At language birth the
    * preset hands a Set of meanings that are bound morphemes (e.g.,

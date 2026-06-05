@@ -898,6 +898,27 @@ export function presetEnglish(): SimulationConfig {
     seedDerivations: {
       behind: { base: "hind", affix: "be-", position: "prefix" },
     },
+    // Track C: etymological decompositions recorded in the engine-inert
+    // `lang.etymology` field (read only by the Dictionary via
+    // wordMorphemes). Determinism-neutral. Every word and every part is a
+    // key in the LEXICON above; entries already covered by seedCompounds /
+    // seedDerivations are intentionally not duplicated. Parts ordered as
+    // the word historically builds.
+    seedEtymologies: {
+      window: { parts: ["wind", "eye"] }, // rationale: ON vindauga "wind-eye", lit. wind + eye
+      today: { parts: ["to", "day"] }, // rationale: OE tō dæġe "on (this) day" = to + day
+      into: { parts: ["in", "to"] }, // rationale: OE in tō, univerbation of in + to
+      upon: { parts: ["up", "on"] }, // rationale: ME up + on (calque of ON upp á)
+      without: { parts: ["with", "out"] }, // rationale: OE wiþ-ūtan "outside" = with + out
+      inside: { parts: ["in", "side"] }, // rationale: ME in + side "interior side"
+      outside: { parts: ["out", "side"] }, // rationale: ME out + side "exterior side"
+      become: { parts: ["be", "come"] }, // rationale: OE becuman = be- + cuman (come)
+      between: { parts: ["be", "two"] }, // rationale: OE betwēonum = be- + twēon- (by two)
+      beside: { parts: ["be", "side"] }, // rationale: OE be sīdan "by the side" = be- + side
+      below: { parts: ["be", "low"] }, // rationale: ME bilooghe = be- + low
+      sometimes: { parts: ["some", "time"] }, // rationale: some + time + adverbial genitive -s
+      always: { parts: ["all", "way"] }, // rationale: OE ealne weg "all the way" = all + way (+ -s)
+    },
     seedBoundMorphemes: BOUND_MORPHEMES,
     seedPhonemeTarget: 44,
     // Phase 46a-migration: declare the canonical English module set.
