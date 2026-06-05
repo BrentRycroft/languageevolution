@@ -14,6 +14,12 @@ subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migra
   `isTabooReferent` export, `613b39b`); 0c `anchorQueries.ts` (`posOfPoint` argmax over labeled POS
   dims — **POS golden parity 100%/2247**; `clusterRegionOf` lexical-geometry centroids — cluster
   parity 58.7%, `ae6ee3f`). Purely additive; determinism byte-identical (simulation.test green).
+- **Wave 2b — neighbours DONE (2026-06-05, `7d39920`).** `neighborsOf` switched to geometry
+  (`geometricNeighbors` = 3 nearest anchors) for grounded meanings; curated `SEMANTIC_NEIGHBORS` kept
+  as ungrounded fallback + reversible source. Semantic drift + genesis coinage pools now vector-native.
+  Re-baked all 6 GENN (GEN0 unchanged); 2 FAST tests updated (dog/cat now related → dog/stone;
+  river→rain-water for the neighbor rung). FAST 1987 green; RUN_SLOW reproduces. Subagent-driven
+  finalization (fix + re-bake), controller-verified.
 - **Wave 1 — IN PROGRESS (2026-06-05).** 1a `glossOf`/`senseGloss` emergent-gloss primitives —
   seed parity `glossOf(lexPoint(c))===c` **99.6%/2247** (`0fa15a8`). 1b `anchorIndex.ts`
   (`anchorIndexOf`/`glossOfWord`/`findWordByEmergentGloss`) + hybrid `effectiveGloss` — point-native
