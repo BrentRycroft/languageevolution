@@ -11,6 +11,7 @@ import type { Language, Meaning } from "../engine/types";
 import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
 import { embed, cosine } from "../engine/semantics/embeddings";
 import { readoutProfile, READOUT_AXES, type ReadoutAxis } from "../engine/semantics/readoutAxes";
+import { morphemeBreakdown } from "../engine/semantics/morphemeSpaceLoader";
 
 /**
  * DictionaryView.tsx
@@ -207,7 +208,8 @@ function SemanticProfile({
       .sort((a, b) => b.s - a.s)
       .slice(0, 8);
     const axes = readoutProfile(meaning);
-    return { nearest, axes };
+    const breakdown = morphemeBreakdown(meaning);
+    return { nearest, axes, breakdown };
   }, [lang, meaning]);
 
   const selfForm = lexGet(lang, meaning);
@@ -242,6 +244,22 @@ function SemanticProfile({
           ✕
         </button>
       </div>
+
+      {data.breakdown && (
+        <div className="row-8 items-center fs-1" style={{ marginTop: 8, flexWrap: "wrap" }}>
+          <span className="label-line">morphemes</span>
+          {data.breakdown.map((p, i) => {
+            const pf = lexGet(lang, p);
+            return (
+              <span key={`${p}-${i}`} className="row-4 items-center">
+                {i > 0 && <span className="t-muted">+</span>}
+                <span>{prettyGloss(p)}</span>
+                {pf && <span className="mono t-muted">{formatForm(pf, lang, script, p)}</span>}
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       <div
         style={{
