@@ -8,6 +8,10 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 - **Architecture:** `ARCHITECTURE.md` (subsystem / data-flow map) + `docs/ARCHITECTURE.md` (dependency layers, data model, conventions).
 - **Historical planning docs** (superseded designs, kept for rationale): `docs/planning/archive/`.
 
+## 0. Use your skills
+
+When in doubt, **check for an applicable skill and use it** — don't improvise a process a skill already encodes. In particular: `superpowers:brainstorming` (turn an idea into an approved design *before* coding), `superpowers:writing-plans` (break a design into bite-sized task plans), `superpowers:subagent-driven-development` (execute a plan task-by-task via fresh subagents with two-stage review), `superpowers:dispatching-parallel-agents` (fan out independent work). Default to **subagent-driven execution** for plan work (saved preference). Invoke the skill at the start of the matching activity, not after you've already winged it.
+
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
