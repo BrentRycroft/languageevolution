@@ -17,9 +17,15 @@ own spec → plan → implementation cycle.
   whale=fish+bird). Deliberate gen-30 re-baseline (all six presets); fast suite green. B2 folded
   (existing cascade), B3 (vector-density necessity) deferred; keyless-point coinage deferred to a
   future lexeme-entity flip.
-- **Track D — NEXT** (sound-change recalibration + D-prosody): remove phoneme-target homeostasis,
-  calibrate rates (~25 yr/step), full stress/prosody model (roots resist / affixes erode), and fix
-  the parked `frequency_direction` RUN_SLOW red. The last overhaul track before E (exploratory).
+- **ACTIVE PRIORITY (2026-06-05, user directive) — VECTOR-NATIVE LEXICON FLIP**
+  (`VECTOR-NATIVE-LEXICON-FLIP-PLAN.md`): de-concept-key the lexicon — words become points, English
+  concepts become a fixed labeled-dimensional anchor set, glosses emergent, concept knowledge
+  re-expressed dimensionally. This is the foundational Track-A flip that was deferred; the user has
+  now prioritised it over Track D. Execute Waves 0→4 subagent-driven (see that plan's §9). Supersedes
+  the track ordering below until done.
+- **Track D** (sound-change recalibration + D-prosody): remove phoneme-target homeostasis, calibrate
+  rates (~25 yr/step), full stress/prosody model (roots resist / affixes erode), fix the parked
+  `frequency_direction` RUN_SLOW red. After the flip.
 - Track E — not started.
 
 Supersedes nothing; extends the meaning-model work locked in the MEGA overhaul
