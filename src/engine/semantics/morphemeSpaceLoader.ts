@@ -27,3 +27,17 @@ export function loadMorphemeSpace(): LoadedMorphemeSpace {
   );
   return { morphemes, wordPoints };
 }
+
+let WORD_PARTS: Map<string, readonly string[]> | null = null;
+
+/**
+ * The ordered morpheme part-ids for a decomposed word, or null if it has no recorded
+ * decomposition. e.g. "behind" → ["hind", "be-"], "daylight" → ["day", "light"], "water" → null.
+ * Lazily indexes the baked words once. Used by the Dictionary to show a word's composition.
+ */
+export function morphemeBreakdown(meaning: string): readonly string[] | null {
+  if (WORD_PARTS === null) {
+    WORD_PARTS = new Map(MORPHEME_SPACE.words.map((w) => [w.meaning, w.parts]));
+  }
+  return WORD_PARTS.get(meaning) ?? null;
+}
