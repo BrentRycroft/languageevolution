@@ -51,6 +51,11 @@ const TABOO_REFERENTS: ReadonlySet<Meaning> = new Set<Meaning>([
   "father-in-law",
 ]);
 
+/** Returns true if `meaning` is a culturally-dangerous referent subject to taboo replacement. */
+export function isTabooReferent(meaning: Meaning): boolean {
+  return TABOO_REFERENTS.has(meaning);
+}
+
 export function maybeTabooReplace(
   lang: Language,
   rng: Rng,
