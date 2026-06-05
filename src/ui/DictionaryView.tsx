@@ -12,7 +12,7 @@ import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
 import { cosineFixed } from "../engine/semantics/vec";
 import { meaningPointFor } from "../engine/semantics/meaningPoint";
 import { readoutProfile, READOUT_AXES, type ReadoutAxis } from "../engine/semantics/readoutAxes";
-import { morphemeBreakdown } from "../engine/semantics/morphemeSpaceLoader";
+import { wordMorphemes } from "../engine/semantics/languageMorphemes";
 import { homonymsOf } from "../engine/semantics/homonyms";
 
 /**
@@ -210,7 +210,7 @@ function SemanticProfile({
       .sort((a, b) => b.s - a.s)
       .slice(0, 8);
     const axes = readoutProfile(meaning);
-    const breakdown = morphemeBreakdown(meaning);
+    const breakdown = wordMorphemes(lang, meaning)?.map((m) => m.id) ?? null;
     const homonyms = homonymsOf(lang, meaning);
     const drifted = !!lang.meaningPoints?.[meaning];
     return { nearest, axes, breakdown, homonyms, drifted };
