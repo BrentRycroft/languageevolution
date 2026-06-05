@@ -317,6 +317,22 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       addDerivation(rootLang, meaning, def.base, def.affix, 0, { position: def.position });
     }
   }
+  // Track C (preset morphemization): preset-declared ETYMOLOGIES — a previously-atomic word's
+  // morphological ancestry, recorded in an engine-INERT field (lang.etymology) that ONLY the
+  // Dictionary / Track B composition accessors read. Nothing in sim.step consumes it, so it is
+  // determinism-neutral — unlike lang.compounds, whose "has recorded parts" status changes
+  // derivation / taboo / obsolescence / neighbour-bootstrap behaviour and would re-baseline the
+  // preset. The word and all parts must be in seedLexicon; skipped when the meaning already has a
+  // real compound/derivation (recordedParts wins in wordMorphemes).
+  if (config.seedEtymologies) {
+    for (const [meaning, def] of Object.entries(config.seedEtymologies)) {
+      if (rootLang.compounds?.[meaning]) continue; // a real compound/derivation takes precedence
+      if (!lexHas(rootLang, meaning)) continue; // need an existing word to attribute ancestry to
+      if (!def.parts.every((p) => lexHas(rootLang, p))) continue; // parts must be lexicalised
+      if (!rootLang.etymology) rootLang.etymology = {};
+      rootLang.etymology[meaning] = def.parts.slice();
+    }
+  }
   // Phase 36 Tranche 36f: register bound morphemes so they're
   // skipped in standalone-form contexts but still flow through
   // phonological evolution.

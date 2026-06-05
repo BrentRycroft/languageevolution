@@ -55,9 +55,14 @@ export function languageMorphemes(lang: Language): Morpheme[] {
   return out;
 }
 
-/** A word's ordered morpheme composition (live forms + points), or null if monomorphemic. */
+/**
+ * A word's ordered morpheme composition (live forms + points), or null if monomorphemic.
+ * Prefers the live `compounds`/derivation structure (recordedParts); falls back to the engine-inert
+ * `lang.etymology` ancestry (Track C seedEtymologies) for words whose synchronic form isn't a live
+ * composition.
+ */
 export function wordMorphemes(lang: Language, meaning: Meaning): Morpheme[] | null {
-  const parts = recordedParts(lang, meaning);
+  const parts = recordedParts(lang, meaning) ?? lang.etymology?.[meaning] ?? null;
   if (!parts || parts.length === 0) return null;
   const bound = boundSet(lang);
   const out: Morpheme[] = [];
