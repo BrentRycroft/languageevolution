@@ -32,6 +32,16 @@ export const ANCHORS: readonly Anchor[] = CONCEPT_IDS.map((concept) => ({
   point: fromFloats(embed(concept)),
 }));
 
+/**
+ * The EMERGENT GLOSS of a point: the concept of its nearest anchor. A lexeme's English label is not
+ * stored — it is read off the coordinate frame here, so a word that drifts into a new region
+ * re-labels automatically (D-gloss). This is a pure read-time function; it draws no RNG and is never
+ * stored as state (determinism footgun §5).
+ */
+export function glossOf(point: Vec): Meaning {
+  return nearestAnchor(point).concept;
+}
+
 /** The single anchor whose point is closest to `point` (integer-exact, id tie-break). */
 export function nearestAnchor(point: Vec): Anchor {
   let best = ANCHORS[0]!;

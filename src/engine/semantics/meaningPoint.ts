@@ -10,6 +10,7 @@
 import type { Language, Meaning } from "../types";
 import { type Vec, fromFloats, sumVecs, subVecs, roundDivVec } from "./vec";
 import { embed } from "./embeddings";
+import { glossOf } from "./anchors";
 import { loadMorphemeSpace } from "./morphemeSpaceLoader";
 
 let WORD_POINTS: Map<string, Vec> | null = null;
@@ -42,6 +43,17 @@ export function sensePoint(sense: WordSense): Vec {
 /** This sense's breadth (region radius); DEFAULT_SPREAD until broaden/narrow moves it. */
 export function senseSpread(sense: WordSense): number {
   return sense.spread ?? DEFAULT_SPREAD;
+}
+
+/**
+ * This sense's EMERGENT GLOSS — the concept of the anchor nearest its current point. The point is
+ * the identity (vector-native flip, Wave 1); the English label is derived, not stored, so a sense
+ * that glides into a new region re-labels. At seed time (no glide) a sense sits at its meaning's
+ * `lexPoint`, so the emergent gloss equals the authored meaning for all but the few concepts whose
+ * baked composition or quantized anchor is nearest a different anchor.
+ */
+export function senseGloss(sense: WordSense): Meaning {
+  return glossOf(sensePoint(sense));
 }
 
 /** Fraction of the way a glide moves toward the target: 1/GLIDE_DENOM per metaphor/metonymy. */
