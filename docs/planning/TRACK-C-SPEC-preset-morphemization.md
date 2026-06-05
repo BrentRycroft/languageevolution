@@ -135,19 +135,29 @@ Morpheme[] {id, form(live), point, type}
 - **Verify (controller, myself):** `npx tsc --noEmit`; `npx vitest run --dir src` semantics + UI
   morpheme tests green; `meaning_layer_baseline.test.ts` unchanged (firewall).
 
-### Plans C1–C6 — Enrich one preset each  *(AGENT-DELEGABLE, one agent per preset, run SERIALLY)*
+> **Determinism finding (2026-06-05, plan 0b):** enrichment must NOT route through
+> `seedCompounds`/`seedDerivations`. A word's "has recorded parts" status (`lang.compounds`)
+> changes ~7 simulation subsystems (derivation eligibility, taboo, obsolescence, reanalysis,
+> neighbour + frequency bootstrap, coinage), which shifts the RNG stream and **re-baselines the
+> preset** (verified empirically — one recorded decomposition diverged all forms over 25 gens).
+> Enrichment instead uses the new **`seedEtymologies`** config field → the engine-INERT
+> `lang.etymology` (read only by `wordMorphemes`), which is **determinism-neutral by construction**.
+
+### Plans C1–C6 — Enrich one preset each  *(AGENT-DELEGABLE, one agent per preset, parallel-safe)*
 Presets: **english, pie, germanic, romance, bantu, tokipona.** Each agent:
-1. Adds etymologically-faithful `seedCompounds`/`seedDerivations` over the shared concept keys,
-   using the language's real morphology, **with a cited rationale comment** (as existing entries do).
-   English + Toki Pona are already rich → mostly verify. Target ~8–20 decompositions per preset; do
-   **not** force-decompose genuinely monomorphemic roots.
-2. Verifies for that preset: every new compound births legally (`addCompound` recomposes from live
-   parts; recomposed form passes the preset's phonotactic profile); `wordMorphemes` returns the
-   intended parts; existing preset tests stay green; the meaning-layer baseline is unchanged.
+1. Adds etymologically-faithful entries to that preset's **`seedEtymologies`** (`{ word: { parts:
+   [...] } }`) over the shared concept keys, using the language's real morphology, **with a cited
+   rationale comment**. Both the word and every part must be in the preset's `seedLexicon`. English +
+   Toki Pona are already rich in `seedCompounds` → lighter. Target ~8–20 etymologies per preset; do
+   **not** force-decompose genuinely monomorphemic roots, and skip words that already have a real
+   `seedCompounds`/`seedDerivations` entry (`recordedParts` wins in `wordMorphemes`).
+2. Verifies for that preset: `wordMorphemes(rootLang, word)` returns the intended ordered parts;
+   the bare preset still builds + its existing tests stay green; the determinism firewall holds
+   (guaranteed by the inert-field mechanism — no per-preset re-bake needed).
 3. Stays within preset `seedConfig` — no engine logic, no `lexPoint` change, no baked data.
 
-> Run serially (one agent at a time): each edits its own preset file, but the verification + the
-> single shared determinism baseline must not race. Subagent-driven dispatch is serial anyway.
+> Parallel-safe: each agent edits only its own preset file, and `seedEtymologies` is
+> determinism-neutral, so there is no shared baseline to race (independent domains).
 
 ### Plan C-final — Cross-preset verification + Dictionary polish  *(serial)*
 - Cross-preset test: all six presets build a morpheme inventory; every recorded decomposition
