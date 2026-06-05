@@ -55,6 +55,11 @@ export function cloneLanguage(lang: Language): Language {
     morphology: cloneMorphology(lang.morphology),
     events: lang.events.map((e) => ({ ...e })),
     wordFrequencyHints: { ...lang.wordFrequencyHints },
+    meaningPoints: lang.meaningPoints
+      ? Object.fromEntries(
+          Object.entries(lang.meaningPoints).map(([k, v]) => [k, v.slice()]),
+        )
+      : undefined,
     phonemeInventory: {
       segmental: lang.phonemeInventory.segmental.slice(),
       tones: lang.phonemeInventory.tones.slice(),

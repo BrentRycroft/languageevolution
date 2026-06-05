@@ -155,6 +155,17 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     purgeOnDelete: true,
     description: "Phase 72d concept UUID anchors per meaning",
   },
+  // Track A plan 7: glided meaning positions (number[] per meaning).
+  // Deep-clone-entries so daughters get independent copies of each
+  // position array (they diverge from the same ancestor point once
+  // they drift independently). Purged on meaning delete so stale
+  // glided positions don't accumulate for retired meanings.
+  {
+    key: "meaningPoints",
+    inherit: "deep-clone-entries",
+    purgeOnDelete: true,
+    description: "Track A plan 7 glided meaning positions (plan 7)",
+  },
 ];
 
 /**

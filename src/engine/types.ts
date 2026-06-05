@@ -300,6 +300,13 @@ export interface Language {
   grammar: GrammarFeatures;
   events: LanguageEvent[];
   wordFrequencyHints: Record<Meaning, number>;
+  /**
+   * Track A plan 7: sparse glided meaning positions (fixed-point ints as number[] for
+   * clone/JSON-persist). A meaning absent here sits at its static `lexPoint`; drift's
+   * metaphor/metonymy shifts nudge an entry toward the target (glideMeaningPoint). Read via
+   * `meaningPointFor`. Survives the word-resync (it is never rebuilt from the lexicon).
+   */
+  meaningPoints?: Record<Meaning, number[]>;
   phonemeInventory: PhonemeInventory;
   inventoryProvenance?: Record<string, {
     source: "native" | "areal" | "internal-rule" | "founder-addition";
