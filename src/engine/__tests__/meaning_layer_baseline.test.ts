@@ -276,6 +276,11 @@ const GEN0: Record<string, string> = {
 // English decomposed words don't drift as sources in that window), so no argmax flips and the
 // hashes below are unchanged. The flip will start to matter once points become mutable (Plan 5)
 // or more words decompose (Track C). Reproducibility preserved (re-run confirmed).
+// Track A plan 7 (drift glides meaning points) — also NO re-baseline at gen-30. classifyShift
+// now reads meaningPointFor (a meaning's possibly-glided point) and a kept metaphor/metonymy
+// shift glides the source 1/8 toward the target. No kept metaphor/metonymy shift occurs inside
+// any preset's 30-gen window, so the hashes are byte-identical — but the glide IS reachable
+// over longer runs (probe: 33 glides across 13 nodes by gen 150). Reproducibility preserved.
 const GENN: Record<string, string> = {
   pie: "7994bc5a",
   bantu: "b57da5ea",
