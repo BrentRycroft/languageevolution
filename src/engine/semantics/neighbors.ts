@@ -1,10 +1,13 @@
 /**
  * neighbors.ts
  *
- * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: SEMANTIC_NEIGHBORS, neighborsOf.
+ * Semantic drift, recarving (split / merge), bleaching, colexification, neighbour relations. Key exports: SEMANTIC_NEIGHBORS, neighborsOf, geometricNeighbors.
  *
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
+
+import { lexPoint } from "./meaningPoint";
+import { glossOf, kNearestAnchors } from "./anchors";
 
 export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   hand: ["arm", "finger", "palm"],
@@ -746,4 +749,22 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
 
 export function neighborsOf(meaning: string): string[] {
   return SEMANTIC_NEIGHBORS[meaning] ?? [];
+}
+
+/**
+ * Vector-native neighbours (flip Wave 2b, ADDITIVE): the `k` anchor concepts geometrically nearest a
+ * meaning's point, excluding the meaning itself. The emergent, distributional counterpart of the
+ * hand-curated `SEMANTIC_NEIGHBORS` association table — `neighborsOf` lists deliberate associations
+ * (hand→arm/finger/palm), this reads them off the GloVe geometry. Pure + deterministic (integer-exact
+ * `kNearestAnchors`). NOT yet wired into the drift/colexification consumers: the curated table and the
+ * geometry diverge (the table is association-based, the geometry distributional), so the live-switch
+ * is a deliberate, realism-gated re-baseline (see flip plan Wave 2). Built additively so the switch is
+ * low-surprise.
+ */
+export function geometricNeighbors(meaning: string, k = 3): string[] {
+  const self = glossOf(lexPoint(meaning));
+  return kNearestAnchors(lexPoint(meaning), k + 1)
+    .map((a) => a.concept)
+    .filter((c) => c !== meaning && c !== self)
+    .slice(0, k);
 }
