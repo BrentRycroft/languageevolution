@@ -283,20 +283,23 @@ const GEN0: Record<string, string> = {
 // over longer runs (probe: 33 glides across 13 nodes by gen 150). Reproducibility preserved.
 // GENN re-baselined 2026-06-05 (TRACK B — gap-driven vector-composition coinage). A new genesis
 // mechanism (MECHANISM_VECTOR_COMPOSITION) coins a word for a needed concept by compounding the two
-// morphemes whose MEANING POINTS are most related to it (composeForGap — whale→fish+bird, the
-// long-tail generalisation of the curated-decomposition compound path). All six presets shift at
-// gen-30 — the mechanism fires within 30 gens for every preset (real, not inert). GEN0 unchanged
-// (no coinage at gen 0). The full FAST suite (1924 tests) stayed green — realism scorecard,
-// divergence_regression, narrative snapshots, and simulation-determinism (reproducibility) all
-// pass — so this is an approved milestone re-baseline (gate = realism, not byte-identity).
-// Reproducibility-determinism preserved (same config → identical output; re-run confirmed).
+// morphemes whose MEANING POINTS are most related to it (composeForGap — whale→fish+bird, lion→
+// bear+cat, island→lake+sea — the long-tail generalisation of the curated-decomposition compound
+// path). Parts are restricted to real distributional concepts (hasEmbedding: excludes grammatical /
+// derived keys + compounds) and a 0.45 cosine relatedness floor, so noisy abstracts (affection,
+// anger) decline to null and fall to other mechanisms instead of producing junk compounds. All six
+// presets shift at gen-30 — the mechanism fires within 30 gens for every preset (real, not inert).
+// GEN0 unchanged (no coinage at gen 0). The full FAST suite (1924 tests) stayed green — realism
+// scorecard, divergence_regression, narrative snapshots, and simulation-determinism (reproducibility)
+// all pass — approved milestone re-baseline (gate = realism, not byte-identity). Reproducibility
+// preserved (same config → identical output; re-run confirmed).
 const GENN: Record<string, string> = {
-  pie: "bfbd1ab2",
-  bantu: "eee8cdbb",
-  romance: "904f6f15",
-  germanic: "bbd35119",
-  tokipona: "e8a5c64f",
-  english: "423f8c3c",
+  pie: "90514acc",
+  bantu: "082184a5",
+  romance: "73b99e67",
+  germanic: "c5d49c8a",
+  tokipona: "371ae44c",
+  english: "33b815a1",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

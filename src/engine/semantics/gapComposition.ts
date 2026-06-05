@@ -20,7 +20,7 @@ import { hasEmbedding } from "./embeddings";
 import { langPhonotacticScore } from "../phonology/phonotactics";
 
 /** A part must be at least this cosine-related to the target to be a compounding constituent. */
-export const GAP_RELATEDNESS_COS = 0.4;
+export const GAP_RELATEDNESS_COS = 0.45;
 /** Reject a composed form longer than this (a coinage shouldn't be a tongue-twister). */
 export const GAP_MAX_FORM_LEN = 10;
 /** Phonotactic floor a composed form must clear (mirrors the compound mechanism's gate). */
@@ -42,7 +42,10 @@ export function composeForGap(lang: Language, meaning: Meaning): GapComposition 
   if (!hasEmbedding(meaning)) return null;
   const target = meaningPointFor(lang, meaning);
   const ranked = languageMorphemes(lang)
-    .filter((m) => m.type === "root" && m.id !== meaning)
+    // Compose only from real, simple-concept roots: `hasEmbedding` excludes grammatical / derived
+    // keys (EXIST.imp, against-dis-) and compound words (firewood) — none have a direct GloVe
+    // point — so a coinage is built from genuine lexical concepts, not affixes or other compounds.
+    .filter((m) => m.type === "root" && m.id !== meaning && hasEmbedding(m.id))
     .map((m) => ({ id: m.id, form: m.form, cos: cosineFixed(target, m.point) }))
     .filter((x) => x.cos >= GAP_RELATEDNESS_COS)
     .sort((a, b) => b.cos - a.cos || (a.id < b.id ? -1 : 1));
