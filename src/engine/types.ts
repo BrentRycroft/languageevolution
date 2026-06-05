@@ -1019,6 +1019,14 @@ export interface WordSense {
    * and `selectSynonyms`.
    */
   synonym?: boolean;
+  /**
+   * Track A: this sense's own position in the meaning space (fixed-point ints, as a plain
+   * number[] for clone/JSON-persist friendliness). Absent until the sense GLIDES (Plan 7);
+   * read via `sensePoint`, which falls back to the meaning's static `lexPoint`.
+   */
+  point?: number[];
+  /** Track A: this sense's breadth (region radius). Absent = DEFAULT_SPREAD. Broaden/narrow drift moves it (Plan 7). */
+  spread?: number;
 }
 
 /**

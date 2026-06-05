@@ -28,3 +28,18 @@ export function lexPoint(meaning: Meaning): Vec {
   cache.set(meaning, point);
   return point;
 }
+
+import type { WordSense } from "../types";
+
+/** Default breadth for a sense that hasn't broadened/narrowed yet. Tunable. */
+export const DEFAULT_SPREAD = 1;
+
+/** This sense's point — its own glided position if set, else the meaning's static default. */
+export function sensePoint(sense: WordSense): Vec {
+  return sense.point ? Int32Array.from(sense.point) : lexPoint(sense.meaning);
+}
+
+/** This sense's breadth (region radius); DEFAULT_SPREAD until broaden/narrow moves it. */
+export function senseSpread(sense: WordSense): number {
+  return sense.spread ?? DEFAULT_SPREAD;
+}
