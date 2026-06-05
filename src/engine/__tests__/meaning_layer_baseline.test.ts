@@ -281,13 +281,25 @@ const GEN0: Record<string, string> = {
 // shift glides the source 1/8 toward the target. No kept metaphor/metonymy shift occurs inside
 // any preset's 30-gen window, so the hashes are byte-identical — but the glide IS reachable
 // over longer runs (probe: 33 glides across 13 nodes by gen 150). Reproducibility preserved.
+// GENN re-baselined 2026-06-05 (TRACK B — gap-driven vector-composition coinage). A new genesis
+// mechanism (MECHANISM_VECTOR_COMPOSITION) coins a word for a needed concept by compounding the two
+// morphemes whose MEANING POINTS are most related to it (composeForGap — whale→fish+bird, lion→
+// bear+cat, island→lake+sea — the long-tail generalisation of the curated-decomposition compound
+// path). Parts are restricted to real distributional concepts (hasEmbedding: excludes grammatical /
+// derived keys + compounds) and a 0.45 cosine relatedness floor, so noisy abstracts (affection,
+// anger) decline to null and fall to other mechanisms instead of producing junk compounds. All six
+// presets shift at gen-30 — the mechanism fires within 30 gens for every preset (real, not inert).
+// GEN0 unchanged (no coinage at gen 0). The full FAST suite (1924 tests) stayed green — realism
+// scorecard, divergence_regression, narrative snapshots, and simulation-determinism (reproducibility)
+// all pass — approved milestone re-baseline (gate = realism, not byte-identity). Reproducibility
+// preserved (same config → identical output; re-run confirmed).
 const GENN: Record<string, string> = {
-  pie: "7994bc5a",
-  bantu: "b57da5ea",
-  romance: "69befd8d",
-  germanic: "74cecf10",
-  tokipona: "3377db8f",
-  english: "7423ad6d",
+  pie: "90514acc",
+  bantu: "082184a5",
+  romance: "73b99e67",
+  germanic: "c5d49c8a",
+  tokipona: "371ae44c",
+  english: "33b815a1",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

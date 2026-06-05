@@ -18,9 +18,13 @@ import { MECHANISM_BLENDING } from "./blending";
 import { MECHANISM_IDEOPHONE } from "./ideophone";
 import { MECHANISM_CONVERSION } from "./conversion";
 import { MECHANISM_TEMPLATE } from "./template";
+import { MECHANISM_VECTOR_COMPOSITION } from "./vectorComposition";
 
 export const MECHANISMS: readonly CoinageMechanism[] = [
   MECHANISM_COMPOUND,
+  // Track B: vector-composition (nearest-meaning compound) — the long-tail generalisation of
+  // the curated compound path. Coins kennings for concepts the curated decomposition can't reach.
+  MECHANISM_VECTOR_COMPOSITION,
   MECHANISM_DERIVATION,
   MECHANISM_REDUPLICATION,
   MECHANISM_CALQUE,

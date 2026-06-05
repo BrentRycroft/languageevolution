@@ -12,8 +12,15 @@ own spec → plan → implementation cycle.
   determinism-neutral `seedEtymologies` field. **Ran before B** (B's coiner needs per-preset
   morphemes-with-forms). Key finding: morphological-structure enrichment can't route through
   `lang.compounds` without re-baselining a preset; use the engine-inert `lang.etymology`.
-- **Track B — NEXT** (gap-driven compositional generation): consumes `languageMorphemes(lang)`.
-- Tracks D, E — not started.
+- **Track B — DONE** (`TRACK-B-SPEC-gap-driven-generation.md`): `MECHANISM_VECTOR_COMPOSITION` coins
+  words by compounding the two morphemes most related to a concept's point (composeForGap —
+  whale=fish+bird). Deliberate gen-30 re-baseline (all six presets); fast suite green. B2 folded
+  (existing cascade), B3 (vector-density necessity) deferred; keyless-point coinage deferred to a
+  future lexeme-entity flip.
+- **Track D — NEXT** (sound-change recalibration + D-prosody): remove phoneme-target homeostasis,
+  calibrate rates (~25 yr/step), full stress/prosody model (roots resist / affixes erode), and fix
+  the parked `frequency_direction` RUN_SLOW red. The last overhaul track before E (exploratory).
+- Track E — not started.
 
 Supersedes nothing; extends the meaning-model work locked in the MEGA overhaul
 (`docs/planning/MEGA-OVERHAUL-2026-06.md`, continuous semantic space + hybrid readout-axes).

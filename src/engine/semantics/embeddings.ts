@@ -56,6 +56,15 @@ function composeFrom(parts: readonly string[]): number[] | null {
   return v;
 }
 
+/**
+ * Whether a meaning has a REAL distributional embedding (a GloVe-table entry) rather than the
+ * deterministic hash fallback. Track B's vector-composition only fires for meanings with a real
+ * point — a hash-vector point yields meaningless "nearest" morphemes.
+ */
+export function hasEmbedding(meaning: Meaning): boolean {
+  return EMBED_TABLE[meaning] !== undefined;
+}
+
 export function embed(meaning: Meaning, lang?: Language): number[] {
   const direct = EMBED_TABLE[meaning];
   if (direct) return direct.slice();
