@@ -1,6 +1,5 @@
 import type { Meaning, Language } from "../types";
 import { isRegisteredConcept } from "../lexicon/concepts";
-import { lexKeys, lexGet } from "../lexicon/access";
 import { fnv1a } from "../rng";
 import { EMBED_DIM, EMBED_TABLE } from "./embeddingData";
 
@@ -85,43 +84,6 @@ export function cosine(a: number[], b: number[]): number {
   }
   if (na === 0 || nb === 0) return 0;
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
-}
-
-/**
- * Default cosine bar for treating one meaning as a usable stand-in for another. Tuned so
- * genuine near-synonyms / hyponyms ground (river≈water, glad≈happy) but loosely-associated
- * words do not — below it the translator coins a fresh form instead of substituting.
- */
-export const SEMANTIC_GROUNDING_THRESHOLD = 0.5;
-
-export interface GroundedMeaning {
-  meaning: Meaning;
-  similarity: number;
-}
-
-/**
- * Nearest-anchor grounding: the lexicalised meaning in `lang` whose embedding is closest
- * (cosine) to `meaning`, provided it clears `threshold`. Lets the translator reuse the
- * semantically nearest word a language ALREADY has rather than coining a novel form when a
- * concept is missing. Returns null when nothing is close enough. Read-only.
- */
-export function nearestLexicalisedMeaning(
-  lang: Language,
-  meaning: Meaning,
-  threshold: number = SEMANTIC_GROUNDING_THRESHOLD,
-): GroundedMeaning | null {
-  const target = embed(meaning, lang);
-  let best: GroundedMeaning | null = null;
-  for (const k of lexKeys(lang)) {
-    if (k === meaning) continue;
-    const f = lexGet(lang, k);
-    if (!f || f.length === 0) continue;
-    const s = cosine(target, embed(k, lang));
-    if (s >= threshold && (!best || s > best.similarity)) {
-      best = { meaning: k, similarity: s };
-    }
-  }
-  return best;
 }
 
 export function nearestMeanings(

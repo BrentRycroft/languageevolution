@@ -11,7 +11,7 @@ import {
   attemptClusterComposition,
 } from "./synthesis";
 import { lexGet, lexHas } from "./access";
-import { nearestLexicalisedMeaning } from "../semantics/embeddings";
+import { nearestLexicalisedMeaning } from "../semantics/grounding";
 
 /**
  * Phase 52 T1: lexicon-lookup abstraction layer.

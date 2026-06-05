@@ -4,7 +4,7 @@ import { neighborsOf } from "./neighbors";
 import { relatedMeanings, clusterOf } from "./clusters";
 import { nearestMeanings } from "./embeddings";
 import { cosineFixed } from "./vec";
-import { lexPoint } from "./meaningPoint";
+import { lexPoint, meaningPointFor, glideMeaningPoint } from "./meaningPoint";
 import { axisBias } from "./readoutAxes";
 import { areAntonyms } from "./antonyms";
 import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
@@ -101,7 +101,7 @@ export function classifyShift(
   to: string,
   rng?: { next: () => number },
   fromRegister?: "high" | "low",
-  _lang?: Language,
+  lang?: Language,
   // LANE-C: optional source frequency in [0,1]. When supplied, biases the
   // direction of generality-changing shifts (Traugott: high-frequency,
   // general words tend to BROADEN; rare, specific words NARROW) and seeds a
@@ -112,10 +112,12 @@ export function classifyShift(
 ): SemanticShiftKind {
   const cFrom = clusterOf(from);
   const cTo = clusterOf(to);
-  // MEGA overhaul (vector-space-native): drift navigates the COMPOSITIONAL meaning space —
-  // a decomposed word sits at its morpheme composition (lexPoint), not its holistic GloVe
-  // anchor. Distance is the fixed-point cosine so the decision is cross-platform exact.
-  const similarity = cosineFixed(lexPoint(from), lexPoint(to));
+  // Plan 7: distance from the meanings' CURRENT (possibly glided) points, not the static
+  // anchors — drift navigates the living space. No-lang callers (the unit test) keep the
+  // static lexPoint, so their behaviour is unchanged.
+  const similarity = lang
+    ? cosineFixed(meaningPointFor(lang, from), meaningPointFor(lang, to))
+    : cosineFixed(lexPoint(from), lexPoint(to));
   const sameCluster = cFrom && cTo && cFrom === cTo;
   const complexityDelta = complexityFor(to) - complexityFor(from);
 
@@ -336,6 +338,11 @@ export function driftOneMeaning(
         // so the UI / reconstruction can surface "concept m is colexified
         // with target in this language."
         recordColexification(lang, m, target);
+        // Plan 7: a kept metaphor/metonymy shift glides m's point toward the target —
+        // the word's meaning drifts toward the sense it colexified with.
+        if (kind === "metaphor" || kind === "metonymy") {
+          glideMeaningPoint(lang, m, target);
+        }
       }
       return {
         from: m,

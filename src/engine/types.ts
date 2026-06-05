@@ -300,6 +300,13 @@ export interface Language {
   grammar: GrammarFeatures;
   events: LanguageEvent[];
   wordFrequencyHints: Record<Meaning, number>;
+  /**
+   * Track A plan 7: sparse glided meaning positions (fixed-point ints as number[] for
+   * clone/JSON-persist). A meaning absent here sits at its static `lexPoint`; drift's
+   * metaphor/metonymy shifts nudge an entry toward the target (glideMeaningPoint). Read via
+   * `meaningPointFor`. Survives the word-resync (it is never rebuilt from the lexicon).
+   */
+  meaningPoints?: Record<Meaning, number[]>;
   phonemeInventory: PhonemeInventory;
   inventoryProvenance?: Record<string, {
     source: "native" | "areal" | "internal-rule" | "founder-addition";
@@ -1019,6 +1026,14 @@ export interface WordSense {
    * and `selectSynonyms`.
    */
   synonym?: boolean;
+  /**
+   * Track A: this sense's own position in the meaning space (fixed-point ints, as a plain
+   * number[] for clone/JSON-persist friendliness). Absent until the sense GLIDES (Plan 7);
+   * read via `sensePoint`, which falls back to the meaning's static `lexPoint`.
+   */
+  point?: number[];
+  /** Track A: this sense's breadth (region radius). Absent = DEFAULT_SPREAD. Broaden/narrow drift moves it (Plan 7). */
+  spread?: number;
 }
 
 /**

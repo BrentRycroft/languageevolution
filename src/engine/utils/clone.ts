@@ -55,6 +55,11 @@ export function cloneLanguage(lang: Language): Language {
     morphology: cloneMorphology(lang.morphology),
     events: lang.events.map((e) => ({ ...e })),
     wordFrequencyHints: { ...lang.wordFrequencyHints },
+    meaningPoints: lang.meaningPoints
+      ? Object.fromEntries(
+          Object.entries(lang.meaningPoints).map(([k, v]) => [k, v.slice()]),
+        )
+      : undefined,
     phonemeInventory: {
       segmental: lang.phonemeInventory.segmental.slice(),
       tones: lang.phonemeInventory.tones.slice(),
@@ -127,7 +132,10 @@ export function cloneLanguage(lang: Language): Language {
       ? lang.words.map((w) => ({
           form: w.form.slice(),
           formKey: w.formKey,
-          senses: w.senses.map((s) => ({ ...s })),
+          senses: w.senses.map((s) => ({
+            ...s,
+            point: s.point ? s.point.slice() : undefined,
+          })),
           primarySenseIndex: w.primarySenseIndex,
           bornGeneration: w.bornGeneration,
           origin: w.origin,

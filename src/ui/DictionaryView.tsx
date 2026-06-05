@@ -9,9 +9,11 @@ import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import type { Language, Meaning } from "../engine/types";
 import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
-import { embed, cosine } from "../engine/semantics/embeddings";
+import { cosineFixed } from "../engine/semantics/vec";
+import { meaningPointFor } from "../engine/semantics/meaningPoint";
 import { readoutProfile, READOUT_AXES, type ReadoutAxis } from "../engine/semantics/readoutAxes";
 import { morphemeBreakdown } from "../engine/semantics/morphemeSpaceLoader";
+import { homonymsOf } from "../engine/semantics/homonyms";
 
 /**
  * DictionaryView.tsx
@@ -200,16 +202,18 @@ function SemanticProfile({
   onClose: () => void;
 }) {
   const data = useMemo(() => {
-    const target = embed(meaning, lang);
+    const target = meaningPointFor(lang, meaning);
     const nearest = lexKeys(lang)
       .filter((k) => k !== meaning)
-      .map((k) => ({ m: k, s: cosine(target, embed(k, lang)) }))
+      .map((k) => ({ m: k, s: cosineFixed(target, meaningPointFor(lang, k)) }))
       .filter((x) => x.s > 0.2)
       .sort((a, b) => b.s - a.s)
       .slice(0, 8);
     const axes = readoutProfile(meaning);
     const breakdown = morphemeBreakdown(meaning);
-    return { nearest, axes, breakdown };
+    const homonyms = homonymsOf(lang, meaning);
+    const drifted = !!lang.meaningPoints?.[meaning];
+    return { nearest, axes, breakdown, homonyms, drifted };
   }, [lang, meaning]);
 
   const selfForm = lexGet(lang, meaning);
@@ -233,6 +237,14 @@ function SemanticProfile({
             </span>
           )}
           <span className="t-muted fs-1">semantic profile</span>
+          {data.drifted && (
+            <span
+              className="t-accent fs-1"
+              title="this meaning has drifted from its original position in the space"
+            >
+              drifted
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -255,6 +267,29 @@ function SemanticProfile({
                 {i > 0 && <span className="t-muted">+</span>}
                 <span>{prettyGloss(p)}</span>
                 {pf && <span className="mono t-muted">{formatForm(pf, lang, script, p)}</span>}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {data.homonyms.length > 0 && (
+        <div
+          className="row-8 items-center fs-1"
+          style={{ marginTop: 8, flexWrap: "wrap" }}
+        >
+          <span
+            className="label-line"
+            title="same form, distant meaning — distinct words that merely sound alike"
+          >
+            homonyms
+          </span>
+          {data.homonyms.map((h) => {
+            const hf = lexGet(lang, h);
+            return (
+              <span key={h} className="row-4 items-center">
+                <span>{prettyGloss(h)}</span>
+                {hf && <span className="mono t-muted">{formatForm(hf, lang, script, h)}</span>}
               </span>
             );
           })}
