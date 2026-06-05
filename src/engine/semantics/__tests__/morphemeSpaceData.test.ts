@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { MORPHEME_SPACE } from "../morphemeSpaceData";
 import { loadMorphemeSpace } from "../morphemeSpaceLoader";
+import { morphemeBreakdown } from "../morphemeSpaceLoader";
 import { embed } from "../embeddings";
 import { fromFloats, distanceSq, sumVecs } from "../vec";
 
@@ -26,5 +27,16 @@ describe("morphemeSpaceData — baked artifact", () => {
     expect(byId.get("be-")).toBe("prefix");
     expect(byId.get("-er.agt")).toBe("suffix");
     expect(byId.get("day")).toBe("root");
+  });
+});
+
+describe("morphemeSpaceLoader — morphemeBreakdown", () => {
+  it("returns the ordered parts for a decomposed word", () => {
+    expect(morphemeBreakdown("behind")).toEqual(["hind", "be-"]);
+    expect(morphemeBreakdown("daylight")).toEqual(["day", "light"]);
+  });
+  it("returns null for a non-decomposed word (a root or unseen meaning)", () => {
+    expect(morphemeBreakdown("water")).toBeNull();
+    expect(morphemeBreakdown("zzz-not-a-word")).toBeNull();
   });
 });
