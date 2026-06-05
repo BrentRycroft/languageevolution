@@ -1,13 +1,22 @@
 import { describe, it, expect } from "vitest";
-import { ANCHORS, nearestAnchor, anchorsWithin, kNearestAnchors } from "../anchors";
+import { ANCHORS, nearestAnchor, anchorsWithin, kNearestAnchors, glossOf } from "../anchors";
 import { fromFloats } from "../vec";
 import { embed } from "../embeddings";
 import { CONCEPT_IDS } from "../../lexicon/concepts";
+import { ANCHOR_EXTRA_TABLE } from "../anchorExtrasData";
 
 describe("anchors — the fixed English-concept coordinate system", () => {
-  it("has exactly one anchor per registered concept, in sorted (deterministic) order", () => {
-    expect(ANCHORS.length).toBe(CONCEPT_IDS.length);
-    expect(ANCHORS.map((a) => a.concept)).toEqual([...CONCEPT_IDS]);
+  it("covers every registered concept plus the anchor-coverage extras (deterministic)", () => {
+    expect(ANCHORS.length).toBe(CONCEPT_IDS.length + Object.keys(ANCHOR_EXTRA_TABLE).length);
+    const set = new Set(ANCHORS.map((a) => a.concept));
+    for (const c of CONCEPT_IDS) expect(set.has(c)).toBe(true);
+  });
+
+  it("the anchor-coverage extras give basic content words real anchors (no longer hash noise)", () => {
+    // house/body/door were orphans glossing to noise; now they anchor to themselves.
+    for (const w of ["house", "body", "door", "person", "time"] as const) {
+      expect(glossOf(fromFloats(embed(w)))).toBe(w);
+    }
   });
 
   it("each anchor's point is the concept's quantized GloVe anchor (EMBED_TABLE/hash)", () => {

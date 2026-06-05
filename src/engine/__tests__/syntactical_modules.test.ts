@@ -82,7 +82,11 @@ describe("Phase 43e — syntactical modules", () => {
     for (let i = 0; i < 30; i++) sim.step();
     const root = sim.getState().tree[sim.getState().rootId]!.language;
     expect(root.activeModules).toBeDefined();
-    expect(root.activeModules!.has("syntactical:wordOrder/svo")).toBe(true);
+    // A wordOrder module stays active, but its VALUE may legitimately drift over 30 gens — a
+    // word-order-change event swaps svo for another wordOrder/* module (grammar.ts deactivates the
+    // old, activates the new). Assert the CATEGORY persists, not the specific seeded value, so the
+    // no-crash/modules-active intent survives emergent typological drift.
+    expect([...root.activeModules!].some((id) => id.startsWith("syntactical:wordOrder/"))).toBe(true);
     expect(root.activeModules!.has("syntactical:alignment/nom-acc")).toBe(true);
   });
 

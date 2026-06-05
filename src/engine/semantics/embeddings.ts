@@ -2,6 +2,7 @@ import type { Meaning, Language } from "../types";
 import { isRegisteredConcept } from "../lexicon/concepts";
 import { fnv1a } from "../rng";
 import { EMBED_DIM, EMBED_TABLE } from "./embeddingData";
+import { ANCHOR_EXTRA_TABLE } from "./anchorExtrasData";
 
 /**
  * embeddings.ts
@@ -62,11 +63,14 @@ function composeFrom(parts: readonly string[]): number[] | null {
  * point — a hash-vector point yields meaningless "nearest" morphemes.
  */
 export function hasEmbedding(meaning: Meaning): boolean {
-  return EMBED_TABLE[meaning] !== undefined;
+  return EMBED_TABLE[meaning] !== undefined || ANCHOR_EXTRA_TABLE[meaning] !== undefined;
 }
 
 export function embed(meaning: Meaning, lang?: Language): number[] {
-  const direct = EMBED_TABLE[meaning];
+  // Curated registry vector first, then the anchor-coverage extras (basic content words the
+  // registry never covered — house/body/door/…): both are real GloVe points, so a word in either
+  // gets a meaningful position instead of the hash fallback.
+  const direct = EMBED_TABLE[meaning] ?? ANCHOR_EXTRA_TABLE[meaning];
   if (direct) return direct.slice();
   // Prefer the RECORDED decomposition (compound / derivation parts) over the gloss.
   const recorded = lang?.compounds?.[meaning]?.parts;

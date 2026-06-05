@@ -293,13 +293,22 @@ const GEN0: Record<string, string> = {
 // scorecard, divergence_regression, narrative snapshots, and simulation-determinism (reproducibility)
 // all pass — approved milestone re-baseline (gate = realism, not byte-identity). Reproducibility
 // preserved (same config → identical output; re-run confirmed).
+// RE-BAKED 2026-06-05 (vector-native lexicon flip — anchor-coverage extension). 179 basic content
+// words the curated registry never covered (house/body/door/person/time/ocean/…) gained real GloVe
+// anchors (anchorExtrasData.ts), so their meaning POINTS moved from the hash fallback to real
+// distributional positions. This shifts the drift/coinage trajectory for every preset that evolves
+// those words → all six gen-30 signatures move. GEN0 unchanged (the gen-0 table above still passes —
+// seed forms are byte-identical; only the evolution trajectory diverges). Deliberate re-baseline:
+// byte-identity-vs-old-baseline was explicitly waived by the user; reproducibility (same config →
+// identical output) is preserved (captured twice, identical). Realism scorecard is diagnostic-only
+// per the user's direction, not a gate.
 const GENN: Record<string, string> = {
-  pie: "90514acc",
-  bantu: "082184a5",
-  romance: "73b99e67",
-  germanic: "c5d49c8a",
-  tokipona: "371ae44c",
-  english: "33b815a1",
+  pie: "99f0a4c9",
+  bantu: "b305d8f7",
+  romance: "7671a8d1",
+  germanic: "04a3793c",
+  tokipona: "d3d4e1c8",
+  english: "eef1ece3",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

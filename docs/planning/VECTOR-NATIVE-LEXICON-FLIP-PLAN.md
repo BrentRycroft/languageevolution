@@ -38,6 +38,34 @@ subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migra
 > authored key). The waves proceed on the hybrid either way; (A) only *raises coverage* and is a clean
 > drop-in later. Recommend **(A) for content words**, since the purity goal needs `house`/`body`/`door`
 > to have anchors — but it is the user's call and is logged here rather than silently chosen.
+>
+> **USER DECISION (2026-06-05):** **(A) Extend embeddings** + **FULL switch**. Register the orphan
+> *content* words (226 found across the 6 presets; ~150 genuine common words after excluding
+> pronouns/adverbs + preset-internal compound keys) and regenerate `embeddingData.ts` from GloVe-50 so
+> they get real anchors; closed-class function words stay unanchored (grammatical identity). The Wave 2+
+> live-switches are **FULL** — consumers switch to pure geometry; the **realism scorecard is diagnostic
+> only, NOT a gate** (noise accepted, old system archived/reversible). Sequencing: extend coverage FIRST
+> (so geometry runs on good coverage, not hash points), then the full switch, then Wave 3/4.
+>
+> **Implementation (2026-06-05, byte-identity explicitly waived by user):** chose the LOW-RISK
+> realization — `scripts/build-anchor-extras.ts` emits `anchorExtrasData.ts` (179 basic content words,
+> real GloVe-50 vectors) as **anchor extras**, NOT registry concepts. `embed`/`hasEmbedding` fall back
+> to them (the words get real points) and `ANCHORS` includes them (they become anchor targets), but the
+> sim's coinable `CONCEPTS` pool is untouched — so tiering/frequency/capacity tests don't break; only
+> the affected words' meaning POINTS change (a contained GENN re-baseline). `house`/`body`/`door`/
+> `person`/`time` now anchor to themselves. (Registering them as full sim concepts is a possible future
+> step if coinability is wanted.)
+>
+> **Re-baseline impact (2026-06-05):** FAST suite stayed green except 2 expectation updates —
+> `translator_polish` ("angry" now GROUNDS via colexification instead of coin/quote: an improvement)
+> and `syntactical_modules` (a seeded word-order module legitimately drifted over 30 gens → assert the
+> wordOrder CATEGORY, not the specific value). RUN_SLOW: all 6 GENN gen-30 hashes re-baked (GEN0
+> byte-identical); realism scorecard passes (diagnostic-only). **Accepted realism trade-off:**
+> `frequency_direction` (Zipfian "high-freq content words drift LESS") softened from ~5/8 seeds to ~3/8
+> — giving 179 mostly-high-frequency content words real semantic activity slightly raised their form
+> drift, neutralising the few-percent conservatism margin (pooled high≈low, noise-level). Test
+> downgraded from a strict directional vote to a pooled "no MATERIAL over-erosion (≤5%)" guard. Logged
+> as accepted per the user's "willing to take the risk / reversible" direction.
 
 ---
 

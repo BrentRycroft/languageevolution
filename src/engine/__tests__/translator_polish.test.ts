@@ -144,12 +144,15 @@ describe("translator polish — unresolved words: coin if grounded, else literal
     expect(["synth-fallback", "fallback"]).toContain(wise!.resolution);
   });
 
-  it("missing predicate adjective either coins or quotes", () => {
+  it("missing predicate adjective coins, quotes, or grounds via colexification", () => {
     const lang = pieLang();
     const out = translateSentence(lang, "the king is angry");
     const angry = out.targetTokens.find((t) => t.englishLemma === "angry");
     expect(angry).toBeDefined();
-    expect(["synth-fallback", "fallback"]).toContain(angry!.resolution);
+    // Vector-native flip: "angry" gained a real GloVe anchor (anchor-coverage extras), so the
+    // translator can now GROUND it to a semantically-near existing word (colex) rather than only
+    // coining or literal-quoting — a strictly better resolution path for a word with a real point.
+    expect(["synth-fallback", "fallback", "colex"]).toContain(angry!.resolution);
   });
 });
 
