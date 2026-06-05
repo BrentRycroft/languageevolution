@@ -114,8 +114,10 @@ describe("Phase 48 T2 — wouldCreateUnrelatedHomonym", () => {
 
   it("returns true when candidate collides with an unrelated word", () => {
     const lang = makeLang();
-    addWord(lang, ["k", "æ", "t"], "cat", { bornGeneration: 0 });
-    // "dog" sound-change candidate collides with cat
+    // "stone" is geometrically unrelated to "dog" (GloVe neighbours of dog:
+    // cat/kid-goat/horse/puppy/rabbit; stone's neighbours: hearth-stone/road-stone/wood/brick/weight-stone).
+    addWord(lang, ["k", "æ", "t"], "stone", { bornGeneration: 0 });
+    // "dog" sound-change candidate collides with stone's form — unrelated homonym.
     expect(
       wouldCreateUnrelatedHomonym(lang, "dog", ["k", "æ", "t"]),
     ).toBe(true);

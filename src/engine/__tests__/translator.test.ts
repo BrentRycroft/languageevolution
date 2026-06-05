@@ -55,7 +55,12 @@ describe("translator", () => {
   });
 
   it("falls back to a neighbor meaning", () => {
-    const r = translate(sampleLang(), "river");
+    // "rain-water" is not in the lexicon; its top-3 geometric neighbours are
+    // ["water", "well-water", "snow"] (GloVe geometry), so the neighbor-fallback
+    // finds "water" (which IS in sampleLang) and returns source="neighbor".
+    // (Old target "river" no longer works: river's GloVe neighbours are valley/lake/shore/along/bridge,
+    // none of which are in sampleLang, so the cascade now falls through to the compound rung.)
+    const r = translate(sampleLang(), "rain-water");
     expect(r.source).toBe("neighbor");
     expect(r.form).toBe("water");
   });

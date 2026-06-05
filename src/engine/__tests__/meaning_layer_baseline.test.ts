@@ -302,13 +302,21 @@ const GEN0: Record<string, string> = {
 // byte-identity-vs-old-baseline was explicitly waived by the user; reproducibility (same config →
 // identical output) is preserved (captured twice, identical). Realism scorecard is diagnostic-only
 // per the user's direction, not a gate.
+// RE-BAKED 2026-06-05 (vector-native neighbour switch — neighborsOf → geometry). neighborsOf() now
+// returns geometricNeighbors(meaning, 3) for all meanings with a real GloVe point (hasEmbedding),
+// replacing the hand-curated SEMANTIC_NEIGHBORS table as the live source for drift, colexification,
+// and coinage. The geometry disagrees with the curated table (~28% overlap), so the drift/coinage
+// trajectory shifts for every preset → all six gen-30 signatures move. GEN0 unchanged (seed forms
+// are byte-identical; only the evolution trajectory diverges). Byte-identity-vs-old-baseline
+// explicitly waived by the user; reproducibility (same config → identical output) preserved — hashes
+// captured twice on consecutive runs and confirmed identical.
 const GENN: Record<string, string> = {
-  pie: "99f0a4c9",
-  bantu: "b305d8f7",
-  romance: "7671a8d1",
-  germanic: "04a3793c",
-  tokipona: "d3d4e1c8",
-  english: "eef1ece3",
+  pie: "76006863",
+  bantu: "4f83551a",
+  romance: "3692f897",
+  germanic: "0b3bc315",
+  tokipona: "aa5f1a15",
+  english: "ab2bd83e",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {
