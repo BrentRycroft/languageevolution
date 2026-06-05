@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   nearestLexicalisedMeaning,
   SEMANTIC_GROUNDING_THRESHOLD,
-} from "../semantics/embeddings";
+} from "../semantics/grounding";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
