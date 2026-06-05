@@ -5,8 +5,15 @@
 > **Directive 1**: the lexicon is no longer concept-keyed. Words become **points in vector space**;
 > English concepts become a **fixed anchor coordinate system** the translator reads against.
 
-Status: **PLAN — awaiting review.** Decisions locked (2026-06-05, below). Built to **delegate heavily
-to subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migration also delegate).
+Status: **IN EXECUTION (2026-06-05).** Decisions locked (below). Built to **delegate heavily to
+subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migration also delegate).
+
+**Progress log:**
+- **Wave 0 — DONE (2026-06-05).** 0a `anchors.ts` (anchor table + nearestAnchor/anchorsWithin/
+  kNearestAnchors, `b7c5baa`); 0b `anchorLabeled.ts` (8 labeled dims baked from CONCEPTS + surgical
+  `isTabooReferent` export, `613b39b`); 0c `anchorQueries.ts` (`posOfPoint` argmax over labeled POS
+  dims — **POS golden parity 100%/2247**; `clusterRegionOf` lexical-geometry centroids — cluster
+  parity 58.7%, `ae6ee3f`). Purely additive; determinism byte-identical (simulation.test green).
 
 ---
 
