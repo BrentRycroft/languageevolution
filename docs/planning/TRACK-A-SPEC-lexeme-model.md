@@ -152,25 +152,32 @@ Morpheme {
 
 ---
 
-## 6. Determinism & re-baseline plan (phased — minimise blast radius)
+## 6. Determinism & re-baseline plan
 
-The roadmap calls A "the biggest re-baseline ever." We **contain** it by splitting the flip:
+> **REVISED 2026-06-04 (owner steer): byte-identity vs the old baseline is NOT a goal —
+> pursue it only where it is free.** The earlier cautious "inert byte-identical storage flip
+> (A.1) then behaviour flip (A.2)" split is dropped: keeping the whole flip byte-identical
+> carries a real tradeoff (it forces the two-phase split and an artificially behavior-neutral
+> implementation), so we don't. The flip is done directly and the locked hashes are
+> re-baselined once, deliberately. **Reproducibility (same seed → identical output every run)
+> remains a hard invariant** — guaranteed by fixed-point integer vectors — and is re-confirmed
+> at each re-baseline.
 
-- **A.0 — Tooling (no engine change).** Build the additive-space bake script + the validation
-  preset's baked morpheme vectors. Pure offline. Zero test movement.
-- **A.1 — Storage flip, BYTE-IDENTICAL.** Introduce lexeme `point`/`spread` + the morpheme
-  inventory *behind the access seam*; points are computed and stored but **do not yet drive any
-  behaviour**. Every existing consumer reads through the seam unchanged. **Gate:
-  `meaning_layer_baseline` byte-identical** (GEN0 + GENN), exactly as the R2 re-key achieved.
-  This proves the substrate is sound before any behaviour moves.
-- **A.2 — Behaviour flip, RE-BASELINED.** Drift mutates `point`/`spread` (metaphor = move point,
-  broaden/narrow = grow/shrink spread) instead of re-keying; homonymy becomes representable;
-  translator resolves by nearest point. **One deliberate, documented re-baseline** of
-  `meaning_layer_baseline` GENN + the affected determinism tier. Reproducibility (same config →
-  identical output) stays invariant throughout (guaranteed by fixed-point integer vectors).
+The work is sequenced so the FREE (no-re-baseline) parts and the RE-BASELINE parts are
+separated by *plan*, not by an artificial inert phase:
 
-> The `frequency_direction` RUN_SLOW red is **NOT** addressed here — it is Track D's. A.2's
-> re-baseline note will explicitly say so to avoid confusing the two.
+- **A.0 — Tooling (no engine change).** Bake script + validation-preset morpheme vectors.
+  Pure offline. Zero test movement. *(Plans 1–2 — done.)*
+- **The flip (one deliberate re-baseline).** `lexPoint` becomes the meaning's position and the
+  drift hot-path navigates it; later, points become mutable (metaphor moves the point,
+  broaden/narrow move `spread`) and homonyms surface as distinct lexemes. `meaning_layer_baseline`
+  GENN + the affected determinism tier are re-baselined deliberately. *(Plan 3 = the drift flip;
+  Plan 5 = mutable points + homonymy.)*
+- **Read-only consumers (FREE — no re-baseline).** The Dictionary morpheme display and the
+  translator grounding read `lexPoint` but never run inside `sim.step()`, so they stay
+  byte-identical for free. *(Plan 4.)*
+
+> The `frequency_direction` RUN_SLOW red is **NOT** addressed here — it is Track D's.
 
 ---
 

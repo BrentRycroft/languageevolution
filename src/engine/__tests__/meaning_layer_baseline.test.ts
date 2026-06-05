@@ -268,6 +268,14 @@ const GEN0: Record<string, string> = {
 // the register/freq-free classifyShift unit callers are untouched (they never open the
 // evaluative weights). Reproducibility-determinism preserved (same config → identical
 // output; re-run confirmed). Approved follow-up to the meaning-model activation.
+// Track A plan 3 (lexPoint drift flip) — NO re-baseline. classifyShift now measures semantic
+// distance via cosineFixed(lexPoint(from), lexPoint(to)) — the stored compositional meaning
+// point (fixed-point) — instead of on-the-fly cosine(embed()). This was VERIFIED BYTE-IDENTICAL
+// for all six presets at gen-30: within a 30-gen run the similarity of every drifting pair
+// falls on the same side of the 0.45/0.6 thresholds under both representations (and the 26
+// English decomposed words don't drift as sources in that window), so no argmax flips and the
+// hashes below are unchanged. The flip will start to matter once points become mutable (Plan 5)
+// or more words decompose (Track C). Reproducibility preserved (re-run confirmed).
 const GENN: Record<string, string> = {
   pie: "7994bc5a",
   bantu: "b57da5ea",
