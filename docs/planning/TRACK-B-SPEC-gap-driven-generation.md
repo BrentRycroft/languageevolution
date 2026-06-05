@@ -4,7 +4,9 @@
 > (`docs/planning/VECTOR-SPACE-OVERHAUL-2026-06.md` §4). Wave 2. Depends on Track A (done) +
 > Track C (done — supplies `languageMorphemes(lang)`).
 
-Status: **DECISIONS LOCKED (2026-06-05).** Ready to decompose into plans (B1 → B4 + B-final).
+Status: **COMPLETE (2026-06-05).** Shipped as B1 (`composeForGap`) + B4 (`MECHANISM_VECTOR_COMPOSITION`
+wired into genesis, with a deliberate gen-30 re-baseline). B2 folded, B3 deferred (§7). Commits
+`fad0749` → `121911b`. Full FAST suite green (1927 tests); RUN_SLOW GENN re-baked + reproduced.
 
 ---
 
@@ -139,3 +141,35 @@ justification comment. Reproducibility-determinism (same config → identical ou
   *what* to coin.
 - **Re-baseline scope:** only `GENN` (and any other exact-form determinism lock) moves; audit for
   other snapshots during B4.
+
+---
+
+## 7. Completion record (2026-06-05)
+
+**Delivered**
+- **B1** (`ef18ce1`): `semantics/gapComposition.ts` — `composeForGap(lang, meaning)` composes a form
+  from the two roots most *related* (cosine) to the concept's point (whale→fish+bird). Plus
+  `hasEmbedding` (embeddings.ts) to gate out hash-vector targets/parts. Pure + deterministic.
+- **B4** (`ea424fe`, `121911b`): `MECHANISM_VECTOR_COMPOSITION` added to the genesis mechanism list;
+  parts restricted to real distributional concepts (`hasEmbedding`) + a 0.45 relatedness floor, so
+  noisy abstracts decline to null and fall to other mechanisms. **All six presets re-baked at
+  gen-30** (the mechanism fires within 30 gens for every preset — real, not inert). GEN0 unchanged.
+- **B-final**: `vectorComposition_mechanism.test.ts` (wiring + behaviour). Full FAST suite green
+  (249 files / 1927 tests); RUN_SLOW `meaning_layer_baseline` re-baked + reproduced (12/12).
+
+**Scope decisions**
+- **B2 (rare new morpheme) — folded.** The existing genesis cascade already mints novel forms
+  (ideophone etc.) when composition fails, and `languageMorphemes` auto-includes coined words as
+  future composable roots — so "grow the inventory organically" (§4 step 4) already holds.
+- **B3 (vector-density necessity) — deferred.** Kept the re-baseline to one behavioral change for a
+  clean, reviewable determinism diff. The existing `lexicalNeed` provides necessity; a vector-density
+  gap term is a documented follow-up.
+
+**Known limitation.** Composition quality is bounded by the GloVe-50 embedding's low-dimensional
+noise; the `hasEmbedding` filter + 0.45 floor remove the worst (no grammatical/derived parts, noisy
+abstracts decline), leaving sensible kennings (lion=bear+cat, coffee=wine+drink, island=lake+sea).
+
+**Deferred (architecture).** Coining into *keyless* empty points (true "empty region" lexemes) needs
+the Track A lexeme-entity flip; out of scope (§1).
+
+**Next:** Track D (sound-change recalibration + prosody) — the last remaining overhaul track.
