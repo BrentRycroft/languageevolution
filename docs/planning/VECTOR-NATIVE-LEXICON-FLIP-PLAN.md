@@ -14,6 +14,30 @@ subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migra
   `isTabooReferent` export, `613b39b`); 0c `anchorQueries.ts` (`posOfPoint` argmax over labeled POS
   dims — **POS golden parity 100%/2247**; `clusterRegionOf` lexical-geometry centroids — cluster
   parity 58.7%, `ae6ee3f`). Purely additive; determinism byte-identical (simulation.test green).
+- **Wave 1 — IN PROGRESS (2026-06-05).** 1a `glossOf`/`senseGloss` emergent-gloss primitives —
+  seed parity `glossOf(lexPoint(c))===c` **99.6%/2247** (`0fa15a8`). 1b `anchorIndex.ts`
+  (`anchorIndexOf`/`glossOfWord`/`findWordByEmergentGloss`) + hybrid `effectiveGloss` — point-native
+  "what means X" lookup; seed lookup parity vs `findPrimaryWordForMeaning` **99.2%/637** English
+  (`a75bb62`). Both additive, determinism byte-identical. Remaining 1b/1c: see below + §3.
+
+> **⚠ FINDING — anchor-coverage gap (logged 2026-06-05; affects D-anchor-set).** The plan assumed
+> the CONCEPTS registry (2,247) anchors *every* preset word. It does not: **24–39% of each preset's
+> primary meanings have no GloVe anchor** (english 61% anchored, tokipona 66%, bantu 75%, pie 76%).
+> Two kinds of orphan: **(1) closed-class function words** (`the`/`and`/`not`/`in`…) — these have no
+> *lexical* anchor by nature; their identity is grammatical (the labeled POS=closed dim), correct to
+> leave unanchored. **(2) basic content words missing from the curated registry** (`house`/`body`/
+> `door`/`person`/`man`/`woman`/`feather`/`wing`/`horn`/`tail`/`ocean`/`time`/`city`/`window`…) —
+> GloVe *has* these; they were simply never added to the 2,247 set, so they sit on a hash point that
+> glosses to noise (`house`→`hypothesise`). **Interim resolution (shipped, green, lossless):** hybrid
+> `effectiveGloss` — emergent gloss for direct anchors + placed points; compounds keep their
+> structural key; orphans keep their authored key until placed. **OPEN DECISION (user):**
+> **(A) Extend coverage** — regenerate `embeddingData.ts` (via `scripts/build-embedding.ts`) + register
+> the missing *content* words so they get real anchors (a one-time data build + determinism
+> re-baseline; makes the flip purer per the Q1 "everything in vector space" preference); vs
+> **(B) keep the permanent hybrid** (function words stay grammatical-identity; content gaps keep their
+> authored key). The waves proceed on the hybrid either way; (A) only *raises coverage* and is a clean
+> drop-in later. Recommend **(A) for content words**, since the purity goal needs `house`/`body`/`door`
+> to have anchors — but it is the user's call and is logged here rather than silently chosen.
 
 ---
 
