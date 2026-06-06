@@ -1,6 +1,8 @@
-import type { Lexicon, Meaning, WordForm } from "../types";
+import type { Lexicon, Language, Meaning, WordForm } from "../types";
 import type { LexiconState } from "../domains";
 import { fnv1a } from "../rng";
+import type { Vec } from "../semantics/vec";
+import { glossOf } from "../semantics/anchors";
 
 /**
  * lexemeIdentity.ts — Phase 72d (full-delivery defer-2).
@@ -256,4 +258,23 @@ export function ensureLexemeIdsForLexicon(lang: LexiconState): number {
     }
   }
   return assigned;
+}
+
+/**
+ * KEYLESS COINAGE (point-native storage core). Coin a lexeme defined PURELY by its `point` + `form`,
+ * with NO concept/gloss key — the storage form of "coining into an empty region of the space" (the
+ * half Track B deferred). It is stored under a fresh lexeme-intrinsic `LexemeId` in
+ * `lang.keylessLexemes`, never touching the gloss-addressed `lexicon`/`lexemeIds` index, so it needs
+ * no concept anchor at all. Its meaning IS the point; its English label is emergent
+ * (`keylessGloss`). Deterministic (mintLexemeId; no RNG). Returns the new lexeme's id.
+ */
+export function coinKeylessLexeme(lang: Language, point: Vec, form: WordForm): LexemeId {
+  const id = mintLexemeId(lang);
+  (lang.keylessLexemes ??= {})[id] = { form: form.slice(), point: Array.from(point) };
+  return id;
+}
+
+/** The EMERGENT gloss of a keyless lexeme — the nearest-anchor concept of its point (its derived label). */
+export function keylessGloss(entry: { point: readonly number[] }): Meaning {
+  return glossOf(Int32Array.from(entry.point));
 }

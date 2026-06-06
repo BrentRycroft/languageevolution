@@ -213,6 +213,15 @@ export interface Language {
   id: string;
   name: string;
   lexicon: Lexicon;
+  /**
+   * KEYLESS lexemes (vector-native flip — point-native storage core). A lexeme defined PURELY by its
+   * position + form, with NO concept/gloss key: its meaning is the `point` and its label is the
+   * emergent nearest-anchor gloss (`keylessGloss`). This is the storage form that "keyless coinage"
+   * (coining into an empty region of the space) produces — the half Track B deferred. Keyed only by a
+   * lexeme-intrinsic `LexemeId`, separate from the gloss-addressed `lexicon` so it never needs a
+   * concept anchor. Optional + lazily created.
+   */
+  keylessLexemes?: Record<string, { form: WordForm; point: number[] }>;
   enabledChangeIds: string[];
   changeWeights: Record<string, number>;
   birthGeneration: number;
