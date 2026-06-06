@@ -210,6 +210,10 @@ git commit -m "feat(storage): LexemeRecord type + lexeme-store primitives (S1 ta
 
 ## Task 2: Cut seeded words over to `lang.lexemes` (remove `lang.lexicon`)
 
+> **CORRECTIONS discovered during execution (2026-06-06):**
+> 1. **Task 2 must KEEP `lang.keylessLexemes`.** Removing it here (original Step 3) breaks `coinKeylessLexeme` / `findSemanticGap` / the keyless tests at the type level — those are migrated in Task 3. So Task 2 removes ONLY `lang.lexicon`; Task 3 removes `keylessLexemes`.
+> 2. **Blast radius is ~70 files, not ~12.** `grep -c` shows **64 test files + presets** author `lexicon: { gloss: form }` literals (each via a local `makeLang`/`testLang` that casts the object `as unknown as Language` / `as Language` and then calls `rekeyLexiconToLexemeIds`). The rename is therefore tsc-driven: change the field in `types.ts`/`domains.ts`, run `npx tsc --noEmit`, and fix every reported site. Authoring rule: rename the literal key `lexicon:` → `lexemes:`; if tsc rejects the gloss→form map as not a `LexemeStore` (helpers using `as Language` / `Partial<Language>`), cast it `as unknown as LexemeStore` (the following `rekeyLexiconToLexemeIds` converts it to real records at runtime). This is a big, single-session atomic commit; budget accordingly (two task-runner subagents exhausted their budget just READING the affected files — do it with the tsc error list as the worklist).
+
 The structural heart. ONE atomic commit (a type change can't be half-applied). Build records at birth with materialized points; route the seam + the few direct form-store sites through `lang.lexemes`; keep keyless OUT of sweeps for now. Target: tsc green, FAST green, **byte-identical** (GEN0 and GENN unchanged — seeded behaviour is preserved; keyless still don't evolve).
 
 **Files:** `types.ts`, `domains.ts`, `lexicon/access.ts`, `lexicon/lexemeIdentity.ts`, `steps/phonology.ts`, `phonology/stratal.ts`, `utils/clone.ts`, plus the direct-reference test files listed in Step 9.
