@@ -22,6 +22,21 @@ label is the *emergent* nearest-anchor gloss. The ConceptId layer only provides 
 addressing a word by its seed concept** — which the engine needs for deterministic, gloss-addressed
 iteration (the RNG order contract, sound-change application, naming, reverse translation).
 
+## Branch progress (`auto/storage-pointnative`, 2026-06-06)
+
+The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realism` `f3b3338`):
+
+- **Increment 1 (`888babf`) — DONE, green.** Re-keyed the store type/functions `ConceptId` →
+  `LexemeId` across 39 files. `lang.lexicon` is now `Record<LexemeId, WordForm>` — keyed by lexeme
+  identity, not concept identity. Pure rename; FAST 1989 / 0 fail.
+- **Increment 2 (`29756f5`) — DONE, green.** Renamed the gloss→id index `lang.conceptIds` →
+  `lang.lexemeIds` and the module `conceptIdentity.ts` → `lexemeIdentity.ts`. The "concept" framing is
+  gone from the storage LAYER. Confirmed safe: the index is rebuilt on load (round-trip + autosave +
+  determinism all green); FAST 1989 / 0 fail.
+- **Increment 3+ — NOT STARTED (the structural multi-week core).** The remaining work below is the
+  genuine decoupling that enables *keyless* lexemes; it is a focused multi-session effort and was left
+  unstarted rather than half-done (it cannot land green in a partial state). Pick it up on this branch.
+
 ## The deferred migration (true keyless point-native store)
 
 Replacing `lang.lexicon` (ConceptId-keyed) with a point-native lexeme store unlocks the last bits:
