@@ -11,6 +11,8 @@ import { anchorsWithin } from "../semantics/anchors";
 import { meaningPointFor } from "../semantics/meaningPoint";
 import { lexKeys, lexHas } from "../lexicon/access";
 import type { Language, Meaning } from "../types";
+import { composeForGap } from "../semantics/gapComposition";
+import { coinKeylessLexeme, type LexemeId } from "../lexicon/lexemeIdentity";
 
 // --- Tunable constants (not yet consumed by the genesis loop) ---
 /** Radius (fixed-point units) that defines a concept's neighbourhood. */
@@ -111,4 +113,17 @@ export function findSemanticGap(lang: Language): SemanticGap | null {
     nearestExistingDistSq: best.nearestExistingDistSq,
     neighborSupport: best.neighborSupport,
   };
+}
+
+/**
+ * Coin a keyless lexeme into a detected semantic gap. Builds a form for the gap's concept by
+ * vector-composition (kenning) from the language's related roots, then stores it POINT-NATIVELY
+ * at the gap point with NO concept/gloss key (lang.keylessLexemes). Deterministic — composeForGap
+ * draws no RNG. Returns the new keyless lexeme's id, or null when no legal form can be composed
+ * (the caller's coinage cascade then moves on).
+ */
+export function coinKeylessForGap(lang: Language, gap: SemanticGap): LexemeId | null {
+  const composed = composeForGap(lang, gap.gloss);
+  if (!composed) return null;
+  return coinKeylessLexeme(lang, gap.point, composed.form);
 }
