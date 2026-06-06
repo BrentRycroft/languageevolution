@@ -39,25 +39,29 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
   label is emergent (`keylessGloss`). This is the "coin into an empty region of the space" primitive
   Track B deferred — the structural core. Additive (deep-cloned; no RNG/loop wiring), FAST 1993 / 0
   fail. The *capability* now exists.
-- **Increment 4+ — remaining (multi-session).** WIRE keyless coinage into the genesis loop and migrate
-  the gloss-addressed data-model. **Concrete staged plan (each step its own commit, re-bake where noted):**
-  1. **Density/gap trigger** (additive, green): in `genesis/need.ts`, add a detector for a salient
-     EMPTY region of the space (a point far from every existing lexeme but inside a populated cluster) —
-     pure geometry over `meaningPointFor` + `anchorsWithin`. Unit-test only; not yet consumed → green.
-  2. **Keyless coinage path** (additive, green): a function that, given a gap point, builds a form
-     (reuse `composeForGap`/phonotactic samplers) and calls `coinKeylessLexeme(lang, point, form)`.
-     Unit-test it produces a legal keyless lexeme; not yet called by the loop → green.
-  3. **Activate in the loop** (BEHAVIOUR CHANGE → re-bake): call the gap trigger + keyless path from
-     the genesis step (low rate). This fires keyless coinages during evolution → GENN shifts. Re-bake
-     `meaning_layer_baseline` (RUN_SLOW), fix any behavioural-test fallout (as the cluster switch did),
-     FAST + RUN_SLOW green. This is the "actively coins keyless words" milestone.
-  4. **Surface keyless lexemes** (additive): Dictionary/translator render `lang.keylessLexemes` via
-     `keylessGloss` (emergent label) alongside the gloss-keyed words.
-  5. **Migrate seeded words to keyless** (the broad rework, optional end-state): make `WordSense`/the
-     seam address by lexeme id + anchor index instead of `meaning`-gloss, so seeded words are stored
-     like keyless ones; retire `lexemeIds` as the primary addressing. Full re-bake. This is the bulk —
-     stage it module-by-module, re-baking per module.
-  Steps 1–2 + 4 are green/additive; 3 + 5 are the deliberate re-baselines. Drive subagent-driven.
+- **Increment 4 — core DONE (2026-06-06), green.** Keyless coinage now fires in the live genesis loop.
+  **Staged plan (each step its own commit, re-bake where noted):**
+  1. **Density/gap trigger — DONE (`9fc7588`), FAST green.** `findSemanticGap(lang)` in the new
+     `genesis/semanticGap.ts`: a pure-geometry detector for a salient EMPTY anchor (unlexicalised, far
+     from every existing word, yet inside a populated neighbourhood). Single early-breaking anchor scan;
+     7 unit tests. Not consumed at commit time → additive/green.
+  2. **Keyless coinage path — DONE (`045f8ff`), FAST green.** `coinKeylessForGap(lang, gap)` (same file):
+     composes a kenning form for the gap's concept (`composeForGap`) and stores it point-natively via
+     `coinKeylessLexeme(lang, gap.point, form)` — NO gloss key added. Deterministic; 4 unit tests.
+  3. **Activate in the loop — DONE (`8b482fd`), re-baked, FAST + RUN_SLOW green.** `stepGenesis` ends
+     with a low-rate (`KEYLESS_GAP_COINAGE_RATE = 0.1`) `rng.chance` gate → `findSemanticGap` →
+     `coinKeylessForGap`. Silent (no event). Deliberate full GENN re-bake (rng-gate stream shift +
+     `conceptIdSeq` advance reseeding the next gloss-keyed coinage's B1-Y sound-change sub-rng); GEN0
+     byte-identical; reproducibility confirmed (identical hashes twice). FAST 2004/0; RUN_SLOW baseline
+     + the RUN_SLOW-gated `keyless_coinage_loop` test (fires ≥1, deterministic, emergent gloss) green.
+     This is the "actively coins keyless words" milestone. ZERO behavioural-test fallout.
+  4. **Surface keyless lexemes — REMAINING (additive).** Dictionary/translator render
+     `lang.keylessLexemes` via `keylessGloss` (emergent label) alongside the gloss-keyed words.
+  5. **Migrate seeded words to keyless — REMAINING (the broad rework, optional end-state).** Make
+     `WordSense`/the seam address by lexeme id + anchor index instead of `meaning`-gloss, so seeded
+     words are stored like keyless ones; retire `lexemeIds` as the primary addressing. Full re-bake.
+     Stage it module-by-module, re-baking per module.
+  Step 4 is green/additive; step 5 is the deliberate re-baseline. Drive subagent-driven.
 
 ## The deferred migration (true keyless point-native store)
 
