@@ -33,20 +33,24 @@ curated tables kept as fallbacks). Per-wave:
   ships (Track B `composeForGap`); coinage now relates parts via geometry (noisy abstracts allowed,
   directive 2). 3c merge is downstream of geometric drift. **Deferred:** coining into *keyless* empty
   points (a word at a point with NO concept key) needs the point-native STORAGE flip (below).
-- **Wave 4 — DONE (achievable) / DEFERRED (storage archive).** 4a points persist (`sense.point`
-  JSON-round-trips; `roundtrip.test` green). 4b UI surfaces emergent glosses + a drift marker
-  (`DictionaryView`). 4c **archive = the curated tables are KEPT in place as documented reversible
-  fallbacks** (D-archive: nothing deleted, old behaviour retrievable). 4d final re-bake done
+- **Wave 4 — DONE (achievable) / DEFERRED (physical store migration).** 4a points persist
+  (`sense.point` JSON-round-trips; `roundtrip.test` green). 4b UI surfaces emergent glosses + a drift
+  marker (`DictionaryView`). 4c **archive DONE** — `archive/CONCEPT-KEYED-STORAGE-deferred-migration.md`
+  documents the kept concept-keyed system, the migration spec, AND the per-switch reversal procedure
+  (D-archive: nothing deleted, old behaviour retrievable + revertible). 4d final re-bake done
   incrementally per switch.
 
-**THE ONE DEFERRAL — keyless point-native STORAGE (`lang.lexicon` ConceptId→Form ⇒ point-keyed).**
-The storage remains ConceptId-keyed (opaque id, NOT the gloss). Flipping the *physical store* to be
-point-native unlocks the last bits (true keyless coinage, full archival of `access.ts`/
-`conceptIdentity.ts`). The codebase itself flags this as a **1–2 week dedicated migration**
-(`conceptIdentity.ts` header, option (a)) touching ~381 access-seam calls + 33 direct indexings + the
-RNG order contract — it cannot be landed byte-green in a single session and is the natural next
-project. **Everything the flip set out to do behaviourally — point identity, emergent gloss, anchors
-as the frame, geometric drift/coinage/clusters/neighbours — is delivered.**
+**THE ONE DEFERRAL — removing the ConceptId ADDRESSING CACHE (physical store ⇒ point-keyed).** Note
+the *meaning model is already point-native*: a word's meaning is its drifting `point` (on the
+`lang.words` lexeme entity) and its label is the *emergent* nearest anchor; `lang.lexicon`
+(ConceptId-keyed) is a **derived addressing/form cache** synced from the point-bearing entity, not the
+meaning authority. What remains is physically REMOVING that cache so words are stored point-natively
+(unlocking true keyless coinage + retiring `access.ts`/`conceptIdentity.ts`). The codebase flags this
+as a **1–2 week dedicated migration** (~381 access-seam calls + 33 direct indexings + the RNG order
+contract; spec in the archive doc) — it cannot land byte-green in a single session and would violate
+the project's "every commit green" invariant if forced, so it is the natural next project.
+**Everything the flip set out to do behaviourally — point identity, emergent gloss, anchors as the
+frame, geometric drift/coinage/clusters/neighbours, emergent-gloss UI — is delivered and green.**
 
 ---
 
