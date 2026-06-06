@@ -14,6 +14,8 @@ import { meaningPointFor } from "../engine/semantics/meaningPoint";
 import { readoutProfile, READOUT_AXES, type ReadoutAxis } from "../engine/semantics/readoutAxes";
 import { wordMorphemes } from "../engine/semantics/languageMorphemes";
 import { homonymsOf } from "../engine/semantics/homonyms";
+import { glossOfWord } from "../engine/semantics/anchorIndex";
+import { findPrimaryWordForMeaning } from "../engine/lexicon/word";
 
 /**
  * DictionaryView.tsx
@@ -68,9 +70,14 @@ export function DictionaryView() {
           }
         }
       }
+      const word = findPrimaryWordForMeaning(lang, m);
+      const emergentGloss = word ? glossOfWord(word) : m;
+      const hasDrifted = emergentGloss !== m;
       return {
         meaning: m,
         gloss: prettyGloss(m),
+        emergentGloss,
+        hasDrifted,
         form: displayForm,
         pos,
         cluster: CONCEPTS[m]?.cluster ?? "—",
@@ -157,7 +164,16 @@ export function DictionaryView() {
                 title="Show semantic profile"
               >
                 <td title={r.gloss !== r.meaning ? `concept id: ${r.meaning}` : undefined}>
-                  {r.gloss}
+                  {r.hasDrifted ? prettyGloss(r.emergentGloss) : r.gloss}
+                  {r.hasDrifted && (
+                    <span
+                      className="t-accent fs-1"
+                      style={{ marginLeft: 6 }}
+                      title={`Seeded as: ${r.gloss}`}
+                    >
+                      (now: {prettyGloss(r.emergentGloss)} · seeded: {r.gloss})
+                    </span>
+                  )}
                   {r.isLoan && (
                     <span
                       className="t-accent"
