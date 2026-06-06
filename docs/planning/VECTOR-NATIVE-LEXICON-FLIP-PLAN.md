@@ -20,19 +20,14 @@ subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migra
   Re-baked all 6 GENN (GEN0 unchanged); 2 FAST tests updated (dog/cat now related → dog/stone;
   river→rain-water for the neighbor rung). FAST 1987 green; RUN_SLOW reproduces. Subagent-driven
   finalization (fix + re-bake), controller-verified.
-- **Wave 2a — clusters switch ATTEMPTED + REVERTED (2026-06-05, NEEDS DECISION).** Switched
-  `clusterOf` to hybrid geometry (`clusterRegionOf`) like neighbours; tsc clean, but the FAST suite
-  showed **4 failures revealing a structural realism cost**: geometric clustering (59% parity)
-  **scatters coherent semantic fields** — `taboo_clusters > "core body meanings cluster together"`
-  fails because body-part GloVe vectors don't all sit nearest the `body` centroid; plus
-  `cluster_expansion` (clusterOf-via-curated lock) and a `genesis` compound-parts assertion. Clusters
-  are a CENTRAL typological scaffold (drift/coinage/abstraction/analogy/borrowing all read them), so
-  scattering them is different in kind from the peripheral neighbour noise. **Reverted** to keep the
-  tree green (`dfdda6a`). **OPEN: how to treat clusters/taboo (the field-coherence signals) —**
-  (A) force the full geometric switch (accept field scattering, update/loosen the realism tests);
-  (B) keep clusters+taboo CURATED (a deliberate typological scaffold) while the more peripheral
-  signals (neighbours/drift) go geometric; (C) blend (geometry biases, curated backbone). The
-  one-function switch is re-appliable instantly once decided.
+- **Wave 2a — clusters DONE (2026-06-05, `481a861`). USER CHOSE (A) full switch.** `clusterOf`
+  switched to geometry (`clusterRegionOf` for grounded meanings; curated `MEANING_TO_CLUSTER` kept as
+  fallback + reversible source). relatedMeanings + the cluster-driven drift/coinage/abstraction/
+  analogy/borrowing paths are now geometric. The user accepted the field-coherence cost: geometry
+  scatters some curated fields (~59% parity; body parts no longer all in `body`) — reversible. 4 FAST
+  tests relaxed (cluster_expansion ×2 → definedness; taboo_clusters body-field → definedness; genesis
+  compounding → geometrically-coherent water lexicon). All 6 GENN re-baked (GEN0 unchanged). FAST 1987
+  green; RUN_SLOW reproduces. Both central Wave-2 switches (neighbours + clusters) now live.
 - **Wave 1 — IN PROGRESS (2026-06-05).** 1a `glossOf`/`senseGloss` emergent-gloss primitives —
   seed parity `glossOf(lexPoint(c))===c` **99.6%/2247** (`0fa15a8`). 1b `anchorIndex.ts`
   (`anchorIndexOf`/`glossOfWord`/`findWordByEmergentGloss`) + hybrid `effectiveGloss` — point-native
