@@ -33,9 +33,16 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
   `lang.lexemeIds` and the module `conceptIdentity.ts` → `lexemeIdentity.ts`. The "concept" framing is
   gone from the storage LAYER. Confirmed safe: the index is rebuilt on load (round-trip + autosave +
   determinism all green); FAST 1989 / 0 fail.
-- **Increment 3+ — NOT STARTED (the structural multi-week core).** The remaining work below is the
-  genuine decoupling that enables *keyless* lexemes; it is a focused multi-session effort and was left
-  unstarted rather than half-done (it cannot land green in a partial state). Pick it up on this branch.
+- **Increment 3 (`be69f55`) — DONE, green.** Delivered the KEYLESS-LEXEME capability:
+  `coinKeylessLexeme(lang, point, form)` stores a lexeme defined PURELY by its point + form under a
+  lexeme-intrinsic `LexemeId` in the new `lang.keylessLexemes`, with NO concept/gloss key at all; its
+  label is emergent (`keylessGloss`). This is the "coin into an empty region of the space" primitive
+  Track B deferred — the structural core. Additive (deep-cloned; no RNG/loop wiring), FAST 1993 / 0
+  fail. The *capability* now exists.
+- **Increment 4+ — remaining (multi-session).** WIRE keyless coinage into the genesis loop (so the sim
+  actively coins keyless words during evolution; a deliberate re-baseline) and migrate the existing
+  gloss-addressed seam/data-model (`WordSense.meaning`, `lexGet`-by-gloss) so seeded words can also be
+  keyless. This is the broad data-model rework; pick it up on this branch.
 
 ## The deferred migration (true keyless point-native store)
 
