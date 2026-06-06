@@ -6,7 +6,7 @@ import { presetRomance } from "../presets/romance";
 import { presetGermanic } from "../presets/germanic";
 import { presetTokipona } from "../presets/tokipona";
 import { presetEnglish } from "../presets/english";
-import { orderedLexiconKeys, orderedLexemeIds, meaningForLexemeId } from "../lexicon/conceptIdentity";
+import { orderedLexiconKeys, orderedLexemeIds, meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { lexKeys } from "../lexicon/access";
 import type { SimulationConfig } from "../types";
 

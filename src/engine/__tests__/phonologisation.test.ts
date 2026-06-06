@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { analyzeContexts, detectPhonologisation } from "../phonology/phonologization";
 import type { Language } from "../types";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { lexSet } from "../lexicon/access";
 
 /**

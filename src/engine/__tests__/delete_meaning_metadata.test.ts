@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { deleteMeaning } from "../lexicon/mutate";
 import { lexGet, lexSet } from "../lexicon/access";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language, Phoneme } from "../types";
 
 /**

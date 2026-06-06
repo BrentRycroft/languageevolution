@@ -461,7 +461,7 @@ export interface Language {
    * for cross-tree reconstruction (which orphan in daughter X
    * corresponds to which proto-concept).
    */
-  conceptIds?: Record<string, string>;
+  lexemeIds?: Record<string, string>;
   /**
    * Per-language monotonic sequence used to mint LexemeIds
    * deterministically. Combined with the language `id` it namespaces

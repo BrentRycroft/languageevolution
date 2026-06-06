@@ -6,7 +6,7 @@ import { GENESIS_BY_ID } from "../genesis/catalog";
 import { stepPhonology } from "../steps/phonology";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language, SimulationState } from "../types";
 import type { Paradigm } from "../morphology/types";
 

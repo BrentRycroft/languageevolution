@@ -8,7 +8,7 @@ import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
 import { lexGet, lexHas } from "../lexicon/access";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language, WordForm } from "../types";
 
 /**
@@ -52,7 +52,7 @@ function makeTestLang(forms: Record<string, WordForm>): Language {
 }
 
 /** Build a test lang AND rekey its gloss-keyed seed lexicon to LexemeIds +
- * conceptIds map, so engine code that reads via the access seam works. */
+ * lexemeIds map, so engine code that reads via the access seam works. */
 function makeRekeyedTestLang(forms: Record<string, WordForm>): Language {
   const lang = makeTestLang(forms);
   rekeyLexiconToLexemeIds(lang);

@@ -25,7 +25,7 @@ function makeLang(
     id: "L",
     name: "Test",
     lexicon: {},
-    conceptIds: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

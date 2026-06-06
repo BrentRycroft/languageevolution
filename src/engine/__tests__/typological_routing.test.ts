@@ -17,7 +17,7 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     id: "L-r",
     name: "TestLang",
     lexicon: {},
-    conceptIds: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

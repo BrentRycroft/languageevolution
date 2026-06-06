@@ -1,6 +1,6 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
 import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority, voicedObstruentShareOf } from "../phonology/apply";
-import { buildLexemeIdToGloss, type LexemeId } from "../lexicon/conceptIdentity";
+import { buildLexemeIdToGloss, type LexemeId } from "../lexicon/lexemeIdentity";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";

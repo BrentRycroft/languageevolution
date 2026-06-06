@@ -12,7 +12,7 @@ import { populationCap } from "../lexicon/tier";
 import { makeRng } from "../rng";
 import type { GrammarFeatures, Language, LanguageTree } from "../types";
 import type { Paradigm } from "../morphology/types";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 
 /**
  * realism_round4.test.ts

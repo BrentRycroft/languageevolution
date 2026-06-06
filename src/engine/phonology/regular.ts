@@ -9,7 +9,7 @@ import {
   PERMISSIVE_PROFILE,
 } from "./phonotactics";
 import { lexGet, lexKeys } from "../lexicon/access";
-import { lexemeIdFor } from "../lexicon/conceptIdentity";
+import { lexemeIdFor } from "../lexicon/lexemeIdentity";
 
 /**
  * regular.ts

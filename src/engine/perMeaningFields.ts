@@ -148,9 +148,9 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
   // sister daughters share the same UUID for the same proto-meaning,
   // which is the cross-tree anchor reverse inference relies on).
   // PURGED on delete: when a meaning is dropped, its UUID record is
-  // removed from conceptIds — meaningHistory holds the trace instead.
+  // removed from lexemeIds — meaningHistory holds the trace instead.
   {
-    key: "conceptIds",
+    key: "lexemeIds",
     inherit: "shallow-clone",
     purgeOnDelete: true,
     description: "Phase 72d concept UUID anchors per meaning",

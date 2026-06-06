@@ -5,7 +5,7 @@ import { closedClassTable } from "../translator/closedClass";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { lexHas, lexSet, lexKeys, lexGet } from "../lexicon/access";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language } from "../types";
 
 /**
@@ -173,14 +173,14 @@ describe("§1.6 — closed-class lookup determinism", () => {
       id: "L-0-X",
       name: "Sister",
       lexicon: stripped,
-      conceptIds: undefined,
+      lexemeIds: undefined,
       phonemeInventory: {
         ...proto.phonemeInventory,
         segmental: [...proto.phonemeInventory.segmental, "θ", "ð"],
       },
     };
     rekeyLexiconToLexemeIds(sister);
-    const protoStripped: Language = { ...proto, lexicon: stripped, conceptIds: undefined };
+    const protoStripped: Language = { ...proto, lexicon: stripped, lexemeIds: undefined };
     rekeyLexiconToLexemeIds(protoStripped);
     const tA = closedClassTable(protoStripped);
     const tB = closedClassTable(sister);

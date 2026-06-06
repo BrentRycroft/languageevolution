@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { GENESIS_BY_ID } from "../genesis/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { lexGet } from "../lexicon/access";
 import type { Language } from "../types";
 

@@ -104,7 +104,7 @@ describe("Phase 26c — closed-class protection", () => {
     // Build seedLengths and force one closed-class word to be eroded.
     const seedLengths: Record<string, number> = {};
     for (const m of lexKeys(lang)) {
-      seedLengths[m] = lang.lexicon[lang.conceptIds![m]!]!.length;
+      seedLengths[m] = lang.lexicon[lang.lexemeIds![m]!]!.length;
     }
     // Pick a closed-class meaning, manually erode it to length 1, set
     // its frequency high. Pre-Phase-26c, this would set a positive

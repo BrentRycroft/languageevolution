@@ -29,7 +29,7 @@ function makeLang(
     id: "L-b",
     name: "Test",
     lexicon: {},
-    conceptIds: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

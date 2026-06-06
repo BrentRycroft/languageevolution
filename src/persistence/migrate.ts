@@ -141,7 +141,7 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
   // explicitly initializes the ones that callers expect to find).
   // The fields:
   //   - lang.endangermentLevel: default "vigorous" if extinct=false.
-  //   - lang.conceptIds: lazy-mint via ensureLexemeIdsForLexicon
+  //   - lang.lexemeIds: lazy-mint via ensureLexemeIdsForLexicon
   //     (populated on first read).
   //   - lang.meaningHistory: stays undefined (only populated on
   //     deleteMeaning calls).
@@ -162,7 +162,7 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
         if (lang.endangermentLevel === undefined && !lang.extinct) {
           lang.endangermentLevel = "vigorous";
         }
-        // conceptIds is lazy-minted by setLexiconForm/lexemeIdFor;
+        // lexemeIds is lazy-minted by setLexiconForm/lexemeIdFor;
         // we don't pre-populate here so existing meanings get fresh
         // UUIDs on first reference (deterministic per session).
       }

@@ -4,7 +4,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { levenshtein } from "../phonology/ipa";
 import type { LanguageTree, WordForm } from "../types";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { lexEntries } from "../lexicon/access";
 
 /**

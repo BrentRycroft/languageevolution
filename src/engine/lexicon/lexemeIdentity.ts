@@ -3,7 +3,7 @@ import type { LexiconState } from "../domains";
 import { fnv1a } from "../rng";
 
 /**
- * conceptIdentity.ts — Phase 72d (full-delivery defer-2).
+ * lexemeIdentity.ts — Phase 72d (full-delivery defer-2).
  *
  * Stable UUID-style anchors for concept identity, separate from the
  * string-keyed `Meaning` used throughout the engine.
@@ -18,7 +18,7 @@ import { fnv1a } from "../rng";
  *       migration; not feasible in one session.
  *
  *   (b) PRACTICAL (this commit): keep Lexicon string-keyed, but
- *       attach a per-language `conceptIds: Record<Meaning, LexemeId>`
+ *       attach a per-language `lexemeIds: Record<Meaning, LexemeId>`
  *       map that gives each meaning a stable UUID. Daughters inherit
  *       the parent's UUIDs at split (so the same proto-meaning is the
  *       SAME concept across the whole subtree). meaningHistory
@@ -65,7 +65,7 @@ export function orderedLexiconKeys(lang: LexiconState): Meaning[] {
 }
 
 /**
- * Build a FRESH LexemeId → gloss map by inverting `lang.conceptIds` (the
+ * Build a FRESH LexemeId → gloss map by inverting `lang.lexemeIds` (the
  * gloss → LexemeId source of truth). O(n), ALWAYS correct.
  *
  * Hot/bulk cid→gloss resolution (apply.ts, lexKeys, lexEntries,
@@ -73,16 +73,16 @@ export function orderedLexiconKeys(lang: LexiconState): Meaning[] {
  * ONCE per scope and does O(1) `Map.get`s, instead of calling
  * `meaningForLexemeId` per key. That routes through the size-staleness-cached
  * reverse index, which is wrong for the hot path on BOTH axes: (a) it recomputes
- * `Object.keys(lang.conceptIds).length` per call → O(n²) per step (a ~6× perf
+ * `Object.keys(lang.lexemeIds).length` per call → O(n²) per step (a ~6× perf
  * regression), and (b) its size check reads STALE when a delete and an add net
  * zero size change within one step → a LexemeId resolves to the wrong gloss →
  * a byte-identity break. A fresh inversion has neither failure mode.
  */
 export function buildLexemeIdToGloss(lang: LexiconState): Map<string, Meaning> {
   const out = new Map<string, Meaning>();
-  if (!lang.conceptIds) return out;
-  for (const gloss of Object.keys(lang.conceptIds)) {
-    out.set(lang.conceptIds[gloss] as string, gloss);
+  if (!lang.lexemeIds) return out;
+  for (const gloss of Object.keys(lang.lexemeIds)) {
+    out.set(lang.lexemeIds[gloss] as string, gloss);
   }
   return out;
 }
@@ -144,16 +144,16 @@ export function mintLexemeId(lang: { id: string; conceptIdSeq?: number }): Lexem
  * adds new meanings via `setLexiconForm`, etc. all continue to work
  * — the UUID is created on first reference.
  *
- * Daughter languages inherit conceptIds at split (tree/split.ts), so
+ * Daughter languages inherit lexemeIds at split (tree/split.ts), so
  * sister leaves share the same UUID for the same proto-meaning. This
  * is the cross-tree anchor the audit's reconstruction probes need.
  */
 export function lexemeIdFor(lang: LexiconState, meaning: Meaning): LexemeId {
-  if (!lang.conceptIds) lang.conceptIds = {};
-  const existing = lang.conceptIds[meaning];
+  if (!lang.lexemeIds) lang.lexemeIds = {};
+  const existing = lang.lexemeIds[meaning];
   if (existing) return existing as LexemeId;
   const id = mintLexemeId(lang);
-  lang.conceptIds[meaning] = id;
+  lang.lexemeIds[meaning] = id;
   return id;
 }
 
@@ -164,7 +164,7 @@ export function lexemeIdFor(lang: LexiconState, meaning: Meaning): LexemeId {
  * back to a parent's lexicon by UUID.
  *
  * Phase 72 code-review fix A6: O(1) via a WeakMap-backed reverse
- * index. Pre-fix this was an O(n) scan of lang.conceptIds; on
+ * index. Pre-fix this was an O(n) scan of lang.lexemeIds; on
  * reconstruction probes that walk many meanings per language across
  * many languages, the scan compounded. The reverse index is keyed on
  * the lang reference (WeakMap-safe) and invalidated lazily — if the
@@ -172,7 +172,7 @@ export function lexemeIdFor(lang: LexiconState, meaning: Meaning): LexemeId {
  *
  * Caveat: the size-based staleness check assumes monotonic add/delete
  * — no callers re-WRITE an existing meaning's UUID (UUIDs are mint-
- * once-and-stable). If a future caller mutates conceptIds[m] in place
+ * once-and-stable). If a future caller mutates lexemeIds[m] in place
  * with a different LexemeId, the reverse index won't notice. None
  * of the current callers do this; if that changes, add a version
  * counter alongside size.
@@ -180,15 +180,15 @@ export function lexemeIdFor(lang: LexiconState, meaning: Meaning): LexemeId {
 const reverseIndex = new WeakMap<LexiconState, { size: number; map: Map<LexemeId, Meaning> }>();
 
 function getReverseIndex(lang: LexiconState): Map<LexemeId, Meaning> | undefined {
-  if (!lang.conceptIds) return undefined;
+  if (!lang.lexemeIds) return undefined;
   const cached = reverseIndex.get(lang);
-  const currentSize = Object.keys(lang.conceptIds).length;
+  const currentSize = Object.keys(lang.lexemeIds).length;
   if (cached && cached.size === currentSize) return cached.map;
   // (Re)build. Triggered on first read OR when entry count changed
   // (new mint or deleteMeaning purge).
   const map = new Map<LexemeId, Meaning>();
-  for (const m of Object.keys(lang.conceptIds)) {
-    map.set(lang.conceptIds[m] as LexemeId, m);
+  for (const m of Object.keys(lang.lexemeIds)) {
+    map.set(lang.lexemeIds[m] as LexemeId, m);
   }
   reverseIndex.set(lang, { size: currentSize, map });
   return map;
@@ -206,7 +206,7 @@ export function meaningForLexemeId(
  * R2 (concept re-key — the flip): convert a GLOSS-keyed `lang.lexicon`
  * (`Record<Meaning, WordForm>`, as presets author it) into the canonical
  * LexemeId-keyed store (`Record<LexemeId, WordForm>`), populating
- * `lang.conceptIds` (gloss → LexemeId) along the way.
+ * `lang.lexemeIds` (gloss → LexemeId) along the way.
  *
  * Determinism: mints LexemeIds in `Object.keys(glossStore)` order — the
  * preset's insertion order, exactly the order the pre-flip
@@ -218,14 +218,14 @@ export function meaningForLexemeId(
  * ids.
  */
 export function rekeyLexiconToLexemeIds(lang: LexiconState): void {
-  if (!lang.conceptIds) lang.conceptIds = {};
+  if (!lang.lexemeIds) lang.lexemeIds = {};
   const glossStore = lang.lexicon as Record<string, WordForm>;
   const cidStore: Record<string, WordForm> = {};
   for (const gloss of Object.keys(glossStore)) {
-    let cid = lang.conceptIds[gloss] as LexemeId | undefined;
+    let cid = lang.lexemeIds[gloss] as LexemeId | undefined;
     if (!cid) {
       cid = mintLexemeId(lang);
-      lang.conceptIds[gloss] = cid;
+      lang.lexemeIds[gloss] = cid;
     }
     cidStore[cid] = glossStore[gloss]!;
   }
@@ -233,7 +233,7 @@ export function rekeyLexiconToLexemeIds(lang: LexiconState): void {
 }
 
 /**
- * Bulk-assign conceptIds for every meaning in a GLOSS-keyed lexicon that
+ * Bulk-assign lexemeIds for every meaning in a GLOSS-keyed lexicon that
  * doesn't have one yet. Retained for old-save migration and identity-map
  * tests; the live birth path uses `rekeyLexiconToLexemeIds` (which also
  * flips the physical store). Operates on gloss keys — do not call on a
@@ -241,17 +241,17 @@ export function rekeyLexiconToLexemeIds(lang: LexiconState): void {
  */
 export function ensureLexemeIdsForLexicon(lang: LexiconState): number {
   let assigned = 0;
-  if (!lang.conceptIds) lang.conceptIds = {};
+  if (!lang.lexemeIds) lang.lexemeIds = {};
   // Post-flip the canonical store is LexemeId-keyed: a store key that is
   // already a known LexemeId has intrinsic identity, so skip it (and never
   // mint a bogus id for it). Only un-identified GLOSS keys — an old gloss-keyed
   // save being migrated — get a fresh id. This keeps the helper idempotent on a
   // live (cid-keyed) lexicon and correct on a legacy (gloss-keyed) one.
-  const knownCids = new Set<string>(Object.values(lang.conceptIds));
+  const knownCids = new Set<string>(Object.values(lang.lexemeIds));
   for (const key of Object.keys(lang.lexicon)) {
     if (knownCids.has(key)) continue;
-    if (!lang.conceptIds[key]) {
-      lang.conceptIds[key] = mintLexemeId(lang);
+    if (!lang.lexemeIds[key]) {
+      lang.lexemeIds[key] = mintLexemeId(lang);
       assigned++;
     }
   }

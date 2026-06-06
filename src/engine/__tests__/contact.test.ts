@@ -74,7 +74,7 @@ describe("contact / loanwords", () => {
       name: "Far",
       coords: { x: 500, y: 0 },
       lexicon: { ...nearLang.lexicon },
-      conceptIds: { ...nearLang.conceptIds },
+      lexemeIds: { ...nearLang.lexemeIds },
     };
     lexSet(farLang, "distant_thing", ["d", "i", "s"]);
     state.tree[farId] = {
@@ -90,7 +90,7 @@ describe("contact / loanwords", () => {
       const r = {
         ...recipient,
         lexicon: { ...recipient.lexicon },
-        conceptIds: { ...recipient.conceptIds },
+        lexemeIds: { ...recipient.lexemeIds },
         wordFrequencyHints: { ...recipient.wordFrequencyHints },
       };
       lexDelete(r, "nearby_thing");

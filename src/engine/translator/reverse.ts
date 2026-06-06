@@ -3,7 +3,7 @@ import type { MorphCategory } from "../morphology/types";
 import { closedClassTable } from "./closedClass";
 import { disambiguateSense, glossLemma } from "../lexicon/word";
 import { lexGet } from "../lexicon/access";
-import { orderedLexiconKeys } from "../lexicon/conceptIdentity";
+import { orderedLexiconKeys } from "../lexicon/lexemeIdentity";
 
 /**
  * reverse.ts

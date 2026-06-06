@@ -3,7 +3,7 @@ import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSe
 import { invalidateReverseLexCache } from "../translator/reverse";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { purgeMeaningFromRegistry, purgePerWordDiffusionForMeaning } from "../perMeaningFields";
-import { mintLexemeId } from "./conceptIdentity";
+import { mintLexemeId } from "./lexemeIdentity";
 import { lexGet, lexSet, lexDelete } from "./access";
 
 /**
@@ -39,9 +39,9 @@ export function setLexiconForm(
   // for the meaning if it doesn't have one yet. Setters that coin
   // genuinely new meanings (genesis, derivation, borrowing) get
   // their identity anchor here; existing meanings keep their UUID.
-  if (!lang.conceptIds) lang.conceptIds = {};
-  if (!lang.conceptIds[meaning]) {
-    lang.conceptIds[meaning] = mintLexemeId(lang);
+  if (!lang.lexemeIds) lang.lexemeIds = {};
+  if (!lang.lexemeIds[meaning]) {
+    lang.lexemeIds[meaning] = mintLexemeId(lang);
   }
   if (!lang.words) return;
   const primary = findPrimaryWordForMeaning(lang, meaning);
@@ -228,9 +228,9 @@ export function deleteMeaning(
   // pathways across the tree without string-matching.
   if (opts && (opts.mergedInto || opts.reason)) {
     if (!lang.meaningHistory) lang.meaningHistory = {};
-    const conceptId = lang.conceptIds?.[meaning];
-    const mergedIntoLexemeId = opts.mergedInto && lang.conceptIds
-      ? lang.conceptIds[opts.mergedInto]
+    const conceptId = lang.lexemeIds?.[meaning];
+    const mergedIntoLexemeId = opts.mergedInto && lang.lexemeIds
+      ? lang.lexemeIds[opts.mergedInto]
       : undefined;
     lang.meaningHistory[meaning] = {
       mergedInto: opts.mergedInto,

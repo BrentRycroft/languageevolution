@@ -1,7 +1,7 @@
 import type { WordForm } from "../types";
 import type { PhonologyState, LexiconState } from "../domains";
 import { lexGet } from "../lexicon/access";
-import type { LexemeId } from "../lexicon/conceptIdentity";
+import type { LexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * stratal.ts — Phase 72g T1.
@@ -78,7 +78,7 @@ export function refreshUR(lang: PhonologyState & LexiconState): void {
  * surface form when stratal mode is not enabled (back-compat).
  */
 export function getUR(lang: PhonologyState & LexiconState, meaning: string): WordForm | undefined {
-  const cid = lang.conceptIds?.[meaning] as LexemeId | undefined;
+  const cid = lang.lexemeIds?.[meaning] as LexemeId | undefined;
   if (lang.lexiconUR && cid && lang.lexiconUR[cid]) {
     return lang.lexiconUR[cid];
   }
@@ -94,7 +94,7 @@ export function getUR(lang: PhonologyState & LexiconState, meaning: string): Wor
  */
 export function isOpaque(lang: PhonologyState & LexiconState, meaning: string): boolean {
   if (!lang.lexiconUR) return false;
-  const cid = lang.conceptIds?.[meaning] as LexemeId | undefined;
+  const cid = lang.lexemeIds?.[meaning] as LexemeId | undefined;
   const ur = cid ? lang.lexiconUR[cid] : undefined;
   const sr = lexGet(lang, meaning);
   if (!ur || !sr) return false;

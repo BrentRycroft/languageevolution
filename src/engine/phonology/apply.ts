@@ -24,7 +24,7 @@ import { posOf } from "../lexicon/pos";
 import { otFit } from "./ot";
 import { wouldCreateUnrelatedHomonym } from "../lexicon/homonyms";
 import { markednessDelta } from "./markedness";
-import { orderedLexemeIds, buildLexemeIdToGloss } from "../lexicon/conceptIdentity";
+import { orderedLexemeIds, buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
 import type { LexiconState } from "../domains";
 import type { Language } from "../types";
 

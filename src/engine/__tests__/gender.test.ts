@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { assignGenderHeuristic, assignAllGenders, genderOf } from "../morphology/gender";
 import { inflect } from "../morphology/evolve";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language } from "../types";
 
 /**

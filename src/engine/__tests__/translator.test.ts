@@ -18,7 +18,7 @@ function sampleLang(): Language {
     id: "L-0",
     name: "Proto",
     lexicon: {},
-    conceptIds: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

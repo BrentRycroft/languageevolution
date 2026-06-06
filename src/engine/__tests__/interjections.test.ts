@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { translateSentence, tokeniseEnglish } from "../translator/sentence";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language, Lexicon } from "../types";
 
 /**

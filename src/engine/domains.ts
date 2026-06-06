@@ -115,7 +115,7 @@ export type LexiconState = Pick<Language,
   | "lexicalCapacity"
   | "orthography"
   | "lexicalSpelling"
-  | "conceptIds"
+  | "lexemeIds"
 >;
 
 // ─── GrammarState ───────────────────────────────────────────────────

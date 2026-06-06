@@ -7,7 +7,7 @@ import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { lexGet } from "../lexicon/access";
 
 /**

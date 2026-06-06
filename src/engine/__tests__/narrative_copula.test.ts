@@ -22,7 +22,7 @@ function sampleLang(withCopula: boolean): Language {
     id: "L-cop",
     name: "Copula-test",
     lexicon: {},
-    conceptIds: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

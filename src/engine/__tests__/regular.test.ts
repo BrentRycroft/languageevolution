@@ -54,7 +54,7 @@ describe("regular (Neogrammarian) sound change", () => {
 
   it("returns null when no rule has any matching site", () => {
     const lang = makeLang();
-    lang.lexicon = {}; lang.conceptIds = {};
+    lang.lexicon = {}; lang.lexemeIds = {};
     lexSet(lang, "foo", ["f", "o", "o"]);
     const rng = makeRng("empty");
     const rule = CATALOG_BY_ID["lenition.p_to_f"]!;

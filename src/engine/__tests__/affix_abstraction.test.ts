@@ -6,7 +6,7 @@ import { buildInitialState } from "../steps/init";
 import { presetEnglish } from "../presets/english";
 import type { Language } from "../types";
 import type { DerivationalSuffix, DerivationCategory } from "../lexicon/derivation";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { lexGet } from "../lexicon/access";
 
 /**

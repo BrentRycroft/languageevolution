@@ -5,7 +5,7 @@ import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 
 /**
  * propose.test.ts
@@ -69,7 +69,7 @@ describe("phonology/propose", () => {
     const rule = proposeOneRule(lang, rng, 0);
     if (!rule) return;
     lang.activeRules = [{ ...rule, strength: 0.06, lastFireGeneration: 0 }];
-    lang.lexicon = {}; lang.conceptIds = {};
+    lang.lexicon = {}; lang.lexemeIds = {};
     const { retired } = ageAndRetire(lang, 10);
     expect(retired.length).toBe(1);
     expect(lang.activeRules.length).toBe(0);

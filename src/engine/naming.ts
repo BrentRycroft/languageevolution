@@ -1,7 +1,7 @@
 import type { Language } from "./types";
 import type { Rng } from "./rng";
 import { formToString, isVowel } from "./phonology/ipa";
-import { orderedLexiconKeys } from "./lexicon/conceptIdentity";
+import { orderedLexiconKeys } from "./lexicon/lexemeIdentity";
 import { lexGet } from "./lexicon/access";
 
 /**

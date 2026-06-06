@@ -7,7 +7,7 @@ import {
 } from "../lexicon/altForms";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { lexGet, lexDelete } from "../lexicon/access";
 
 /**

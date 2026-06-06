@@ -7,7 +7,7 @@ import {
   meaningForLexemeId,
   ensureLexemeIdsForLexicon,
   mintLexemeId,
-} from "../lexicon/conceptIdentity";
+} from "../lexicon/lexemeIdentity";
 import { setLexiconForm } from "../lexicon/mutate";
 import { lexKeys } from "../lexicon/access";
 
@@ -22,17 +22,17 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     cfg.seed = "p72-defer2-init";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    expect(lang.conceptIds).toBeDefined();
+    expect(lang.lexemeIds).toBeDefined();
     // Every meaning (gloss) in the lexicon should have an ID.
     for (const m of lexKeys(lang)) {
-      expect(lang.conceptIds![m]).toBeDefined();
+      expect(lang.lexemeIds![m]).toBeDefined();
       // Format: c_<8-hex>_<langId>_<seq>. Proto meanings are minted on
       // the root language (id "L-0").
-      expect(lang.conceptIds![m]).toMatch(/^c_[0-9a-f]{8}_L-\d+_\d+$/);
+      expect(lang.lexemeIds![m]).toMatch(/^c_[0-9a-f]{8}_L-\d+_\d+$/);
     }
   });
 
-  it("two sims with the same config produce identical conceptIds (determinism)", () => {
+  it("two sims with the same config produce identical lexemeIds (determinism)", () => {
     // Regression for the pre-fix module-global counter: two sims built
     // and stepped in the SAME process used to get different LexemeIds
     // for the same meaning (the counter advanced across both). With the
@@ -51,7 +51,7 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     const collect = (sim: ReturnType<typeof createSimulation>) => {
       const out: Record<string, Record<string, string>> = {};
       for (const [id, node] of Object.entries(sim.getState().tree)) {
-        out[id] = { ...(node.language.conceptIds ?? {}) };
+        out[id] = { ...(node.language.lexemeIds ?? {}) };
       }
       return out;
     };
@@ -68,13 +68,13 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     expect(a).toBe(b);
   });
 
-  it("daughters inherit the parent's conceptIds at split (cross-tree anchor)", () => {
+  it("daughters inherit the parent's lexemeIds at split (cross-tree anchor)", () => {
     const cfg = presetRomance();
     cfg.seed = "p72-defer2-inherit";
     cfg.historical = { scheduleId: "romance", intensity: 1.0 };
     const sim = createSimulation(cfg);
     const proto = sim.getState().tree["L-0"]!.language;
-    const protoTailId = proto.conceptIds?.tail;
+    const protoTailId = proto.lexemeIds?.tail;
     // Run through the M2 split.
     for (let i = 0; i < 70; i++) sim.step();
     const leaves = Object.values(sim.getState().tree)
@@ -83,7 +83,7 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
       .filter((l) => !l.extinct && l.id !== proto.id);
     let foundMatch = false;
     for (const lang of leaves) {
-      if (lang.conceptIds?.tail === protoTailId) {
+      if (lang.lexemeIds?.tail === protoTailId) {
         foundMatch = true;
         break;
       }
@@ -101,8 +101,8 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
 
-    const tailId = lang.conceptIds!.tail;
-    const backId = lang.conceptIds!.back;
+    const tailId = lang.lexemeIds!.tail;
+    const backId = lang.lexemeIds!.back;
     expect(tailId).toBeDefined();
     expect(backId).toBeDefined();
 
@@ -125,10 +125,10 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     const lang = sim.getState().tree["L-0"]!.language;
 
     const newMeaning = "newly-coined-test-meaning";
-    expect(lang.conceptIds?.[newMeaning]).toBeUndefined();
+    expect(lang.lexemeIds?.[newMeaning]).toBeUndefined();
     setLexiconForm(lang, newMeaning, ["x", "y", "z"], { bornGeneration: 5 });
-    expect(lang.conceptIds![newMeaning]).toBeDefined();
-    expect(lang.conceptIds![newMeaning]).toMatch(/^c_/);
+    expect(lang.lexemeIds![newMeaning]).toBeDefined();
+    expect(lang.lexemeIds![newMeaning]).toMatch(/^c_/);
   });
 
   it("meaningForLexemeId reverse-lookup finds the bound meaning", () => {
@@ -136,7 +136,7 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     cfg.seed = "p72-defer2-reverse";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    const tailId = lang.conceptIds!.tail as any;
+    const tailId = lang.lexemeIds!.tail as any;
     expect(meaningForLexemeId(lang, tailId)).toBe("tail");
     expect(meaningForLexemeId(lang, "non-existent" as any)).toBeUndefined();
   });
@@ -155,11 +155,11 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     cfg.seed = "p72-defer2-idem-bulk";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    const before = { ...lang.conceptIds };
+    const before = { ...lang.lexemeIds };
     const assigned = ensureLexemeIdsForLexicon(lang);
     expect(assigned).toBe(0); // every meaning already has an ID
     for (const m of Object.keys(before)) {
-      expect(lang.conceptIds![m]).toBe(before[m]);
+      expect(lang.lexemeIds![m]).toBe(before[m]);
     }
   });
 });

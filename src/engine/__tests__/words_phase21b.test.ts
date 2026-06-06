@@ -20,12 +20,12 @@ import { lexSet } from "../lexicon/access";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  const { lexicon: seedLexicon, conceptIds: _cids, ...rest } = overrides;
+  const { lexicon: seedLexicon, lexemeIds: _cids, ...rest } = overrides;
   const lang: Language = {
     id: "L",
     name: "Test",
     lexicon: {},
-    conceptIds: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

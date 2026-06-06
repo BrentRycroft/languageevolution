@@ -5,7 +5,7 @@ import {
   scoreMeaningCorrespondence,
 } from "../tree/correspondences";
 import type { Language, LanguageNode, LanguageTree } from "../types";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 
 /**
  * correspondences.test.ts

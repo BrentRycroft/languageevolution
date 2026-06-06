@@ -1,6 +1,6 @@
 import type { Meaning, WordForm } from "../types";
 import type { LexiconState } from "../domains";
-import { lexemeIdFor, buildLexemeIdToGloss, type LexemeId } from "./conceptIdentity";
+import { lexemeIdFor, buildLexemeIdToGloss, type LexemeId } from "./lexemeIdentity";
 
 /**
  * access.ts — the canonical lexicon ACCESSOR seam (concept re-key).
@@ -14,7 +14,7 @@ import { lexemeIdFor, buildLexemeIdToGloss, type LexemeId } from "./conceptIdent
  *
  * KEYING DISCIPLINE: `lang.lexicon` is the ONLY LexemeId-keyed map. Every
  * satellite per-meaning field (wordFrequencyHints, registerOf,
- * lastChangeGeneration, localNeighbors, …) and `lang.conceptIds` itself stay
+ * lastChangeGeneration, localNeighbors, …) and `lang.lexemeIds` itself stay
  * GLOSS-keyed. The bridge is `meaningForLexemeId` / `lexemeIdFor`.
  *
  * ORDER CONTRACT (determinism footgun — read this):
@@ -27,20 +27,20 @@ import { lexemeIdFor, buildLexemeIdToGloss, type LexemeId } from "./conceptIdent
  *     NOT `lexKeys().sort()`, so the canonical sorted order lives in one place.
  *
  * Reads (`lexGet`/`lexHas`/`lexDelete`) use the NON-minting lookup
- * (`lang.conceptIds?.[m]`) so a miss never perturbs the LexemeId mint stream;
+ * (`lang.lexemeIds?.[m]`) so a miss never perturbs the LexemeId mint stream;
  * only `lexSet` mints (via `lexemeIdFor`) when a genuinely new meaning is
  * coined.
  */
 
 /** Form for a meaning, or undefined. */
 export function lexGet(lang: LexiconState, m: Meaning): WordForm | undefined {
-  const cid = lang.conceptIds?.[m] as LexemeId | undefined;
+  const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
   return cid === undefined ? undefined : lang.lexicon[cid];
 }
 
 /** Whether the lexicon has a form for this meaning. */
 export function lexHas(lang: LexiconState, m: Meaning): boolean {
-  const cid = lang.conceptIds?.[m] as LexemeId | undefined;
+  const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
   return cid !== undefined && lang.lexicon[cid] !== undefined;
 }
 
@@ -51,10 +51,10 @@ export function lexSet(lang: LexiconState, m: Meaning, form: WordForm): void {
   lang.lexicon[lexemeIdFor(lang, m)] = form;
 }
 
-/** Remove a meaning's entry from the store. (`lang.conceptIds` is purged
+/** Remove a meaning's entry from the store. (`lang.lexemeIds` is purged
  * separately by deleteMeaning's registry pass.) */
 export function lexDelete(lang: LexiconState, m: Meaning): void {
-  const cid = lang.conceptIds?.[m] as LexemeId | undefined;
+  const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
   if (cid !== undefined) delete lang.lexicon[cid];
 }
 

@@ -4,7 +4,7 @@ import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { lexGet, lexHas, lexEntries } from "./access";
-import { lexemeIdFor } from "./conceptIdentity";
+import { lexemeIdFor } from "./lexemeIdentity";
 import { CONCEPT_IDS } from "./concepts";
 
 /**

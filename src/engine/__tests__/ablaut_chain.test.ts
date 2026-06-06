@@ -10,7 +10,7 @@ import type { Paradigm, Morphology } from "../morphology/types";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 import { makeRng } from "../rng";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 
 /**
  * ablaut_chain.test.ts
@@ -99,7 +99,7 @@ describe("Phase 64 T2 — ablaut chain emergence + sound-change tracking", () =>
       lexicon: { sing: ["s", "i", "ŋ"] as WordForm },
       events: [],
     } as unknown as Language;
-    // Rekey the hand-built gloss-keyed lexicon to LexemeIds + conceptIds map,
+    // Rekey the hand-built gloss-keyed lexicon to LexemeIds + lexemeIds map,
     // so decayAblautClasses (which reads forms via the access seam) finds "sing".
     rekeyLexiconToLexemeIds(fakeLang);
     decayAblautClasses(fakeLang, 100);

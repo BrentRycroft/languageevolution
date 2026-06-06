@@ -11,7 +11,7 @@ import { lexicalCapacity, computeTierCandidate } from "../lexicon/tier";
 import { maybeRecarve } from "../semantics/recarve";
 import { makeRng } from "../rng";
 import type { Language, LanguageTree } from "../types";
-import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { lexGet, lexHas } from "../lexicon/access";
 
 /**

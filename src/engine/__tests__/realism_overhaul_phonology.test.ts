@@ -122,7 +122,7 @@ describe("Lane A #7 — tonogenesis (opt-in language-level regime shift)", () =>
     // No obstruent codas ⇒ no contrast ⇒ never actuates (rng-independent).
     const open = makeContrastLang();
     open.lexicon = {};
-    (open as { conceptIds?: Record<string, unknown> }).conceptIds = {};
+    (open as { lexemeIds?: Record<string, unknown> }).lexemeIds = {};
     lexSet(open, "a", ["t", "a"]);
     lexSet(open, "b", ["p", "a"]);
     lexSet(open, "c", ["k", "o"]);

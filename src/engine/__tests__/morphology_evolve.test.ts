@@ -19,7 +19,7 @@ function makeLang(): Language {
     id: "L-0",
     name: "Proto",
     lexicon: {},
-    conceptIds: {},
+    lexemeIds: {},
     enabledChangeIds: ["lenition.p_to_f"],
     changeWeights: { "lenition.p_to_f": 1 },
     birthGeneration: 0,
