@@ -7,7 +7,7 @@
  */
 import type { Vec } from "../semantics/vec";
 import { distanceSq } from "../semantics/vec";
-import { anchorsWithin } from "../semantics/anchors";
+import { ANCHORS } from "../semantics/anchors";
 import { meaningPointFor } from "../semantics/meaningPoint";
 import { lexKeys, lexHas } from "../lexicon/access";
 import type { Language, Meaning } from "../types";
@@ -43,76 +43,60 @@ export interface SemanticGap {
  * concept string (deterministic).
  */
 export function findSemanticGap(lang: Language): SemanticGap | null {
-  // Step 1: gather all existing word points (keyed lexemes + keyless lexemes)
+  // Gather all existing word points (keyed lexemes + keyless lexemes).
   const existingPoints: Vec[] = [];
-  for (const m of lexKeys(lang)) {
-    existingPoints.push(meaningPointFor(lang, m));
-  }
+  for (const m of lexKeys(lang)) existingPoints.push(meaningPointFor(lang, m));
   if (lang.keylessLexemes) {
     for (const entry of Object.values(lang.keylessLexemes)) {
       existingPoints.push(Int32Array.from(entry.point));
     }
   }
-  if (existingPoints.length === 0) return null;
+  const n = existingPoints.length;
+  if (n === 0) return null;
 
-  // Step 2: gather candidate anchors — union of anchorsWithin each existing point,
-  // deduped by concept, skipping already-lexicalised meanings. This restricts candidates
-  // to the populated region (far cheaper than scanning all ~2400 ANCHORS).
   const MIN_GAP_DIST_SQ = MIN_GAP_DIST * MIN_GAP_DIST;
   const NEIGHBOR_RADIUS_SQ = NEIGHBOR_RADIUS * NEIGHBOR_RADIUS;
 
-  const seen = new Set<Meaning>();
-  const candidates: Array<{
-    concept: Meaning;
-    point: Vec;
-    nearestExistingDistSq: number;
-    neighborSupport: number;
-  }> = [];
-
-  for (const p of existingPoints) {
-    for (const anchor of anchorsWithin(p, NEIGHBOR_RADIUS)) {
-      if (seen.has(anchor.concept)) continue;
-      seen.add(anchor.concept);
-      if (lexHas(lang, anchor.concept)) continue;
-
-      // Step 3: score the candidate
-      let nearestDistSq = Infinity;
-      let support = 0;
-      for (const ep of existingPoints) {
-        const d = distanceSq(anchor.point, ep);
-        if (d < nearestDistSq) nearestDistSq = d;
-        if (d <= NEIGHBOR_RADIUS_SQ) support++;
+  // Scan every anchor once, scoring against the existing points in a single pass with an
+  // early break the moment a word lands within MIN_GAP_DIST (the anchor is then NOT a gap —
+  // most unlexicalised anchors disqualify after only a few words, so the common case is
+  // cheap and we never allocate/sort a per-word neighbour list). An anchor that qualifies
+  // (support ≥ MIN_SUPPORT) is necessarily within NEIGHBOR_RADIUS of ≥ MIN_SUPPORT words, so
+  // visiting all anchors yields the SAME qualifying set as a neighbourhood-union gather.
+  let best: SemanticGap | null = null;
+  for (const a of ANCHORS) {
+    if (lexHas(lang, a.concept)) continue;
+    let nearest = Infinity;
+    let support = 0;
+    let disqualified = false;
+    for (let i = 0; i < n; i++) {
+      const d = distanceSq(a.point, existingPoints[i]!);
+      if (d < MIN_GAP_DIST_SQ) {
+        disqualified = true; // too close to an existing word → not an empty region
+        break;
       }
-
-      if (nearestDistSq < MIN_GAP_DIST_SQ) continue; // too close to an existing word
-      if (support < MIN_SUPPORT) continue;            // neighbourhood not populated enough
-
-      candidates.push({
-        concept: anchor.concept,
-        point: anchor.point,
-        nearestExistingDistSq: nearestDistSq,
+      if (d < nearest) nearest = d;
+      if (d <= NEIGHBOR_RADIUS_SQ) support++;
+    }
+    if (disqualified || support < MIN_SUPPORT) continue;
+    // Most salient gap: max support, then max distance-to-nearest, then smallest concept.
+    if (
+      best === null ||
+      support > best.neighborSupport ||
+      (support === best.neighborSupport && nearest > best.nearestExistingDistSq) ||
+      (support === best.neighborSupport &&
+        nearest === best.nearestExistingDistSq &&
+        a.concept < best.gloss)
+    ) {
+      best = {
+        point: a.point,
+        gloss: a.concept,
+        nearestExistingDistSq: nearest,
         neighborSupport: support,
-      });
+      };
     }
   }
-
-  if (candidates.length === 0) return null;
-
-  // Step 4: pick best: max neighborSupport, then max nearestExistingDistSq, then smallest concept
-  candidates.sort((a, b) => {
-    if (b.neighborSupport !== a.neighborSupport) return b.neighborSupport - a.neighborSupport;
-    if (b.nearestExistingDistSq !== a.nearestExistingDistSq)
-      return b.nearestExistingDistSq - a.nearestExistingDistSq;
-    return a.concept < b.concept ? -1 : a.concept > b.concept ? 1 : 0;
-  });
-
-  const best = candidates[0]!;
-  return {
-    point: best.point,
-    gloss: best.concept,
-    nearestExistingDistSq: best.nearestExistingDistSq,
-    neighborSupport: best.neighborSupport,
-  };
+  return best;
 }
 
 /**

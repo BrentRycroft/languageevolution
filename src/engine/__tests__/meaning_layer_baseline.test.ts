@@ -316,13 +316,26 @@ const GEN0: Record<string, string> = {
 // six gen-30 signatures move again. The geometry scatters some curated fields (~59% parity; e.g. body
 // parts), an accepted/reversible trade-off (user chose the full switch). GEN0 unchanged. Byte-identity
 // waived; reproducibility preserved.
+// RE-BAKED 2026-06-06 (storage migration inc 4 step 3 — keyless gap-coinage wired into the genesis
+// loop). stepGenesis now ends with a low-rate (KEYLESS_GAP_COINAGE_RATE=0.1) rng.chance gate that, on
+// firing, coins a KEYLESS lexeme into a salient empty region of the meaning space (findSemanticGap →
+// coinKeylessForGap): a point-native word stored by point + form in lang.keylessLexemes with NO
+// concept/gloss key, its label emergent. Two deliberate perturbations shift every preset's gen-30
+// trajectory: (1) the per-generation rng.chance gate advances the shared stream; (2) when keyless
+// coinage fires it advances lang.conceptIdSeq, so the LexemeId minted for the NEXT gloss-keyed coinage
+// differs → that word's content-addressed (B1-Y) sound-change sub-rng reseeds differently. Seed words
+// keep their birth-time LexemeIds, so existing vocabulary is insulated; only post-keyless coinages
+// move. GEN0 unchanged (no genesis at gen 0). The signature() hashes gloss→form + word formKeys, NOT
+// keylessLexemes, so the shift is purely the trajectory perturbation above, not the keyless words
+// themselves. Byte-identity-vs-old-baseline waived by the user; reproducibility (same config →
+// identical output) preserved — hashes captured twice on consecutive runs, identical.
 const GENN: Record<string, string> = {
-  pie: "566cecb1",
-  bantu: "1fc883b5",
-  romance: "7d1d575b",
-  germanic: "06b28415",
-  tokipona: "b98f5dbc",
-  english: "ec78376b",
+  pie: "96539fb4",
+  bantu: "9cc04867",
+  romance: "622cb632",
+  germanic: "42b92e41",
+  tokipona: "581f39fd",
+  english: "db425ca5",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

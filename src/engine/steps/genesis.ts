@@ -8,6 +8,7 @@ import type {
 import type { CoinageOutcome } from "../genesis/apply";
 import { tryCoin } from "../genesis/apply";
 import { lexicalNeed } from "../genesis/need";
+import { findSemanticGap, coinKeylessForGap } from "../genesis/semanticGap";
 import { neighborsOf } from "../semantics/neighbors";
 import type { Rng } from "../rng";
 import { genesisRulesFor, pushEvent } from "./helpers";
@@ -90,6 +91,13 @@ function buildMorphStructure(
   }
   return out;
 }
+
+/**
+ * Inc 4 step 3 — per-generation probability that a language coins a KEYLESS word into a
+ * salient empty region of its meaning space (point-native storage, no concept key). Low, so
+ * keyless coinage is a rare innovation alongside the gloss-keyed mechanisms.
+ */
+const KEYLESS_GAP_COINAGE_RATE = 0.1;
 
 export function stepGenesis(
   lang: Language,
@@ -400,6 +408,17 @@ export function stepGenesis(
           ? `${outcome.originTag}+polysemy: ${outcome.meaning} (homophone of existing word)`
           : `${outcome.originTag}: ${outcome.meaning}`,
     });
+  }
+
+  // Inc 4 step 3 — keyless gap-coinage. At a low rate, coin a word into a salient EMPTY
+  // region of the meaning space: a point-native lexeme stored by point + form with NO
+  // concept/gloss key (lang.keylessLexemes), its label emergent. This drives the
+  // point-native storage path from the live loop. Silent for now (surfaced in a later
+  // increment). The rng.chance gate is the LAST genesis draw, so it perturbs only this
+  // generation's downstream stream onward — gen-0 (no genesis) stays byte-identical.
+  if (rng.chance(KEYLESS_GAP_COINAGE_RATE)) {
+    const gap = findSemanticGap(lang);
+    if (gap) coinKeylessForGap(lang, gap);
   }
 }
 
