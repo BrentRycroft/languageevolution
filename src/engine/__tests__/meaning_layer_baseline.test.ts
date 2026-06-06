@@ -310,13 +310,19 @@ const GEN0: Record<string, string> = {
 // are byte-identical; only the evolution trajectory diverges). Byte-identity-vs-old-baseline
 // explicitly waived by the user; reproducibility (same config → identical output) preserved — hashes
 // captured twice on consecutive runs and confirmed identical.
+// RE-BAKED 2026-06-05 (vector-native CLUSTER switch — clusterOf → geometry). clusterOf() now reads
+// the nearest cluster centroid by GloVe geometry (clusterRegionOf) for grounded meanings, so
+// relatedMeanings + the cluster-driven drift/coinage/abstraction paths shift for every preset → all
+// six gen-30 signatures move again. The geometry scatters some curated fields (~59% parity; e.g. body
+// parts), an accepted/reversible trade-off (user chose the full switch). GEN0 unchanged. Byte-identity
+// waived; reproducibility preserved.
 const GENN: Record<string, string> = {
-  pie: "76006863",
-  bantu: "4f83551a",
-  romance: "3692f897",
-  germanic: "0b3bc315",
-  tokipona: "aa5f1a15",
-  english: "ab2bd83e",
+  pie: "566cecb1",
+  bantu: "1fc883b5",
+  romance: "7d1d575b",
+  germanic: "06b28415",
+  tokipona: "b98f5dbc",
+  english: "ec78376b",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

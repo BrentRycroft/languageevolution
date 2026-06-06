@@ -21,11 +21,15 @@ const RUN_SLOW = !!(globalThis as { process?: { env?: Record<string, string | un
   .process?.env?.RUN_SLOW;
 
 describe("semantic clusters", () => {
-  it("core body meanings cluster together", () => {
-    expect(clusterOf("hand")).toBe("body");
-    expect(clusterOf("foot")).toBe("body");
-    expect(clusterOf("water")).toBe("environment");
-    expect(clusterOf("go")).toBe("motion");
+  it("core meanings resolve to a defined semantic field (geometric, fields may scatter)", () => {
+    // Vector-native flip (full cluster switch, user-authorized): clusterOf now reads the nearest
+    // cluster centroid by GloVe geometry, which DISAGREES with the curated field names (~59% parity)
+    // and scatters some coherent fields — e.g. body parts no longer all land in "body". This is an
+    // accepted, reversible trade-off (the curated `MEANING_TO_CLUSTER` table remains the canonical
+    // source). The surviving invariant: every grounded core meaning resolves to SOME valid field.
+    for (const m of ["hand", "foot", "water", "go"] as const) {
+      expect(clusterOf(m), m).toBeDefined();
+    }
   });
 
   it("relatedMeanings returns cluster-mates for seed meanings", () => {
