@@ -5,7 +5,7 @@ import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 
 /**
  * propose.test.ts
@@ -46,7 +46,7 @@ function sampleLang(): Language {
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},
   };
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

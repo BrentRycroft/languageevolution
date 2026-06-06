@@ -401,7 +401,7 @@ export function LexiconView() {
                       // assignment per noun.
                       const proto = state.tree[state.rootId]?.language;
                       // nounDeclensionClass is a per-meaning satellite map —
-                      // GLOSS-keyed (unaffected by the R2 ConceptId store flip).
+                      // GLOSS-keyed (unaffected by the R2 LexemeId store flip).
                       const cls = proto?.nounDeclensionClass?.[meaning];
                       if (!cls) return null;
                       return (

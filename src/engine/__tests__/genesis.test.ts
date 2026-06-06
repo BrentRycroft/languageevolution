@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { GENESIS_BY_ID } from "../genesis/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import { lexGet } from "../lexicon/access";
 import type { Language } from "../types";
 
@@ -41,7 +41,7 @@ function makeLang(lexicon: Record<string, string[]> = {
     activeRules: [],
     orthography: {}, otRanking: [], lastChangeGeneration: {},
   } as unknown as Language;
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

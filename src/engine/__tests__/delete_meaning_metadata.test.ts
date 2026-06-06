@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { deleteMeaning } from "../lexicon/mutate";
 import { lexGet, lexSet } from "../lexicon/access";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import type { Language, Phoneme } from "../types";
 
 /**
@@ -28,7 +28,7 @@ function fakeLang(): Language {
     },
     words: [],
   } as unknown as Language;
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

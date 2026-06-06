@@ -7,7 +7,7 @@ import {
 } from "../lexicon/altForms";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import { lexGet, lexDelete } from "../lexicon/access";
 
 /**
@@ -48,7 +48,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

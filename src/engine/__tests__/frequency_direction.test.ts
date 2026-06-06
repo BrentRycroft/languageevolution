@@ -97,7 +97,7 @@ describe("Phase 24 — frequency direction by POS", () => {
         let hS = 0, hN = 0, lS = 0, lN = 0;
         for (const lang of langs) {
           for (const m of HIGH_FREQ) {
-            // Route through the accessor seam: lang.lexicon is ConceptId-keyed
+            // Route through the accessor seam: lang.lexicon is LexemeId-keyed
             // since the R2 re-key, so lang.lexicon[gloss] is always undefined.
             const cur = lexGet(lang, m);
             const seedForm = seedLex[m];

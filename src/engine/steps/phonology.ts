@@ -1,6 +1,6 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
 import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority, voicedObstruentShareOf } from "../phonology/apply";
-import { buildConceptIdToGloss, type ConceptId } from "../lexicon/conceptIdentity";
+import { buildLexemeIdToGloss, type LexemeId } from "../lexicon/conceptIdentity";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
@@ -166,12 +166,12 @@ export function stepPhonology(
   // Phase 69a T1: single combined pass over `before` builds both the
   // per-meaning age and neighbour-momentum maps. Pre-fix this was
   // two separate Object.keys(before) walks (line 79 + line 105).
-  // `before` is the ConceptId-keyed store; resolve each key's gloss (fresh map,
+  // `before` is the LexemeId-keyed store; resolve each key's gloss (fresh map,
   // O(1) lookups) so the satellite per-meaning maps (lastChangeGeneration,
   // localNeighbors) and the gloss-keyed ages/momentum outputs stay
   // byte-identical to the pre-flip sorted-gloss build. apply.ts looks these up
   // by the same gloss.
-  const glossByCid = buildConceptIdToGloss(lang);
+  const glossByCid = buildLexemeIdToGloss(lang);
   for (const cid of Object.keys(before)) {
     const m = glossByCid.get(cid) ?? cid;
     const last = lang.lastChangeGeneration[m];
@@ -314,10 +314,10 @@ export function stepPhonology(
     lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
     const policy = lang.lexiconURRefreshPolicy ?? "each-gen";
     if (policy === "each-gen") {
-      // UR mirrors the surface store, so it is ConceptId-keyed too.
+      // UR mirrors the surface store, so it is LexemeId-keyed too.
       lang.lexiconUR = {};
       for (const cid of Object.keys(lang.lexicon)) {
-        lang.lexiconUR[cid] = lang.lexicon[cid as ConceptId]!.slice();
+        lang.lexiconUR[cid] = lang.lexicon[cid as LexemeId]!.slice();
       }
     }
     // policy === "manual": leave UR untouched. Caller checkpoints when
@@ -350,15 +350,15 @@ export function stepPhonology(
   // sound-change additions from outpacing homeostatic pruning.
   // Mergers (rules that REDUCE the inventory) are still allowed —
   // their outputs are by definition in the old inventory.
-  // `before` and `lang.lexicon` are both ConceptId-keyed; iterate by store key
+  // `before` and `lang.lexicon` are both LexemeId-keyed; iterate by store key
   // and resolve the gloss only for the gloss-keyed satellite maps. (Pre-flip
   // these loops keyed `before` by gloss; that mismatch silently no-op'd the
   // change-recording below — see CONCEPT-REKEY-PLAN.md.)
-  const glossOfCid = buildConceptIdToGloss(lang);
+  const glossOfCid = buildLexemeIdToGloss(lang);
   if (inventorySizePressure(lang) > 0) {
     const oldInv = new Set(lang.phonemeInventory.segmental);
     for (const cid of Object.keys(lang.lexicon)) {
-      const newForm = lang.lexicon[cid as ConceptId]!;
+      const newForm = lang.lexicon[cid as LexemeId]!;
       const oldForm = before[cid];
       if (!oldForm || newForm === oldForm) continue;
       let introducesNovel = false;
@@ -370,12 +370,12 @@ export function stepPhonology(
         }
       }
       if (introducesNovel) {
-        lang.lexicon[cid as ConceptId] = oldForm;
+        lang.lexicon[cid as LexemeId] = oldForm;
       }
     }
   }
   for (const cid of Object.keys(before)) {
-    if (lang.lexicon[cid as ConceptId] !== undefined) continue;
+    if (lang.lexicon[cid as LexemeId] !== undefined) continue;
     const m = glossOfCid.get(cid);
     if (m === undefined) continue;
     delete lang.wordFrequencyHints[m];
@@ -415,7 +415,7 @@ export function stepPhonology(
   }
   let mutated = 0;
   for (const cid of Object.keys(before)) {
-    const cur = lang.lexicon[cid as ConceptId];
+    const cur = lang.lexicon[cid as LexemeId];
     if (cur === undefined) continue;
     const m = glossOfCid.get(cid);
     if (m === undefined) continue;

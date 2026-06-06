@@ -13,7 +13,7 @@ import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
 import { zipfFrequencyFor } from "../lexicon/concepts";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
@@ -142,7 +142,7 @@ function seedRegister(
 ): Record<string, "high" | "low"> {
   const out: Record<string, "high" | "low"> = {};
   // `lex` is the gloss-keyed seed lexicon (pre-flip); sort its glosses for the
-  // canonical RNG-draw order. (The store flips to ConceptId keys immediately
+  // canonical RNG-draw order. (The store flips to LexemeId keys immediately
   // after this proto is built; here it is still gloss-keyed.)
   for (const m of Object.keys(lex).sort()) {
     if (rng.chance(0.15)) {
@@ -234,11 +234,11 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   };
   // Concept re-key (R2 — the flip): the preset authors gloss -> form, so the
   // literal above leaves rootLang.lexicon gloss-keyed. Flip it to the canonical
-  // ConceptId-keyed store NOW, before any accessor-driven setup runs
+  // LexemeId-keyed store NOW, before any accessor-driven setup runs
   // (seedDerivationalSuffixes, seedClosedClassLexicon, tonaliseLexicon, …),
   // which all assume conceptIds is populated. Mints in preset insertion order,
   // so the downstream lexKeys gloss sequence is byte-identical.
-  rekeyLexiconToConceptIds(rootLang);
+  rekeyLexiconToLexemeIds(rootLang);
   // Phase 6a: give EVERY content concept a Zipfian-by-rank seed frequency (by
   // concept tier), not just the ~89 in seedFrequencyHints. Without this most
   // words fell back to a flat 0.5 default, so the content/function + Swadesh
@@ -478,8 +478,8 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     rootLang.territory = { cells: [originId] };
     rootLang.coords = territoryCentroid(worldMap, [originId]);
   }
-  // Phase 72d / R2: stable ConceptIds were assigned at the gloss->cid flip
-  // above (rekeyLexiconToConceptIds), which also keys the canonical store by
+  // Phase 72d / R2: stable LexemeIds were assigned at the gloss->cid flip
+  // above (rekeyLexiconToLexemeIds), which also keys the canonical store by
   // them. Daughters inherit conceptIds at split; identity persists across
   // phonological / semantic drift.
   const rootNode: LanguageNode = {

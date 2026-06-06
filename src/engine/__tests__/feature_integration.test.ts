@@ -6,7 +6,7 @@ import { GENESIS_BY_ID } from "../genesis/catalog";
 import { stepPhonology } from "../steps/phonology";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import type { Language, SimulationState } from "../types";
 import type { Paradigm } from "../morphology/types";
 
@@ -45,7 +45,7 @@ function testLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   } as Language;
-  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToConceptIds(lang);
+  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

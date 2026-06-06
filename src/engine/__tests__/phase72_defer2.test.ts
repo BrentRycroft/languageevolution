@@ -3,21 +3,21 @@ import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { deleteMeaning } from "../lexicon/mutate";
 import {
-  conceptIdFor,
-  meaningForConceptId,
-  ensureConceptIdsForLexicon,
-  mintConceptId,
+  lexemeIdFor,
+  meaningForLexemeId,
+  ensureLexemeIdsForLexicon,
+  mintLexemeId,
 } from "../lexicon/conceptIdentity";
 import { setLexiconForm } from "../lexicon/mutate";
 import { lexKeys } from "../lexicon/access";
 
 /**
  * phase72_defer2.test.ts — Phase 72 deferred item defer-2:
- * stable ConceptId UUIDs for meanings + UUID-anchored meaningHistory.
+ * stable LexemeId UUIDs for meanings + UUID-anchored meaningHistory.
  */
 
 describe("Defer-2 (T72d) — concept UUID anchors", () => {
-  it("buildInitialState assigns ConceptIds to every meaning in proto lexicon", () => {
+  it("buildInitialState assigns LexemeIds to every meaning in proto lexicon", () => {
     const cfg = presetRomance();
     cfg.seed = "p72-defer2-init";
     const sim = createSimulation(cfg);
@@ -34,7 +34,7 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
 
   it("two sims with the same config produce identical conceptIds (determinism)", () => {
     // Regression for the pre-fix module-global counter: two sims built
-    // and stepped in the SAME process used to get different ConceptIds
+    // and stepped in the SAME process used to get different LexemeIds
     // for the same meaning (the counter advanced across both). With the
     // per-language deterministic mint they must match exactly.
     const make = () => {
@@ -58,13 +58,13 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     expect(collect(a)).toEqual(collect(b));
   });
 
-  it("conceptIdFor returns the same ID on repeat calls (idempotent)", () => {
+  it("lexemeIdFor returns the same ID on repeat calls (idempotent)", () => {
     const cfg = presetRomance();
     cfg.seed = "p72-defer2-idem";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    const a = conceptIdFor(lang, "water");
-    const b = conceptIdFor(lang, "water");
+    const a = lexemeIdFor(lang, "water");
+    const b = lexemeIdFor(lang, "water");
     expect(a).toBe(b);
   });
 
@@ -95,7 +95,7 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     }
   });
 
-  it("deleteMeaning records BOTH conceptId and mergedIntoConceptId in history", () => {
+  it("deleteMeaning records BOTH conceptId and mergedIntoLexemeId in history", () => {
     const cfg = presetRomance();
     cfg.seed = "p72-defer2-delete";
     const sim = createSimulation(cfg);
@@ -114,7 +114,7 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
 
     expect(lang.meaningHistory!.tail).toBeDefined();
     expect(lang.meaningHistory!.tail.conceptId).toBe(tailId);
-    expect(lang.meaningHistory!.tail.mergedIntoConceptId).toBe(backId);
+    expect(lang.meaningHistory!.tail.mergedIntoLexemeId).toBe(backId);
     expect(lang.meaningHistory!.tail.mergedInto).toBe("back");
   });
 
@@ -131,32 +131,32 @@ describe("Defer-2 (T72d) — concept UUID anchors", () => {
     expect(lang.conceptIds![newMeaning]).toMatch(/^c_/);
   });
 
-  it("meaningForConceptId reverse-lookup finds the bound meaning", () => {
+  it("meaningForLexemeId reverse-lookup finds the bound meaning", () => {
     const cfg = presetRomance();
     cfg.seed = "p72-defer2-reverse";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     const tailId = lang.conceptIds!.tail as any;
-    expect(meaningForConceptId(lang, tailId)).toBe("tail");
-    expect(meaningForConceptId(lang, "non-existent" as any)).toBeUndefined();
+    expect(meaningForLexemeId(lang, tailId)).toBe("tail");
+    expect(meaningForLexemeId(lang, "non-existent" as any)).toBeUndefined();
   });
 
-  it("mintConceptId produces unique values", () => {
+  it("mintLexemeId produces unique values", () => {
     const lang = { id: "L-test", conceptIdSeq: 0 };
     const ids = new Set<string>();
     for (let i = 0; i < 100; i++) {
-      ids.add(mintConceptId(lang));
+      ids.add(mintLexemeId(lang));
     }
     expect(ids.size).toBe(100);
   });
 
-  it("ensureConceptIdsForLexicon is idempotent (no double-mint)", () => {
+  it("ensureLexemeIdsForLexicon is idempotent (no double-mint)", () => {
     const cfg = presetRomance();
     cfg.seed = "p72-defer2-idem-bulk";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     const before = { ...lang.conceptIds };
-    const assigned = ensureConceptIdsForLexicon(lang);
+    const assigned = ensureLexemeIdsForLexicon(lang);
     expect(assigned).toBe(0); // every meaning already has an ID
     for (const m of Object.keys(before)) {
       expect(lang.conceptIds![m]).toBe(before[m]);

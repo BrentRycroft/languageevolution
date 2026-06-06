@@ -3,7 +3,7 @@ import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSe
 import { invalidateReverseLexCache } from "../translator/reverse";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { purgeMeaningFromRegistry, purgePerWordDiffusionForMeaning } from "../perMeaningFields";
-import { mintConceptId } from "./conceptIdentity";
+import { mintLexemeId } from "./conceptIdentity";
 import { lexGet, lexSet, lexDelete } from "./access";
 
 /**
@@ -35,13 +35,13 @@ export function setLexiconForm(
   },
 ): void {
   lexSet(lang, meaning, form);
-  // Phase 72d (full-delivery defer-2): lazy-mint a stable ConceptId
+  // Phase 72d (full-delivery defer-2): lazy-mint a stable LexemeId
   // for the meaning if it doesn't have one yet. Setters that coin
   // genuinely new meanings (genesis, derivation, borrowing) get
   // their identity anchor here; existing meanings keep their UUID.
   if (!lang.conceptIds) lang.conceptIds = {};
   if (!lang.conceptIds[meaning]) {
-    lang.conceptIds[meaning] = mintConceptId(lang);
+    lang.conceptIds[meaning] = mintLexemeId(lang);
   }
   if (!lang.words) return;
   const primary = findPrimaryWordForMeaning(lang, meaning);
@@ -223,18 +223,18 @@ export function deleteMeaning(
 
   // Phase 72d T2 + 72d defer-2: record the pathway BEFORE deleting
   // per-meaning metadata. Captures both the string mergedInto AND
-  // (post-defer-2) the stable ConceptId pair (this meaning's UUID
+  // (post-defer-2) the stable LexemeId pair (this meaning's UUID
   // and the absorber's UUID) so reverse inference can follow merger
   // pathways across the tree without string-matching.
   if (opts && (opts.mergedInto || opts.reason)) {
     if (!lang.meaningHistory) lang.meaningHistory = {};
     const conceptId = lang.conceptIds?.[meaning];
-    const mergedIntoConceptId = opts.mergedInto && lang.conceptIds
+    const mergedIntoLexemeId = opts.mergedInto && lang.conceptIds
       ? lang.conceptIds[opts.mergedInto]
       : undefined;
     lang.meaningHistory[meaning] = {
       mergedInto: opts.mergedInto,
-      mergedIntoConceptId,
+      mergedIntoLexemeId,
       conceptId,
       generation: opts.generation ?? 0,
       reason: opts.reason,

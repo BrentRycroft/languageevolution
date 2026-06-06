@@ -94,7 +94,7 @@ describe("Phase 28d — lexical diffusion", () => {
     // signature (Phase 24 + Phase 28d combined).
     const entries = Object.keys(freqHints)
       // Route gloss → form through the access seam: post concept-rekey,
-      // `lang.lexicon[gloss]` is undefined (the store is ConceptId-keyed),
+      // `lang.lexicon[gloss]` is undefined (the store is LexemeId-keyed),
       // which previously collapsed `entries` to empty and made this test
       // return early without asserting anything.
       .filter((m) => lexGet(lang, m) && seedLex[m])

@@ -22,7 +22,7 @@ describe("Phase 72e-1 — empty lexicon stress test", () => {
     const initialSize = Object.keys(lang.lexicon).length;
 
     // Delete every non-protected meaning. Iterate GLOSSES via the seam:
-    // Object.keys(lang.lexicon) now yields ConceptIds, which neither
+    // Object.keys(lang.lexicon) now yields LexemeIds, which neither
     // PROTECTED_MEANINGS (gloss-keyed) nor deleteMeaning (gloss-keyed) accept.
     const all = lexKeys(lang);
     for (const m of all) {

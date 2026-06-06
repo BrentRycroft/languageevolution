@@ -6,7 +6,7 @@ import { buildInitialState } from "../steps/init";
 import { presetEnglish } from "../presets/english";
 import type { Language } from "../types";
 import type { DerivationalSuffix, DerivationCategory } from "../lexicon/derivation";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import { lexGet } from "../lexicon/access";
 
 /**
@@ -55,7 +55,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

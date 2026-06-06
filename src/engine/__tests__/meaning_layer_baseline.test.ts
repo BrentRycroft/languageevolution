@@ -54,7 +54,7 @@ function signature(sim: ReturnType<typeof createSimulation>): string {
     // Route through the accessor seam (lexKeys/lexGet) so the signature locks
     // GLOSS → form, not the physical store key. Pre-flip the seam yields the
     // glosses directly; post-flip (concept re-key R2) it resolves the
-    // ConceptId store key back to its gloss. Either way the linguistic
+    // LexemeId store key back to its gloss. Either way the linguistic
     // content — what this test guards — is identical, so the locked hashes
     // survive a pure storage refactor and still catch any real form change.
     // NB: sort the GLOSSES (as the original Object.keys(...).sort() did), not

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { translateSentence, tokeniseEnglish } from "../translator/sentence";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import type { Language, Lexicon } from "../types";
 
 /**
@@ -42,7 +42,7 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     lastChangeGeneration: {},
     ...overrides,
   } as Language;
-  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToConceptIds(lang);
+  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

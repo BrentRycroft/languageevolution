@@ -24,7 +24,7 @@ import { posOf } from "../lexicon/pos";
 import { otFit } from "./ot";
 import { wouldCreateUnrelatedHomonym } from "../lexicon/homonyms";
 import { markednessDelta } from "./markedness";
-import { orderedConceptIds, buildConceptIdToGloss } from "../lexicon/conceptIdentity";
+import { orderedLexemeIds, buildLexemeIdToGloss } from "../lexicon/conceptIdentity";
 import type { LexiconState } from "../domains";
 import type { Language } from "../types";
 
@@ -868,10 +868,10 @@ export function stratalApplyChangesToLexicon(
 }
 
 /**
- * `lexicon` is ConceptId-keyed in the production path (`lang` supplied) and
+ * `lexicon` is LexemeId-keyed in the production path (`lang` supplied) and
  * gloss-keyed in the legacy/unit-test path (`lang` omitted). The single
  * `glossOf(key)` resolver below collapses the two: with `lang`, a store key
- * is a ConceptId resolved to its gloss; without, the key already IS the gloss.
+ * is a LexemeId resolved to its gloss; without, the key already IS the gloss.
  * Every gloss-driven helper (sensitivity, legality, content, frequency) and
  * the deterministic collision tiebreak read the gloss; the store and `out` are
  * indexed by the raw key. The iteration order is by gloss either way, so the
@@ -884,7 +884,7 @@ export function stratalApplyChangesToLexicon(
  * word's draws then depend only on its own stable identity + language +
  * generation — NOT on its position in the iteration order or how many other
  * words exist, so existing words' phonological trajectories are insulated from
- * vocabulary changes (append-enrichment keeps each word's ConceptId, hence its
+ * vocabulary changes (append-enrichment keeps each word's LexemeId, hence its
  * seed, stable). Without `conceptSeedBase` (unit-test path) the legacy shared-
  * stream draw is used unchanged. Cross-word mechanisms (homonym avoidance,
  * collision revert, neighbour momentum) remain lexicon-coupled by design.
@@ -898,18 +898,18 @@ export function applyChangesToLexicon(
   conceptSeedBase?: string,
 ): Lexicon {
   const out: Lexicon = {};
-  // Build the ConceptId→gloss resolver ONCE per call (fresh, O(n), never
+  // Build the LexemeId→gloss resolver ONCE per call (fresh, O(n), never
   // stale); resolve each word's gloss with an O(1) Map.get in the hot loop.
-  const glossByCid = lang ? buildConceptIdToGloss(lang) : undefined;
+  const glossByCid = lang ? buildLexemeIdToGloss(lang) : undefined;
   const glossOf = (key: string): Meaning =>
     glossByCid ? glossByCid.get(key) ?? (key as Meaning) : (key as Meaning);
   const keys: string[] = lang
-    ? orderedConceptIds(lexicon, lang)
+    ? orderedLexemeIds(lexicon, lang)
     : Object.keys(lexicon).sort();
   const optsWithOrder: ApplyOptions = opts._orderedChanges
     ? opts
     : { ...opts, _orderedChanges: sortByPriority(changes) };
-  // B1-Y: one reusable sub-rng, reseeded per word from its ConceptId. Reusing a
+  // B1-Y: one reusable sub-rng, reseeded per word from its LexemeId. Reusing a
   // single object + setState (vs makeRng per word) is byte-identical to a fresh
   // makeRng(seed) and avoids a per-word allocation in the hot loop. The fixed
   // `base|` prefix is hashed once here; only the cid is folded per word, so the
@@ -968,7 +968,7 @@ export function applyChangesToLexicon(
   // doublets like mother/father (mama/baba) don't merge into one
   // word over a few hundred generations.
   const CORE_FREQ_THRESHOLD = 0.85;
-  // Store keys (ConceptIds in production) whose GLOSS is a high-frequency
+  // Store keys (LexemeIds in production) whose GLOSS is a high-frequency
   // content word. Iterating `out` walks gloss-sorted order, so the set's
   // insertion order matches the pre-flip gloss set.
   const coreKeys = new Set<string>();
@@ -1041,7 +1041,7 @@ export function applyChangesToLexicon(
         // Collision with another core meaning's stable form. Revert
         // this gen's change for `k` to keep the kinship pair
         // distinct. (Frequency-tied: revert the alphabetically-later
-        // GLOSS for determinism — ConceptIds don't sort like glosses.)
+        // GLOSS for determinism — LexemeIds don't sort like glosses.)
         if (glossOf(k) > glossOf(other)) {
           out[k] = lexicon[k]!.slice();
         }

@@ -7,7 +7,7 @@ import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import { lexGet } from "../lexicon/access";
 
 /**
@@ -49,7 +49,7 @@ function minimalLanguage(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

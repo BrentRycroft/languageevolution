@@ -9,7 +9,7 @@ import {
   PERMISSIVE_PROFILE,
 } from "./phonotactics";
 import { lexGet, lexKeys } from "../lexicon/access";
-import { conceptIdFor } from "../lexicon/conceptIdentity";
+import { lexemeIdFor } from "../lexicon/conceptIdentity";
 
 /**
  * regular.ts
@@ -76,12 +76,12 @@ export function applyOneRegularChange(
     next[m] = form;
   }
   // `next` was built gloss-keyed (preserving the per-meaning RNG draw order
-  // above); re-key it to the canonical ConceptId store. Every surviving
-  // meaning already has a ConceptId, so conceptIdFor is a lookup, and the
+  // above); re-key it to the canonical LexemeId store. Every surviving
+  // meaning already has a LexemeId, so lexemeIdFor is a lookup, and the
   // insertion order carries over (positional parity with the old store).
   const nextCid: Lexicon = {};
   for (const m of Object.keys(next)) {
-    nextCid[conceptIdFor(lang, m as Meaning)] = next[m as Meaning]!;
+    nextCid[lexemeIdFor(lang, m as Meaning)] = next[m as Meaning]!;
   }
   lang.lexicon = nextCid;
   for (const m of dropped) {

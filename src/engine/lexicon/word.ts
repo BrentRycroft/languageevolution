@@ -4,7 +4,7 @@ import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { lexGet, lexHas, lexEntries } from "./access";
-import { conceptIdFor } from "./conceptIdentity";
+import { lexemeIdFor } from "./conceptIdentity";
 import { CONCEPT_IDS } from "./concepts";
 
 /**
@@ -282,7 +282,7 @@ function ambiguousBases(): Set<string> {
   if (_ambiguousBases) return _ambiguousBases;
   const seen = new Map<string, number>();
   for (const id of CONCEPT_IDS) {
-    const parsed = parseConceptId(id);
+    const parsed = parseLexemeId(id);
     if (parsed.suffix === null) continue; // no disambiguator → not a collision source
     seen.set(parsed.base, (seen.get(parsed.base) ?? 0) + 1);
   }
@@ -299,7 +299,7 @@ function ambiguousBases(): Set<string> {
  * final segment is a real word (`mother-in-law`, `ice-cream`,
  * `prime-minister`) — those must pass through with their hyphens intact.
  */
-function parseConceptId(id: string): { base: string; suffix: string | null } {
+function parseLexemeId(id: string): { base: string; suffix: string | null } {
   const dash = id.lastIndexOf("-");
   if (dash <= 0 || dash === id.length - 1) return { base: id, suffix: null };
   // Multi-word lexemes joined by a function word — `mother-in-law`,
@@ -333,7 +333,7 @@ function parseConceptId(id: string): { base: string; suffix: string | null } {
  * shared domain base keeps its suffix as a parenthetical.
  */
 export function prettyGloss(conceptId: string): string {
-  const { base, suffix } = parseConceptId(conceptId);
+  const { base, suffix } = parseLexemeId(conceptId);
   if (suffix === null) return conceptId;
   const pos = POS_SUFFIX[suffix];
   if (pos) return `${base} (${pos})`;
@@ -594,9 +594,9 @@ export function syncLexiconFromWords(lang: Language): void {
     }
   }
   for (const [meaning, { word }] of Object.entries(bestBySense)) {
-    // Canonical store is ConceptId-keyed; resolve each gloss to its concept.
+    // Canonical store is LexemeId-keyed; resolve each gloss to its concept.
     // Insertion order follows bestBySense (gloss first-seen order), unchanged.
-    nextLexicon[conceptIdFor(lang, meaning)] = word.form.slice();
+    nextLexicon[lexemeIdFor(lang, meaning)] = word.form.slice();
   }
   lang.lexicon = nextLexicon;
   // Only overwrite colexifiedAs when we have data; pre-existing entries

@@ -18,7 +18,7 @@ function pickKnownMeaning(): string {
   const root = state.tree[state.rootId];
   if (!root) return "water";
   // Pick a GLOSS seeded by the default preset's lexicon (via the seam, since
-  // the canonical store is ConceptId-keyed post R2 flip).
+  // the canonical store is LexemeId-keyed post R2 flip).
   for (const candidate of ["water", "father", "see", "fire", "tree"]) {
     if (lexHas(root.language, candidate)) return candidate;
   }

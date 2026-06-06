@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { analyzeContexts, detectPhonologisation } from "../phonology/phonologization";
 import type { Language } from "../types";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import { lexSet } from "../lexicon/access";
 
 /**
@@ -38,7 +38,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

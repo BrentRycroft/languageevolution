@@ -443,7 +443,7 @@ export interface Language {
      * lets reverse inference and reconstruction probes follow merger
      * pathways across the tree without string-matching.
      */
-    mergedIntoConceptId?: string;
+    mergedIntoLexemeId?: string;
     /**
      * Phase 72d (defer-2): UUID of THIS deleted meaning at the time
      * of deletion. Pre-defer-2, once the string key was gone there
@@ -455,7 +455,7 @@ export interface Language {
   }>;
   /**
    * Phase 72d (full-delivery defer-2): per-language meaning → UUID
-   * map. Each Meaning gets a stable ConceptId on first reference.
+   * map. Each Meaning gets a stable LexemeId on first reference.
    * Daughters inherit the parent's map at split, so the same
    * proto-concept is the SAME UUID across all descendants. Used
    * for cross-tree reconstruction (which orphan in daughter X
@@ -463,10 +463,10 @@ export interface Language {
    */
   conceptIds?: Record<string, string>;
   /**
-   * Per-language monotonic sequence used to mint ConceptIds
+   * Per-language monotonic sequence used to mint LexemeIds
    * deterministically. Combined with the language `id` it namespaces
    * every mint to this language, so two runs of the same config
-   * produce identical ConceptIds (the prior module-global counter
+   * produce identical LexemeIds (the prior module-global counter
    * did not — it depended on process-wide mint order). Not inherited
    * at split: each language namespaces its own mints by its own `id`,
    * so a fresh daughter restarting at 0 cannot collide with the
@@ -1126,7 +1126,7 @@ export type MorphemeCategory = "root" | "affix";
  * Lane D (morphology encoding): one entry in a language's morpheme
  * inventory — a root or bound affix as a first-class, queryable unit.
  *
- * `meaning` is the entry's lexical key (a gloss / ConceptId-resolvable
+ * `meaning` is the entry's lexical key (a gloss / LexemeId-resolvable
  * Meaning); `form` is its current surface form read from the lexicon, so
  * the inventory stays a derived view (rebuild after sound change rather
  * than hand-mutating). `productivity` is a coarse 0..1 signal: affixes

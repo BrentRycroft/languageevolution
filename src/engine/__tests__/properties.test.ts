@@ -8,7 +8,7 @@ import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
 import { lexGet, lexHas } from "../lexicon/access";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import type { Language, WordForm } from "../types";
 
 /**
@@ -51,11 +51,11 @@ function makeTestLang(forms: Record<string, WordForm>): Language {
   } as Language;
 }
 
-/** Build a test lang AND rekey its gloss-keyed seed lexicon to ConceptIds +
+/** Build a test lang AND rekey its gloss-keyed seed lexicon to LexemeIds +
  * conceptIds map, so engine code that reads via the access seam works. */
 function makeRekeyedTestLang(forms: Record<string, WordForm>): Language {
   const lang = makeTestLang(forms);
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 
@@ -184,7 +184,7 @@ describe("engine property tests", () => {
           const afterSize = Object.keys(lang.lexicon).length;
           expect(afterSize).toBeGreaterThanOrEqual(beforeSize - 1);
           expect(afterSize).toBeLessThanOrEqual(beforeSize + 1);
-          // gloss → form via the access seam (lang.lexicon is ConceptId-keyed).
+          // gloss → form via the access seam (lang.lexicon is LexemeId-keyed).
           expect(lexHas(lang, result.to)).toBe(true);
           if (!result.polysemous) {
             expect(lexGet(lang, result.from)).toBeUndefined();

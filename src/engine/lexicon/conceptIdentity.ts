@@ -13,12 +13,12 @@ import { fnv1a } from "../rng";
  * shippable interpretations:
  *
  *   (a) FULL: replace `Lexicon = Record<Meaning, WordForm>` with
- *       `Record<ConceptId, WordForm>`. Touches every preset,
+ *       `Record<LexemeId, WordForm>`. Touches every preset,
  *       snapshot test, and persistence path. 1-2 weeks of dedicated
  *       migration; not feasible in one session.
  *
  *   (b) PRACTICAL (this commit): keep Lexicon string-keyed, but
- *       attach a per-language `conceptIds: Record<Meaning, ConceptId>`
+ *       attach a per-language `conceptIds: Record<Meaning, LexemeId>`
  *       map that gives each meaning a stable UUID. Daughters inherit
  *       the parent's UUIDs at split (so the same proto-meaning is the
  *       SAME concept across the whole subtree). meaningHistory
@@ -31,14 +31,14 @@ import { fnv1a } from "../rng";
  * architectural endpoint and remains documented in the migration
  * plan (`docs/LANGUAGE_DOMAINS.md`).
  *
- * The branded `ConceptId` type prevents accidental confusion with
+ * The branded `LexemeId` type prevents accidental confusion with
  * `Meaning` (which is a structural alias for `string`). Use
- * `mintConceptId()` to create new IDs and `conceptIdFor(lang, m)`
+ * `mintLexemeId()` to create new IDs and `lexemeIdFor(lang, m)`
  * to look up or lazily assign the ID for a meaning in a given
  * language.
  */
 
-export type ConceptId = string & { readonly __brand: "ConceptId" };
+export type LexemeId = string & { readonly __brand: "LexemeId" };
 
 /**
  * B1 (Stage B meaning re-key) — the CANONICAL lexicon iteration order.
@@ -48,37 +48,37 @@ export type ConceptId = string & { readonly __brand: "ConceptId" };
  * per-language Rng PER WORD, so a word's draw POSITION depends on its rank
  * in this order. The contract is "ordered by GLOSS".
  *
- * R2 (concept re-key — the flip): `lang.lexicon` is now `Record<ConceptId,
- * WordForm>`. This function resolves each store key (a ConceptId) back to its
+ * R2 (concept re-key — the flip): `lang.lexicon` is now `Record<LexemeId,
+ * WordForm>`. This function resolves each store key (a LexemeId) back to its
  * gloss and returns the GLOSSES sorted — byte-for-byte the same sequence as
  * the pre-flip `Object.keys(glossStore).sort()`. Gloss-consuming callers
  * (naming.ts, reverse.ts) stay agnostic. The RNG hot path (apply.ts) needs
- * the matching ConceptId sequence to index the store; it calls
- * `orderedConceptIds` instead, which returns the SAME glosses' ConceptIds in
+ * the matching LexemeId sequence to index the store; it calls
+ * `orderedLexemeIds` instead, which returns the SAME glosses' LexemeIds in
  * the SAME order. See docs/planning/CONCEPT-REKEY-PLAN.md.
  */
 export function orderedLexiconKeys(lang: LexiconState): Meaning[] {
-  const g = buildConceptIdToGloss(lang);
+  const g = buildLexemeIdToGloss(lang);
   return Object.keys(lang.lexicon)
     .map((cid) => g.get(cid) ?? (cid as Meaning))
     .sort();
 }
 
 /**
- * Build a FRESH ConceptId → gloss map by inverting `lang.conceptIds` (the
- * gloss → ConceptId source of truth). O(n), ALWAYS correct.
+ * Build a FRESH LexemeId → gloss map by inverting `lang.conceptIds` (the
+ * gloss → LexemeId source of truth). O(n), ALWAYS correct.
  *
  * Hot/bulk cid→gloss resolution (apply.ts, lexKeys, lexEntries,
- * orderedLexiconKeys/orderedConceptIds, the phonology ages loop) builds this
+ * orderedLexiconKeys/orderedLexemeIds, the phonology ages loop) builds this
  * ONCE per scope and does O(1) `Map.get`s, instead of calling
- * `meaningForConceptId` per key. That routes through the size-staleness-cached
+ * `meaningForLexemeId` per key. That routes through the size-staleness-cached
  * reverse index, which is wrong for the hot path on BOTH axes: (a) it recomputes
  * `Object.keys(lang.conceptIds).length` per call → O(n²) per step (a ~6× perf
  * regression), and (b) its size check reads STALE when a delete and an add net
- * zero size change within one step → a ConceptId resolves to the wrong gloss →
+ * zero size change within one step → a LexemeId resolves to the wrong gloss →
  * a byte-identity break. A fresh inversion has neither failure mode.
  */
-export function buildConceptIdToGloss(lang: LexiconState): Map<string, Meaning> {
+export function buildLexemeIdToGloss(lang: LexiconState): Map<string, Meaning> {
   const out = new Map<string, Meaning>();
   if (!lang.conceptIds) return out;
   for (const gloss of Object.keys(lang.conceptIds)) {
@@ -88,33 +88,33 @@ export function buildConceptIdToGloss(lang: LexiconState): Map<string, Meaning> 
 }
 
 /**
- * The ConceptId store keys ordered by their GLOSS — the canonical RNG-draw
+ * The LexemeId store keys ordered by their GLOSS — the canonical RNG-draw
  * order, expressed as the physical keys the hot path uses to index the store.
- * `orderedConceptIds(lexicon, lang)[i]` is the ConceptId whose gloss is at
+ * `orderedLexemeIds(lexicon, lang)[i]` is the LexemeId whose gloss is at
  * position i of `orderedLexiconKeys(lang)`, so iterating it draws RNG in the
  * exact same per-word sequence as the pre-flip sorted-gloss iteration.
  *
  * Takes `lexicon` explicitly (not `lang.lexicon`) because the stratal hot path
  * applies changes to an intermediate store distinct from `lang.lexicon`; its
- * keys are the same ConceptIds, resolved against `lang`'s identity map.
+ * keys are the same LexemeIds, resolved against `lang`'s identity map.
  * Decorate-sort-undecorate: resolve each gloss once, sort by gloss.
  */
-export function orderedConceptIds(lexicon: Lexicon, lang: LexiconState): ConceptId[] {
-  const g = buildConceptIdToGloss(lang);
-  return (Object.keys(lexicon) as ConceptId[])
-    .map((cid) => [g.get(cid) ?? (cid as string), cid] as [string, ConceptId])
+export function orderedLexemeIds(lexicon: Lexicon, lang: LexiconState): LexemeId[] {
+  const g = buildLexemeIdToGloss(lang);
+  return (Object.keys(lexicon) as LexemeId[])
+    .map((cid) => [g.get(cid) ?? (cid as string), cid] as [string, LexemeId])
     .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
     .map((pair) => pair[1]);
 }
 
 /**
- * Mint a fresh ConceptId for `lang`. Format:
+ * Mint a fresh LexemeId for `lang`. Format:
  * `c_<8-hex>_<langId>_<seq>` where `seq` is a per-language monotonic
  * counter (`lang.conceptIdSeq`).
  *
  * Determinism: the id is a pure function of `(lang.id, seq)` and the
  * seq advances in deterministic mint order, so two runs of the same
- * config produce identical ConceptIds. The previous implementation
+ * config produce identical LexemeIds. The previous implementation
  * drew from a MODULE-GLOBAL counter, which made ids depend on
  * process-wide mint order — two sims in one process (or a run
  * regenerated from a share link) got different ids for the same
@@ -132,14 +132,14 @@ export function orderedConceptIds(lexicon: Lexicon, lang: LexiconState): Concept
  * No RNG is consumed, so minting never perturbs the simulation's
  * random stream.
  */
-export function mintConceptId(lang: { id: string; conceptIdSeq?: number }): ConceptId {
+export function mintLexemeId(lang: { id: string; conceptIdSeq?: number }): LexemeId {
   const seq = (lang.conceptIdSeq = (lang.conceptIdSeq ?? 0) + 1);
   const h = fnv1a(`${lang.id}:${seq}`).toString(16).padStart(8, "0");
-  return `c_${h}_${lang.id}_${seq}` as ConceptId;
+  return `c_${h}_${lang.id}_${seq}` as LexemeId;
 }
 
 /**
- * Look up the ConceptId for a meaning, or lazily mint one. The
+ * Look up the LexemeId for a meaning, or lazily mint one. The
  * lazy-mint policy means existing code that calls `deleteMeaning`,
  * adds new meanings via `setLexiconForm`, etc. all continue to work
  * — the UUID is created on first reference.
@@ -148,18 +148,18 @@ export function mintConceptId(lang: { id: string; conceptIdSeq?: number }): Conc
  * sister leaves share the same UUID for the same proto-meaning. This
  * is the cross-tree anchor the audit's reconstruction probes need.
  */
-export function conceptIdFor(lang: LexiconState, meaning: Meaning): ConceptId {
+export function lexemeIdFor(lang: LexiconState, meaning: Meaning): LexemeId {
   if (!lang.conceptIds) lang.conceptIds = {};
   const existing = lang.conceptIds[meaning];
-  if (existing) return existing as ConceptId;
-  const id = mintConceptId(lang);
+  if (existing) return existing as LexemeId;
+  const id = mintLexemeId(lang);
   lang.conceptIds[meaning] = id;
   return id;
 }
 
 /**
  * Reverse lookup: find the meaning string currently bound to a given
- * ConceptId. Returns undefined if the language has no record of the
+ * LexemeId. Returns undefined if the language has no record of the
  * concept. Useful for reconstruction probes that walk meaningHistory
  * back to a parent's lexicon by UUID.
  *
@@ -173,30 +173,30 @@ export function conceptIdFor(lang: LexiconState, meaning: Meaning): ConceptId {
  * Caveat: the size-based staleness check assumes monotonic add/delete
  * — no callers re-WRITE an existing meaning's UUID (UUIDs are mint-
  * once-and-stable). If a future caller mutates conceptIds[m] in place
- * with a different ConceptId, the reverse index won't notice. None
+ * with a different LexemeId, the reverse index won't notice. None
  * of the current callers do this; if that changes, add a version
  * counter alongside size.
  */
-const reverseIndex = new WeakMap<LexiconState, { size: number; map: Map<ConceptId, Meaning> }>();
+const reverseIndex = new WeakMap<LexiconState, { size: number; map: Map<LexemeId, Meaning> }>();
 
-function getReverseIndex(lang: LexiconState): Map<ConceptId, Meaning> | undefined {
+function getReverseIndex(lang: LexiconState): Map<LexemeId, Meaning> | undefined {
   if (!lang.conceptIds) return undefined;
   const cached = reverseIndex.get(lang);
   const currentSize = Object.keys(lang.conceptIds).length;
   if (cached && cached.size === currentSize) return cached.map;
   // (Re)build. Triggered on first read OR when entry count changed
   // (new mint or deleteMeaning purge).
-  const map = new Map<ConceptId, Meaning>();
+  const map = new Map<LexemeId, Meaning>();
   for (const m of Object.keys(lang.conceptIds)) {
-    map.set(lang.conceptIds[m] as ConceptId, m);
+    map.set(lang.conceptIds[m] as LexemeId, m);
   }
   reverseIndex.set(lang, { size: currentSize, map });
   return map;
 }
 
-export function meaningForConceptId(
+export function meaningForLexemeId(
   lang: LexiconState,
-  conceptId: ConceptId,
+  conceptId: LexemeId,
 ): Meaning | undefined {
   const idx = getReverseIndex(lang);
   return idx?.get(conceptId);
@@ -205,26 +205,26 @@ export function meaningForConceptId(
 /**
  * R2 (concept re-key — the flip): convert a GLOSS-keyed `lang.lexicon`
  * (`Record<Meaning, WordForm>`, as presets author it) into the canonical
- * ConceptId-keyed store (`Record<ConceptId, WordForm>`), populating
- * `lang.conceptIds` (gloss → ConceptId) along the way.
+ * LexemeId-keyed store (`Record<LexemeId, WordForm>`), populating
+ * `lang.conceptIds` (gloss → LexemeId) along the way.
  *
- * Determinism: mints ConceptIds in `Object.keys(glossStore)` order — the
+ * Determinism: mints LexemeIds in `Object.keys(glossStore)` order — the
  * preset's insertion order, exactly the order the pre-flip
- * `ensureConceptIdsForLexicon` used — and builds the new store in that same
+ * `ensureLexemeIdsForLexicon` used — and builds the new store in that same
  * order, so the cid store's INSERTION order positionally matches the old
  * gloss store's. Every insertion-order-sensitive site (`lexKeys`) therefore
  * yields the identical gloss sequence. Call ONCE, at language birth, on a
  * gloss-keyed store; calling it on an already-flipped store would mint bogus
  * ids.
  */
-export function rekeyLexiconToConceptIds(lang: LexiconState): void {
+export function rekeyLexiconToLexemeIds(lang: LexiconState): void {
   if (!lang.conceptIds) lang.conceptIds = {};
   const glossStore = lang.lexicon as Record<string, WordForm>;
   const cidStore: Record<string, WordForm> = {};
   for (const gloss of Object.keys(glossStore)) {
-    let cid = lang.conceptIds[gloss] as ConceptId | undefined;
+    let cid = lang.conceptIds[gloss] as LexemeId | undefined;
     if (!cid) {
-      cid = mintConceptId(lang);
+      cid = mintLexemeId(lang);
       lang.conceptIds[gloss] = cid;
     }
     cidStore[cid] = glossStore[gloss]!;
@@ -235,15 +235,15 @@ export function rekeyLexiconToConceptIds(lang: LexiconState): void {
 /**
  * Bulk-assign conceptIds for every meaning in a GLOSS-keyed lexicon that
  * doesn't have one yet. Retained for old-save migration and identity-map
- * tests; the live birth path uses `rekeyLexiconToConceptIds` (which also
+ * tests; the live birth path uses `rekeyLexiconToLexemeIds` (which also
  * flips the physical store). Operates on gloss keys — do not call on a
- * ConceptId-keyed store.
+ * LexemeId-keyed store.
  */
-export function ensureConceptIdsForLexicon(lang: LexiconState): number {
+export function ensureLexemeIdsForLexicon(lang: LexiconState): number {
   let assigned = 0;
   if (!lang.conceptIds) lang.conceptIds = {};
-  // Post-flip the canonical store is ConceptId-keyed: a store key that is
-  // already a known ConceptId has intrinsic identity, so skip it (and never
+  // Post-flip the canonical store is LexemeId-keyed: a store key that is
+  // already a known LexemeId has intrinsic identity, so skip it (and never
   // mint a bogus id for it). Only un-identified GLOSS keys — an old gloss-keyed
   // save being migrated — get a fresh id. This keeps the helper idempotent on a
   // live (cid-keyed) lexicon and correct on a legacy (gloss-keyed) one.
@@ -251,7 +251,7 @@ export function ensureConceptIdsForLexicon(lang: LexiconState): number {
   for (const key of Object.keys(lang.lexicon)) {
     if (knownCids.has(key)) continue;
     if (!lang.conceptIds[key]) {
-      lang.conceptIds[key] = mintConceptId(lang);
+      lang.conceptIds[key] = mintLexemeId(lang);
       assigned++;
     }
   }

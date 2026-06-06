@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { assignGenderHeuristic, assignAllGenders, genderOf } from "../morphology/gender";
 import { inflect } from "../morphology/evolve";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import type { Language } from "../types";
 
 /**
@@ -45,7 +45,7 @@ function makeLang(opts: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...opts,
   } as Language;
-  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToConceptIds(lang);
+  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

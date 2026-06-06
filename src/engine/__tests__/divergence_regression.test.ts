@@ -25,7 +25,7 @@ function meanDelta(
   let n = 0;
   for (const m of Object.keys(seedLex)) {
     // Route gloss → form through the access seam: post concept-rekey the
-    // physical store is ConceptId-keyed, so `lang.lexicon[gloss]` is undefined.
+    // physical store is LexemeId-keyed, so `lang.lexicon[gloss]` is undefined.
     const cur = lexGet(lang, m);
     const seed = seedLex[m];
     if (!cur || !seed) continue;

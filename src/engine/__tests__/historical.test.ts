@@ -441,7 +441,7 @@ describe("Phase 71b — translator + suppletion fixes", () => {
     cfg.seed = "p71b-protect";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    // Route gloss → form through the access seam (lang.lexicon is ConceptId-keyed).
+    // Route gloss → form through the access seam (lang.lexicon is LexemeId-keyed).
     expect(lexGet(lang, "be")).toBeDefined();
     expect(lexGet(lang, "go")).toBeDefined();
     expect(PROTECTED_MEANINGS.has("be")).toBe(true);

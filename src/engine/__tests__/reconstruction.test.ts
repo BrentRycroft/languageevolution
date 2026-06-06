@@ -4,7 +4,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { levenshtein } from "../phonology/ipa";
 import type { LanguageTree, WordForm } from "../types";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/conceptIdentity";
 import { lexEntries } from "../lexicon/access";
 
 /**
@@ -111,7 +111,7 @@ function makeStubWith(id: string, glossLexicon: Record<string, WordForm>) {
   const lang = makeStub(id);
   // Replace the empty store with the gloss-keyed lexicon and rekey.
   lang.lexicon = glossLexicon as any;
-  rekeyLexiconToConceptIds(lang as never);
+  rekeyLexiconToLexemeIds(lang as never);
   return lang;
 }
 
@@ -144,6 +144,6 @@ function makeStub(id: string) {
     otRanking: [],
     lastChangeGeneration: {},
   };
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
   return lang;
 }
