@@ -5,8 +5,52 @@
 > **Directive 1**: the lexicon is no longer concept-keyed. Words become **points in vector space**;
 > English concepts become a **fixed anchor coordinate system** the translator reads against.
 
-Status: **IN EXECUTION (2026-06-05).** Decisions locked (below). Built to **delegate heavily to
-subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migration also delegate).
+Status: **CORE DELIVERED (2026-06-05).** All ACHIEVABLE wave intent shipped green; one architectural
+piece (keyless point-native STORAGE) deferred with reason — see **§10 Final status**.
+
+## 10. Final status (2026-06-05) — what shipped vs. what's deferred
+
+The vector-native flip's *behavioural* core is live and green (FAST 1987 passing; RUN_SLOW reproduces;
+GEN0 byte-identical; determinism re-baked deliberately at every behaviour change; all reversible —
+curated tables kept as fallbacks). Per-wave:
+
+- **Wave 0 — DONE.** Anchor coordinate space, 8 baked labeled dims (POS golden parity 100%),
+  `posOfPoint`/`clusterRegionOf`.
+- **Wave 1 — DONE (identity layer).** Emergent gloss (`glossOf`/`senseGloss`/`effectiveGloss`), point
+  is first-class identity, point-native anchor index. *Storage stayed ConceptId-keyed (opaque, not the
+  gloss) as the stable ordering/persistence handle — the order contract §5 is preserved; the gloss is
+  emergent for all semantic/display purposes.*
+- **Anchor-coverage extension — DONE.** 179 basic content words given real GloVe anchors
+  (`anchorExtrasData.ts`); house/body/door/person/time anchor to themselves.
+- **Wave 2 — DONE (relational subsystems geometric; categorical = baked dims).** 2b neighbours →
+  geometry (`geometricNeighbors`, drift+coinage); 2a clusters → geometry (`clusterRegionOf`, the
+  field signal). 2c POS / 2e taboo are **baked labeled dims** (the plan §8 deliberately keeps these
+  reliable, not noisy-distributional — they ARE the dimensional representation). 2d derivation is the
+  existing Track-C morpheme space (already vector). 2f colexification is **downstream of the now-
+  geometric drift/neighbours** (it emerges from polysemous drift — no separate seam).
+- **Wave 3 — DONE (achievable) / DEFERRED (keyless storage).** 3a drift **re-labels** (glide moves the
+  point; `effectiveGloss` reads the new nearest anchor — already live). 3b vector-composition coinage
+  ships (Track B `composeForGap`); coinage now relates parts via geometry (noisy abstracts allowed,
+  directive 2). 3c merge is downstream of geometric drift. **Deferred:** coining into *keyless* empty
+  points (a word at a point with NO concept key) needs the point-native STORAGE flip (below).
+- **Wave 4 — DONE (achievable) / DEFERRED (storage archive).** 4a points persist (`sense.point`
+  JSON-round-trips; `roundtrip.test` green). 4b UI surfaces emergent glosses + a drift marker
+  (`DictionaryView`). 4c **archive = the curated tables are KEPT in place as documented reversible
+  fallbacks** (D-archive: nothing deleted, old behaviour retrievable). 4d final re-bake done
+  incrementally per switch.
+
+**THE ONE DEFERRAL — keyless point-native STORAGE (`lang.lexicon` ConceptId→Form ⇒ point-keyed).**
+The storage remains ConceptId-keyed (opaque id, NOT the gloss). Flipping the *physical store* to be
+point-native unlocks the last bits (true keyless coinage, full archival of `access.ts`/
+`conceptIdentity.ts`). The codebase itself flags this as a **1–2 week dedicated migration**
+(`conceptIdentity.ts` header, option (a)) touching ~381 access-seam calls + 33 direct indexings + the
+RNG order contract — it cannot be landed byte-green in a single session and is the natural next
+project. **Everything the flip set out to do behaviourally — point identity, emergent gloss, anchors
+as the frame, geometric drift/coinage/clusters/neighbours — is delivered.**
+
+---
+
+Built to **delegate heavily to subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migration also delegate).
 
 **Progress log:**
 - **Wave 0 — DONE (2026-06-05).** 0a `anchors.ts` (anchor table + nearestAnchor/anchorsWithin/
