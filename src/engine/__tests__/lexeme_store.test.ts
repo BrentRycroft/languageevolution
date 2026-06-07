@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   recordForm, setRecordForm, formViewOf, seededFormViewOf, mergeFormsIntoStore, migrateLexemeStore,
+  migrateSatelliteMaps,
 } from "../lexicon/store";
 import type { LexemeStore } from "../primitives";
 import { createSimulation } from "../simulation";
@@ -89,5 +90,24 @@ describe("migrateLexemeStore — old-save back-compat (S1 task 5)", () => {
     const sameRef = fresh.lexemes;
     migrateLexemeStore(fresh);
     expect(fresh.lexemes).toBe(sameRef); // untouched
+  });
+});
+
+describe("migrateSatelliteMaps (S2a task 16)", () => {
+  it("re-keys gloss-keyed satellite maps to LexemeId; no-op when already id-keyed", () => {
+    const lang = {
+      id: "root",
+      lexemeIds: { fire: "c_aaaa_root_1" },
+      lexemes: { "c_aaaa_root_1": { form: ["f"], point: [0], gloss: "fire" } },
+      wordFrequencyHints: { fire: 0.7 },          // OLD shape: gloss-keyed
+      wordOrigin: { fire: "seed" },
+    } as unknown as Parameters<typeof migrateSatelliteMaps>[0] & Record<string, Record<string, unknown>>;
+    migrateSatelliteMaps(lang);
+    expect(lang.wordFrequencyHints["c_aaaa_root_1"]).toBe(0.7);
+    expect(lang.wordFrequencyHints["fire"]).toBeUndefined();
+    expect(lang.wordOrigin["c_aaaa_root_1"]).toBe("seed");
+    // idempotent: running again leaves it id-keyed
+    migrateSatelliteMaps(lang);
+    expect(lang.wordFrequencyHints["c_aaaa_root_1"]).toBe(0.7);
   });
 });

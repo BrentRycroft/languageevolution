@@ -39,7 +39,7 @@ import { timeStep } from "./modules/profile";
 import "./modules";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { rebuildFormKeyIndex } from "./lexicon/word";
-import { migrateLexemeStore } from "./lexicon/store";
+import { migrateLexemeStore, migrateSatelliteMaps } from "./lexicon/store";
 import { seedTierTwoOrthography } from "./phonology/orthography";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
@@ -502,6 +502,10 @@ export function createSimulation(
         // the canonical `lang.lexemes` record store before anything reads it via the seam. No-op for
         // new saves. Must run before rebuildFormKeyIndex (which reads forms through lexGet).
         migrateLexemeStore(lang);
+        // S2a task 16: re-key old gloss-keyed satellite maps to LexemeId. Runs after
+        // migrateLexemeStore (canonical store + lexemeIds in place) and before any seam read.
+        // Mint-free + idempotent → no-op for new (already id-keyed) saves.
+        migrateSatelliteMaps(lang);
         if (lang.words) rebuildFormKeyIndex(lang);
         if (lang.activeModules && !(lang.activeModules instanceof Set)) {
           const arr = Array.isArray(lang.activeModules)
