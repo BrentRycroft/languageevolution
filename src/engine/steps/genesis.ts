@@ -469,17 +469,17 @@ export function bootstrapNeologismNeighbors(lang: Language): void {
         ));
       }
     }
-    if (neighborsOf(m).length > 0 || (lang.localNeighbors[m] ?? []).length > 0) continue;
+    if (neighborsOf(m).length > 0 || (satGet(lang, "localNeighbors", m) ?? []).length > 0) continue;
     const proposed = new Set<string>();
     for (const p of parts) {
       for (const n of neighborsOf(p)) proposed.add(n);
-      for (const n of lang.localNeighbors[p] ?? []) proposed.add(n);
+      for (const n of satGet(lang, "localNeighbors", p) ?? []) proposed.add(n);
     }
     const usable = Array.from(proposed).filter(
       (n) => n !== m && lexHas(lang, n),
     );
     if (usable.length > 0) {
-      lang.localNeighbors[m] = usable.slice(0, 5);
+      satSet(lang, "localNeighbors", m, usable.slice(0, 5));
     }
   }
 }

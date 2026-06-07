@@ -91,7 +91,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "localNeighbors",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Per-meaning neighbour list for diffusion momentum",
   },
   {

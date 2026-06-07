@@ -187,7 +187,7 @@ export function stepPhonology(
     const m = glossByCid.get(cid) ?? cid;
     const last = satGet(lang, "lastChangeGeneration", m);
     ages[m] = last === undefined ? 99 : generation - last;
-    const nbrs = lang.localNeighbors[m];
+    const nbrs = satGet(lang, "localNeighbors", m);
     if (!nbrs || nbrs.length === 0) continue;
     let recentlyChanged = 0;
     for (const n of nbrs) {
@@ -392,7 +392,7 @@ export function stepPhonology(
     satDelete(lang, "wordFrequencyHints", m);
     satDelete(lang, "lastChangeGeneration", m);
     delete lang.wordOrigin[m];
-    delete lang.localNeighbors[m];
+    satDelete(lang, "localNeighbors", m);
     if (lang.registerOf) satDelete(lang, "registerOf", m);
     if (lang.variants) delete lang.variants[m];
   }

@@ -347,7 +347,7 @@ export interface Language {
    */
   idioms?: Record<string, { parts: Meaning[]; form: import("./types").WordForm; literal?: boolean }>;
   morphology: import("./morphology/types").Morphology;
-  localNeighbors: Record<Meaning, string[]>;
+  localNeighbors: Record<LexemeId, string[]>;
   /**
    * Track C (preset morphemization): engine-INERT etymological ancestry — a word's morphological
    * decomposition for DISPLAY / composition reference only (`wordMorphemes` falls back to this when

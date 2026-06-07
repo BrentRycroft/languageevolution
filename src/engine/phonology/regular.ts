@@ -120,7 +120,7 @@ export function applyOneRegularChange(
     satDelete(lang, "wordFrequencyHints", m);
     satDelete(lang, "lastChangeGeneration", m);
     delete lang.wordOrigin[m];
-    delete lang.localNeighbors[m];
+    satDelete(lang, "localNeighbors", m);
     if (lang.registerOf) satDelete(lang, "registerOf", m);
   }
   return picked.id;
