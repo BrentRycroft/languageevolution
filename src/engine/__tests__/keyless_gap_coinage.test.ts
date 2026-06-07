@@ -6,6 +6,7 @@ import { presetEnglish } from "../presets/english";
 import { meaningPointFor } from "../semantics/meaningPoint";
 import { lexKeys } from "../lexicon/access";
 import { keylessRecords } from "../lexicon/store";
+import { satGet } from "../lexicon/satellites";
 import { stepPhonology } from "../steps/phonology";
 import { coinKeylessLexeme } from "../lexicon/lexemeIdentity";
 import { fromFloats } from "../semantics/vec";
@@ -104,6 +105,24 @@ describe("coinKeylessForGap — keyless gap-coinage path", () => {
     expect(id1).toBe(id2);
     expect(lang1.lexemes[id1!]!.form).toEqual(lang2.lexemes[id2!]!.form);
     expect(lang1.lexemes[id1!]!.point).toEqual(lang2.lexemes[id2!]!.point);
+  });
+});
+
+describe("keyless birth-time satellite population (S2a task 15)", () => {
+  it("a coined keyless word gets frequency / age / origin / register under its id", () => {
+    const lang = rootLang();
+    const gap: SemanticGap = {
+      point: meaningPointFor(lang, "whale"),
+      gloss: "whale",
+      nearestExistingDistSq: 1_000_000_000,
+      neighborSupport: 5,
+    };
+    const id = coinKeylessForGap(lang, gap, 12);
+    expect(id).not.toBeNull();
+    expect(satGet(lang, "wordFrequencyHints", id!)).toBe(0.4);
+    expect(satGet(lang, "lastChangeGeneration", id!)).toBe(12);
+    expect(satGet(lang, "wordOrigin", id!)).toBe("keyless-gap");
+    expect(satGet(lang, "registerOf", id!)).toBe("low");
   });
 });
 

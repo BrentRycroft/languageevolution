@@ -103,8 +103,8 @@ export function findSemanticGap(lang: Language): SemanticGap | null {
  * draws no RNG. Returns the new keyless lexeme's id, or null when no legal form can be composed
  * (the caller's coinage cascade then moves on).
  */
-export function coinKeylessForGap(lang: Language, gap: SemanticGap): LexemeId | null {
+export function coinKeylessForGap(lang: Language, gap: SemanticGap, generation = 0): LexemeId | null {
   const composed = composeForGap(lang, gap.gloss);
   if (!composed) return null;
-  return coinKeylessLexeme(lang, gap.point, composed.form);
+  return coinKeylessLexeme(lang, gap.point, composed.form, generation);
 }

@@ -4,6 +4,7 @@ import { fnv1a } from "../rng";
 import type { Vec } from "../semantics/vec";
 import { glossOf } from "../semantics/anchors";
 import { lexPoint } from "../semantics/meaningPoint";
+import { seedKeylessBirthSatellites } from "./satellites";
 
 /**
  * lexemeIdentity.ts — Phase 72d (full-delivery defer-2).
@@ -306,9 +307,13 @@ export function ensureLexemeIdsForLexicon(lang: LexiconState): number {
  * meaning IS the point; its English label is emergent (`keylessGloss`). Deterministic (mintLexemeId;
  * no RNG). Returns the new lexeme's id.
  */
-export function coinKeylessLexeme(lang: Language, point: Vec, form: WordForm): LexemeId {
+export function coinKeylessLexeme(lang: Language, point: Vec, form: WordForm, generation = 0): LexemeId {
   const id = mintLexemeId(lang);
   lang.lexemes[id] = { form: form.slice(), point: Array.from(point) }; // no gloss => keyless
+  // S2a task 15: seed birth-time satellite data (freq / age / origin / register) under the
+  // keyless id, so the keyless word participates in frequency/age-gated dynamics like any seeded
+  // lexeme. Point-lookup only and keyless forms are excluded from signature() → baseline-neutral.
+  seedKeylessBirthSatellites(lang, id, generation);
   return id;
 }
 

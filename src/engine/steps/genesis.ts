@@ -415,7 +415,7 @@ export function stepGenesis(
   // generation's downstream stream onward — gen-0 (no genesis) stays byte-identical.
   if (rng.chance(KEYLESS_GAP_COINAGE_RATE)) {
     const gap = findSemanticGap(lang);
-    if (gap) coinKeylessForGap(lang, gap);
+    if (gap) coinKeylessForGap(lang, gap, generation);
   }
 }
 
