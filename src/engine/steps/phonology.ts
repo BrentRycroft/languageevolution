@@ -394,7 +394,7 @@ export function stepPhonology(
     delete lang.wordOrigin[m];
     delete lang.localNeighbors[m];
     if (lang.registerOf) delete lang.registerOf[m];
-    if (lang.variants) delete lang.variants[m];
+    if (lang.variants) satDelete(lang, "variants", m);
   }
   const evolveForm = (form: WordForm): WordForm => {
     return changes.reduce((acc, change) => {

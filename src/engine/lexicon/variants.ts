@@ -1,5 +1,6 @@
 import type { Language, Meaning, WordForm } from "../types";
-import { satGet } from "./satellites";
+import { satGet, satSet, satKeys, satDelete } from "./satellites";
+import { meaningForLexemeId } from "./lexemeIdentity";
 import { setLexiconForm } from "./mutate";
 import { lexGet } from "./access";
 
@@ -32,7 +33,7 @@ export function recordVariant(
   weight = NEW_VARIANT_WEIGHT,
 ): void {
   if (!lang.variants) lang.variants = {};
-  const existing = lang.variants[meaning] ?? [];
+  const existing = satGet(lang, "variants", meaning) ?? [];
   for (let i = 0; i < existing.length; i++) {
     if (formsEqual(existing[i]!.form, form)) {
       existing[i]!.weight = Math.min(1, existing[i]!.weight + weight);
@@ -44,7 +45,7 @@ export function recordVariant(
     existing.sort((a, b) => b.weight - a.weight);
     existing.length = MAX_VARIANTS;
   }
-  lang.variants[meaning] = existing;
+  satSet(lang, "variants", meaning, existing);
 }
 
 export function reinforceCanonical(
@@ -53,7 +54,7 @@ export function reinforceCanonical(
   form: WordForm,
 ): void {
   if (!lang.variants) return;
-  const list = lang.variants[meaning];
+  const list = satGet(lang, "variants", meaning);
   if (!list) return;
   for (let i = 0; i < list.length; i++) {
     if (formsEqual(list[i]!.form, form)) {
@@ -75,9 +76,10 @@ export function decayAndActuate(
 ): ActuationResult[] {
   if (!lang.variants) return [];
   const actuations: ActuationResult[] = [];
-  const meanings = Object.keys(lang.variants);
-  for (const m of meanings) {
-    const list = lang.variants[m]!;
+  const ids = satKeys(lang, "variants");
+  for (const id of ids) {
+    const m = meaningForLexemeId(lang, id) ?? id;
+    const list = satGet(lang, "variants", id)!;
     const canonical = lexGet(lang, m);
     for (let i = 0; i < list.length; i++) {
       const v = list[i]!;
@@ -96,7 +98,7 @@ export function decayAndActuate(
       survivors = list.filter((v) => v.weight >= PRUNE_THRESHOLD);
     }
     if (survivors.length === 0) {
-      delete lang.variants[m];
+      satDelete(lang, "variants", id);
       continue;
     }
     survivors.sort((a, b) => b.weight - a.weight);
@@ -118,8 +120,8 @@ export function decayAndActuate(
       // Phase 29 Tranche 1 round 2: route through chokepoint.
       setLexiconForm(lang, m, top.form.slice(), { bornGeneration: generation, origin: "variant-actuation" });
     }
-    lang.variants[m] = survivors;
+    satSet(lang, "variants", id, survivors);
   }
-  if (Object.keys(lang.variants).length === 0) delete lang.variants;
+  if (satKeys(lang, "variants").length === 0) delete lang.variants;
   return actuations;
 }

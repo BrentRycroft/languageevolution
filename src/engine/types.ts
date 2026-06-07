@@ -985,7 +985,7 @@ export interface Language {
   altRegister?: Record<Meaning, Array<"high" | "low" | "neutral">>;
   substrateAccelerationRemaining?: number;
   recentLoanGens?: number[];
-  variants?: Record<Meaning, FormVariant[]>;
+  variants?: Record<LexemeId, FormVariant[]>;
   bilingualLinks?: Record<string, number>;
   socialNetworkClustering?: number;
   /**
