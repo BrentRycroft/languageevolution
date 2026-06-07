@@ -78,6 +78,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **Run tests efficiently — batch, don't repeat.** Get the verification you need in one or two runs, not forty. Pass multiple files / name filters to a single `vitest run` (e.g. `vitest run --dir src fileA fileB`) instead of launching it once per file; reserve the full suite for milestones and the occasional safety net. Re-running the same test repeatedly — or the whole suite when a targeted file would prove it — burns minutes per cycle. Pick the narrowest command that actually proves the thing, run it once, move on.
 
+**Decide the test plan up front; defer the full suite to the merge.** During planning, name *which* existing tests gate each task and *which* new tests must be written (with their assertions) — don't discover test scope mid-implementation. While executing per-task in parallel worktrees, each task runs only its own targeted tests (+ a fast determinism canary where relevant); the **full suite + RUN_SLOW baseline is reserved for once, after all worktree branches are merged back**. Running the whole suite inside every worktree is wasted minutes and can't catch cross-branch interactions anyway — those only exist on the merged result. The merge step is the single full-verification gate.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
