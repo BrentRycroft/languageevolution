@@ -154,7 +154,7 @@ export function pickRuntimeDerivedMeaning(
   if (candidates.length === 0) return null;
   const base = candidates[rng.int(candidates.length)]!;
   const meaning = `${base}-${suffix.tag}`;
-  const form = tryDerivedFormFromMeaning({ ...lang, lexicon: lang.lexicon } as Language, meaning);
+  const form = tryDerivedFormFromMeaning({ ...lang } as Language, meaning);
   if (!form) return null;
   // Nudge the productive suffix's usage count so the runtime
   // emission feeds back into the next gen's coinage prioritisation.

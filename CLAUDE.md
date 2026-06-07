@@ -68,6 +68,8 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+**Verify against *current* tests.** Before treating a test as proof, confirm it is up to date — that what it asserts is something your change is *expected* to affect. Many tests were authored long ago and may not account for recent changes. When a test fails after a mechanical or byte-identical change, it is often a stale expectation predating recent work, not evidence of a regression. Distinguish "my change broke this" from "this test was already out of date" before contorting code to satisfy it. For determinism work, the real proof of byte-identity is the `meaning_layer_baseline` GEN0/GENN baseline — trust it over individual aged assertions.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

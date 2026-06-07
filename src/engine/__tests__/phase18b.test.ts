@@ -28,7 +28,7 @@ function makeLang(
   const lang: Language = {
     id: "L-b",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},

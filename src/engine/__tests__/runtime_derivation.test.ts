@@ -18,7 +18,7 @@ import { lexSet, lexGet } from "../lexicon/access";
 
 function fakeLang(): Language {
   const lang = {
-    lexicon: {},
+    lexemes: {},
     derivationalSuffixes: [
       {
         tag: "agt",

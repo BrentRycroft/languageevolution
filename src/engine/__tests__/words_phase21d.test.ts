@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import {
   addWord,
   syncWordsAfterPhonology,
@@ -23,11 +24,11 @@ import { lexGet, lexKeys, lexSet } from "../lexicon/access";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  const { lexicon: seedLexicon, lexemeIds: _cids, ...rest } = overrides;
+  const { lexemes: seedLexicon, lexemeIds: _cids, ...rest } = overrides;
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
@@ -55,7 +56,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     ...rest,
   };
   if (seedLexicon) {
-    for (const [g, form] of Object.entries(seedLexicon)) {
+    for (const [g, form] of Object.entries(seedLexicon as unknown as Record<string, string[]>)) {
       lexSet(lang, g, form);
     }
   }
@@ -65,10 +66,10 @@ function makeLang(overrides: Partial<Language> = {}): Language {
 describe("Phase 21d — sound-change merger detection", () => {
   it("two distinct words drifting to the same form merge into one polysemous word", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         child: ["k", "i", "l", "d"],
         shall: ["s", "a", "l"],
-      },
+      } as unknown as LexemeStore,
     });
     addWord(lang, ["k", "i", "l", "d"], "child", { bornGeneration: 0 });
     addWord(lang, ["s", "a", "l"], "shall", { bornGeneration: 0 });
@@ -91,10 +92,10 @@ describe("Phase 21d — sound-change merger detection", () => {
 
   it("a polysemous word whose senses diverge phonologically gets split", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "a", "n", "k"],
         "bank.river": ["b", "a", "n", "k"],
-      },
+      } as unknown as LexemeStore,
     });
     addWord(lang, ["b", "a", "n", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "a", "n", "k"], "bank.river", { bornGeneration: 0 });
@@ -115,7 +116,7 @@ describe("Phase 21d — sound-change merger detection", () => {
 
   it("a meaning whose lexicon entry was deleted is dropped from words", () => {
     const lang = makeLang({
-      lexicon: { dog: ["d", "ɔ", "g"] }, // 'cat' was deleted by phonology
+      lexemes: { dog: ["d", "ɔ", "g"] } as unknown as LexemeStore, // 'cat' was deleted by phonology
     });
     addWord(lang, ["d", "ɔ", "g"], "dog", { bornGeneration: 0 });
     addWord(lang, ["k", "æ", "t"], "cat", { bornGeneration: 0 });
@@ -125,7 +126,7 @@ describe("Phase 21d — sound-change merger detection", () => {
   });
 
   it("idempotent: a second call on a synced language emits no events", () => {
-    const lang = makeLang({ lexicon: { dog: ["d", "ɔ", "g"] } });
+    const lang = makeLang({ lexemes: { dog: ["d", "ɔ", "g"] } as unknown as LexemeStore });
     addWord(lang, ["d", "ɔ", "g"], "dog", { bornGeneration: 0 });
     expect(syncWordsAfterPhonology(lang, 0)).toEqual([]);
     expect(syncWordsAfterPhonology(lang, 1)).toEqual([]);
@@ -133,7 +134,7 @@ describe("Phase 21d — sound-change merger detection", () => {
 
   it("merger preserves the earliest bornGeneration on the surviving word", () => {
     const lang = makeLang({
-      lexicon: { child: ["ʃ", "a", "l"], shall: ["ʃ", "a", "l"] },
+      lexemes: { child: ["ʃ", "a", "l"], shall: ["ʃ", "a", "l"] } as unknown as LexemeStore,
     });
     addWord(lang, ["k", "i", "l", "d"], "child", { bornGeneration: 0 });
     addWord(lang, ["s", "a", "l"], "shall", { bornGeneration: 50 });
@@ -151,10 +152,10 @@ describe("Phase 21d — sound-change merger detection", () => {
 describe("Phase 21d — obsolescence respects polysemy", () => {
   it("two meanings sharing a Word are NOT treated as rivals (no deletion)", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
+      } as unknown as LexemeStore,
       wordFrequencyHints: { "bank.financial": 0.5, "bank.river": 0.5 },
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
@@ -173,10 +174,10 @@ describe("Phase 21d — obsolescence respects polysemy", () => {
 
   it("two distinct words with similar forms are still rivals (one gets killed)", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         cat: ["k", "æ", "t"],
         bat: ["b", "æ", "t"],
-      },
+      } as unknown as LexemeStore,
       wordFrequencyHints: { cat: 0.5, bat: 0.4 },
     });
     addWord(lang, ["k", "æ", "t"], "cat", { bornGeneration: 0 });
@@ -195,10 +196,10 @@ describe("Phase 21d — obsolescence respects polysemy", () => {
 
   it("when obsolescence kills a meaning, the corresponding word sense is removed", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         cat: ["k", "æ", "t"],
         bat: ["b", "æ", "t"],
-      },
+      } as unknown as LexemeStore,
       wordFrequencyHints: { cat: 0.5, bat: 0.4 },
     });
     addWord(lang, ["k", "æ", "t"], "cat", { bornGeneration: 0 });

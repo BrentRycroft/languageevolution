@@ -3,6 +3,10 @@ import {
   recordForm, setRecordForm, formViewOf, seededFormViewOf, mergeFormsIntoStore,
 } from "../lexicon/store";
 import type { LexemeStore } from "../primitives";
+import { createSimulation } from "../simulation";
+import { presetEnglish } from "../presets/english";
+import { lexGet, lexKeys } from "../lexicon/access";
+import { lexPoint } from "../semantics/meaningPoint";
 
 describe("lexeme store primitives", () => {
   it("reads a record's form", () => {
@@ -37,5 +41,28 @@ describe("lexeme store primitives", () => {
     expect(store["id-1"]).toEqual({ form: ["a", "a"], point: [1], gloss: "water" });
     expect(store["id-2"]).toBeUndefined();
     expect(store["id-3"]).toEqual({ form: ["c"], point: [3] });
+  });
+});
+
+describe("lang.lexemes is the canonical store after birth (S1 task 2)", () => {
+  const root = () => {
+    const s = createSimulation(presetEnglish()).getState();
+    return s.tree[s.rootId]!.language;
+  };
+
+  it("every seeded gloss resolves to a record with form + materialized point + gloss", () => {
+    const lang = root();
+    for (const m of lexKeys(lang)) {
+      const id = lang.lexemeIds![m]!;
+      const rec = lang.lexemes[id]!;
+      expect(rec).toBeDefined();
+      expect(rec.form).toEqual(lexGet(lang, m));
+      expect(rec.gloss).toBe(m);
+      expect(rec.point).toEqual(Array.from(lexPoint(m))); // materialized = today's derived point
+    }
+  });
+
+  it("the legacy `lexicon` field is gone", () => {
+    expect((root() as unknown as { lexicon?: unknown }).lexicon).toBeUndefined();
   });
 });

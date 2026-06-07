@@ -21,8 +21,8 @@ import type { Rng } from "./rng";
  * ARCHITECTURE.md for the design walkthrough.
  */
 
-export type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
-import type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
+export type { Phoneme, Meaning, WordForm, Lexicon, LexemeRecord, LexemeStore } from "./primitives";
+import type { Phoneme, Meaning, WordForm, Lexicon, LexemeStore } from "./primitives";
 
 export type SoundChangeCategory =
   | "lenition"
@@ -212,7 +212,14 @@ export interface PhonemeInventory {
 export interface Language {
   id: string;
   name: string;
-  lexicon: Lexicon;
+  /**
+   * The canonical point-native lexeme store (store unification, step 5 S1). One LexemeRecord per
+   * lexeme, keyed by LexemeId. Seeded/concept-coined records carry a `gloss`; keyless records
+   * (coined into an empty region) have none — their label is the emergent nearest-anchor gloss.
+   * Replaces the form-only `lexicon`. (Keyless words still live in the separate `keylessLexemes`
+   * during S1 task 2; task 3 folds them in here and removes that field.)
+   */
+  lexemes: LexemeStore;
   /**
    * KEYLESS lexemes (vector-native flip — point-native storage core). A lexeme defined PURELY by its
    * position + form, with NO concept/gloss key: its meaning is the `point` and its label is the

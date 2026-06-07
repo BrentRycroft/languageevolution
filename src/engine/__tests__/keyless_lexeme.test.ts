@@ -8,7 +8,7 @@ import type { Language } from "../types";
 
 function bareLang(): Language {
   return {
-    id: "L-0", name: "Proto", lexicon: {}, lexemeIds: {},
+    id: "L-0", name: "Proto", lexemes: {}, lexemeIds: {},
     enabledChangeIds: [], changeWeights: {}, birthGeneration: 0,
     grammar: {}, events: [], wordFrequencyHints: {},
     phonemeInventory: { segmental: [], tones: [], usesTones: false },
@@ -26,7 +26,7 @@ describe("keyless lexemes — point-native storage (no concept key)", () => {
     // Stored under a lexeme-intrinsic id in keylessLexemes — NOT in the gloss-addressed lexicon/index.
     expect(lang.keylessLexemes![id]).toBeDefined();
     expect(lang.keylessLexemes![id]!.form).toEqual(["b", "l", "a", "z"]);
-    expect(lang.lexicon[id as unknown as string]).toBeUndefined();
+    expect(lang.lexemes[id as unknown as string]).toBeUndefined();
     expect(lang.lexemeIds).toEqual({}); // no gloss anchor at all
   });
 

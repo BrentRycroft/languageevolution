@@ -5,7 +5,7 @@ import {
   allHistoricalMeanings,
   type HistoryByLangMeaning,
 } from "../history";
-import type { SimulationState } from "../../engine/types";
+import type { SimulationState, LexemeStore } from "../../engine/types";
 
 /**
  * history.test.ts
@@ -27,7 +27,9 @@ function stateOf(langId: string, lex: Record<string, string[]>, generation: numb
         language: {
           id: langId,
           name: langId,
-          lexicon: lex,
+          lexemes: Object.fromEntries(
+            Object.entries(lex).map(([g, f]) => [g, { form: f, point: [], gloss: g }]),
+          ) as LexemeStore,
           enabledChangeIds: [],
           changeWeights: {},
           birthGeneration: 0,

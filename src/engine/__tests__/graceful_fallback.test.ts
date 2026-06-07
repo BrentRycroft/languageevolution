@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { lexGet } from "../lexicon/access";
 import { translateSentence } from "../translator/sentence";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
@@ -26,7 +27,7 @@ describe("Phase 50 T3 + 53 T1 — translator graceful fallback", () => {
     expect(tok).toBeDefined();
     if (tok!.resolution === "synth-fallback") {
       expect(tok!.targetForm.length).toBeGreaterThan(0);
-      expect(lang.lexicon["floogarbus"]).toBeDefined();
+      expect(lexGet(lang, "floogarbus")).toBeDefined();
     } else {
       // If grounding failed (e.g. derivation could not build a form
       // with sufficient phonotactic fit), the lemma falls through to
@@ -74,12 +75,12 @@ describe("Phase 50 T3 + 53 T1 — translator graceful fallback", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree["L-0"]!.language;
     // Wipe the lexicon so derivation/compound have nothing to ground on.
-    lang.lexicon = {};
+    lang.lexemes = {};
     const before = lang.events.length;
     translateSentence(lang, "the dragon eats");
     const after = lang.events.length;
     // No coinage event because grounding failed.
     expect(after).toBe(before);
-    expect(lang.lexicon["dragon"]).toBeUndefined();
+    expect(lexGet(lang, "dragon")).toBeUndefined();
   });
 });

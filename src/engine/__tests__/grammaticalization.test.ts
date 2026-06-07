@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { lexSet } from "../lexicon/access";
 import { maybeGrammaticalize } from "../morphology/evolve";
 import { makeRng } from "../rng";
 import { createSimulation } from "../simulation";
@@ -24,7 +25,7 @@ describe("grammaticalization pathways", () => {
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
-    lang.lexicon.go = ["g", "o"];
+    lexSet(lang, "go", ["g", "o"]);
     lang.wordFrequencyHints.go = 0.95;
     delete lang.morphology.paradigms["verb.tense.fut"];
     delete lang.morphology.paradigms["verb.aspect.pfv"];
@@ -42,7 +43,7 @@ describe("grammaticalization pathways", () => {
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
-    lang.lexicon = { flubbergarble: ["b", "a"] };
+    lang.lexemes = {}; lang.lexemeIds = {}; lexSet(lang, "flubbergarble", ["b", "a"]);
     lang.wordFrequencyHints = { flubbergarble: 0.99 };
     lang.morphology.paradigms = {};
     const rng = makeRng("gram-untagged");
@@ -55,7 +56,7 @@ describe("grammaticalization pathways", () => {
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
-    lang.lexicon.back = ["b", "a", "k"];
+    lexSet(lang, "back", ["b", "a", "k"]);
     lang.wordFrequencyHints.back = 0.8;
     delete lang.morphology.paradigms["noun.case.loc"];
     delete lang.morphology.paradigms["noun.case.dat"];

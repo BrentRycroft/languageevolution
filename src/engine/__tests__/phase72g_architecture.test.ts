@@ -25,8 +25,8 @@ describe("Phase 72g-1 — stratal phonology UR/SR layer", () => {
     enableStratalMode(lang);
     expect(lang.lexiconUR).toBeDefined();
     // UR should match SR at moment of enable.
-    for (const m of Object.keys(lang.lexicon)) {
-      expect(lang.lexiconUR![m]).toEqual(lang.lexicon[m]);
+    for (const m of Object.keys(lang.lexemes)) {
+      expect(lang.lexiconUR![m]).toEqual(lang.lexemes[m]?.form);
     }
   });
 
@@ -339,7 +339,7 @@ describe("Phase 72g-5 (Phase 1) — domain sub-state type views", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     const lex: LexiconState = lang;
-    expect(lex.lexicon).toBe(lang.lexicon);
+    expect(lex.lexemes).toBe(lang.lexemes);
     expect(lex.wordFrequencyHints).toBe(lang.wordFrequencyHints);
   });
 

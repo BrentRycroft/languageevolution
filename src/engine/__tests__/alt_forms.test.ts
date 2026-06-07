@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import {
   addAlt,
   pruneAlts,
@@ -22,7 +23,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -54,27 +55,27 @@ function makeLang(overrides: Partial<Language> = {}): Language {
 
 describe("altForms", () => {
   it("addAlt appends a new alternate with register tag", () => {
-    const lang = makeLang({ lexicon: { horse: ["h", "ɔ", "r", "s"] } });
+    const lang = makeLang({ lexemes: { horse: ["h", "ɔ", "r", "s"] } as unknown as LexemeStore });
     expect(addAlt(lang, "horse", ["s", "t", "iː", "d"], "high")).toBe(true);
     expect(lang.altForms?.horse).toEqual([["s", "t", "iː", "d"]]);
     expect(lang.altRegister?.horse).toEqual(["high"]);
   });
 
   it("addAlt skips a duplicate that equals the primary form", () => {
-    const lang = makeLang({ lexicon: { horse: ["h", "ɔ", "r", "s"] } });
+    const lang = makeLang({ lexemes: { horse: ["h", "ɔ", "r", "s"] } as unknown as LexemeStore });
     expect(addAlt(lang, "horse", ["h", "ɔ", "r", "s"])).toBe(false);
     expect(lang.altForms?.horse).toBeUndefined();
   });
 
   it("addAlt skips a duplicate already in altForms", () => {
-    const lang = makeLang({ lexicon: { horse: ["h", "ɔ", "r", "s"] } });
+    const lang = makeLang({ lexemes: { horse: ["h", "ɔ", "r", "s"] } as unknown as LexemeStore });
     addAlt(lang, "horse", ["s", "t", "iː", "d"], "high");
     expect(addAlt(lang, "horse", ["s", "t", "iː", "d"], "high")).toBe(false);
     expect(lang.altForms?.horse).toHaveLength(1);
   });
 
   it("addAlt caps the alt list at 4 entries (drops the oldest)", () => {
-    const lang = makeLang({ lexicon: { x: ["a"] } });
+    const lang = makeLang({ lexemes: { x: ["a"] } as unknown as LexemeStore });
     addAlt(lang, "x", ["b"]);
     addAlt(lang, "x", ["c"]);
     addAlt(lang, "x", ["d"]);
@@ -85,7 +86,7 @@ describe("altForms", () => {
 
   it("pruneAlts removes the last alt when its meaning's frequency is low", () => {
     const lang = makeLang({
-      lexicon: { x: ["a"] },
+      lexemes: { x: ["a"] } as unknown as LexemeStore,
       wordFrequencyHints: { x: 0.1 }, // low — high decay
     });
     addAlt(lang, "x", ["b"], "low");
@@ -95,7 +96,7 @@ describe("altForms", () => {
 
   it("pruneAlts protects high-frequency meanings", () => {
     const lang = makeLang({
-      lexicon: { x: ["a"] },
+      lexemes: { x: ["a"] } as unknown as LexemeStore,
       wordFrequencyHints: { x: 0.95 }, // high — low decay
     });
     addAlt(lang, "x", ["b"], "low");
@@ -113,7 +114,7 @@ describe("altForms", () => {
   });
 
   it("promoteAltOnPrimaryLoss promotes the first alt to primary", () => {
-    const lang = makeLang({ lexicon: { x: ["a"] } });
+    const lang = makeLang({ lexemes: { x: ["a"] } as unknown as LexemeStore });
     addAlt(lang, "x", ["b"], "high");
     addAlt(lang, "x", ["c"], "low");
     lexDelete(lang, "x");
@@ -130,7 +131,7 @@ describe("altForms", () => {
   });
 
   it("allFormsFor returns primary first, then alternates", () => {
-    const lang = makeLang({ lexicon: { x: ["a"] } });
+    const lang = makeLang({ lexemes: { x: ["a"] } as unknown as LexemeStore });
     addAlt(lang, "x", ["b"]);
     addAlt(lang, "x", ["c"]);
     const all = allFormsFor(lang, "x");
@@ -138,7 +139,7 @@ describe("altForms", () => {
   });
 
   it("allFormsFor returns just primary when no alts", () => {
-    const lang = makeLang({ lexicon: { x: ["a"] } });
+    const lang = makeLang({ lexemes: { x: ["a"] } as unknown as LexemeStore });
     expect(allFormsFor(lang, "x")).toEqual([["a"]]);
   });
 

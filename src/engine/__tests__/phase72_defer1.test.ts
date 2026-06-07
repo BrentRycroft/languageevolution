@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { deleteMeaning } from "../lexicon/mutate";
@@ -83,7 +84,7 @@ describe("Defer-1c (T72g G1) — cross-gen UR persistence under manual policy", 
     expect(JSON.stringify(lang.lexiconUR)).toBe(initialURSnapshot);
     // Caller-driven refresh updates UR to current SR.
     refreshUR(lang);
-    expect(JSON.stringify(lang.lexiconUR)).toBe(JSON.stringify(lang.lexicon));
+    expect(JSON.stringify(lang.lexiconUR)).toBe(JSON.stringify(formViewOf(lang.lexemes)));
   });
 
   it("each-gen policy (default): UR mirrors SR after every step", () => {
@@ -102,10 +103,10 @@ describe("Defer-1c (T72g G1) — cross-gen UR persistence under manual policy", 
     // form-mutating step — see ROADMAP "stratal UR refresh ordering".)
     let mismatches = 0;
     let total = 0;
-    for (const m of Object.keys(lang.lexicon)) {
+    for (const m of Object.keys(lang.lexemes)) {
       if (lang.lexiconUR![m]) {
         total++;
-        if (JSON.stringify(lang.lexiconUR![m]) !== JSON.stringify(lang.lexicon[m])) mismatches++;
+        if (JSON.stringify(lang.lexiconUR![m]) !== JSON.stringify(lang.lexemes[m]?.form)) mismatches++;
       }
     }
     expect(total).toBeGreaterThan(0);

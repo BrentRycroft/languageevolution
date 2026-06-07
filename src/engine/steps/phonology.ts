@@ -1,6 +1,6 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
 import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority, voicedObstruentShareOf } from "../phonology/apply";
-import { buildLexemeIdToGloss, type LexemeId } from "../lexicon/lexemeIdentity";
+import { buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
@@ -30,6 +30,7 @@ import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
 import { lexGet, lexSet, lexKeys } from "../lexicon/access";
+import { seededFormViewOf, mergeFormsIntoStore } from "../lexicon/store";
 
 /**
  * phonology.ts
@@ -108,7 +109,13 @@ export function stepPhonology(
   const literary = literaryStabilityFor(lang);
   lang.literaryStability = literary;
   const literaryBrake = 1 - 0.6 * literary;
-  const before = lang.lexicon;
+  // Store unification (S1): the sound-change ENGINE stays form-only. Project a SEEDED-only form-view
+  // out of the record store, run sound change on it, then `mergeFormsIntoStore` the result back into
+  // the records (preserving each record's point + gloss). `seededFormViewOf` is the single sweep gate
+  // — keyless words are NOT swept until task 4 flips this to `formViewOf`. In S1 task 2 the store holds
+  // only seeded records, so this view's key set + order is byte-identical to the pre-unification
+  // `lang.lexicon`.
+  const before = seededFormViewOf(lang.lexemes);
   const changes = changesForLang(lang);
   // Phase 69a T1: hoist the sortByPriority computation. Pre-fix
   // applyChangesToLexicon ran sortByPriority(changes) once per call
@@ -310,20 +317,22 @@ export function stepPhonology(
   // config.seed keeps the global seed in control; lang.id makes sibling
   // daughters diverge; generation gives independent draws each gen.
   const conceptSeedBase = `${config.seed}|${lang.id}|${generation}`;
+  // `after` is the post-sound-change form-view (LexemeId -> form), merged back into the records below.
+  let after: Record<string, WordForm>;
   if (lang.lexiconUR !== undefined) {
-    lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
+    after = stratalApplyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
     const policy = lang.lexiconURRefreshPolicy ?? "each-gen";
     if (policy === "each-gen") {
-      // UR mirrors the surface store, so it is LexemeId-keyed too.
+      // UR mirrors the surface form-view, so it is LexemeId-keyed too.
       lang.lexiconUR = {};
-      for (const cid of Object.keys(lang.lexicon)) {
-        lang.lexiconUR[cid] = lang.lexicon[cid as LexemeId]!.slice();
+      for (const cid of Object.keys(after)) {
+        lang.lexiconUR[cid] = after[cid]!.slice();
       }
     }
     // policy === "manual": leave UR untouched. Caller checkpoints when
     // a morphological reanalysis or other event justifies updating UR.
   } else {
-    lang.lexicon = applyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
+    after = applyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
   }
   // Phase 72a T2 (Invariant 1 fix): closed-class forms are cached
   // per-language; the cache silently goes stale when phonology rewrites
@@ -343,22 +352,20 @@ export function stepPhonology(
   // Phase 29 Tranche 5d: record proto→daughter substitutions for
   // every position-aligned change to surface systematic correspondences
   // (Grimm's-Law-grade shifts) in the UI / audit reports.
-  recordCorrespondences(lang, before, lang.lexicon, generation);
+  recordCorrespondences(lang, before, after, generation);
   // Phase 27.1: when the language is already over its tier-target
   // inventory, reject post-rule forms that introduce phonemes which
   // weren't in the inventory before this generation. This prevents
   // sound-change additions from outpacing homeostatic pruning.
   // Mergers (rules that REDUCE the inventory) are still allowed —
   // their outputs are by definition in the old inventory.
-  // `before` and `lang.lexicon` are both LexemeId-keyed; iterate by store key
-  // and resolve the gloss only for the gloss-keyed satellite maps. (Pre-flip
-  // these loops keyed `before` by gloss; that mismatch silently no-op'd the
-  // change-recording below — see CONCEPT-REKEY-PLAN.md.)
+  // `before` and `after` are both LexemeId-keyed form-views; iterate by store
+  // key and resolve the gloss only for the gloss-keyed satellite maps.
   const glossOfCid = buildLexemeIdToGloss(lang);
   if (inventorySizePressure(lang) > 0) {
     const oldInv = new Set(lang.phonemeInventory.segmental);
-    for (const cid of Object.keys(lang.lexicon)) {
-      const newForm = lang.lexicon[cid as LexemeId]!;
+    for (const cid of Object.keys(after)) {
+      const newForm = after[cid]!;
       const oldForm = before[cid];
       if (!oldForm || newForm === oldForm) continue;
       let introducesNovel = false;
@@ -370,12 +377,12 @@ export function stepPhonology(
         }
       }
       if (introducesNovel) {
-        lang.lexicon[cid as LexemeId] = oldForm;
+        after[cid] = oldForm;
       }
     }
   }
   for (const cid of Object.keys(before)) {
-    if (lang.lexicon[cid as LexemeId] !== undefined) continue;
+    if (after[cid] !== undefined) continue;
     const m = glossOfCid.get(cid);
     if (m === undefined) continue;
     delete lang.wordFrequencyHints[m];
@@ -415,7 +422,7 @@ export function stepPhonology(
   }
   let mutated = 0;
   for (const cid of Object.keys(before)) {
-    const cur = lang.lexicon[cid as LexemeId];
+    const cur = after[cid];
     if (cur === undefined) continue;
     const m = glossOfCid.get(cid);
     if (m === undefined) continue;
@@ -436,6 +443,10 @@ export function stepPhonology(
       reinforceCanonical(lang, m, cur);
     }
   }
+  // Store unification (S1): reconcile the swept form-view back into the record store. Updates each
+  // seeded record's form (or drops it if it merged away); keyless records, absent from `before`, are
+  // left untouched. Done now — before anything downstream reads forms via the seam / lang.lexemes.
+  mergeFormsIntoStore(lang.lexemes, before, after);
   decayFrequencies(lang);
   // Phase 33 Tranche 33a: actuation events used to fire 1 per
   // adopted variant, drowning the log (74-78/gen). Now we collapse

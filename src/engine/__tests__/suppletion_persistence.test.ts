@@ -3,6 +3,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
 import { makeRng } from "../rng";
+import { lexGet, lexSet } from "../lexicon/access";
 
 /**
  * Phase 28e: suppletive paradigms must survive long-form runs.
@@ -18,21 +19,21 @@ describe("Phase 28e — suppletion persistence", () => {
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
     // Synthesise a length-imbalanced suppletive form: `go` short,
     // semantic neighbours longer.
-    lang.lexicon["go"] = ["g", "o"];
+    lexSet(lang, "go", ["g", "o"]);
     lang.suppletion = {
       go: { "verb.tense.past": ["w", "ɛ", "n", "t"] },
     };
     // Force the cluster mates to be longer so the bare leveler would
     // pick `go` as a target if not gated.
-    lang.lexicon["come"] = ["k", "o", "m", "e", "n"];
-    lang.lexicon["walk"] = ["w", "a", "l", "k", "e"];
-    lang.lexicon["run"] = ["r", "u", "n", "n", "e", "n"];
-    const before = lang.lexicon["go"]!.slice();
+    lexSet(lang, "come", ["k", "o", "m", "e", "n"]);
+    lexSet(lang, "walk", ["w", "a", "l", "k", "e"]);
+    lexSet(lang, "run", ["r", "u", "n", "n", "e", "n"]);
+    const before = lexGet(lang, "go")!.slice();
     // Try repeatedly with high probability — should never re-shape `go`.
     for (let i = 0; i < 50; i++) {
       const rng = makeRng(`anal-${i}`);
       maybeAnalogicalLevel(lang, rng, 1.0);
     }
-    expect(lang.lexicon["go"]).toEqual(before);
+    expect(lexGet(lang, "go")).toEqual(before);
   });
 });

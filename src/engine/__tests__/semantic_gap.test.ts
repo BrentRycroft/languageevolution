@@ -17,7 +17,7 @@ import type { Language } from "../types";
 
 function bareLang(): Language {
   return {
-    id: "L-0", name: "Proto", lexicon: {}, lexemeIds: {},
+    id: "L-0", name: "Proto", lexemes: {}, lexemeIds: {},
     enabledChangeIds: [], changeWeights: {}, birthGeneration: 0,
     grammar: {}, events: [], wordFrequencyHints: {},
     phonemeInventory: { segmental: [], tones: [], usesTones: false },

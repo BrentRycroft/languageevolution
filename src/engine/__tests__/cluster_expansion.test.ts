@@ -91,7 +91,7 @@ describe("§H.1 — cluster lookups span the expanded registry", () => {
     sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
     lang.culturalTier = 3;
-    lang.lexicon = {} as never;
+    lang.lexemes = {} as never;
     lang.lexemeIds = {};
     lexSet(lang, "people", ["p", "e", "o", "p", "l"]);
     lexSet(lang, "law", ["l", "a", "w", "a"]);

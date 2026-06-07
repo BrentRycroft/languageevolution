@@ -1,10 +1,11 @@
-import type { Language, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
+import type { Language, LexemeStore, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
 import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { lexGet, lexHas, lexEntries } from "./access";
 import { lexemeIdFor } from "./lexemeIdentity";
+import { lexPoint } from "../semantics/meaningPoint";
 import { CONCEPT_IDS } from "./concepts";
 
 /**
@@ -568,7 +569,7 @@ export function removeSense(lang: Language, meaning: Meaning): void {
  */
 export function syncLexiconFromWords(lang: Language): void {
   if (!lang.words) return;
-  const nextLexicon: Record<Meaning, WordForm> = {};
+  const nextStore: LexemeStore = {};
   const colex: Record<Meaning, Meaning[]> = {};
   // For each meaning, track the (word, sense) pair with the highest weight.
   const bestBySense: Record<Meaning, { word: Word; weight: number }> = {};
@@ -594,11 +595,24 @@ export function syncLexiconFromWords(lang: Language): void {
     }
   }
   for (const [meaning, { word }] of Object.entries(bestBySense)) {
-    // Canonical store is LexemeId-keyed; resolve each gloss to its concept.
-    // Insertion order follows bestBySense (gloss first-seen order), unchanged.
-    nextLexicon[lexemeIdFor(lang, meaning)] = word.form.slice();
+    // Store unification (S1): rebuild the seeded records from words. Reuse the
+    // existing record's materialized point when present, else materialize
+    // lexPoint(meaning). Insertion order follows bestBySense (gloss first-seen
+    // order), unchanged.
+    const id = lexemeIdFor(lang, meaning);
+    const existing = lang.lexemes[id];
+    nextStore[id] = {
+      form: word.form.slice(),
+      point: existing ? existing.point : Array.from(lexPoint(meaning)),
+      gloss: meaning,
+    };
   }
-  lang.lexicon = nextLexicon;
+  // Keyless records (no gloss) are not derived from words — carry them over untouched.
+  for (const id of Object.keys(lang.lexemes)) {
+    const r = lang.lexemes[id]!;
+    if (r.gloss === undefined) nextStore[id] = r;
+  }
+  lang.lexemes = nextStore;
   // Only overwrite colexifiedAs when we have data; pre-existing entries
   // from older code paths are preserved if the words table is empty.
   if (Object.keys(colex).length > 0 || lang.colexifiedAs) {

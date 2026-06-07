@@ -18,7 +18,7 @@ function makeLang(): Language {
   const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: ["lenition.p_to_f"],
     changeWeights: { "lenition.p_to_f": 1 },
     birthGeneration: 0,
@@ -54,7 +54,7 @@ describe("regular (Neogrammarian) sound change", () => {
 
   it("returns null when no rule has any matching site", () => {
     const lang = makeLang();
-    lang.lexicon = {}; lang.lexemeIds = {};
+    lang.lexemes = {}; lang.lexemeIds = {};
     lexSet(lang, "foo", ["f", "o", "o"]);
     const rng = makeRng("empty");
     const rule = CATALOG_BY_ID["lenition.p_to_f"]!;

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import { attemptMorphologicalSynthesis, attemptConceptDecomposition, attemptClusterComposition } from "../lexicon/synthesis";
 import type { Language } from "../types";
 import type { DerivationalSuffix, DerivationCategory } from "../lexicon/derivation";
@@ -17,11 +18,11 @@ import { lexSet, lexGet } from "../lexicon/access";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  const { lexicon: seedLexicon, ...rest } = overrides;
+  const { lexemes: seedLexicon, ...rest } = overrides;
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -48,7 +49,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     ...rest,
   };
   if (seedLexicon) {
-    for (const [gloss, form] of Object.entries(seedLexicon as Record<string, string[]>)) {
+    for (const [gloss, form] of Object.entries(seedLexicon as unknown as Record<string, string[]>)) {
       lexSet(lang, gloss, form);
     }
   }
@@ -94,7 +95,7 @@ function prefix(
 describe("Phase 47 T1 — morphological synthesis", () => {
   it("synthesises 'lighter' from 'light' + productive '-er.agt'", () => {
     const lang = makeLang({
-      lexicon: { light: ["l", "a", "j", "t"] },
+      lexemes: { light: ["l", "a", "j", "t"] } as unknown as LexemeStore,
       derivationalSuffixes: [suffix("-er.agt", ["ə", "r"])],
     });
     const result = attemptMorphologicalSynthesis(lang, "lighter");
@@ -109,7 +110,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("synthesises 'kindness' from 'kind' + productive '-ness'", () => {
     const lang = makeLang({
-      lexicon: { kind: ["k", "a", "j", "n", "d"] },
+      lexemes: { kind: ["k", "a", "j", "n", "d"] } as unknown as LexemeStore,
       derivationalSuffixes: [suffix("-ness", ["n", "ə", "s"])],
     });
     const result = attemptMorphologicalSynthesis(lang, "kindness");
@@ -120,7 +121,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("returns null when stem is missing from lexicon", () => {
     const lang = makeLang({
-      lexicon: {},
+      lexemes: {},
       derivationalSuffixes: [suffix("-er.agt", ["ə", "r"])],
     });
     const result = attemptMorphologicalSynthesis(lang, "lighter");
@@ -129,7 +130,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("returns null when no productive affix matches", () => {
     const lang = makeLang({
-      lexicon: { light: ["l", "a", "j", "t"] },
+      lexemes: { light: ["l", "a", "j", "t"] } as unknown as LexemeStore,
       derivationalSuffixes: [suffix("-ness", ["n", "ə", "s"])], // wrong suffix
     });
     const result = attemptMorphologicalSynthesis(lang, "lighter");
@@ -138,7 +139,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("rejects non-productive affixes (productivity gate)", () => {
     const lang = makeLang({
-      lexicon: { light: ["l", "a", "j", "t"] },
+      lexemes: { light: ["l", "a", "j", "t"] } as unknown as LexemeStore,
       derivationalSuffixes: [suffix("-er.agt", ["ə", "r"], false)], // not productive
     });
     const result = attemptMorphologicalSynthesis(lang, "lighter");
@@ -147,7 +148,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("returns null when language has no derivationalSuffixes", () => {
     const lang = makeLang({
-      lexicon: { light: ["l", "a", "j", "t"] },
+      lexemes: { light: ["l", "a", "j", "t"] } as unknown as LexemeStore,
     });
     const result = attemptMorphologicalSynthesis(lang, "lighter");
     expect(result).toBeNull();
@@ -157,7 +158,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
     // "happiness" could match both "-ness" (stem "happi") and "-ess"
     // (stem "happin"). Longest-match should pick "-ness".
     const lang = makeLang({
-      lexicon: { happi: ["h", "æ", "p", "i"] }, // synthetic stem
+      lexemes: { happi: ["h", "æ", "p", "i"] } as unknown as LexemeStore, // synthetic stem
       derivationalSuffixes: [
         suffix("-ess", ["e", "s"]),
         suffix("-ness", ["n", "ə", "s"]),
@@ -171,7 +172,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("returns null when lemma equals the suffix (no stem)", () => {
     const lang = makeLang({
-      lexicon: { er: ["ə", "r"] },
+      lexemes: { er: ["ə", "r"] } as unknown as LexemeStore,
       derivationalSuffixes: [suffix("-er.agt", ["ə", "r"])],
     });
     const result = attemptMorphologicalSynthesis(lang, "er");
@@ -180,7 +181,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("returns null when affix has empty form", () => {
     const lang = makeLang({
-      lexicon: { light: ["l", "a", "j", "t"] },
+      lexemes: { light: ["l", "a", "j", "t"] } as unknown as LexemeStore,
       derivationalSuffixes: [suffix("-er.agt", [])],
     });
     const result = attemptMorphologicalSynthesis(lang, "lighter");
@@ -190,7 +191,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
   // Phase 47 T2: prefix synthesis
   it("synthesises 'rebuild' from productive 're-' prefix + 'build'", () => {
     const lang = makeLang({
-      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      lexemes: { build: ["b", "ɪ", "l", "d"] } as unknown as LexemeStore,
       derivationalSuffixes: [prefix("re-", ["r", "iː"])],
     });
     const result = attemptMorphologicalSynthesis(lang, "rebuild");
@@ -204,7 +205,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("synthesises 'preview' from 'pre-' + 'view'", () => {
     const lang = makeLang({
-      lexicon: { view: ["v", "j", "u"] },
+      lexemes: { view: ["v", "j", "u"] } as unknown as LexemeStore,
       derivationalSuffixes: [prefix("pre-", ["p", "r", "iː"])],
     });
     const result = attemptMorphologicalSynthesis(lang, "preview");
@@ -214,7 +215,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("rejects prefix synthesis when prefix is non-productive", () => {
     const lang = makeLang({
-      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      lexemes: { build: ["b", "ɪ", "l", "d"] } as unknown as LexemeStore,
       derivationalSuffixes: [prefix("re-", ["r", "iː"], false)],
     });
     const result = attemptMorphologicalSynthesis(lang, "rebuild");
@@ -223,7 +224,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("position auto-detected from tag shape ('re-' → prefix without explicit position)", () => {
     const lang = makeLang({
-      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      lexemes: { build: ["b", "ɪ", "l", "d"] } as unknown as LexemeStore,
       // Note: no `position` field — should be inferred from "re-" trailing hyphen.
       derivationalSuffixes: [{
         affix: ["r", "iː"],
@@ -240,7 +241,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("position auto-detected: '-er.agt' (leading hyphen) → suffix", () => {
     const lang = makeLang({
-      lexicon: { light: ["l", "a", "j", "t"] },
+      lexemes: { light: ["l", "a", "j", "t"] } as unknown as LexemeStore,
       derivationalSuffixes: [{
         affix: ["ə", "r"],
         tag: "-er.agt",
@@ -256,7 +257,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("prefix and suffix can coexist; longest-match still wins", () => {
     const lang = makeLang({
-      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      lexemes: { build: ["b", "ɪ", "l", "d"] } as unknown as LexemeStore,
       derivationalSuffixes: [
         prefix("re-", ["r", "iː"]),
         suffix("-er.agt", ["ə", "r"]),
@@ -276,7 +277,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
   // Phase 47 T3: negational rare path
   it("negational synthesis: 'unhappy' from 'un-' + 'happy' in neg mode", () => {
     const lang = makeLang({
-      lexicon: { happy: ["h", "æ", "p", "i"] },
+      lexemes: { happy: ["h", "æ", "p", "i"] } as unknown as LexemeStore,
       derivationalSuffixes: [prefix("un-", ["ʌ", "n"])],
     });
     // Default mode (non-neg): "un-" excluded, returns null.
@@ -290,7 +291,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("non-neg mode excludes negational tags (un-, dis-, non-, in-, anti-, de-)", () => {
     const lang = makeLang({
-      lexicon: { happy: ["h", "æ", "p", "i"] },
+      lexemes: { happy: ["h", "æ", "p", "i"] } as unknown as LexemeStore,
       derivationalSuffixes: [
         prefix("un-", ["ʌ", "n"]),
         prefix("dis-", ["d", "ɪ", "s"]),
@@ -310,7 +311,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("neg mode INCLUDES negational tags but excludes ordinary affixes", () => {
     const lang = makeLang({
-      lexicon: { happy: ["h", "æ", "p", "i"], light: ["l", "a", "j", "t"] },
+      lexemes: { happy: ["h", "æ", "p", "i"], light: ["l", "a", "j", "t"] } as unknown as LexemeStore,
       derivationalSuffixes: [
         prefix("un-", ["ʌ", "n"]),                  // negational
         suffix("-er.agt", ["ə", "r"]),              // non-neg
@@ -323,7 +324,7 @@ describe("Phase 47 T1 — morphological synthesis", () => {
 
   it("non-productive negational prefix is rejected even in neg mode", () => {
     const lang = makeLang({
-      lexicon: { happy: ["h", "æ", "p", "i"] },
+      lexemes: { happy: ["h", "æ", "p", "i"] } as unknown as LexemeStore,
       derivationalSuffixes: [prefix("un-", ["ʌ", "n"], false)], // not productive
     });
     expect(attemptMorphologicalSynthesis(lang, "unhappy", "neg")).toBeNull();
@@ -396,10 +397,10 @@ describe("Phase 47 T6 — CONCEPTS metadata + cross-linguistic decomposition", (
 
   it("attemptConceptDecomposition composes 'computer' from 'work' + 'know'", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         work: ["v", "ɜ", "r", "k"],
         know: ["n", "o"],
-      },
+      } as unknown as LexemeStore,
     });
     const result = attemptConceptDecomposition(lang, "computer");
     expect(result).not.toBeNull();
@@ -413,14 +414,14 @@ describe("Phase 47 T6 — CONCEPTS metadata + cross-linguistic decomposition", (
 
   it("returns null when not all decomposition parts are in lexicon", () => {
     const lang = makeLang({
-      lexicon: { work: ["v", "ɜ", "r", "k"] }, // missing "know"
+      lexemes: { work: ["v", "ɜ", "r", "k"] } as unknown as LexemeStore, // missing "know"
     });
     expect(attemptConceptDecomposition(lang, "computer")).toBeNull();
   });
 
   it("returns null for primitives (irreducible by definition)", () => {
     const lang = makeLang({
-      lexicon: { water: ["w", "a", "t", "e", "r"] },
+      lexemes: { water: ["w", "a", "t", "e", "r"] } as unknown as LexemeStore,
     });
     // "water" is marked primitive in PRIMITIVE_MEANINGS even though
     // CONCEPTS["water"] doesn't have a decomposition. Even if it did,
@@ -429,7 +430,7 @@ describe("Phase 47 T6 — CONCEPTS metadata + cross-linguistic decomposition", (
   });
 
   it("returns null for unknown meanings (not in CONCEPTS)", () => {
-    const lang = makeLang({ lexicon: {} });
+    const lang = makeLang({ lexemes: {} });
     expect(attemptConceptDecomposition(lang, "nonexistent-meaning")).toBeNull();
   });
 });
@@ -440,11 +441,11 @@ describe("Phase 47 T9 — cluster-emergent composition", () => {
     // Small lexicon (under 200): triggers eligibility.
     // Lexicon includes some animal cluster peers but not "horse".
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         dog: ["w", "a", "n"],
         cow: ["m", "u"],
         wolf: ["k", "a", "i"],
-      },
+      } as unknown as LexemeStore,
       grammar: {
         wordOrder: "SVO", affixPosition: "suffix",
         pluralMarking: "none", tenseMarking: "none",
@@ -466,7 +467,7 @@ describe("Phase 47 T9 — cluster-emergent composition", () => {
     for (let i = 0; i < 250; i++) lex[`meaning-${i}`] = ["x"];
     lex.dog = ["d"];
     lex.cow = ["c"];
-    const lang = makeLang({ lexicon: lex });
+    const lang = makeLang({ lexemes: lex as unknown as LexemeStore });
     const result = attemptClusterComposition(lang, "horse");
     expect(result).toBeNull();
   });
@@ -479,7 +480,7 @@ describe("Phase 47 T9 — cluster-emergent composition", () => {
     lex.cow = ["c"];
     lex.wolf = ["w"];
     const lang = makeLang({
-      lexicon: lex,
+      lexemes: lex as unknown as LexemeStore,
       grammar: {
         wordOrder: "SVO", affixPosition: "suffix",
         pluralMarking: "none", tenseMarking: "none",
@@ -493,7 +494,7 @@ describe("Phase 47 T9 — cluster-emergent composition", () => {
 
   it("returns null for primitives (irreducible)", () => {
     const lang = makeLang({
-      lexicon: { fire: ["f"], earth: ["e"] },
+      lexemes: { fire: ["f"], earth: ["e"] } as unknown as LexemeStore,
     });
     // "water" is a primitive — never decomposes
     expect(attemptClusterComposition(lang, "water")).toBeNull();
@@ -501,13 +502,13 @@ describe("Phase 47 T9 — cluster-emergent composition", () => {
 
   it("returns null when fewer than 2 cluster peers in lexicon", () => {
     const lang = makeLang({
-      lexicon: { dog: ["d"] },
+      lexemes: { dog: ["d"] } as unknown as LexemeStore,
     });
     expect(attemptClusterComposition(lang, "horse")).toBeNull();
   });
 
   it("returns null for meanings not in CONCEPTS", () => {
-    const lang = makeLang({ lexicon: { dog: ["d"], cow: ["c"] } });
+    const lang = makeLang({ lexemes: { dog: ["d"], cow: ["c"] } as unknown as LexemeStore });
     expect(attemptClusterComposition(lang, "nonexistent-meaning")).toBeNull();
   });
 });

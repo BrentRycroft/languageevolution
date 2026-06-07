@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LexemeStore } from "../types";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { stepContact } from "../steps/contact";
@@ -19,7 +20,7 @@ function bareLang(id: string, overrides: Partial<Language> = {}): Language {
   return {
     id,
     name: id,
-    lexicon: { water: ["w", "a"], fire: ["f", "i"] },
+    lexemes: { water: ["w", "a"], fire: ["f", "i"] } as unknown as LexemeStore,
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

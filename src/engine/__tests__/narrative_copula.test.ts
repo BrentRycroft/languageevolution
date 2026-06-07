@@ -21,7 +21,7 @@ function sampleLang(withCopula: boolean): Language {
   const lang: Language = {
     id: "L-cop",
     name: "Copula-test",
-    lexicon: {},
+    lexemes: {},
     lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},

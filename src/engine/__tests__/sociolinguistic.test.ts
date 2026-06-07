@@ -21,7 +21,7 @@ function makeLang(overrides: Partial<Language> = {}, seedLexicon: Record<string,
   const lang: Language = {
     id: "L-s",
     name: "TestLang",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

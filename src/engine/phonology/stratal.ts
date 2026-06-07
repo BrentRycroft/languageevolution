@@ -37,8 +37,8 @@ import type { LexemeId } from "../lexicon/lexemeIdentity";
  */
 export function enableStratalMode(lang: PhonologyState & LexiconState): void {
   lang.lexiconUR = {};
-  for (const cid of Object.keys(lang.lexicon)) {
-    lang.lexiconUR[cid] = lang.lexicon[cid as LexemeId]!.slice();
+  for (const cid of Object.keys(lang.lexemes)) {
+    lang.lexiconUR[cid] = lang.lexemes[cid]!.form.slice();
   }
   lang.lexiconURRefreshPolicy = "each-gen";
 }
@@ -52,8 +52,8 @@ export function enableStratalMode(lang: PhonologyState & LexiconState): void {
  */
 export function enableStratalModeManual(lang: PhonologyState & LexiconState): void {
   lang.lexiconUR = {};
-  for (const cid of Object.keys(lang.lexicon)) {
-    lang.lexiconUR[cid] = lang.lexicon[cid as LexemeId]!.slice();
+  for (const cid of Object.keys(lang.lexemes)) {
+    lang.lexiconUR[cid] = lang.lexemes[cid]!.form.slice();
   }
   lang.lexiconURRefreshPolicy = "manual";
 }
@@ -68,8 +68,8 @@ export function enableStratalModeManual(lang: PhonologyState & LexiconState): vo
 export function refreshUR(lang: PhonologyState & LexiconState): void {
   if (lang.lexiconUR === undefined) return;
   lang.lexiconUR = {};
-  for (const cid of Object.keys(lang.lexicon)) {
-    lang.lexiconUR[cid] = lang.lexicon[cid as LexemeId]!.slice();
+  for (const cid of Object.keys(lang.lexemes)) {
+    lang.lexiconUR[cid] = lang.lexemes[cid]!.form.slice();
   }
 }
 

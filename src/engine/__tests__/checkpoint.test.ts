@@ -16,10 +16,10 @@ function stableKey(state: ReturnType<ReturnType<typeof createSimulation>["getSta
     .sort()
     .map((id) => {
       const lang = tree[id]!.language;
-      const lex = Object.keys(lang.lexicon).sort();
+      const lex = Object.keys(lang.lexemes).sort();
       return (
         `${id}:${lang.name}:ext=${lang.extinct ?? false}:` +
-        lex.map((m) => `${m}=${lang.lexicon[m]!.join("")}`).join(",")
+        lex.map((m) => `${m}=${lang.lexemes[m]!.form.join("")}`).join(",")
       );
     })
     .join("|");

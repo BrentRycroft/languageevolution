@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import {
   proposeAblautEmergence,
@@ -96,7 +97,7 @@ describe("Phase 64 T2 — ablaut chain emergence + sound-change tracking", () =>
         },
       },
       phonemeInventory: { segmental: ["a", "u", "k", "s", "ŋ"] as Phoneme[] },
-      lexicon: { sing: ["s", "i", "ŋ"] as WordForm },
+      lexemes: { sing: ["s", "i", "ŋ"] as WordForm } as unknown as LexemeStore,
       events: [],
     } as unknown as Language;
     // Rekey the hand-built gloss-keyed lexicon to LexemeIds + lexemeIds map,

@@ -8,8 +8,9 @@ import {
   pickEpentheticVowel,
   PERMISSIVE_PROFILE,
 } from "./phonotactics";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexGet, lexKeys, lexDelete } from "../lexicon/access";
 import { lexemeIdFor } from "../lexicon/lexemeIdentity";
+import { setRecordForm } from "../lexicon/store";
 
 /**
  * regular.ts
@@ -76,15 +77,16 @@ export function applyOneRegularChange(
     next[m] = form;
   }
   // `next` was built gloss-keyed (preserving the per-meaning RNG draw order
-  // above); re-key it to the canonical LexemeId store. Every surviving
-  // meaning already has a LexemeId, so lexemeIdFor is a lookup, and the
-  // insertion order carries over (positional parity with the old store).
-  const nextCid: Lexicon = {};
+  // above). Store unification (S1): write each survivor's new form into its
+  // existing record in place (lexemeIdFor is a lookup — the record already has
+  // its point + gloss), and DROP the records that merged away. Updating in place
+  // keeps the store's key order (minus dropped) byte-identical to the old
+  // wholesale-replace, and leaves keyless records untouched.
   for (const m of Object.keys(next)) {
-    nextCid[lexemeIdFor(lang, m as Meaning)] = next[m as Meaning]!;
+    setRecordForm(lang.lexemes, lexemeIdFor(lang, m as Meaning), next[m as Meaning]!);
   }
-  lang.lexicon = nextCid;
   for (const m of dropped) {
+    lexDelete(lang, m);
     delete lang.wordFrequencyHints[m];
     delete lang.lastChangeGeneration[m];
     delete lang.wordOrigin[m];

@@ -26,7 +26,7 @@ function bareLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

@@ -17,7 +17,7 @@ function sampleLang(): Language {
   const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
+    lexemes: {},
     lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},

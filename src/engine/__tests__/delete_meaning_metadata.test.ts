@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import { deleteMeaning } from "../lexicon/mutate";
 import { lexGet, lexSet } from "../lexicon/access";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
@@ -15,7 +16,7 @@ import type { Language, Phoneme } from "../types";
 function fakeLang(): Language {
   const m = "king";
   const lang = {
-    lexicon: { [m]: ["k", "i", "ŋ"] as Phoneme[] },
+    lexemes: { [m]: ["k", "i", "ŋ"] as Phoneme[] } as unknown as LexemeStore,
     wordFrequencyHints: { [m]: 0.9 },
     lastChangeGeneration: { [m]: 5 },
     wordOrigin: { [m]: "preset-seed" },

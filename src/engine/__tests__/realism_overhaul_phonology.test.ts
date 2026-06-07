@@ -72,7 +72,7 @@ function makeContrastLang(): Language {
   const lang = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -121,7 +121,7 @@ describe("Lane A #7 — tonogenesis (opt-in language-level regime shift)", () =>
   it("does not actuate without the conditioning contrast, or on an already-tonal language", () => {
     // No obstruent codas ⇒ no contrast ⇒ never actuates (rng-independent).
     const open = makeContrastLang();
-    open.lexicon = {};
+    open.lexemes = {};
     (open as { lexemeIds?: Record<string, unknown> }).lexemeIds = {};
     lexSet(open, "a", ["t", "a"]);
     lexSet(open, "b", ["p", "a"]);

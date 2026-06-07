@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LexemeStore } from "../types";
 import { changesForLang } from "../steps/helpers";
 import { applyPhonologyToAffixes, maybeSplitParadigm, inflect } from "../morphology/evolve";
 import { CATALOG_BY_ID } from "../phonology/catalog";
@@ -22,7 +23,7 @@ function testLang(overrides: Partial<Language> = {}): Language {
   const lang = {
     id: "L-int",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -45,7 +46,7 @@ function testLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   } as Language;
-  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToLexemeIds(lang);
+  if (Object.keys(lang.lexemes).length > 0) rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 
@@ -112,9 +113,9 @@ describe("cross-feature integration", () => {
         affix: ["a", "n"], position: "suffix", category: "verb.tense.past",
       };
       const lang = testLang({
-        lexicon: {
+        lexemes: {
           go: ["g", "o"], walk: ["w", "a", "l", "k"], run: ["r", "u", "n"],
-        },
+        } as unknown as LexemeStore,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
       });
       const rng = makeRng("class-split");
@@ -133,7 +134,7 @@ describe("cross-feature integration", () => {
         affix: ["e", "d"], position: "suffix", category: "verb.tense.past",
       };
       const lang = testLang({
-        lexicon: { go: ["g", "o"], walk: ["w", "a", "l", "k"] },
+        lexemes: { go: ["g", "o"], walk: ["w", "a", "l", "k"] } as unknown as LexemeStore,
         wordFrequencyHints: { go: 0.9, walk: 0.4 },
         morphology: { paradigms: { "verb.tense.past": paradigm } },
         enabledChangeIds: ["lenition.p_to_f"],
@@ -164,7 +165,7 @@ describe("cross-feature integration", () => {
   describe("derivational suffixes × phonology evolution", () => {
     it("language-specific suffixes drift along with the rest of the phonology", () => {
       const lang = testLang({
-        lexicon: { water: ["w", "a", "t", "e", "r"] },
+        lexemes: { water: ["w", "a", "t", "e", "r"] } as unknown as LexemeStore,
         derivationalSuffixes: [
           { affix: ["p", "i"], tag: "-er" },
         ],
@@ -197,7 +198,7 @@ describe("cross-feature integration", () => {
         variants: [{ when: "vowel-final", affix: ["t"] }],
       };
       const lang = testLang({
-        lexicon: { go: ["g", "o"] },
+        lexemes: { go: ["g", "o"] } as unknown as LexemeStore,
         wordFrequencyHints: { go: 0.9 },
         morphology: { paradigms: { "verb.tense.past": paradigm } },
         suppletion: { go: { "verb.tense.past": ["w", "e", "n", "t"] } },
@@ -210,7 +211,7 @@ describe("cross-feature integration", () => {
   describe("genesis × derivational suffixes", () => {
     it("stays stable when a language has no suffixes (falls back to catalog)", () => {
       const lang = testLang({
-        lexicon: { water: ["w", "a", "t", "e", "r"] },
+        lexemes: { water: ["w", "a", "t", "e", "r"] } as unknown as LexemeStore,
         derivationalSuffixes: [],
       });
       const rule = GENESIS_BY_ID["genesis.derivation"]!;

@@ -73,7 +73,7 @@ describe("contact / loanwords", () => {
       id: farId,
       name: "Far",
       coords: { x: 500, y: 0 },
-      lexicon: { ...nearLang.lexicon },
+      lexemes: { ...nearLang.lexemes },
       lexemeIds: { ...nearLang.lexemeIds },
     };
     lexSet(farLang, "distant_thing", ["d", "i", "s"]);
@@ -89,7 +89,7 @@ describe("contact / loanwords", () => {
     for (let i = 0; i < 300; i++) {
       const r = {
         ...recipient,
-        lexicon: { ...recipient.lexicon },
+        lexemes: { ...recipient.lexemes },
         lexemeIds: { ...recipient.lexemeIds },
         wordFrequencyHints: { ...recipient.wordFrequencyHints },
       };

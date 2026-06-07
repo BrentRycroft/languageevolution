@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import {
   addWord,
   tryCommitCoinage,
@@ -20,7 +21,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -199,7 +200,7 @@ describe("Phase 21c — integration with stepGenesis", () => {
     // with polysemy probability forced to 1. The lang.words table
     // should end up with one word, two senses.
     const lang = makeLang({
-      lexicon: { wolf: ["b", "a", "n", "k"] },
+      lexemes: { wolf: ["b", "a", "n", "k"] } as unknown as LexemeStore,
       localNeighbors: { wolf: ["dog"] },
     });
     addWord(lang, ["b", "a", "n", "k"], "wolf", { bornGeneration: 0 });

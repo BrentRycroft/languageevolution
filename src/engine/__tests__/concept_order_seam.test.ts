@@ -38,7 +38,7 @@ describe("concept-order seam — canonical order is sorted glosses", () => {
       expect(orderedLexiconKeys(lang)).toEqual(lexKeys(lang).sort());
       // orderedLexemeIds returns the SAME glosses' store keys in the SAME
       // order, so the RNG hot path draws in the identical per-word sequence.
-      const cidGlosses = orderedLexemeIds(lang.lexicon, lang).map(
+      const cidGlosses = orderedLexemeIds(lang.lexemes, lang).map(
         (cid) => meaningForLexemeId(lang, cid)!,
       );
       expect(cidGlosses).toEqual(orderedLexiconKeys(lang));

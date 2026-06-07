@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import { analyzeContexts, detectPhonologisation } from "../phonology/phonologization";
 import type { Language } from "../types";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
@@ -12,7 +13,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -45,11 +46,11 @@ function makeLang(overrides: Partial<Language> = {}): Language {
 describe("Phase 48 D4-D — analyzeContexts", () => {
   it("classifies intervocalic, edge, and consonantal contexts", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         a: ["a", "p", "a"],   // p in V_V
         b: ["p", "a"],        // p in #_V
         c: ["a", "p"],        // p in V_#
-      },
+      } as unknown as LexemeStore,
     });
     const ctx = analyzeContexts(lang);
     expect(ctx.p?.has("V_V")).toBe(true);
@@ -60,11 +61,11 @@ describe("Phase 48 D4-D — analyzeContexts", () => {
 
   it("phoneme appearing in only one context is allophone-like", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         a: ["a", "b", "a"], // b only intervocalic
         c: ["a", "p"],
         d: ["p", "a"],
-      },
+      } as unknown as LexemeStore,
     });
     const ctx = analyzeContexts(lang);
     expect(ctx.b?.size).toBe(1);
@@ -75,10 +76,10 @@ describe("Phase 48 D4-D — analyzeContexts", () => {
 describe("Phase 48 D4-D — detectPhonologisation", () => {
   it("emits no events on first call (no previous snapshot)", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         a: ["a", "p", "a"],
         b: ["p", "a"],
-      },
+      } as unknown as LexemeStore,
     });
     const events = detectPhonologisation(lang, 0);
     expect(events.length).toBeGreaterThanOrEqual(0);
@@ -89,9 +90,9 @@ describe("Phase 48 D4-D — detectPhonologisation", () => {
   it("emits a phonologisation event when a phoneme's diversity rises past threshold", () => {
     const lang = makeLang({
       // Initial state: b appears only in V_V (1 context).
-      lexicon: {
+      lexemes: {
         a: ["a", "b", "a"],
-      },
+      } as unknown as LexemeStore,
     });
     detectPhonologisation(lang, 0); // Set baseline snapshot.
     expect(lang.contextDiversitySnapshot?.b).toBe(1);
@@ -103,11 +104,11 @@ describe("Phase 48 D4-D — detectPhonologisation", () => {
 
   it("does NOT emit for the tracked phoneme when its diversity stays below threshold", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         a: ["a", "b", "a"], // b in only V_V (1 context)
         b: ["i", "b", "i"], // still V_V
         c: ["u", "b", "u"], // still V_V
-      },
+      } as unknown as LexemeStore,
     });
     detectPhonologisation(lang, 0);
     // No new entries; diversity stays the same.
@@ -118,7 +119,7 @@ describe("Phase 48 D4-D — detectPhonologisation", () => {
 
   it("snapshot persists across calls", () => {
     const lang = makeLang({
-      lexicon: { a: ["a", "p", "a"], b: ["p", "a"] },
+      lexemes: { a: ["a", "p", "a"], b: ["p", "a"] } as unknown as LexemeStore,
     });
     detectPhonologisation(lang, 0);
     const snap1 = { ...lang.contextDiversitySnapshot };

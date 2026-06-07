@@ -15,7 +15,7 @@ function leaf(id: string, form: string[]): LanguageNode {
   const lang: Language = {
     id,
     name: id,
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

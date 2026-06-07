@@ -18,7 +18,7 @@ function lang(inv: string[]): Language {
   return {
     id: "L-0",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

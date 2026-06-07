@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import { assignGenderHeuristic, assignAllGenders, genderOf } from "../morphology/gender";
 import { inflect } from "../morphology/evolve";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
@@ -16,7 +17,7 @@ function makeLang(opts: Partial<Language> = {}): Language {
   const lang = {
     id: "L-g",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -45,7 +46,7 @@ function makeLang(opts: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...opts,
   } as Language;
-  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToLexemeIds(lang);
+  if (Object.keys(lang.lexemes).length > 0) rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 
@@ -66,7 +67,7 @@ describe("gender heuristic", () => {
   });
 
   it("genderOf lazily fills the map and is stable across calls", () => {
-    const lang = makeLang({ lexicon: { dog: ["k", "a", "n"] } });
+    const lang = makeLang({ lexemes: { dog: ["k", "a", "n"] } as unknown as LexemeStore });
     expect(lang.gender).toBeUndefined();
     const g1 = genderOf(lang, "dog");
     expect(g1).toBe(1);
@@ -77,7 +78,7 @@ describe("gender heuristic", () => {
 
   it("genderOf returns 0 for languages with genderCount=0", () => {
     const lang = makeLang({
-      lexicon: { dog: ["k", "a", "n"] },
+      lexemes: { dog: ["k", "a", "n"] } as unknown as LexemeStore,
       grammar: { ...makeLang().grammar, genderCount: 0 },
     });
     expect(genderOf(lang, "dog")).toBe(0);
@@ -86,11 +87,11 @@ describe("gender heuristic", () => {
 
   it("assignAllGenders fills every lexicon entry", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         dog: ["k", "a", "n"],
         cat: ["g", "a", "t", "o"],
         moon: ["l", "u", "n", "a"],
-      },
+      } as unknown as LexemeStore,
       grammar: { ...makeLang().grammar, genderCount: 3 },
     });
     assignAllGenders(lang);
@@ -103,10 +104,10 @@ describe("gender heuristic", () => {
 describe("gender-conditioned paradigm variants", () => {
   it("inflect picks the gender:N variant when the meaning's gender matches", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         dog: ["k", "a", "n"],
         moon: ["l", "u", "n", "a"],
-      },
+      } as unknown as LexemeStore,
       morphology: {
         paradigms: {
           "noun.case.acc": {
@@ -130,7 +131,7 @@ describe("gender-conditioned paradigm variants", () => {
 
   it("falls back to stem-shape variant if no gender variant matches", () => {
     const lang = makeLang({
-      lexicon: { dog: ["k", "a", "n"] },
+      lexemes: { dog: ["k", "a", "n"] } as unknown as LexemeStore,
       morphology: {
         paradigms: {
           "noun.case.acc": {
@@ -151,7 +152,7 @@ describe("gender-conditioned paradigm variants", () => {
 
   it("languages without gender ignore gender:N variants", () => {
     const lang = makeLang({
-      lexicon: { dog: ["k", "a", "n"] },
+      lexemes: { dog: ["k", "a", "n"] } as unknown as LexemeStore,
       grammar: { ...makeLang().grammar, genderCount: 0 },
       morphology: {
         paradigms: {

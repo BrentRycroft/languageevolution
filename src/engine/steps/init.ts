@@ -2,6 +2,7 @@ import type {
   Language,
   LanguageNode,
   LanguageTree,
+  LexemeStore,
   SimulationConfig,
   SimulationState,
 } from "../types";
@@ -180,7 +181,9 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   const rootLang: Language = {
     id: rootId,
     name: "Proto",
-    lexicon: seedLex,
+    // Transitional gloss-keyed shape: `rekeyLexiconToLexemeIds(rootLang)` (below) converts this
+    // `Record<gloss, WordForm>` into the canonical record store (materializing points + glosses).
+    lexemes: seedLex as unknown as LexemeStore,
     enabledChangeIds: enabled,
     changeWeights: weights,
     birthGeneration: 0,

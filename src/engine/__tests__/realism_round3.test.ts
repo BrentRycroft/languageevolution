@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LexemeStore } from "../types";
 import { isolationFactor } from "../phonology/rate";
 import { stressIndex } from "../phonology/stress";
 import { narrowTranscribe } from "../phonology/narrow";
@@ -22,7 +23,7 @@ function minimalLanguage(overrides: Partial<Language> = {}): Language {
   const lang: Language = {
     id: "L-test",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -102,7 +103,7 @@ describe("realism round 3", () => {
         category: "verb.tense.past",
       };
       const lang = minimalLanguage({
-        lexicon: { go: ["g", "o"], walk: ["w", "a", "l", "k"] },
+        lexemes: { go: ["g", "o"], walk: ["w", "a", "l", "k"] } as unknown as LexemeStore,
         wordFrequencyHints: { go: 0.9, walk: 0.4 },
         morphology: { paradigms: { "verb.tense.past": paradigm } },
       });

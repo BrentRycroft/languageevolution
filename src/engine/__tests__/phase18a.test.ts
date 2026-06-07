@@ -78,7 +78,7 @@ describe("Phase 18a — quick fixes", () => {
       const lang: Language = {
         id: "L0",
         name: "L",
-        lexicon: {},
+        lexemes: {},
         lexemeIds: {},
         enabledChangeIds: [],
         changeWeights: {},
@@ -137,7 +137,7 @@ describe("Phase 18a — quick fixes", () => {
       const lang: Language = {
         id: "L0",
         name: "L",
-        lexicon: {},
+        lexemes: {},
         lexemeIds: {},
         enabledChangeIds: [],
         changeWeights: {},

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import * as fc from "fast-check";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
@@ -23,7 +24,7 @@ function makeTestLang(forms: Record<string, WordForm>): Language {
   return {
     id: "L-prop",
     name: "Prop",
-    lexicon: { ...forms },
+    lexemes: { ...forms },
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -48,7 +49,7 @@ function makeTestLang(forms: Record<string, WordForm>): Language {
     orthography: {},
     otRanking: [],
     lastChangeGeneration: {},
-  } as Language;
+  } as unknown as Language;
 }
 
 /** Build a test lang AND rekey its gloss-keyed seed lexicon to LexemeIds +
@@ -64,7 +65,7 @@ function stringifyLeafLexicons(tree: ReturnType<ReturnType<typeof createSimulati
     .filter((id) => tree[id]!.childrenIds.length === 0)
     .sort()
     .map((id) => {
-      const lex = tree[id]!.language.lexicon;
+      const lex = formViewOf(tree[id]!.language.lexemes);
       return Object.keys(lex)
         .sort()
         .map((m) => `${m}=${lex[m]!.join("")}`)
@@ -175,13 +176,13 @@ describe("engine property tests", () => {
             forms[meanings[i]!] = ["p", "a", "t", "i"].slice(0, 2 + (i % 3));
           }
           const lang = makeRekeyedTestLang(forms);
-          const beforeSize = Object.keys(lang.lexicon).length;
+          const beforeSize = Object.keys(lang.lexemes).length;
           const result = driftOneMeaning(lang, makeRng(seed));
           if (result === null) return;
           expect(result.from).not.toBe(result.to);
           expect(result.from.length).toBeGreaterThan(0);
           expect(result.to.length).toBeGreaterThan(0);
-          const afterSize = Object.keys(lang.lexicon).length;
+          const afterSize = Object.keys(lang.lexemes).length;
           expect(afterSize).toBeGreaterThanOrEqual(beforeSize - 1);
           expect(afterSize).toBeLessThanOrEqual(beforeSize + 1);
           // gloss → form via the access seam (lang.lexicon is LexemeId-keyed).
@@ -210,7 +211,7 @@ describe("engine property tests", () => {
           const ra = driftOneMeaning(a, makeRng(seed));
           const rb = driftOneMeaning(b, makeRng(seed));
           expect(JSON.stringify(ra)).toBe(JSON.stringify(rb));
-          expect(JSON.stringify(a.lexicon)).toBe(JSON.stringify(b.lexicon));
+          expect(JSON.stringify(formViewOf(a.lexemes))).toBe(JSON.stringify(formViewOf(b.lexemes)));
         },
       ),
       { numRuns: 12 },

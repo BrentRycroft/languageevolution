@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { lexGet } from "../lexicon/access";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 
@@ -40,8 +41,8 @@ describe("targetedDerivation integration with stepGenesis", () => {
       const chains = lang.wordOriginChain ?? {};
       for (const [meaning, chain] of Object.entries(chains)) {
         if (!chain.from || !chain.via) continue;
-        const derived = lang.lexicon[meaning];
-        const root = lang.lexicon[chain.from];
+        const derived = lexGet(lang, meaning);
+        const root = lexGet(lang, chain.from);
         if (!derived || !root) continue;
         // The root form should be a prefix of the derived form (since
         // suffixation appends at end). After phonological drift the

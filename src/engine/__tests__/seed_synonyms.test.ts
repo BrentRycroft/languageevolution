@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { lexGet } from "../lexicon/access";
 import { buildInitialState } from "../steps/init";
 import { presetPIE } from "../presets/pie";
 import { presetEnglish } from "../presets/english";
@@ -25,7 +26,7 @@ describe("seedAltForms — preset synonym doublets", () => {
     const lang = buildInitialState(presetEnglish()).tree["L-0"]!.language;
     for (const meaning of Object.keys(lang.altForms ?? {})) {
       // every meaning carrying doublets must itself be a real lexicon entry
-      expect(lang.lexicon[meaning] ?? lang.words?.some((w) => w.senses.some((s) => s.meaning === meaning))).toBeTruthy();
+      expect(lexGet(lang, meaning) ?? lang.words?.some((w) => w.senses.some((s) => s.meaning === meaning))).toBeTruthy();
     }
   });
 });

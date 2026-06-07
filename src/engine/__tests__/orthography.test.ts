@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import { romanize, driftOrthography } from "../phonology/orthography";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
@@ -16,7 +17,7 @@ function baseLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L-0",
     name: "Proto",
-    lexicon: { water: ["w", "a", "θ", "e", "r"] },
+    lexemes: { water: ["w", "a", "θ", "e", "r"] } as unknown as LexemeStore,
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

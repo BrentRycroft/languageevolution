@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { lexHas } from "../lexicon/access";
+import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { presetPIE } from "../presets/pie";
@@ -72,7 +74,7 @@ function runAndCollect(
     activeRulesTotal += (lang.activeRules ?? []).length;
     retiredRulesTotal += (lang.retiredRules ?? []).length;
 
-    for (const [m, form] of Object.entries(lang.lexicon)) {
+    for (const [m, form] of Object.entries(formViewOf(lang.lexemes))) {
       totalForms++;
       totalLen += form.length;
       if (form.length > maxFormLength) maxFormLength = form.length;
@@ -82,11 +84,11 @@ function runAndCollect(
 
     if (lang.registerOf) {
       for (const key of Object.keys(lang.registerOf)) {
-        if (!lang.lexicon[key]) danglingRegisters++;
+        if (!lexHas(lang, key)) danglingRegisters++;
       }
     }
     for (const key of Object.keys(lang.wordOrigin)) {
-      if (!lang.lexicon[key]) danglingOrigins++;
+      if (!lexHas(lang, key)) danglingOrigins++;
     }
 
     for (const e of lang.events) {

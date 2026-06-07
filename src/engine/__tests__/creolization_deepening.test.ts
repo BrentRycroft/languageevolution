@@ -21,7 +21,7 @@ function makeLang(id: string, overrides: Partial<Language> = {}): Language {
   return {
     id,
     name: id,
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

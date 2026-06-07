@@ -60,8 +60,8 @@ describe("Phase 59 T1+T2 — pressure-driven rule proposal", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree["L-0"]!.language;
     // Artificially flood the lexicon with /p/ to force saturation.
-    for (const m of Object.keys(lang.lexicon).slice(0, 50)) {
-      lang.lexicon[m] = ["p", "p", "p", "p", "p"];
+    for (const m of Object.keys(lang.lexemes).slice(0, 50)) {
+      lang.lexemes[m]!.form = ["p", "p", "p", "p", "p"];
     }
     const sat = findSaturatedPhoneme(lang);
     expect(sat).not.toBeNull();

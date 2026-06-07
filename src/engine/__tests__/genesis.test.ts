@@ -14,7 +14,7 @@ import type { Language } from "../types";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-function makeLang(lexicon: Record<string, string[]> = {
+function makeLang(lexemes: Record<string, string[]> = {
   foot: ["p", "o", "d"],
   hand: ["h", "a", "n", "d"],
   head: ["h", "e", "d"],
@@ -26,7 +26,7 @@ function makeLang(lexicon: Record<string, string[]> = {
     // RELATED pair. The default body words suffice for the non-compound tests;
     // the compound test passes its own geometrically-coherent lexicon (see below)
     // because the vector-native flip's geometric clusterOf scatters body parts.
-    lexicon: { ...lexicon },
+    lexemes: { ...lexemes },
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

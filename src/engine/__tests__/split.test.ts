@@ -18,7 +18,7 @@ function makeTree(): LanguageTree {
   const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: ["lenition.p_to_f", "lenition.t_to_theta"],
     changeWeights: { "lenition.p_to_f": 1, "lenition.t_to_theta": 1 },
     birthGeneration: 0,

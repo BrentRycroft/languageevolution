@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { lexSet } from "../lexicon/access";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
@@ -82,7 +83,7 @@ describe("Phase 73c Phase 1 — grammaticalisedAxes gating", () => {
     for (const c of ["verb.aspect.prosp", "verb.aspect.hab", "verb.aspect.perf", "verb.tense.fut", "verb.tense.past"] as const) {
       delete lang.morphology.paradigms[c];
     }
-    lang.lexicon.go = ["g", "o"];
+    lexSet(lang, "go", ["g", "o"]);
     lang.wordFrequencyHints.go = 0.95;
     // Fire many times; with the gate, no gated paradigm should
     // ever be seeded from 'go'.

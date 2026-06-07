@@ -1,8 +1,9 @@
-import type { Lexicon, Language, Meaning, WordForm } from "../types";
+import type { Language, LexemeStore, Meaning, WordForm } from "../types";
 import type { LexiconState } from "../domains";
 import { fnv1a } from "../rng";
 import type { Vec } from "../semantics/vec";
 import { glossOf } from "../semantics/anchors";
+import { lexPoint } from "../semantics/meaningPoint";
 
 /**
  * lexemeIdentity.ts — Phase 72d (full-delivery defer-2).
@@ -61,9 +62,12 @@ export type LexemeId = string & { readonly __brand: "LexemeId" };
  */
 export function orderedLexiconKeys(lang: LexiconState): Meaning[] {
   const g = buildLexemeIdToGloss(lang);
-  return Object.keys(lang.lexicon)
-    .map((cid) => g.get(cid) ?? (cid as Meaning))
-    .sort();
+  const out: Meaning[] = [];
+  for (const cid of Object.keys(lang.lexemes)) {
+    const m = g.get(cid);
+    if (m !== undefined) out.push(m);
+  }
+  return out.sort();
 }
 
 /**
@@ -101,12 +105,24 @@ export function buildLexemeIdToGloss(lang: LexiconState): Map<string, Meaning> {
  * keys are the same LexemeIds, resolved against `lang`'s identity map.
  * Decorate-sort-undecorate: resolve each gloss once, sort by gloss.
  */
-export function orderedLexemeIds(lexicon: Lexicon, lang: LexiconState): LexemeId[] {
+export function orderedLexemeIds(lexicon: Record<string, unknown>, lang: LexiconState): LexemeId[] {
+  // Only the KEYS are read (the engine passes its form-view; callers may pass the record store),
+  // so the value type is loose. Order contract: SEEDED ids sorted by gloss, then KEYLESS ids
+  // (gloss-less records) sorted by their intrinsic LexemeId — a determinism-stable order that never
+  // depends on the drifting emergent gloss. In S1 tasks 2-3 the swept view is seeded-only, so the
+  // keyless bucket is empty and the result is byte-identical to the pre-unification order; task 4
+  // widens the view and the append activates.
   const g = buildLexemeIdToGloss(lang);
-  return (Object.keys(lexicon) as LexemeId[])
-    .map((cid) => [g.get(cid) ?? (cid as string), cid] as [string, LexemeId])
-    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
-    .map((pair) => pair[1]);
+  const seeded: [string, LexemeId][] = [];
+  const keyless: LexemeId[] = [];
+  for (const cid of Object.keys(lexicon) as LexemeId[]) {
+    const gloss = g.get(cid);
+    if (gloss === undefined) keyless.push(cid);
+    else seeded.push([gloss, cid]);
+  }
+  seeded.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  keyless.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return [...seeded.map((p) => p[1]), ...keyless];
 }
 
 /**
@@ -221,17 +237,21 @@ export function meaningForLexemeId(
  */
 export function rekeyLexiconToLexemeIds(lang: LexiconState): void {
   if (!lang.lexemeIds) lang.lexemeIds = {};
-  const glossStore = lang.lexicon as Record<string, WordForm>;
-  const cidStore: Record<string, WordForm> = {};
+  // At birth the preset author leaves a GLOSS-keyed form map on `lang.lexemes`-to-be (the literal
+  // preset shape, `Record<gloss, WordForm>`). Mint ids in insertion order and build the canonical
+  // record store, materializing each seeded record's point = `lexPoint(gloss)` (a cache of today's
+  // derived value, so byte-identical at birth) and tagging its `gloss`.
+  const glossStore = lang.lexemes as unknown as Record<string, WordForm>;
+  const recStore: LexemeStore = {};
   for (const gloss of Object.keys(glossStore)) {
     let cid = lang.lexemeIds[gloss] as LexemeId | undefined;
     if (!cid) {
       cid = mintLexemeId(lang);
       lang.lexemeIds[gloss] = cid;
     }
-    cidStore[cid] = glossStore[gloss]!;
+    recStore[cid] = { form: glossStore[gloss]!, point: Array.from(lexPoint(gloss)), gloss };
   }
-  lang.lexicon = cidStore as Lexicon;
+  lang.lexemes = recStore;
 }
 
 /**
@@ -250,7 +270,7 @@ export function ensureLexemeIdsForLexicon(lang: LexiconState): number {
   // save being migrated — get a fresh id. This keeps the helper idempotent on a
   // live (cid-keyed) lexicon and correct on a legacy (gloss-keyed) one.
   const knownCids = new Set<string>(Object.values(lang.lexemeIds));
-  for (const key of Object.keys(lang.lexicon)) {
+  for (const key of Object.keys(lang.lexemes)) {
     if (knownCids.has(key)) continue;
     if (!lang.lexemeIds[key]) {
       lang.lexemeIds[key] = mintLexemeId(lang);

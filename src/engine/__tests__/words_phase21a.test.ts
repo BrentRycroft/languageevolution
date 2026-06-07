@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import {
   formKeyOf,
   findWordByForm,
@@ -26,11 +27,11 @@ import { lexGet, lexKeys, lexSet } from "../lexicon/access";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  const { lexicon: seedLexicon, lexemeIds: _cids, ...rest } = overrides;
+  const { lexemes: seedLexicon, lexemeIds: _cids, ...rest } = overrides;
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
@@ -58,7 +59,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     ...rest,
   };
   if (seedLexicon) {
-    for (const [g, form] of Object.entries(seedLexicon)) {
+    for (const [g, form] of Object.entries(seedLexicon as unknown as Record<string, string[]>)) {
       lexSet(lang, g, form);
     }
   }
@@ -195,10 +196,10 @@ describe("Phase 21a — sync between lexicon and words", () => {
 
   it("syncWordsFromLexicon builds words from a meaning-keyed lexicon", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         cat: ["k", "æ", "t"],
         dog: ["d", "ɔ", "g"],
-      },
+      } as unknown as LexemeStore,
       wordFrequencyHints: { cat: 0.8, dog: 0.7 },
     });
     syncWordsFromLexicon(lang, 0);
@@ -209,10 +210,10 @@ describe("Phase 21a — sync between lexicon and words", () => {
 
   it("syncWordsFromLexicon merges meanings that share a form into one word", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
+      } as unknown as LexemeStore,
     });
     syncWordsFromLexicon(lang, 0);
     expect(lang.words).toHaveLength(1);
@@ -221,13 +222,13 @@ describe("Phase 21a — sync between lexicon and words", () => {
 
   it("syncWordsFromLexicon preserves colexification edges from old saves", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         // pre-21a colexification could record meanings as colexified even
         // when their forms briefly differ; the migrator should fold them
         // into one word.
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
+      } as unknown as LexemeStore,
       colexifiedAs: { "bank.financial": ["bank.river"] },
     });
     syncWordsFromLexicon(lang, 0);
@@ -239,7 +240,7 @@ describe("Phase 21a — sync between lexicon and words", () => {
   });
 
   it("syncWordsFromLexicon is idempotent if words already populated", () => {
-    const lang = makeLang({ lexicon: { cat: ["k", "æ", "t"] } });
+    const lang = makeLang({ lexemes: { cat: ["k", "æ", "t"] } as unknown as LexemeStore });
     syncWordsFromLexicon(lang, 0);
     const ref = lang.words!;
     syncWordsFromLexicon(lang, 5);
@@ -285,7 +286,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
 
   it("a v5 save with a stateSnapshot gets words populated post-migration", () => {
     const lang: Language = makeLang({
-      lexicon: { cat: ["k", "æ", "t"], dog: ["d", "ɔ", "g"] },
+      lexemes: { cat: ["k", "æ", "t"], dog: ["d", "ɔ", "g"] } as unknown as LexemeStore,
     });
     const snapshot: SimulationState = {
       generation: 0,
@@ -315,10 +316,10 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
 
   it("a v5 save with two meanings sharing a form becomes one polysemous word", () => {
     const lang: Language = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
+      } as unknown as LexemeStore,
     });
     const snapshot: SimulationState = {
       generation: 0,
@@ -347,7 +348,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
 
   it("a v6 save passes through unchanged (no double-migration)", () => {
     const lang: Language = makeLang({
-      lexicon: { cat: ["k", "æ", "t"] },
+      lexemes: { cat: ["k", "æ", "t"] } as unknown as LexemeStore,
     });
     const snapshot: SimulationState = {
       generation: 0,

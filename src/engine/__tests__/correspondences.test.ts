@@ -19,7 +19,7 @@ function leaf(id: string, lex: Record<string, string[]>): LanguageNode {
   const lang: Language = {
     id,
     name: id,
-    lexicon: lex as never,
+    lexemes: lex as never,
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

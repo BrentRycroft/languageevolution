@@ -48,12 +48,12 @@ describe("coinKeylessForGap — keyless gap-coinage path", () => {
       neighborSupport: 5,
     };
 
-    const lexiconKeysBefore = Object.keys(lang.lexicon).length;
+    const lexiconKeysBefore = Object.keys(lang.lexemes).length;
     const lexemeIdKeysBefore = Object.keys(lang.lexemeIds ?? {}).length;
 
     coinKeylessForGap(lang, gap);
 
-    expect(Object.keys(lang.lexicon).length).toBe(lexiconKeysBefore);
+    expect(Object.keys(lang.lexemes).length).toBe(lexiconKeysBefore);
     expect(Object.keys(lang.lexemeIds ?? {}).length).toBe(lexemeIdKeysBefore);
   });
 

@@ -22,7 +22,7 @@ describe("presets", () => {
       const leaves = leafIds(state.tree);
       expect(leaves.length).toBeGreaterThan(0);
       const root = state.tree[state.rootId]!;
-      expect(Object.keys(root.language.lexicon).length).toBeGreaterThan(0);
+      expect(Object.keys(root.language.lexemes).length).toBeGreaterThan(0);
     });
   }
 

@@ -15,7 +15,7 @@ function makeLang(opts: Partial<Language> = {}): Language {
   return {
     id: "L-c",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

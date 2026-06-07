@@ -1,7 +1,7 @@
 import type { Language, LanguageNode, LanguageTree } from "../types";
 import { CATALOG, CATALOG_BY_ID } from "../phonology/catalog";
 import { generateName } from "../naming";
-import { cloneLexicon, cloneGrammar, cloneMorphology } from "../utils/clone";
+import { cloneLexemeStore, cloneGrammar, cloneMorphology } from "../utils/clone";
 import { DEFAULT_RULE_BIAS } from "../phonology/propose";
 import { fnv1a } from "../rng";
 import type { Rng } from "../rng";
@@ -159,7 +159,7 @@ export function splitLeaf(
     return {
       id,
       name: generateName(parentLang, rng),
-      lexicon: cloneLexicon(parentLang.lexicon),
+      lexemes: cloneLexemeStore(parentLang.lexemes),
       enabledChangeIds: enabled,
       changeWeights: weights,
       birthGeneration: generation,

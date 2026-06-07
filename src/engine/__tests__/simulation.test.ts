@@ -17,8 +17,8 @@ function serializeLeafLexicons(tree: LanguageTree): Record<string, Lexicon> {
     const node = tree[id]!;
     if (node.childrenIds.length > 0) continue;
     const copy: Lexicon = {};
-    for (const m of Object.keys(node.language.lexicon).sort()) {
-      copy[m] = node.language.lexicon[m]!.slice();
+    for (const m of Object.keys(node.language.lexemes).sort()) {
+      copy[m] = node.language.lexemes[m]!.form.slice();
     }
     out[id] = copy;
   }

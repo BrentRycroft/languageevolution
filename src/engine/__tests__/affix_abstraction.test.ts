@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import { parseEnglishAffix, lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { selectAffixForCategory } from "../lexicon/affixSelector";
 import { attemptMorphologicalSynthesis } from "../lexicon/synthesis";
@@ -29,7 +30,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -236,7 +237,7 @@ describe("Phase 49 — waterdom regression (the user's bug)", () => {
 describe("Phase 49 — cross-language category abstraction", () => {
   it("a synthetic language whose abstractNoun realisation is '-tas' resolves 'lightness' via light + -tas", () => {
     const lang = makeLang({
-      lexicon: { light: ["l", "a", "j", "t"] },
+      lexemes: { light: ["l", "a", "j", "t"] } as unknown as LexemeStore,
       derivationalSuffixes: [
         suffixEntry("-tas", ["t", "a", "s"], "abstractNoun"),
       ],
@@ -251,7 +252,7 @@ describe("Phase 49 — cross-language category abstraction", () => {
 describe("Phase 49 — back-compat with legacy literal-tag fallback", () => {
   it("a productive affix with no category still resolves via the legacy path when its surface tag matches the lemma", () => {
     const lang = makeLang({
-      lexicon: { build: ["b", "ɪ", "l", "d"] },
+      lexemes: { build: ["b", "ɪ", "l", "d"] } as unknown as LexemeStore,
       // No category field — pre-Phase-49 entry. The category-driven
       // path won't pick it up; the literal-tag fallback will.
       derivationalSuffixes: [{

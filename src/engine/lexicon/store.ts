@@ -1,4 +1,4 @@
-import type { LexemeStore } from "../primitives";
+import type { LexemeRecord, LexemeStore } from "../primitives";
 import type { WordForm } from "../types";
 
 /**
@@ -43,18 +43,37 @@ export function seededFormViewOf(store: LexemeStore): Record<string, WordForm> {
 
 /**
  * Reconcile the SWEPT set back into the store after sound change. `before` is the form-view that was
- * handed to the engine (the swept records); `after` is what the engine returned. For each id in
- * `before`: update its record's form from `after`, or DROP the record if it merged away (absent from
- * `after`). Records NOT in `before` (e.g. keyless words while they are not yet swept) are left
- * untouched. Records keep their point + gloss.
+ * handed to the engine (the swept records); `after` is what the engine returned. The swept records
+ * are rebuilt in `after`'s KEY ORDER (updating each form, preserving its point + gloss; records that
+ * merged away — absent from `after` — are dropped); records NOT in `before` (e.g. keyless words while
+ * they are not yet swept) keep their forms and are re-appended after the swept set.
+ *
+ * Rebuilding in `after`'s order (rather than updating in place) is required for byte-identity with the
+ * legacy whole-store replacement `lang.lexicon = applyChangesToLexicon(...)`: apply.ts returns its
+ * store in `orderedLexemeIds` (gloss-sorted) order, and several `lexKeys`-by-index RNG sites depend on
+ * that order. An in-place update would leave the store in birth-insertion order and perturb the
+ * trajectory from the first phonology step on.
  */
 export function mergeFormsIntoStore(
   store: LexemeStore,
   before: Record<string, WordForm>,
   after: Record<string, WordForm>,
 ): void {
+  // Snapshot each swept record's identity (point + gloss) and the untouched (non-swept) records.
+  const sweptMeta = new Map<string, LexemeRecord>();
   for (const id of Object.keys(before)) {
-    if (id in after) store[id]!.form = after[id]!;
-    else delete store[id];
+    const r = store[id];
+    if (r) sweptMeta.set(id, r);
   }
+  const untouched: Array<[string, LexemeRecord]> = [];
+  for (const id of Object.keys(store)) {
+    if (!(id in before)) untouched.push([id, store[id]!]);
+  }
+  // Rebuild: swept records in `after`'s key order, then the untouched records.
+  for (const id of Object.keys(store)) delete store[id];
+  for (const id of Object.keys(after)) {
+    const r = sweptMeta.get(id);
+    store[id] = r ? { form: after[id]!, point: r.point, gloss: r.gloss } : { form: after[id]!, point: [] };
+  }
+  for (const [id, rec] of untouched) store[id] = rec;
 }

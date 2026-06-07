@@ -1,4 +1,5 @@
 import type { SimulationState, Meaning, WordForm } from "../engine/types";
+import { formViewOf } from "../engine/lexicon/store";
 
 /**
  * history.ts
@@ -39,7 +40,7 @@ export function recordHistory(
   for (const id of Object.keys(state.tree)) {
     const node = state.tree[id]!;
     if (node.childrenIds.length > 0) continue;
-    const lex = node.language.lexicon;
+    const lex = formViewOf(node.language.lexemes);
     if (!next[id]) next[id] = {};
     const byMeaning = (next[id] = { ...next[id] });
     const eventsByMeaning: Record<string, string> = {};

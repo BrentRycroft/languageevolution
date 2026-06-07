@@ -20,7 +20,7 @@ function baseLang(affixPosition: "prefix" | "suffix"): Language {
   const lang = {
     id: "L",
     name: "T",
-    lexicon: {},
+    lexemes: {},
     grammar: { affixPosition, harmony: "none" },
     morphology: { paradigms: {} },
     phonemeInventory: { segmental: [] as Phoneme[], tones: [], usesTones: false },

@@ -22,12 +22,12 @@ describe("lexicogenesis e2e", () => {
     const state = sim.getState();
     for (const id of leafIds(state.tree)) {
       const lang = state.tree[id]!.language;
-      for (const m of Object.keys(lang.lexicon)) {
-        expect(lang.lexicon[m]!.length, `empty form for ${m}`).toBeGreaterThan(0);
+      for (const m of Object.keys(lang.lexemes)) {
+        expect(lang.lexemes[m]!.form.length, `empty form for ${m}`).toBeGreaterThan(0);
       }
       const coined = Object.keys(lang.wordOrigin);
       for (const m of coined) {
-        if (!lang.lexicon[m]) continue;
+        if (!lang.lexemes[m]) continue;
         // Coined words must be TRACKABLE (non-empty provenance) and have
         // a legal form (asserted above). A frequency hint is OPTIONAL by
         // contract: `frequencyFor` falls back to DEFAULT_FREQUENCY when a

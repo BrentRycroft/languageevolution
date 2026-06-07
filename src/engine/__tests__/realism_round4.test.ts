@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LexemeStore } from "../types";
 import { simplificationFactor } from "../phonology/rate";
 import { driftGrammar } from "../grammar/evolve";
 import {
@@ -26,7 +27,7 @@ function testLang(overrides: Partial<Language> = {}): Language {
   const lang: Language = {
     id: "L-r",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -103,10 +104,10 @@ describe("realism round 4 — population-feedback mechanics", () => {
         category: "verb.tense.past",
       };
       const lang = testLang({
-        lexicon: {
+        lexemes: {
           go: ["g", "o"], walk: ["w", "a", "l", "k"],
           run: ["r", "u", "n"], eat: ["e", "a", "t"],
-        },
+        } as unknown as LexemeStore,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
       });
       const rng = makeRng("split-conj");
@@ -134,9 +135,9 @@ describe("realism round 4 — population-feedback mechanics", () => {
   describe("reanalysis (compound → productive suffix)", () => {
     it("promotes a trailing slice to a derivational suffix", () => {
       const lang = testLang({
-        lexicon: {
+        lexemes: {
           "water-keeper": ["w", "a", "t", "e", "r", "k", "i", "p"],
-        },
+        } as unknown as LexemeStore,
         // Concept-native (item 4): reanalysis reads RECORDED compound structure
         // (lang.compounds), not the gloss hyphen. Register the compound the way
         // addCompound would, so maybeReanalyse sees its two constituents.
@@ -155,7 +156,7 @@ describe("realism round 4 — population-feedback mechanics", () => {
     });
 
     it("does nothing when no compounds exist", () => {
-      const lang = testLang({ lexicon: { water: ["w", "a", "t", "e", "r"] } });
+      const lang = testLang({ lexemes: { water: ["w", "a", "t", "e", "r"] } as unknown as LexemeStore });
       const rng = makeRng("reanalysis-empty");
       expect(maybeReanalyse(lang, rng, 1)).toBeNull();
     });
@@ -164,12 +165,12 @@ describe("realism round 4 — population-feedback mechanics", () => {
   describe("kinship simplification at urbanisation", () => {
     it("merges mother/aunt and father/uncle on tier 0→1 transition", () => {
       const lang = testLang({
-        lexicon: {
+        lexemes: {
           mother: ["m", "a", "t", "e", "r"],
           aunt: ["t", "a", "n", "t"],
           father: ["p", "a", "t", "e", "r"],
           uncle: ["a", "v", "u"],
-        },
+        } as unknown as LexemeStore,
         wordFrequencyHints: { mother: 0.9, aunt: 0.4, father: 0.9, uncle: 0.4 },
       });
       const rng = makeRng("kinship-urb");
@@ -187,7 +188,7 @@ describe("realism round 4 — population-feedback mechanics", () => {
       const recipient = testLang({
         id: "L-r",
         coords: { x: 0, y: 0 },
-        lexicon: { water: ["w", "a", "t", "e", "r"] },
+        lexemes: { water: ["w", "a", "t", "e", "r"] } as unknown as LexemeStore,
         phonemeInventory: { segmental: ["w", "a", "t", "e", "r"], tones: [], usesTones: false },
       });
       const donor = testLang({

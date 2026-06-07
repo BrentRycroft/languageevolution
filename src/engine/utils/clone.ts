@@ -4,6 +4,7 @@ import type {
   LanguageNode,
   LanguageTree,
   Lexicon,
+  LexemeStore,
   SimulationState,
 } from "../types";
 import type { Morphology } from "../morphology/types";
@@ -19,6 +20,16 @@ import type { Morphology } from "../morphology/types";
 export function cloneLexicon(lex: Lexicon): Lexicon {
   const out: Lexicon = {};
   for (const m of Object.keys(lex)) out[m] = lex[m]!.slice();
+  return out;
+}
+
+/** Deep-clone the canonical lexeme record store (store unification, step 5 S1). */
+export function cloneLexemeStore(store: LexemeStore): LexemeStore {
+  const out: LexemeStore = {};
+  for (const id of Object.keys(store)) {
+    const r = store[id]!;
+    out[id] = { form: r.form.slice(), point: r.point.slice(), gloss: r.gloss };
+  }
   return out;
 }
 
@@ -50,7 +61,7 @@ export function cloneMorphology(morph: Morphology | undefined): Morphology {
 export function cloneLanguage(lang: Language): Language {
   return {
     ...lang,
-    lexicon: cloneLexicon(lang.lexicon),
+    lexemes: cloneLexemeStore(lang.lexemes),
     keylessLexemes: lang.keylessLexemes
       ? Object.fromEntries(
           Object.entries(lang.keylessLexemes).map(([k, v]) => [

@@ -1,6 +1,7 @@
 import type { Meaning, WordForm } from "../types";
 import type { LexiconState } from "../domains";
 import { lexemeIdFor, buildLexemeIdToGloss, type LexemeId } from "./lexemeIdentity";
+import { lexPoint } from "../semantics/meaningPoint";
 
 /**
  * access.ts — the canonical lexicon ACCESSOR seam (concept re-key).
@@ -35,50 +36,65 @@ import { lexemeIdFor, buildLexemeIdToGloss, type LexemeId } from "./lexemeIdenti
 /** Form for a meaning, or undefined. */
 export function lexGet(lang: LexiconState, m: Meaning): WordForm | undefined {
   const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
-  return cid === undefined ? undefined : lang.lexicon[cid];
+  return cid === undefined ? undefined : lang.lexemes[cid]?.form;
 }
 
 /** Whether the lexicon has a form for this meaning. */
 export function lexHas(lang: LexiconState, m: Meaning): boolean {
   const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
-  return cid !== undefined && lang.lexicon[cid] !== undefined;
+  return cid !== undefined && lang.lexemes[cid] !== undefined;
 }
 
-/** Set/replace the form for a meaning. Mints a LexemeId for a new meaning,
- * appending to the store in call order (insertion parity with the old gloss
- * store). An existing meaning updates its LexemeId entry in place. */
+/** Set/replace the form for a meaning. Mints a LexemeId + record (materialized
+ * point + gloss) for a new meaning, appending to the store in call order
+ * (insertion parity with the old gloss store). An existing meaning updates its
+ * record's form in place, preserving its point + gloss. */
 export function lexSet(lang: LexiconState, m: Meaning, form: WordForm): void {
-  lang.lexicon[lexemeIdFor(lang, m)] = form;
+  const id = lexemeIdFor(lang, m);
+  const rec = lang.lexemes[id];
+  if (rec) rec.form = form;
+  else lang.lexemes[id] = { form, point: Array.from(lexPoint(m)), gloss: m };
 }
 
-/** Remove a meaning's entry from the store. (`lang.lexemeIds` is purged
- * separately by deleteMeaning's registry pass.) */
+/** Remove a meaning's record. (`lang.lexemeIds` is purged separately by
+ * deleteMeaning's registry pass.) */
 export function lexDelete(lang: LexiconState, m: Meaning): void {
   const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
-  if (cid !== undefined) delete lang.lexicon[cid];
+  if (cid !== undefined) delete lang.lexemes[cid];
 }
 
-/** Meanings (glosses) in INSERTION order. NOT sorted. */
+/** Meanings (glosses) in INSERTION order — gloss-bearing records only (keyless
+ * EXCLUDED, preserving today's behaviour for every gloss-iterating caller). NOT sorted. */
 export function lexKeys(lang: LexiconState): Meaning[] {
   const g = buildLexemeIdToGloss(lang);
-  return Object.keys(lang.lexicon).map((cid) => g.get(cid) ?? (cid as Meaning));
+  const out: Meaning[] = [];
+  for (const cid of Object.keys(lang.lexemes)) {
+    const m = g.get(cid);
+    if (m !== undefined) out.push(m);
+  }
+  return out;
 }
 
-/** Forms in insertion order. (`Object.values(lang.lexicon)`) */
+/** Forms in insertion order — gloss-bearing records only. */
 export function lexValues(lang: LexiconState): WordForm[] {
-  return Object.values(lang.lexicon);
+  const g = buildLexemeIdToGloss(lang);
+  const out: WordForm[] = [];
+  for (const cid of Object.keys(lang.lexemes)) if (g.has(cid)) out.push(lang.lexemes[cid]!.form);
+  return out;
 }
 
-/** [meaning, form] pairs in insertion order. */
+/** [meaning, form] pairs in insertion order — gloss-bearing records only. */
 export function lexEntries(lang: LexiconState): [Meaning, WordForm][] {
   const g = buildLexemeIdToGloss(lang);
-  return Object.keys(lang.lexicon).map(
-    (cid) =>
-      [g.get(cid) ?? (cid as Meaning), lang.lexicon[cid as LexemeId]!] as [Meaning, WordForm],
-  );
+  const out: [Meaning, WordForm][] = [];
+  for (const cid of Object.keys(lang.lexemes)) {
+    const m = g.get(cid);
+    if (m !== undefined) out.push([m, lang.lexemes[cid]!.form]);
+  }
+  return out;
 }
 
-/** Number of entries. (`Object.keys(lang.lexicon).length`) */
+/** Number of gloss-bearing entries. */
 export function lexSize(lang: LexiconState): number {
-  return Object.keys(lang.lexicon).length;
+  return lexKeys(lang).length;
 }

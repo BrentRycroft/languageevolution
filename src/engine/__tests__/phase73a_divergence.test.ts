@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 
@@ -45,8 +46,8 @@ function maxFractionDistinct(seed: string): number {
   let maxFrac = 0;
   for (let i = 0; i < leaves.length; i++) {
     for (let j = i + 1; j < leaves.length; j++) {
-      const a = leaves[i]!.lexicon;
-      const b = leaves[j]!.lexicon;
+      const a = formViewOf(leaves[i]!.lexemes);
+      const b = formViewOf(leaves[j]!.lexemes);
       const shared = Object.keys(a).filter((m) => b[m]);
       if (shared.length < 30) continue;
       let distinct = 0;

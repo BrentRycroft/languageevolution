@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { MECHANISMS } from "../genesis/mechanisms";
@@ -97,7 +98,7 @@ describe("genesis mechanisms", () => {
     const conv = MECHANISMS.find((m) => m.id === "mechanism.conversion")!;
     const result = conv.tryCoin(lang, "kitten", state.tree, rng);
     if (result) {
-      const allForms = Object.values(lang.lexicon).map((f) => f.join(""));
+      const allForms = Object.values(formViewOf(lang.lexemes)).map((f) => f.join(""));
       expect(allForms).toContain(result.form.join(""));
     }
   });
