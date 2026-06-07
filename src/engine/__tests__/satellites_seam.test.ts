@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { satGet, satSet, satHas, satDelete, satKeys, satEntries } from "../lexicon/satellites";
+import { satGet, satSet, satHas, satDelete, satKeys, satEntries, seedKeylessBirthSatellites } from "../lexicon/satellites";
 import type { Language } from "../types";
 
 // Minimal hand-built lang: one seeded gloss "fire" with an id, one keyless id.
@@ -56,5 +56,20 @@ describe("satellites seam — gloss/id resolution", () => {
       ["c_aaaa_root_1", 0.5],
       ["c_bbbb_root_2", 0.3],
     ]);
+  });
+});
+
+describe("seedKeylessBirthSatellites", () => {
+  it("seeds the four birth-time fields under the keyless id, none of the lazy maps", () => {
+    const lang = {
+      id: "root", lexemeIds: {}, lexemes: { "c_bbbb_root_2": { form: ["k"], point: [1] } },
+    } as unknown as import("../types").Language;
+    seedKeylessBirthSatellites(lang, "c_bbbb_root_2" as any, 7);
+    expect(satGet(lang, "wordFrequencyHints", "c_bbbb_root_2")).toBe(0.4);
+    expect(satGet(lang, "lastChangeGeneration", "c_bbbb_root_2")).toBe(7);
+    expect(satGet(lang, "wordOrigin", "c_bbbb_root_2")).toBe("keyless-gap");
+    expect(satGet(lang, "registerOf", "c_bbbb_root_2")).toBe("low");
+    expect(satGet(lang, "variants", "c_bbbb_root_2")).toBeUndefined();
+    expect(satGet(lang, "suppletion", "c_bbbb_root_2")).toBeUndefined();
   });
 });

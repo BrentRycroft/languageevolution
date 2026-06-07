@@ -73,3 +73,15 @@ export function satEntries<K extends SatField>(lang: Language, field: K): Array<
   const m = mapOf(lang, field);
   return m ? (Object.entries(m) as Array<[LexemeId, SatelliteTypes[K]]>) : [];
 }
+
+/**
+ * Seed the birth-time satellite fields a keyless lexeme gets at coinage (S2a),
+ * keyed by its id. Mirrors the defaults a fresh seeded coinage receives
+ * (frequency 0.4, register "low", origin marker, age = current generation).
+ */
+export function seedKeylessBirthSatellites(lang: Language, id: LexemeId, generation: number): void {
+  satSet(lang, "wordFrequencyHints", id, 0.4);
+  satSet(lang, "lastChangeGeneration", id, generation);
+  satSet(lang, "wordOrigin", id, "keyless-gap");
+  satSet(lang, "registerOf", id, "low");
+}

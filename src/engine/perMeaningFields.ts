@@ -1,4 +1,5 @@
 import type { Language, Meaning } from "./types";
+import { lexemeIdFor } from "./lexicon/lexemeIdentity";
 
 /**
  * perMeaningFields.ts — Phase 72d T1.
@@ -39,6 +40,9 @@ interface PerMeaningFieldSpec {
   inherit: "shallow-clone" | "deep-clone-entries";
   /** Whether to delete `lang[key][meaning]` on `deleteMeaning(lang, meaning)`. */
   purgeOnDelete: boolean;
+  /** Key space of this map. Satellite maps re-keyed in S2a are "lexemeId"; the
+   *  lexemeIds index stays "gloss". Drives purge key resolution. */
+  keyedBy: "gloss" | "lexemeId";
   /** Optional human-readable description for diagnostics. */
   description?: string;
 }
@@ -67,48 +71,56 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "wordFrequencyHints",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Per-meaning frequency seed (Phase 24)",
   },
   {
     key: "lastChangeGeneration",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Per-meaning age tracker for sound-change diffusion",
   },
   {
     key: "wordOrigin",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Per-meaning provenance string (Phase 21)",
   },
   {
     key: "localNeighbors",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Per-meaning neighbour list for diffusion momentum",
   },
   {
     key: "registerOf",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Per-meaning register tag (high/low/neutral)",
   },
   {
     key: "variants",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Per-meaning form variants (alt forms competing with primary)",
   },
   {
     key: "wordOriginChain",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Etymology trace chain",
   },
   {
     key: "colexifiedAs",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Per-meaning colexification list",
   },
   // Phase 64 fields
@@ -116,24 +128,28 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "inflectionClass",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Phase 29 Tranche 5e inflection class assignment",
   },
   {
     key: "nounDeclensionClass",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Phase 64 T1 noun declension class",
   },
   {
     key: "ablautClassAssignment",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Phase 64 T2 ablaut class assignment",
   },
   {
     key: "grammaticalizationStage",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Phase 66 T1 grammaticalization stage tracking",
   },
   // Phase 71 / 72
@@ -141,6 +157,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "suppletion",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Phase 70 suppletion table; purged on delete by Phase 71b",
   },
   // Phase 72d (full-delivery defer-2): stable concept-identity UUIDs.
@@ -153,6 +170,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "lexemeIds",
     inherit: "shallow-clone",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Phase 72d concept UUID anchors per meaning",
   },
   // Track A plan 7: glided meaning positions (number[] per meaning).
@@ -164,6 +182,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "meaningPoints",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Track A plan 7 glided meaning positions (plan 7)",
   },
   // Track C: engine-inert etymological ancestry (Record<Meaning, Meaning[]>).
@@ -173,6 +192,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "etymology",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
+    keyedBy: "gloss",
     description: "Track C preset-morphemization etymological ancestry (display-only)",
   },
 ];
@@ -290,15 +310,27 @@ export function inheritMeaningFields(
  */
 export function purgeMeaningFromRegistry(lang: Language, meaning: Meaning): number {
   let count = 0;
-  const key = meaning as string;
-  // Cast to a generic record once to avoid per-field type narrowing.
   const langAsRecord = lang as unknown as Record<string, Record<string, unknown> | undefined>;
   for (const spec of PER_MEANING_FIELDS) {
     if (!spec.purgeOnDelete) continue;
     const map = langAsRecord[spec.key];
-    if (map && Object.prototype.hasOwnProperty.call(map, key)) {
+    if (!map) continue;
+    const key =
+      spec.keyedBy === "lexemeId"
+        ? (lexemeIdFor(lang, meaning) as string)
+        : (meaning as string);
+    if (Object.prototype.hasOwnProperty.call(map, key)) {
       delete map[key];
       count++;
+    }
+    // Also try the LexemeId key in case data was written via the satellite seam
+    // (which resolves gloss → LexemeId on write, even for gloss-keyed fields).
+    if (spec.keyedBy === "gloss") {
+      const existingId = lang.lexemeIds?.[meaning];
+      if (existingId && existingId !== key && Object.prototype.hasOwnProperty.call(map, existingId)) {
+        delete map[existingId];
+        count++;
+      }
     }
   }
   return count;
