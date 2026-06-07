@@ -23,10 +23,10 @@ describe("keyless lexemes — point-native storage (no concept key)", () => {
     const point = fromFloats(embed("fire"));
     const id = coinKeylessLexeme(lang, point, ["b", "l", "a", "z"]);
 
-    // Stored under a lexeme-intrinsic id in keylessLexemes — NOT in the gloss-addressed lexicon/index.
-    expect(lang.keylessLexemes![id]).toBeDefined();
-    expect(lang.keylessLexemes![id]!.form).toEqual(["b", "l", "a", "z"]);
-    expect(lang.lexemes[id as unknown as string]).toBeUndefined();
+    // Stored as a GLOSS-LESS record in lang.lexemes — not in the gloss-addressed lexemeIds index.
+    expect(lang.lexemes[id]).toBeDefined();
+    expect(lang.lexemes[id]!.form).toEqual(["b", "l", "a", "z"]);
+    expect(lang.lexemes[id]!.gloss).toBeUndefined(); // keyless — no concept key
     expect(lang.lexemeIds).toEqual({}); // no gloss anchor at all
   });
 
@@ -34,8 +34,8 @@ describe("keyless lexemes — point-native storage (no concept key)", () => {
     const lang = bareLang();
     const id = coinKeylessLexeme(lang, fromFloats(embed("fire")), ["b", "l", "a", "z"]);
     // parked on fire's anchor → emergent gloss is "fire", with no stored concept key.
-    expect(keylessGloss(lang.keylessLexemes![id]!)).toBe("fire");
-    expect(keylessGloss(lang.keylessLexemes![id]!)).toBe(glossOf(fromFloats(embed("fire"))));
+    expect(keylessGloss(lang.lexemes[id]!)).toBe("fire");
+    expect(keylessGloss(lang.lexemes[id]!)).toBe(glossOf(fromFloats(embed("fire"))));
   });
 
   it("mints distinct ids and is deterministic", () => {
@@ -51,8 +51,8 @@ describe("keyless lexemes — point-native storage (no concept key)", () => {
     const lang = bareLang();
     const id = coinKeylessLexeme(lang, fromFloats(embed("fire")), ["b", "l", "a", "z"]);
     const copy = cloneLanguage(lang);
-    expect(copy.keylessLexemes![id]!.form).toEqual(["b", "l", "a", "z"]);
-    copy.keylessLexemes![id]!.form.push("x");
-    expect(lang.keylessLexemes![id]!.form).toEqual(["b", "l", "a", "z"]); // original unchanged
+    expect(copy.lexemes[id]!.form).toEqual(["b", "l", "a", "z"]);
+    copy.lexemes[id]!.form.push("x");
+    expect(lang.lexemes[id]!.form).toEqual(["b", "l", "a", "z"]); // original unchanged
   });
 });

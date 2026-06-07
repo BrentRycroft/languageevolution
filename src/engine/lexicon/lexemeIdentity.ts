@@ -283,14 +283,15 @@ export function ensureLexemeIdsForLexicon(lang: LexiconState): number {
 /**
  * KEYLESS COINAGE (point-native storage core). Coin a lexeme defined PURELY by its `point` + `form`,
  * with NO concept/gloss key — the storage form of "coining into an empty region of the space" (the
- * half Track B deferred). It is stored under a fresh lexeme-intrinsic `LexemeId` in
- * `lang.keylessLexemes`, never touching the gloss-addressed `lexicon`/`lexemeIds` index, so it needs
- * no concept anchor at all. Its meaning IS the point; its English label is emergent
- * (`keylessGloss`). Deterministic (mintLexemeId; no RNG). Returns the new lexeme's id.
+ * half Track B deferred). It is stored under a fresh lexeme-intrinsic `LexemeId` as a GLOSS-LESS
+ * record in the canonical `lang.lexemes` store (store unification S1 task 3); never populating the
+ * gloss→LexemeId index, so the seam (`lexKeys` et al.) and the sound-change sweep both ignore it. Its
+ * meaning IS the point; its English label is emergent (`keylessGloss`). Deterministic (mintLexemeId;
+ * no RNG). Returns the new lexeme's id.
  */
 export function coinKeylessLexeme(lang: Language, point: Vec, form: WordForm): LexemeId {
   const id = mintLexemeId(lang);
-  (lang.keylessLexemes ??= {})[id] = { form: form.slice(), point: Array.from(point) };
+  lang.lexemes[id] = { form: form.slice(), point: Array.from(point) }; // no gloss => keyless
   return id;
 }
 

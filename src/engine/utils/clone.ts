@@ -62,14 +62,6 @@ export function cloneLanguage(lang: Language): Language {
   return {
     ...lang,
     lexemes: cloneLexemeStore(lang.lexemes),
-    keylessLexemes: lang.keylessLexemes
-      ? Object.fromEntries(
-          Object.entries(lang.keylessLexemes).map(([k, v]) => [
-            k,
-            { form: v.form.slice(), point: v.point.slice() },
-          ]),
-        )
-      : undefined,
     grammar: cloneGrammar(lang.grammar),
     morphology: cloneMorphology(lang.morphology),
     events: lang.events.map((e) => ({ ...e })),

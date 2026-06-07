@@ -319,14 +319,14 @@ const GEN0: Record<string, string> = {
 // RE-BAKED 2026-06-06 (storage migration inc 4 step 3 — keyless gap-coinage wired into the genesis
 // loop). stepGenesis now ends with a low-rate (KEYLESS_GAP_COINAGE_RATE=0.1) rng.chance gate that, on
 // firing, coins a KEYLESS lexeme into a salient empty region of the meaning space (findSemanticGap →
-// coinKeylessForGap): a point-native word stored by point + form in lang.keylessLexemes with NO
-// concept/gloss key, its label emergent. Two deliberate perturbations shift every preset's gen-30
+// coinKeylessForGap): a point-native word stored by point + form as a gloss-less record in
+// lang.lexemes with NO concept/gloss key, its label emergent. Two deliberate perturbations shift every preset's gen-30
 // trajectory: (1) the per-generation rng.chance gate advances the shared stream; (2) when keyless
 // coinage fires it advances lang.conceptIdSeq, so the LexemeId minted for the NEXT gloss-keyed coinage
 // differs → that word's content-addressed (B1-Y) sound-change sub-rng reseeds differently. Seed words
 // keep their birth-time LexemeIds, so existing vocabulary is insulated; only post-keyless coinages
 // move. GEN0 unchanged (no genesis at gen 0). The signature() hashes gloss→form + word formKeys, NOT
-// keylessLexemes, so the shift is purely the trajectory perturbation above, not the keyless words
+// keyless (gloss-less) records, so the shift is purely the trajectory perturbation above, not the keyless words
 // themselves. Byte-identity-vs-old-baseline waived by the user; reproducibility (same config →
 // identical output) preserved — hashes captured twice on consecutive runs, identical.
 const GENN: Record<string, string> = {

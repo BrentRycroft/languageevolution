@@ -10,6 +10,7 @@ import { distanceSq } from "../semantics/vec";
 import { ANCHORS } from "../semantics/anchors";
 import { meaningPointFor } from "../semantics/meaningPoint";
 import { lexKeys, lexHas } from "../lexicon/access";
+import { keylessRecords } from "../lexicon/store";
 import type { Language, Meaning } from "../types";
 import { composeForGap } from "../semantics/gapComposition";
 import { coinKeylessLexeme, type LexemeId } from "../lexicon/lexemeIdentity";
@@ -43,14 +44,10 @@ export interface SemanticGap {
  * concept string (deterministic).
  */
 export function findSemanticGap(lang: Language): SemanticGap | null {
-  // Gather all existing word points (keyed lexemes + keyless lexemes).
+  // Gather all existing word points (seeded lexemes + keyless gloss-less records).
   const existingPoints: Vec[] = [];
   for (const m of lexKeys(lang)) existingPoints.push(meaningPointFor(lang, m));
-  if (lang.keylessLexemes) {
-    for (const entry of Object.values(lang.keylessLexemes)) {
-      existingPoints.push(Int32Array.from(entry.point));
-    }
-  }
+  for (const r of keylessRecords(lang.lexemes)) existingPoints.push(Int32Array.from(r.point));
   const n = existingPoints.length;
   if (n === 0) return null;
 
@@ -102,7 +99,7 @@ export function findSemanticGap(lang: Language): SemanticGap | null {
 /**
  * Coin a keyless lexeme into a detected semantic gap. Builds a form for the gap's concept by
  * vector-composition (kenning) from the language's related roots, then stores it POINT-NATIVELY
- * at the gap point with NO concept/gloss key (lang.keylessLexemes). Deterministic — composeForGap
+ * at the gap point with NO concept/gloss key (a gloss-less record in lang.lexemes). Deterministic — composeForGap
  * draws no RNG. Returns the new keyless lexeme's id, or null when no legal form can be composed
  * (the caller's coinage cascade then moves on).
  */

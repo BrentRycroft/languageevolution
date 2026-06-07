@@ -108,11 +108,9 @@ describe("findSemanticGap", () => {
     for (const concept of T_LEXICON_CONCEPTS) {
       lexSet(lang, concept, ["x"]);
     }
-    // Put a keyless lexeme right at the "think" anchor point
+    // Put a keyless (gloss-less) record right at the "think" anchor point
     const thinkPoint = Array.from(fromFloats(embed(T_CONCEPT)));
-    lang.keylessLexemes = {
-      "kl-0": { form: ["y"], point: thinkPoint },
-    };
+    lang.lexemes["kl-0"] = { form: ["y"], point: thinkPoint };
     const gap = findSemanticGap(lang);
     // With a keyless lexeme on "think", the gap (if any) must be further away or null
     if (gap !== null) {

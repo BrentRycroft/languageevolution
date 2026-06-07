@@ -214,21 +214,13 @@ export interface Language {
   name: string;
   /**
    * The canonical point-native lexeme store (store unification, step 5 S1). One LexemeRecord per
-   * lexeme, keyed by LexemeId. Seeded/concept-coined records carry a `gloss`; keyless records
-   * (coined into an empty region) have none — their label is the emergent nearest-anchor gloss.
-   * Replaces the form-only `lexicon`. (Keyless words still live in the separate `keylessLexemes`
-   * during S1 task 2; task 3 folds them in here and removes that field.)
+   * lexeme, keyed by LexemeId. Seeded/concept-coined records carry a `gloss`; KEYLESS records (coined
+   * into an empty region of the space) have none — their meaning IS the point and their label is the
+   * emergent nearest-anchor gloss (`keylessGloss`). Replaces the form-only `lexicon` and the former
+   * separate `keylessLexemes`. The seam (`lexKeys` et al.) and the sound-change sweep both ignore
+   * gloss-less records, so keyless words are inert until they are made first-class (S1 task 4).
    */
   lexemes: LexemeStore;
-  /**
-   * KEYLESS lexemes (vector-native flip — point-native storage core). A lexeme defined PURELY by its
-   * position + form, with NO concept/gloss key: its meaning is the `point` and its label is the
-   * emergent nearest-anchor gloss (`keylessGloss`). This is the storage form that "keyless coinage"
-   * (coining into an empty region of the space) produces — the half Track B deferred. Keyed only by a
-   * lexeme-intrinsic `LexemeId`, separate from the gloss-addressed `lexicon` so it never needs a
-   * concept anchor. Optional + lazily created.
-   */
-  keylessLexemes?: Record<string, { form: WordForm; point: number[] }>;
   enabledChangeIds: string[];
   changeWeights: Record<string, number>;
   birthGeneration: number;

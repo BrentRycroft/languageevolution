@@ -412,7 +412,7 @@ export function stepGenesis(
 
   // Inc 4 step 3 — keyless gap-coinage. At a low rate, coin a word into a salient EMPTY
   // region of the meaning space: a point-native lexeme stored by point + form with NO
-  // concept/gloss key (lang.keylessLexemes), its label emergent. This drives the
+  // concept/gloss key (a gloss-less record in lang.lexemes), its label emergent. This drives the
   // point-native storage path from the live loop. Silent for now (surfaced in a later
   // increment). The rng.chance gate is the LAST genesis draw, so it perturbs only this
   // generation's downstream stream onward — gen-0 (no genesis) stays byte-identical.

@@ -4,6 +4,8 @@ import { composeForGap } from "../semantics/gapComposition";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 import { meaningPointFor } from "../semantics/meaningPoint";
+import { lexKeys } from "../lexicon/access";
+import { keylessRecords } from "../lexicon/store";
 import type { Language } from "../types";
 
 function rootLang(): Language {
@@ -31,7 +33,7 @@ describe("coinKeylessForGap — keyless gap-coinage path", () => {
     const id = coinKeylessForGap(lang, gap);
     expect(id).not.toBeNull();
 
-    const entry = lang.keylessLexemes![id!];
+    const entry = lang.lexemes[id!];
     expect(entry).toBeDefined();
     // form must equal what composeForGap produces
     expect(entry!.form).toEqual(composed!.form);
@@ -39,7 +41,7 @@ describe("coinKeylessForGap — keyless gap-coinage path", () => {
     expect(entry!.point).toEqual(Array.from(gap.point));
   });
 
-  it("no gloss-key leak: coinage must not touch lexicon or lexemeIds", () => {
+  it("no gloss-key leak: coinage adds a gloss-less record but never mints a gloss anchor", () => {
     const lang = rootLang();
     const gap: SemanticGap = {
       point: meaningPointFor(lang, C),
@@ -48,16 +50,18 @@ describe("coinKeylessForGap — keyless gap-coinage path", () => {
       neighborSupport: 5,
     };
 
-    const lexiconKeysBefore = Object.keys(lang.lexemes).length;
+    const seededBefore = lexKeys(lang).length;
     const lexemeIdKeysBefore = Object.keys(lang.lexemeIds ?? {}).length;
 
-    coinKeylessForGap(lang, gap);
+    const id = coinKeylessForGap(lang, gap);
 
-    expect(Object.keys(lang.lexemes).length).toBe(lexiconKeysBefore);
-    expect(Object.keys(lang.lexemeIds ?? {}).length).toBe(lexemeIdKeysBefore);
+    expect(id).not.toBeNull();
+    expect(lang.lexemes[id!]!.gloss).toBeUndefined(); // stored gloss-less (keyless)
+    expect(lexKeys(lang).length).toBe(seededBefore); // no new seeded gloss
+    expect(Object.keys(lang.lexemeIds ?? {}).length).toBe(lexemeIdKeysBefore); // no gloss anchor minted
   });
 
-  it("failure → null: returns null and does NOT grow keylessLexemes when gloss can't compose", () => {
+  it("failure → null: returns null and does NOT grow the keyless record set when gloss can't compose", () => {
     const lang = rootLang();
     const badGloss = "zzqqxv-not-a-concept";
     // Confirm composeForGap returns null for this gloss (documents the precondition)
@@ -70,10 +74,10 @@ describe("coinKeylessForGap — keyless gap-coinage path", () => {
       neighborSupport: 5,
     };
 
-    const sizeBefore = Object.keys(lang.keylessLexemes ?? {}).length;
+    const sizeBefore = keylessRecords(lang.lexemes).length;
     const result = coinKeylessForGap(lang, gap);
     expect(result).toBeNull();
-    expect(Object.keys(lang.keylessLexemes ?? {}).length).toBe(sizeBefore);
+    expect(keylessRecords(lang.lexemes).length).toBe(sizeBefore);
   });
 
   it("determinism: two identical languages + same gap produce the same id and stored entry", () => {
@@ -93,7 +97,7 @@ describe("coinKeylessForGap — keyless gap-coinage path", () => {
     expect(id1).not.toBeNull();
     expect(id2).not.toBeNull();
     expect(id1).toBe(id2);
-    expect(lang1.keylessLexemes![id1!]!.form).toEqual(lang2.keylessLexemes![id2!]!.form);
-    expect(lang1.keylessLexemes![id1!]!.point).toEqual(lang2.keylessLexemes![id2!]!.point);
+    expect(lang1.lexemes[id1!]!.form).toEqual(lang2.lexemes[id2!]!.form);
+    expect(lang1.lexemes[id1!]!.point).toEqual(lang2.lexemes[id2!]!.point);
   });
 });

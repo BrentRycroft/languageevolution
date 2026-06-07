@@ -41,6 +41,13 @@ export function seededFormViewOf(store: LexemeStore): Record<string, WordForm> {
   return out;
 }
 
+/** The KEYLESS records of the store — point-native lexemes with no concept/gloss key (their label is
+ *  the emergent nearest-anchor gloss). Excluded from the seam (`lexKeys` et al.) and, until task 4,
+ *  from the sound-change sweep. */
+export function keylessRecords(store: LexemeStore): LexemeRecord[] {
+  return Object.keys(store).filter((id) => store[id]!.gloss === undefined).map((id) => store[id]!);
+}
+
 /**
  * Reconcile the SWEPT set back into the store after sound change. `before` is the form-view that was
  * handed to the engine (the swept records); `after` is what the engine returned. The swept records
