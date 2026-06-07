@@ -673,7 +673,7 @@ export interface Language {
    * grammaticalising INTO so progressive stages can target the same
    * destination. `lastTransitionGen` is when the meaning last moved.
    */
-  grammaticalizationStage?: Record<Meaning, {
+  grammaticalizationStage?: Record<LexemeId, {
     stage: 0 | 1 | 2 | 3 | 4;
     targetCategory?: import("./morphology/types").MorphCategory;
     lastTransitionGen: number;

@@ -148,7 +148,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "grammaticalizationStage",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Phase 66 T1 grammaticalization stage tracking",
   },
   // Phase 71 / 72

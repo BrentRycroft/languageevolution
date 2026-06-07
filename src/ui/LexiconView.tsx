@@ -9,6 +9,7 @@ import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 import { prettyGloss } from "../engine/lexicon/word";
 import { lexGet } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * LexiconView.tsx
@@ -451,7 +452,7 @@ export function LexiconView() {
                       // (Phase 66 T1). Tracks word→clitic→affix→fused→lost
                       // chain progression.
                       const proto = state.tree[state.rootId]?.language;
-                      const st = proto?.grammaticalizationStage?.[meaning];
+                      const st = proto ? satGet(proto, "grammaticalizationStage", meaning) : undefined;
                       if (!st) return null;
                       const STAGE_LABEL = ["", "clitic", "affix", "fused", "lost"];
                       return (

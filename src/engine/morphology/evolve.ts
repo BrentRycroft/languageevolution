@@ -1,5 +1,6 @@
 import type { Morphology, MorphCategory, Paradigm } from "./types";
-import { satGet, satSet, satHas } from "../lexicon/satellites";
+import { satGet, satSet, satHas, satEntries } from "../lexicon/satellites";
+import { meaningForLexemeId, type LexemeId } from "../lexicon/lexemeIdentity";
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargetsForLang } from "../semantics/grammaticalization";
@@ -138,7 +139,7 @@ export function maybeGrammaticalize(
   const chosen = candidates[rng.int(candidates.length)]!;
   const candidate = chosen.meaning;
   if (!lang.grammaticalizationStage) lang.grammaticalizationStage = {};
-  const existing = lang.grammaticalizationStage[candidate];
+  const existing = satGet(lang, "grammaticalizationStage", candidate);
 
   // Phase 4b: respect the grammaticalization cline (free → clitic → affix →
   // fusion → loss). Pre-4b a high-freq word TELEPORTED straight to a bound
@@ -172,12 +173,12 @@ export function maybeGrammaticalize(
 
   // ── stage 0 → 1: free word becomes a clitic (no paradigm yet) ──
   const affixForm = reduceToClitic(chosen.form, lang.grammar.affixPosition);
-  lang.grammaticalizationStage[candidate] = {
+  satSet(lang, "grammaticalizationStage", candidate, {
     stage: 1,
     targetCategory: chosen.target,
     affixForm,
     lastTransitionGen: 0,
-  };
+  });
   if (!lang.wordOrigin) lang.wordOrigin = {};
   lang.wordOrigin[candidate] = `clitic:${chosen.tag}`;
   // Clitics lose stress and frequency-as-a-lexeme as they bleach.
@@ -215,15 +216,19 @@ export function progressGrammaticalizationChain(
   // rateMultiplier defaults to 1 (legacy callers see the old ~4%/gen base).
   if (!rng.chance(0.04 * rateMultiplier)) return null; // base ~4%/gen ≈ 1 transition every 25 gens
   const candidates: string[] = [];
-  for (const [m, st] of Object.entries(lang.grammaticalizationStage)) {
+  for (const [id, st] of satEntries(lang, "grammaticalizationStage")) {
     if (!st) continue;
     if (st.stage < 2 || st.stage >= 4) continue;
     if (generation - st.lastTransitionGen < 5) continue; // cooldown
-    candidates.push(m);
+    candidates.push(id);
   }
   if (candidates.length === 0) return null;
   const chosen = candidates[rng.int(candidates.length)]!;
-  const st = lang.grammaticalizationStage[chosen]!;
+  // `chosen` is the storage key (LexemeId for sim langs, gloss for minimal
+  // langs); resolve the human gloss for descriptions / source.meaning /
+  // deleteMeaning (S2a task 10).
+  const chosenGloss = meaningForLexemeId(lang, chosen as LexemeId) ?? chosen;
+  const st = satGet(lang, "grammaticalizationStage", chosen)!;
   const newStage = (st.stage + 1) as 3 | 4;
   st.stage = newStage;
   st.lastTransitionGen = generation;
@@ -248,9 +253,9 @@ export function progressGrammaticalizationChain(
     if (st.affixForm && st.affixForm.length > 1) st.affixForm = st.affixForm.slice(0, -1);
     return {
       kind: "grammaticalization",
-      description: `"${chosen}" → fused [stage 3] (affix reduced to /${(pdm?.affix ?? []).join("")}/)`,
+      description: `"${chosenGloss}" → fused [stage 3] (affix reduced to /${(pdm?.affix ?? []).join("")}/)`,
       source: {
-        meaning: chosen,
+        meaning: chosenGloss,
         pathway: "chain-fusion",
         category: st.targetCategory ?? "verb.tense.past",
       },
@@ -259,12 +264,12 @@ export function progressGrammaticalizationChain(
   // newStage === 4: total loss. Remove from lexicon entirely.
   // Phase 72d-2 (defer-1a): record grammaticalization-loss pathway.
   // No mergedInto — the lemma is fully consumed by the paradigm.
-  deleteMeaning(lang, chosen, { generation, reason: "grammaticalization-stage-4" });
+  deleteMeaning(lang, chosenGloss, { generation, reason: "grammaticalization-stage-4" });
   return {
     kind: "grammaticalization",
-    description: `"${chosen}" → lost [stage 4] (lexical entry removed; paradigm continues)`,
+    description: `"${chosenGloss}" → lost [stage 4] (lexical entry removed; paradigm continues)`,
     source: {
-      meaning: chosen,
+      meaning: chosenGloss,
       pathway: "chain-loss",
       category: st.targetCategory ?? "verb.tense.past",
     },
@@ -507,17 +512,17 @@ export function maybeCliticize(
   // Pre-4c it did `form.slice(0,-1)` and wrote that back to the lexicon,
   // ERODING THE FREE DICTIONARY LEMMA itself (belly→/kʷefoː/-style corruption).
   // The free word is now left intact; only the bound allomorph is recorded.
-  if (lang.grammaticalizationStage?.[chosen.m]) return null; // already in chain
+  if (satHas(lang, "grammaticalizationStage", chosen.m)) return null; // already in chain
   const affixForm = reduceToClitic(chosen.form, lang.grammar.affixPosition);
   if (affixForm.length < 1) return null;
   const target = pathwayTargetsForLang(chosen.tag, lang)[0];
   if (!lang.grammaticalizationStage) lang.grammaticalizationStage = {};
-  lang.grammaticalizationStage[chosen.m] = {
+  satSet(lang, "grammaticalizationStage", chosen.m, {
     stage: 1,
     targetCategory: target,
     affixForm,
     lastTransitionGen: 0,
-  };
+  });
   lang.wordOrigin[chosen.m] = `clitic:${chosen.tag}`;
   satSet(lang, "wordFrequencyHints", chosen.m, 0.45);
   return {
