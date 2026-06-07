@@ -321,9 +321,9 @@ export function driftOneMeaning(
       if (lang.wordOrigin[m] !== undefined && !lang.wordOrigin[target]) {
         lang.wordOrigin[target] = lang.wordOrigin[m]!;
       }
-      const lastChange = lang.lastChangeGeneration[m];
-      if (lastChange !== undefined && lang.lastChangeGeneration[target] === undefined) {
-        lang.lastChangeGeneration[target] = lastChange;
+      const lastChange = satGet(lang, "lastChangeGeneration", m);
+      if (lastChange !== undefined && satGet(lang, "lastChangeGeneration", target) === undefined) {
+        satSet(lang, "lastChangeGeneration", target, lastChange);
       }
       if (!polysemous) {
         // Phase 72d-2 (defer-1a): drift drops the source meaning when

@@ -77,7 +77,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "lastChangeGeneration",
     inherit: "shallow-clone",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Per-meaning age tracker for sound-change diffusion",
   },
   {

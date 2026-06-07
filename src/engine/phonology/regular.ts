@@ -118,7 +118,7 @@ export function applyOneRegularChange(
   for (const m of dropped) {
     lexDelete(lang, m);
     satDelete(lang, "wordFrequencyHints", m);
-    delete lang.lastChangeGeneration[m];
+    satDelete(lang, "lastChangeGeneration", m);
     delete lang.wordOrigin[m];
     delete lang.localNeighbors[m];
     if (lang.registerOf) delete lang.registerOf[m];

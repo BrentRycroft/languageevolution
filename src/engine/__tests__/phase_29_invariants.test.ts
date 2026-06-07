@@ -123,7 +123,7 @@ describe("Phase 29 Tranche 7b — cross-system invariants", () => {
             if (lexHas(lang, m)) return false;
             if (satGet(lang, "wordFrequencyHints", m) !== undefined) return false;
             if (lang.wordOrigin[m] !== undefined) return false;
-            if (lang.lastChangeGeneration[m] !== undefined) return false;
+            if (satGet(lang, "lastChangeGeneration", m) !== undefined) return false;
             if (lang.words) {
               for (const w of lang.words) {
                 if (w.senses.some((s) => s.meaning === m)) return false;

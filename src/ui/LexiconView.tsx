@@ -9,6 +9,7 @@ import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 import { prettyGloss } from "../engine/lexicon/word";
 import { lexGet } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * LexiconView.tsx
@@ -66,7 +67,8 @@ export function LexiconView() {
       } else if (sort === "last-changed") {
         let maxGen = -1;
         for (const lid of visibleLeaves) {
-          const g = state.tree[lid]?.language.lastChangeGeneration?.[m];
+          const leafLang = state.tree[lid]?.language;
+          const g = leafLang ? satGet(leafLang, "lastChangeGeneration", m) : undefined;
           if (typeof g === "number" && g > maxGen) maxGen = g;
         }
         out[m] = -maxGen;
