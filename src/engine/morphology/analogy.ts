@@ -5,6 +5,7 @@ import { isFormLegal } from "../phonology/wordShape";
 import { isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm } from "../lexicon/mutate";
 import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * analogy.ts
@@ -43,7 +44,7 @@ export function maybeAnalogicalLevel(
     // by being lexically irregular. Length-based leveling would erase
     // exactly the irregularity that makes them suppletive in the first
     // place, so skip any meaning carrying a suppletion record.
-    const supp = lang.suppletion?.[m];
+    const supp = satGet(lang, "suppletion", m);
     if (supp && Object.keys(supp).length > 0) continue;
     const cluster = clusterOf(m);
     if (!cluster) continue;

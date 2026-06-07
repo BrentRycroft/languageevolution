@@ -100,7 +100,7 @@ describe("inflectCascade", () => {
       grammar: { ...makeLang().grammar, synthesisIndex: 2.0 },
       suppletion: {
         see: { "verb.tense.past": ["s", "ɔ"] },
-      },
+      } as Language["suppletion"],
     });
     const order: MorphCategory[] = ["verb.tense.past", "verb.person.3sg"];
     const result = inflectCascade(["s", "i"], order, lang, "see");

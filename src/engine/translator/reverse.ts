@@ -3,7 +3,8 @@ import type { MorphCategory } from "../morphology/types";
 import { closedClassTable } from "./closedClass";
 import { disambiguateSense, glossLemma } from "../lexicon/word";
 import { lexGet } from "../lexicon/access";
-import { orderedLexiconKeys } from "../lexicon/lexemeIdentity";
+import { orderedLexiconKeys, meaningForLexemeId } from "../lexicon/lexemeIdentity";
+import { satKeys, satGet } from "../lexicon/satellites";
 
 /**
  * reverse.ts
@@ -115,9 +116,12 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
   // pasts. This is the root cause of the 3 known-failing
   // translator_roundtrip past-tense tests.
   if (lang.suppletion) {
-    for (const meaning of Object.keys(lang.suppletion)) {
-      const perCategory = lang.suppletion[meaning];
+    for (const id of satKeys(lang, "suppletion")) {
+      const perCategory = satGet(lang, "suppletion", id);
       if (!perCategory) continue;
+      // The store is id-keyed; the reverse lex renders a human gloss lemma.
+      const meaning = meaningForLexemeId(lang, id);
+      if (meaning === undefined) continue;
       for (const cat of Object.keys(perCategory) as MorphCategory[]) {
         const form = perCategory[cat];
         if (!form || form.length === 0) continue;

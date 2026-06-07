@@ -51,7 +51,7 @@ function makeLang(id: string, overrides: Partial<Language> = {}): Language {
     },
     suppletion: {
       go: { "verb.tense.past": ["w", "ɛ", "n", "t"] },
-    },
+    } as Language["suppletion"],
     gender: { dog: 1 },
     localNeighbors: {},
     conservatism: 1,

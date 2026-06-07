@@ -437,7 +437,9 @@ const MORPHOLOGY: Morphology = {
  * forms feed straight into early Romance daughters when the simulator
  * descends from this preset.
  */
-const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+const SUPPLETION: NonNullable<
+  import("../types").SimulationConfig["seedSuppletion"]
+> = {
   // *esse* "be" → perfect *fui*
   be: { "verb.tense.past": ["f", "u", "i"] },
   // *ire* "go" → perfect *ii* / present *vāde-* (the suppletion that

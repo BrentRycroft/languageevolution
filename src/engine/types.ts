@@ -628,7 +628,7 @@ export interface Language {
     }
   >;
   suppletion?: Record<
-    Meaning,
+    LexemeId,
     Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
   >;
   /**
@@ -1485,7 +1485,10 @@ export interface SimulationConfig {
   seedStressPattern?: NonNullable<Language["stressPattern"]>;
   seedLexicalStress?: Record<Meaning, number>;
   seedCulturalTier?: 0 | 1 | 2 | 3;
-  seedSuppletion?: NonNullable<Language["suppletion"]>;
+  seedSuppletion?: Record<
+    Meaning,
+    Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
+  >;
   /** Phase 26b: per-preset infinitive realisation strategy. See Language.infinitiveStrategy. */
   seedInfinitiveStrategy?: NonNullable<Language["infinitiveStrategy"]>;
   /** Phase 27a: per-preset phonotactic profile. See Language.phonotacticProfile. */

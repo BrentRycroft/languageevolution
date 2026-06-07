@@ -4,6 +4,7 @@ import { createSimulation } from "../simulation";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
 import { makeRng } from "../rng";
 import { lexGet, lexSet } from "../lexicon/access";
+import { satSet } from "../lexicon/satellites";
 
 /**
  * Phase 28e: suppletive paradigms must survive long-form runs.
@@ -20,9 +21,7 @@ describe("Phase 28e — suppletion persistence", () => {
     // Synthesise a length-imbalanced suppletive form: `go` short,
     // semantic neighbours longer.
     lexSet(lang, "go", ["g", "o"]);
-    lang.suppletion = {
-      go: { "verb.tense.past": ["w", "ɛ", "n", "t"] },
-    };
+    satSet(lang, "suppletion", "go", { "verb.tense.past": ["w", "ɛ", "n", "t"] });
     // Force the cluster mates to be longer so the bare leveler would
     // pick `go` as a target if not gated.
     lexSet(lang, "come", ["k", "o", "m", "e", "n"]);
