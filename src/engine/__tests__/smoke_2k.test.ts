@@ -83,8 +83,10 @@ function runAndCollect(
     }
 
     if (lang.registerOf) {
+      // registerOf is now LexemeId-keyed (S2a): a key is dangling iff its
+      // lexeme record is gone (lexHas resolves glosses, not ids).
       for (const key of Object.keys(lang.registerOf)) {
-        if (!lexHas(lang, key)) danglingRegisters++;
+        if (lang.lexemes[key] === undefined) danglingRegisters++;
       }
     }
     for (const key of Object.keys(lang.wordOrigin)) {

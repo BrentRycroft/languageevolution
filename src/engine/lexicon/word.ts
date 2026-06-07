@@ -703,7 +703,7 @@ export function syncWordsFromLexicon(
     const senses: WordSense[] = meanings.map((meaning) => ({
       meaning,
       weight: satGet(lang, "wordFrequencyHints", meaning) ?? 0.4,
-      register: lang.registerOf?.[meaning],
+      register: satGet(lang, "registerOf", meaning),
       bornGeneration,
       origin:
         typeof lang.wordOrigin?.[meaning] === "string"

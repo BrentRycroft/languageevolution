@@ -5,7 +5,7 @@ import type {
   WordMorphStructure,
   WordMorphStructureOrigin,
 } from "../types";
-import { satGet, satSet } from "../lexicon/satellites";
+import { satGet, satSet, satHas } from "../lexicon/satellites";
 import type { CoinageOutcome } from "../genesis/apply";
 import { tryCoin } from "../genesis/apply";
 import { lexicalNeed } from "../genesis/need";
@@ -341,8 +341,8 @@ export function stepGenesis(
     ) {
       recordCoinageStructure(lang, outcome.meaning, outcome.sources.partMeanings, generation);
     }
-    if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
-      lang.registerOf[outcome.meaning] = outcome.register ?? "low";
+    if (!satHas(lang, "registerOf", outcome.meaning)) {
+      satSet(lang, "registerOf", outcome.meaning, outcome.register ?? "low");
     }
     // Phase 29 Tranche 5e + Phase 64 T1: assign inflection /
     // declension class for the new coinage. Verbs get

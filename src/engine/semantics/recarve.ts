@@ -184,10 +184,9 @@ function trySplit(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   });
   const freq = satGet(lang, "wordFrequencyHints", pick.source) ?? 0.4;
   satSet(lang, "wordFrequencyHints", pick.target, freq);
-  const reg = lang.registerOf?.[pick.source];
+  const reg = satGet(lang, "registerOf", pick.source);
   if (reg !== undefined) {
-    if (!lang.registerOf) lang.registerOf = {};
-    lang.registerOf[pick.target] = reg;
+    satSet(lang, "registerOf", pick.target, reg);
   }
   lang.wordOrigin[pick.target] = `split:${pick.source}`;
   stampRecarve(lang, pick.source, pick.target, generation);

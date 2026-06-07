@@ -223,7 +223,7 @@ export function driftOneMeaning(
       // noun; PIE *de-/to- demonstratives stayed demonstrative across
       // millennia in every IE branch). Drift mechanism gates here.
       if (isClosedClass(posOf(m))) continue;
-      const reg = lang.registerOf?.[m];
+      const reg = satGet(lang, "registerOf", m);
       if (reg === "high" && rng.chance(0.5)) continue;
       // LANE-C — Zipfian frequency-retention law (Pagel, Atkinson & Meade
       // 2007; Zipf): the rate of semantic (and lexical) change is inversely
@@ -291,7 +291,7 @@ export function driftOneMeaning(
       const form = lexGet(lang, m);
       if (!form) continue;
       if (!isFormLegal(target, form)) continue;
-      const kind = classifyShift(m, target, rng, lang.registerOf?.[m], lang, freqHint);
+      const kind = classifyShift(m, target, rng, satGet(lang, "registerOf", m), lang, freqHint);
       // Phase 73e: a PROTECTED source meaning (be/eat/go/…) cannot be dropped
       // by deleteMeaning's Phase-71b guard. Pre-fix, drift still copied its
       // form to `target` and reported polysemous:false while the guard silently
@@ -314,10 +314,11 @@ export function driftOneMeaning(
         satSet(lang, "wordFrequencyHints", target, oldFreq);
       }
       if (!polysemous) satDelete(lang, "wordFrequencyHints", m);
-      if (lang.registerOf?.[m] !== undefined) {
-        lang.registerOf[target] = lang.registerOf[m]!;
+      const oldReg = satGet(lang, "registerOf", m);
+      if (oldReg !== undefined) {
+        satSet(lang, "registerOf", target, oldReg);
       }
-      if (!polysemous && lang.registerOf?.[m] !== undefined) delete lang.registerOf[m];
+      if (!polysemous && oldReg !== undefined) satDelete(lang, "registerOf", m);
       if (lang.wordOrigin[m] !== undefined && !lang.wordOrigin[target]) {
         lang.wordOrigin[target] = lang.wordOrigin[m]!;
       }
