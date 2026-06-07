@@ -1,5 +1,4 @@
 import type { Language, Meaning } from "./types";
-import { lexemeIdFor } from "./lexicon/lexemeIdentity";
 
 /**
  * perMeaningFields.ts — Phase 72d T1.
@@ -315,22 +314,17 @@ export function purgeMeaningFromRegistry(lang: Language, meaning: Meaning): numb
     if (!spec.purgeOnDelete) continue;
     const map = langAsRecord[spec.key];
     if (!map) continue;
+    // Mint-free key resolution (mirrors the satellite seam, which never mints):
+    // a "lexemeId" field is addressed by the meaning's existing id, falling back
+    // to the gloss when no id has been minted (the seam stores such entries
+    // gloss-keyed too). A "gloss" field is addressed by the gloss.
     const key =
       spec.keyedBy === "lexemeId"
-        ? (lexemeIdFor(lang, meaning) as string)
+        ? (lang.lexemeIds?.[meaning] ?? (meaning as string))
         : (meaning as string);
     if (Object.prototype.hasOwnProperty.call(map, key)) {
       delete map[key];
       count++;
-    }
-    // Also try the LexemeId key in case data was written via the satellite seam
-    // (which resolves gloss → LexemeId on write, even for gloss-keyed fields).
-    if (spec.keyedBy === "gloss") {
-      const existingId = lang.lexemeIds?.[meaning];
-      if (existingId && existingId !== key && Object.prototype.hasOwnProperty.call(map, existingId)) {
-        delete map[existingId];
-        count++;
-      }
     }
   }
   return count;

@@ -1,6 +1,6 @@
 import type { Language, Meaning, WordForm, FormVariant } from "../types";
 import type { InflectionClass, NounDeclensionClass, MorphCategory } from "../morphology/types";
-import { lexemeIdFor, type LexemeId } from "./lexemeIdentity";
+import type { LexemeId } from "./lexemeIdentity";
 
 /**
  * satellites.ts — the typed accessor seam for the per-meaning satellite maps
@@ -41,30 +41,37 @@ function ensureMap<K extends SatField>(lang: Language, field: K): SatMap<K> {
   return (rec[field] ??= {});
 }
 
-/** Read-path key resolution: gloss → its id (no mint); a keyless/seeded id passes through. */
-function readKey(lang: Language, key: string): string {
+/**
+ * Key resolution — read and write are SYMMETRIC and NEVER mint. A record id
+ * (keyless or seeded) passes through; a gloss resolves to its existing id; a
+ * gloss with no id passes through as itself (stored gloss-keyed, exactly as the
+ * pre-flip direct writes did — they never minted either).
+ *
+ * Determinism: minting (`lexemeIdFor`) advances `conceptIdSeq`, which seeds every
+ * downstream LexemeId and its per-word sound-change sub-rng. A satellite write
+ * must therefore never mint — otherwise seeding a gloss that has no lexeme (e.g.
+ * a non-lexicon `seedFrequencyHints` entry) would shift the whole id stream and
+ * diverge GENN. Ids are minted only by the lexeme layer (`lexSet` /
+ * `rekeyLexiconToLexemeIds`); the seam merely addresses what already exists.
+ */
+function resolveKey(lang: Language, key: string): string {
   if (lang.lexemes?.[key]) return key;            // already a record id
-  return lang.lexemeIds?.[key] ?? key;            // gloss → id, else passthrough (yields no entry)
-}
-/** Write-path key resolution: a record id passes through; a gloss mints/looks up its id. */
-function writeKey(lang: Language, key: string): LexemeId {
-  if (lang.lexemes?.[key]) return key as LexemeId; // already an id → never mint a gloss
-  return lexemeIdFor(lang as unknown as Parameters<typeof lexemeIdFor>[0], key as Meaning);
+  return lang.lexemeIds?.[key] ?? key;            // gloss → id, else passthrough (no mint)
 }
 
 export function satGet<K extends SatField>(lang: Language, field: K, key: string): SatelliteTypes[K] | undefined {
-  return mapOf(lang, field)?.[readKey(lang, key)];
+  return mapOf(lang, field)?.[resolveKey(lang, key)];
 }
 export function satSet<K extends SatField>(lang: Language, field: K, key: string, value: SatelliteTypes[K]): void {
-  ensureMap(lang, field)[writeKey(lang, key)] = value;
+  ensureMap(lang, field)[resolveKey(lang, key)] = value;
 }
 export function satHas<K extends SatField>(lang: Language, field: K, key: string): boolean {
   const m = mapOf(lang, field);
-  return m ? readKey(lang, key) in m : false;
+  return m ? resolveKey(lang, key) in m : false;
 }
 export function satDelete<K extends SatField>(lang: Language, field: K, key: string): void {
   const m = mapOf(lang, field);
-  if (m) delete m[readKey(lang, key)];
+  if (m) delete m[resolveKey(lang, key)];
 }
 export function satKeys<K extends SatField>(lang: Language, field: K): LexemeId[] {
   return Object.keys(mapOf(lang, field) ?? {}) as LexemeId[];
