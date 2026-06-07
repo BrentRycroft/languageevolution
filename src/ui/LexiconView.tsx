@@ -9,6 +9,7 @@ import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 import { prettyGloss } from "../engine/lexicon/word";
 import { lexGet } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * LexiconView.tsx
@@ -479,8 +480,8 @@ export function LexiconView() {
                     const isChanged = justChangedRef.current.has(key);
                     const isSelected = selectedLangId === lid && selectedMeaning === meaning;
                     const lang = state.tree[lid]!.language;
-                    const origin = lang.wordOrigin?.[meaning];
-                    const chain = lang.wordOriginChain?.[meaning];
+                    const origin = satGet(lang, "wordOrigin", meaning);
+                    const chain = satGet(lang, "wordOriginChain", meaning);
                     const glyph = originGlyph(origin);
                     // Build a chain hint like "← free + -dom" for derivation
                     // chains recorded by Phase 20f-2's targetedDerivation.

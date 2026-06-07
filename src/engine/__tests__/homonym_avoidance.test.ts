@@ -52,7 +52,7 @@ describe("Phase 48 T1 — areMeaningsRelated extended with origin-chain + compou
     const lang = makeLang({
       wordOriginChain: {
         runner: { tag: "derivation", from: "run", via: "-er.agt" },
-      },
+      } as Record<string, { tag: string; from?: string; via?: string; donor?: string }>,
     });
     expect(areMeaningsRelated(lang, "runner", "run")).toBe(true);
     expect(areMeaningsRelated(lang, "run", "runner")).toBe(true);
@@ -64,7 +64,7 @@ describe("Phase 48 T1 — areMeaningsRelated extended with origin-chain + compou
         teach: { tag: "primary" },
         teacher: { tag: "derivation", from: "teach", via: "-er.agt" },
         teaching: { tag: "derivation", from: "teacher", via: "-ing" },
-      },
+      } as Record<string, { tag: string; from?: string; via?: string; donor?: string }>,
     });
     expect(areMeaningsRelated(lang, "teaching", "teach")).toBe(true);
   });
@@ -88,7 +88,7 @@ describe("Phase 48 T1 — areMeaningsRelated extended with origin-chain + compou
     const lang = makeLang({
       wordOriginChain: {
         runner: { tag: "derivation", from: "run", via: "-er.agt" },
-      },
+      } as Record<string, { tag: string; from?: string; via?: string; donor?: string }>,
       compounds: {
         daylight: {
           parts: ["day", "light"],
@@ -145,7 +145,7 @@ describe("Phase 48 T2 — wouldCreateUnrelatedHomonym", () => {
     const lang = makeLang({
       wordOriginChain: {
         runner: { tag: "derivation", from: "run", via: "-er.agt" },
-      },
+      } as Record<string, { tag: string; from?: string; via?: string; donor?: string }>,
     });
     addWord(lang, ["r", "ʌ", "n"], "run", { bornGeneration: 0 });
     // runner sound-change candidate collides with run — related via chain.

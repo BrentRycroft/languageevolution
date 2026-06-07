@@ -113,7 +113,7 @@ export function maybeTabooReplace(
     bornGeneration: 0,
     origin: donor ? `taboo:${donor}` : "taboo:self",
   });
-  lang.wordOrigin[target] = donor ? `taboo:${donor}` : "taboo:self";
+  satSet(lang, "wordOrigin", target, donor ? `taboo:${donor}` : "taboo:self");
   satSet(lang, "wordFrequencyHints", target, 0.55);
 
   return {

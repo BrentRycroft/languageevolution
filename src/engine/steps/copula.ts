@@ -76,7 +76,7 @@ export function stepCopulaGenesis(
     bornGeneration: 0,
     origin: `grammaticalization:${pathway}:${donor}`,
   });
-  lang.wordOrigin["be"] = `grammaticalization:${pathway}:${donor}`;
+  satSet(lang, "wordOrigin", "be", `grammaticalization:${pathway}:${donor}`);
   satSet(lang, "wordFrequencyHints", "be", 0.95);
   lang.lastChangeGeneration["be"] = generation;
 

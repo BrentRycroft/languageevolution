@@ -114,7 +114,7 @@ export function maybeGrammaticalize(
     if (!tag) continue;
     const form = lexGet(lang, m)!;
     if (form.length === 0 || form.length > 4) continue;
-    const isClitic = (lang.wordOrigin?.[m] ?? "").startsWith("clitic:");
+    const isClitic = (satGet(lang, "wordOrigin", m) ?? "").startsWith("clitic:");
     const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     const freqFloor = isClitic ? 0.4 : 0.6;
     if (freq < freqFloor) continue;
@@ -178,8 +178,7 @@ export function maybeGrammaticalize(
     affixForm,
     lastTransitionGen: 0,
   };
-  if (!lang.wordOrigin) lang.wordOrigin = {};
-  lang.wordOrigin[candidate] = `clitic:${chosen.tag}`;
+  satSet(lang, "wordOrigin", candidate, `clitic:${chosen.tag}`);
   // Clitics lose stress and frequency-as-a-lexeme as they bleach.
   if (satHas(lang, "wordFrequencyHints", candidate)) {
     satSet(lang, "wordFrequencyHints", candidate, Math.max(0.1, satGet(lang, "wordFrequencyHints", candidate)! * 0.6));
@@ -323,7 +322,7 @@ function maybeArticleEmergence(
   if (!lexHas(lang, "the")) {
     lexSet(lang, "the", lexGet(lang, donor)!.slice());
     satSet(lang, "wordFrequencyHints", "the", 0.97);
-    lang.wordOrigin["the"] = `grammaticalization:${donor}`;
+    satSet(lang, "wordOrigin", "the", `grammaticalization:${donor}`);
   }
   lang.grammar.articlePresence = next;
   return {
@@ -475,8 +474,7 @@ export function maybeBackformation(
     bornGeneration: 0,
     origin: `backformation:${chosen.meaning}`,
   });
-  if (!lang.wordOrigin) lang.wordOrigin = {};
-  lang.wordOrigin[newLemma] = `backformation:${chosen.meaning}`;
+  satSet(lang, "wordOrigin", newLemma, `backformation:${chosen.meaning}`);
   return { newLemma, base: chosen.base, from: chosen.meaning };
 }
 
@@ -493,7 +491,7 @@ export function maybeCliticize(
   for (const m of meanings) {
     const tag = semanticTagOf(m);
     if (!tag) continue;
-    if ((lang.wordOrigin?.[m] ?? "").startsWith("clitic:")) continue;
+    if ((satGet(lang, "wordOrigin", m) ?? "").startsWith("clitic:")) continue;
     const form = lexGet(lang, m)!;
     if (form.length < 2 || form.length > 5) continue;
     const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
@@ -518,7 +516,7 @@ export function maybeCliticize(
     affixForm,
     lastTransitionGen: 0,
   };
-  lang.wordOrigin[chosen.m] = `clitic:${chosen.tag}`;
+  satSet(lang, "wordOrigin", chosen.m, `clitic:${chosen.tag}`);
   satSet(lang, "wordFrequencyHints", chosen.m, 0.45);
   return {
     meaning: chosen.m,

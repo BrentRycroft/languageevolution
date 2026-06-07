@@ -4,6 +4,7 @@ import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { lexSet, lexGet, lexKeys } from "../lexicon/access";
+import { satGet } from "../lexicon/satellites";
 import type { Language } from "../types";
 
 /**
@@ -77,7 +78,7 @@ describe("morphology evolution", () => {
     // to a bound affix, so no new paradigm appears on this transition.
     expect(lang.grammaticalizationStage?.[m]?.stage).toBe(1);
     expect(Object.keys(lang.morphology.paradigms).length).toBe(paradigmsBefore);
-    expect(lang.wordOrigin[m]).toMatch(/^clitic:/);
+    expect(satGet(lang, "wordOrigin", m)).toMatch(/^clitic:/);
     expect(lang.grammaticalizationStage?.[m]?.affixForm).toBeDefined();
     // 4c: the free dictionary lemma is INTACT (not slice(0,-1)'d).
     expect(lexGet(lang, m)!.join("")).toBe(before.get(m));

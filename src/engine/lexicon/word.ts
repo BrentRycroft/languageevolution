@@ -1,11 +1,11 @@
 import type { Language, LexemeStore, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
-import { satGet } from "./satellites";
+import { satGet, satEntries } from "./satellites";
 import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { lexGet, lexHas, lexEntries } from "./access";
-import { lexemeIdFor } from "./lexemeIdentity";
+import { lexemeIdFor, meaningForLexemeId } from "./lexemeIdentity";
 import { lexPoint } from "../semantics/meaningPoint";
 import { CONCEPT_IDS } from "./concepts";
 
@@ -706,8 +706,8 @@ export function syncWordsFromLexicon(
       register: lang.registerOf?.[meaning],
       bornGeneration,
       origin:
-        typeof lang.wordOrigin?.[meaning] === "string"
-          ? (lang.wordOrigin![meaning] as string)
+        typeof satGet(lang, "wordOrigin", meaning) === "string"
+          ? satGet(lang, "wordOrigin", meaning)
           : undefined,
     }));
     // Lane D (morphology encoding): close the seed-time morphStructure gap
@@ -893,14 +893,13 @@ function originChainConnects(
   b: Meaning,
   maxHops: number,
 ): boolean {
-  const chain = lang.wordOriginChain;
-  if (!chain) return false;
+  if (!lang.wordOriginChain) return false;
   const visited = new Set<Meaning>([a]);
   let frontier: Meaning[] = [a];
   for (let depth = 0; depth < maxHops && frontier.length > 0; depth++) {
     const next: Meaning[] = [];
     for (const m of frontier) {
-      const entry = chain[m];
+      const entry = satGet(lang, "wordOriginChain", m);
       if (entry) {
         if (entry.from && !visited.has(entry.from)) {
           if (entry.from === b) return true;
@@ -914,7 +913,8 @@ function originChainConnects(
         }
       }
       // Reverse: any other meaning that lists `m` as parent counts too.
-      for (const [child, e] of Object.entries(chain)) {
+      for (const [childId, e] of satEntries(lang, "wordOriginChain")) {
+        const child = meaningForLexemeId(lang, childId) ?? childId;
         if (visited.has(child)) continue;
         if (e?.from === m || e?.via === m) {
           if (child === b) return true;

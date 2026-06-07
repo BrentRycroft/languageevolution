@@ -7,6 +7,7 @@ import { ListSearch } from "./ListSearch";
 import { CopyButton } from "./CopyButton";
 import { downloadAs, toCsv, slugForFile } from "./exportUtils";
 import { lexKeys } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * Cognate-set explorer.
@@ -148,7 +149,7 @@ export function CognateExplorer() {
         <tbody>
           {cognates.map((c) => {
             const lang = tree[c.languageId]?.language;
-            const chain = lang?.wordOriginChain?.[meaning.trim().toLowerCase()];
+            const chain = lang ? satGet(lang, "wordOriginChain", meaning.trim().toLowerCase()) : undefined;
             const alts = lang?.altForms?.[meaning.trim().toLowerCase()] ?? [];
             return (
               <tr key={c.languageId} style={{ opacity: c.extinct ? 0.5 : 1 }}>

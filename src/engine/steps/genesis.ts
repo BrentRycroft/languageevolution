@@ -186,7 +186,7 @@ export function stepGenesis(
           if (!commit.committed) continue;
           lexSet(lang, derived.meaning, derived.form);
           satSet(lang, "wordFrequencyHints", derived.meaning, 0.4);
-          lang.wordOrigin[derived.meaning] = "derivation";
+          satSet(lang, "wordOrigin", derived.meaning, "derivation");
           recordDerivationChain(lang, derived);
           // Record the derived word's structure so recordedParts() sees coined
           // derivations, not just seed ones (concept-native structure checks).
@@ -329,9 +329,9 @@ export function stepGenesis(
     }
     lexSet(lang, outcome.meaning, outcome.form);
     satSet(lang, "wordFrequencyHints", outcome.meaning, 0.4);
-    lang.wordOrigin[outcome.meaning] = isReplacement
+    satSet(lang, "wordOrigin", outcome.meaning, isReplacement
       ? `lexical-replacement:${outcome.originTag}`
-      : outcome.originTag;
+      : outcome.originTag);
     // Record structure for coined compounds (mechanisms that report ≥2
     // constituents) so recordedParts() covers coinage, not just seed compounds.
     if (
@@ -371,20 +371,19 @@ export function stepGenesis(
     // field upstream via recordDerivationChain; the MECHANISMS
     // path was previously dropping all etymology.
     if (!isReplacement && outcome.sources) {
-      if (!lang.wordOriginChain) lang.wordOriginChain = {};
       const s = outcome.sources;
       if (s.partMeanings && s.partMeanings.length >= 2) {
-        lang.wordOriginChain[outcome.meaning] = {
+        satSet(lang, "wordOriginChain", outcome.meaning, {
           tag: outcome.originTag,
           from: s.partMeanings[0]!,
           via: s.partMeanings[1]!,
-        };
+        });
       } else if (s.donorLangId && s.donorMeaning) {
-        lang.wordOriginChain[outcome.meaning] = {
+        satSet(lang, "wordOriginChain", outcome.meaning, {
           tag: outcome.originTag,
           from: s.donorMeaning,
           via: `←${s.donorLangId}`,
-        };
+        });
       }
     }
     // Phase 47 T11: opaque coinage. When the meaning is marked
@@ -396,8 +395,7 @@ export function stepGenesis(
     if (!isReplacement) {
       const concept = CONCEPTS[outcome.meaning];
       if (concept?.canBeOpaqueCoined && rng.chance(0.15)) {
-        if (!lang.wordOriginChain) lang.wordOriginChain = {};
-        lang.wordOriginChain[outcome.meaning] = { tag: "opaque-coined" };
+        satSet(lang, "wordOriginChain", outcome.meaning, { tag: "opaque-coined" });
       }
     }
     pushEvent(lang, {

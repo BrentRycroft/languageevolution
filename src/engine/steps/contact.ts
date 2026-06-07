@@ -7,6 +7,7 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { getWorldMap } from "../geo/map";
 import { bumpFrequency } from "../lexicon/frequencyDynamics";
+import { satSet } from "../lexicon/satellites";
 import { computeBilingualLinks } from "../contact/bilingual";
 import { isFeatureActive } from "../modules/legacyGate";
 
@@ -65,7 +66,7 @@ export function stepContact(
     // (origin persisted while freq was dropped → "coined word without
     // a frequency hint").
     if (!loan.addedAsSynonym) {
-      lang.wordOrigin[loan.meaning] = `borrow:${loan.donor}`;
+      satSet(lang, "wordOrigin", loan.meaning, `borrow:${loan.donor}`);
     }
     bumpFrequency(lang, loan.meaning, 0.1);
     if (!lang.recentLoanGens) lang.recentLoanGens = [];

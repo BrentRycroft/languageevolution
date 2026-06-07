@@ -78,7 +78,6 @@ export function tryUniverbation(
   // Set a high frequency hint so the new word isn't immediately
   // discarded by erosion.
   satSet(lang, "wordFrequencyHints", chosen.meaning, 0.8);
-  if (!lang.wordOrigin) lang.wordOrigin = {};
-  lang.wordOrigin[chosen.meaning] = "univerbation";
+  satSet(lang, "wordOrigin", chosen.meaning, "univerbation");
   return { meaning: chosen.meaning, parts: chosen.parts };
 }

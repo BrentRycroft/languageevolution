@@ -12,6 +12,7 @@ import {
   type SentenceTranslation,
 } from "../engine/translator/sentence";
 import { findCognates, traceEtymology } from "../engine/translator/cognates";
+import { satGet } from "../engine/lexicon/satellites";
 import { glossToEnglish } from "../engine/translator/glossToEnglish";
 import { formatForm } from "../engine/phonology/display";
 import type { MorphCategory } from "../engine/morphology/types";
@@ -392,15 +393,15 @@ export function Translator() {
               </div>
             );
           })()}
-          {lang && lang.wordOriginChain?.[text.trim().toLowerCase()] && (
+          {lang && satGet(lang, "wordOriginChain", text.trim().toLowerCase()) && (
             <div
               style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}
               title="Derivation chain"
             >
               ←{" "}
-              {lang.wordOriginChain[text.trim().toLowerCase()]?.from}{" "}
+              {satGet(lang, "wordOriginChain", text.trim().toLowerCase())?.from}{" "}
               {"+ "}
-              {lang.wordOriginChain[text.trim().toLowerCase()]?.via}
+              {satGet(lang, "wordOriginChain", text.trim().toLowerCase())?.via}
             </div>
           )}
         </div>

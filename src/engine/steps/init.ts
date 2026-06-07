@@ -6,7 +6,7 @@ import type {
   SimulationConfig,
   SimulationState,
 } from "../types";
-import { satSet, satHas } from "../lexicon/satellites";
+import { satGet, satSet, satHas } from "../lexicon/satellites";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
@@ -114,7 +114,7 @@ function seedClosedClassLexicon(lang: Language): void {
     const form = closedClassForm(lang, lemma);
     if (!form || form.length === 0) continue;
     lexSet(lang, lemma, form);
-    if (!lang.wordOrigin[lemma]) lang.wordOrigin[lemma] = "closed-class";
+    if (!satGet(lang, "wordOrigin", lemma)) satSet(lang, "wordOrigin", lemma, "closed-class");
     if (!satHas(lang, "wordFrequencyHints", lemma)) {
       satSet(lang, "wordFrequencyHints", lemma, 0.95);
     }

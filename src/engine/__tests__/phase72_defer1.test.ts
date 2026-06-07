@@ -55,7 +55,7 @@ describe("Defer-1b (T72f) — registry-driven inheritance safety net", () => {
     const child = {
       ...lang,
       // Synthetic child with one field already populated and another absent.
-      wordOrigin: { "x": "child-only" },
+      wordOrigin: { "x": "child-only" } as Record<string, string>,
       // wordFrequencyHints intentionally absent on the child to verify
       // registry fills it from parent.
     } as typeof lang;
@@ -65,7 +65,7 @@ describe("Defer-1b (T72f) — registry-driven inheritance safety net", () => {
     expect(child.wordFrequencyHints).toBeDefined();
     // wordOrigin retained the child's pre-existing value (safety net,
     // not override).
-    expect(child.wordOrigin.x).toBe("child-only");
+    expect((child.wordOrigin as Record<string, string>).x).toBe("child-only");
     expect(cloned).toBeGreaterThan(0);
   });
 });
