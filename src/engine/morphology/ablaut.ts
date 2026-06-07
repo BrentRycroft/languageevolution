@@ -1,5 +1,5 @@
 import type { Language, Meaning } from "../types";
-import { satGet } from "../lexicon/satellites";
+import { satGet, satSet, satKeys, satDelete } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { isVowel } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
@@ -140,7 +140,7 @@ export function proposeAblautEmergence(
   const candidates: Meaning[] = [];
   for (const m of lexKeys(lang)) {
     if (posOf(m) !== "verb") continue;
-    if (lang.ablautClassAssignment?.[m]) continue;
+    if (satGet(lang, "ablautClassAssignment", m)) continue;
     const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.4;
     if (freq < 0.7) continue; // strong verbs are typically high-freq
     candidates.push(m);
@@ -163,8 +163,7 @@ export function proposeAblautEmergence(
     past.ablautMap[src] = dst;
     classId = Object.keys(past.ablautMap).length;
   }
-  if (!lang.ablautClassAssignment) lang.ablautClassAssignment = {};
-  lang.ablautClassAssignment[meaning] = classId;
+  satSet(lang, "ablautClassAssignment", meaning, classId);
 
   pushEvent(lang, {
     generation,
@@ -197,11 +196,11 @@ export function decayAblautClasses(
   // If any tagged verbs no longer have a matching ablaut entry,
   // un-tag them.
   if (lang.ablautClassAssignment) {
-    for (const m of Object.keys(lang.ablautClassAssignment)) {
-      const f = lexGet(lang, m);
+    for (const id of satKeys(lang, "ablautClassAssignment")) {
+      const f = lang.lexemes[id]?.form;
       if (!f) continue;
       const hasMatch = f.some((p) => past.ablautMap![stripTone(p)] !== undefined);
-      if (!hasMatch) delete lang.ablautClassAssignment[m];
+      if (!hasMatch) satDelete(lang, "ablautClassAssignment", id);
     }
   }
   pushEvent(lang, {

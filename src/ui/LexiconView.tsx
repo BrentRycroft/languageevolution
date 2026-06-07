@@ -9,6 +9,7 @@ import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 import { prettyGloss } from "../engine/lexicon/word";
 import { lexGet } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * LexiconView.tsx
@@ -426,7 +427,7 @@ export function LexiconView() {
                       // Phase 68b T6: ablaut class glyph (Phase 64 T2).
                       // Marks strong verbs with vowel-mutation paradigm.
                       const proto = state.tree[state.rootId]?.language;
-                      const ab = proto?.ablautClassAssignment?.[meaning];
+                      const ab = proto ? satGet(proto, "ablautClassAssignment", meaning) : undefined;
                       if (!ab) return null;
                       return (
                         <span
