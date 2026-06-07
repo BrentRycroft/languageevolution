@@ -30,7 +30,7 @@ import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
 import { lexGet, lexSet, lexKeys } from "../lexicon/access";
-import { seededFormViewOf, mergeFormsIntoStore } from "../lexicon/store";
+import { formViewOf, mergeFormsIntoStore } from "../lexicon/store";
 
 /**
  * phonology.ts
@@ -109,13 +109,16 @@ export function stepPhonology(
   const literary = literaryStabilityFor(lang);
   lang.literaryStability = literary;
   const literaryBrake = 1 - 0.6 * literary;
-  // Store unification (S1): the sound-change ENGINE stays form-only. Project a SEEDED-only form-view
-  // out of the record store, run sound change on it, then `mergeFormsIntoStore` the result back into
-  // the records (preserving each record's point + gloss). `seededFormViewOf` is the single sweep gate
-  // — keyless words are NOT swept until task 4 flips this to `formViewOf`. In S1 task 2 the store holds
-  // only seeded records, so this view's key set + order is byte-identical to the pre-unification
-  // `lang.lexicon`.
-  const before = seededFormViewOf(lang.lexemes);
+  // Store unification (S1): the sound-change ENGINE stays form-only. Project a form-view out of the
+  // record store, run sound change on it, then `mergeFormsIntoStore` the result back into the records
+  // (preserving each record's point + gloss). `formViewOf` is the single sweep gate — task 4 widened it
+  // from `seededFormViewOf` to ALL records, so KEYLESS (gloss-less) words are now first-class: they
+  // evolve phonologically like any word. apply.ts resolves a keyless key's gloss emergently
+  // (`glossResolverForSweep`) for sensitivity/legality; `orderedLexemeIds` sorts keyless after the
+  // seeded set (by id), so seeded words' draw positions — and their content-addressed sub-rng — are
+  // unchanged. Seeded SOUND trajectories stay byte-identical; the gen-N divergence is the deliberate
+  // re-bake (keyless now participate in the shared cross-word stream).
+  const before = formViewOf(lang.lexemes);
   const changes = changesForLang(lang);
   // Phase 69a T1: hoist the sortByPriority computation. Pre-fix
   // applyChangesToLexicon ran sortByPriority(changes) once per call

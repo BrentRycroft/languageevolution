@@ -329,12 +329,25 @@ const GEN0: Record<string, string> = {
 // keyless (gloss-less) records, so the shift is purely the trajectory perturbation above, not the keyless words
 // themselves. Byte-identity-vs-old-baseline waived by the user; reproducibility (same config →
 // identical output) preserved — hashes captured twice on consecutive runs, identical.
+// RE-BAKED 2026-06-06 (storage step 5 S1 task 4 — keyless words are FIRST-CLASS in the sound-change
+// sweep). The phonology step now projects ALL records (formViewOf, not seededFormViewOf), and the
+// regular exceptionless sweep (applyOneRegularChange) applies the picked rule to keyless gloss-less
+// records too (emergent gloss for legality). Keyless words therefore EVOLVE phonologically like any
+// word. Only ONE preset's gen-30 signature moves — tokipona (581f39fd → a8166cb8): it is the only
+// preset whose 30-gen run both coins keyless words AND has them match a regular-sweep rule, so the
+// keyless application consumes extra SHARED-rng draws (appended AFTER all seeded draws), shifting the
+// downstream stream. The other five presets are byte-identical: their keyless words (if any) never
+// matched a swept rule within 30 gens, so no extra draw fired. Seeded words' SOUND trajectories stay
+// insulated (content-addressed sub-rng; keyless sort last) and the signature excludes keyless records,
+// so the move is purely the downstream shared-rng perturbation. GEN0 unchanged (no keyless at gen 0).
+// Byte-identity-vs-old waived by the user; reproducibility preserved — a8166cb8 captured twice on
+// consecutive runs, identical.
 const GENN: Record<string, string> = {
   pie: "96539fb4",
   bantu: "9cc04867",
   romance: "622cb632",
   germanic: "42b92e41",
-  tokipona: "581f39fd",
+  tokipona: "a8166cb8",
   english: "db425ca5",
 };
 

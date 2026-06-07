@@ -24,7 +24,7 @@ import { posOf } from "../lexicon/pos";
 import { otFit } from "./ot";
 import { wouldCreateUnrelatedHomonym } from "../lexicon/homonyms";
 import { markednessDelta } from "./markedness";
-import { orderedLexemeIds, buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
+import { orderedLexemeIds, glossResolverForSweep } from "../lexicon/lexemeIdentity";
 import type { LexiconState } from "../domains";
 import type { Language } from "../types";
 
@@ -900,7 +900,7 @@ export function applyChangesToLexicon(
   const out: Lexicon = {};
   // Build the LexemeId→gloss resolver ONCE per call (fresh, O(n), never
   // stale); resolve each word's gloss with an O(1) Map.get in the hot loop.
-  const glossByCid = lang ? buildLexemeIdToGloss(lang) : undefined;
+  const glossByCid = lang ? glossResolverForSweep(lang) : undefined;
   const glossOf = (key: string): Meaning =>
     glossByCid ? glossByCid.get(key) ?? (key as Meaning) : (key as Meaning);
   const keys: string[] = lang

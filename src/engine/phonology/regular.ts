@@ -9,7 +9,7 @@ import {
   PERMISSIVE_PROFILE,
 } from "./phonotactics";
 import { lexGet, lexKeys, lexDelete } from "../lexicon/access";
-import { lexemeIdFor } from "../lexicon/lexemeIdentity";
+import { lexemeIdFor, keylessGloss } from "../lexicon/lexemeIdentity";
 import { setRecordForm } from "../lexicon/store";
 
 /**
@@ -75,6 +75,35 @@ export function applyOneRegularChange(
       continue;
     }
     next[m] = form;
+  }
+  // S1 task 4: keyless words are first-class in the regular (exceptionless) sweep too. Apply the SAME
+  // picked rule to every gloss-less record, using its EMERGENT gloss (`keylessGloss`) for legality.
+  // These draws come AFTER all seeded draws above, so seeded outcomes stay byte-identical; the extra
+  // shared-rng advance is the deliberate re-bake. Forms are written in place; a keyless word that
+  // erodes to empty is dropped.
+  for (const id of Object.keys(lang.lexemes)) {
+    const rec = lang.lexemes[id]!;
+    if (rec.gloss !== undefined) continue; // seeded handled above
+    const km = keylessGloss(rec);
+    let form = rec.form;
+    for (let safety = 0; safety < MAX_PER_MEANING_PASSES; safety++) {
+      if (picked.probabilityFor(form) <= 0) break;
+      const after = picked.apply(form, rng);
+      if (after === form || after.join("") === form.join("")) break;
+      if (!isFormLegal(km, after as WordForm)) break;
+      let accepted = after as WordForm;
+      if (introducesViolation(form, accepted, profile)) {
+        const repaired = repairToProfile(accepted, profile, epentheticVowel);
+        if (!violatesProfile(repaired, profile) && isFormLegal(km, repaired)) {
+          accepted = repaired;
+        } else {
+          break;
+        }
+      }
+      form = accepted;
+    }
+    if (form.length === 0) delete lang.lexemes[id];
+    else rec.form = form;
   }
   // `next` was built gloss-keyed (preserving the per-meaning RNG draw order
   // above). Store unification (S1): write each survivor's new form into its

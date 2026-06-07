@@ -94,6 +94,23 @@ export function buildLexemeIdToGloss(lang: LexiconState): Map<string, Meaning> {
 }
 
 /**
+ * ENGINE-SIDE gloss resolver for the sound-change sweep (S1 task 4). Seeded ids → their stored gloss;
+ * KEYLESS (gloss-less) ids → their EMERGENT gloss `glossOf(point)`. Used ONLY by
+ * `applyChangesToLexicon` (to drive `soundChangeSensitivity` / `isFormLegal` for keyless words now
+ * that they are first-class in the sweep). The seam's `buildLexemeIdToGloss` stays seeded-only, so
+ * gloss iteration (`lexKeys` et al.) keeps EXCLUDING keyless — only the sweep is widened. Built fresh
+ * per call (O(n)); the keyless extension never overrides a seeded id (only fills ids the seeded map
+ * lacks).
+ */
+export function glossResolverForSweep(lang: LexiconState): Map<string, Meaning> {
+  const g = buildLexemeIdToGloss(lang);
+  for (const id of Object.keys(lang.lexemes)) {
+    if (!g.has(id)) g.set(id, glossOf(Int32Array.from(lang.lexemes[id]!.point)));
+  }
+  return g;
+}
+
+/**
  * The LexemeId store keys ordered by their GLOSS — the canonical RNG-draw
  * order, expressed as the physical keys the hot path uses to index the store.
  * `orderedLexemeIds(lexicon, lang)[i]` is the LexemeId whose gloss is at
