@@ -347,8 +347,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       if (rootLang.compounds?.[meaning]) continue; // a real compound/derivation takes precedence
       if (!lexHas(rootLang, meaning)) continue; // need an existing word to attribute ancestry to
       if (!def.parts.every((p) => lexHas(rootLang, p))) continue; // parts must be lexicalised
-      if (!rootLang.etymology) rootLang.etymology = {};
-      rootLang.etymology[meaning] = def.parts.slice();
+      satSet(rootLang, "etymology", meaning, def.parts.slice());
     }
   }
   // Phase 36 Tranche 36f: register bound morphemes so they're
