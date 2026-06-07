@@ -355,7 +355,7 @@ export interface Language {
    * simulation subsystem (drift, coinage, derivation, taboo, obsolescence) so recording it is
    * determinism-neutral — contrast `compounds`, whose presence changes those subsystems' behaviour.
    */
-  etymology?: Record<Meaning, Meaning[]>;
+  etymology?: Record<LexemeId, Meaning[]>;
   /**
    * Phase 41a: per-language active-module set. Modules in this set
    * have their `step` and `realise` hooks called; modules outside
