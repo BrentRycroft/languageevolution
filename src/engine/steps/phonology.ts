@@ -274,7 +274,7 @@ export function stepPhonology(
     rateMultiplier: mult * strataMult,
     frequencyHints: glossKeyedView(lang, "wordFrequencyHints"),
     agesSinceChange: ages,
-    registerOf: lang.registerOf,
+    registerOf: glossKeyedView(lang, "registerOf"),
     stressPattern: lang.stressPattern,
     lexicalStress: lang.lexicalStress,
     seedLengths,
@@ -393,7 +393,7 @@ export function stepPhonology(
     satDelete(lang, "lastChangeGeneration", m);
     delete lang.wordOrigin[m];
     delete lang.localNeighbors[m];
-    if (lang.registerOf) delete lang.registerOf[m];
+    if (lang.registerOf) satDelete(lang, "registerOf", m);
     if (lang.variants) delete lang.variants[m];
   }
   const evolveForm = (form: WordForm): WordForm => {

@@ -205,7 +205,7 @@ export function tryBorrow(
     }
   }
   if (!recipient.registerOf) recipient.registerOf = {};
-  if (!alreadyHas) recipient.registerOf[meaning] = prestige;
+  if (!alreadyHas) satSet(recipient, "registerOf", meaning, prestige);
   satSet(recipient, "wordFrequencyHints", meaning, Math.max(
     satGet(recipient, "wordFrequencyHints", meaning) ?? 0,
     prestige === "high" ? 0.55 : 0.45,

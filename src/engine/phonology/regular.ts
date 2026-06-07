@@ -121,7 +121,7 @@ export function applyOneRegularChange(
     satDelete(lang, "lastChangeGeneration", m);
     delete lang.wordOrigin[m];
     delete lang.localNeighbors[m];
-    if (lang.registerOf) delete lang.registerOf[m];
+    if (lang.registerOf) satDelete(lang, "registerOf", m);
   }
   return picked.id;
 }

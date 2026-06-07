@@ -428,7 +428,7 @@ export interface Language {
    */
   vowelShiftPressure?: Record<string, number>;
   lexicalStress?: Record<string, number>;
-  registerOf?: Record<string, "high" | "low">;
+  registerOf?: Record<LexemeId, "high" | "low">;
   /**
    * Phase 72d T2: meaning-merger pathway tracker. When a meaning is
    * deleted via recarving (e.g., "water" merges into "liquid"),
