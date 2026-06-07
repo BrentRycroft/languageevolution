@@ -1,5 +1,6 @@
 import type { LexemeRecord, LexemeStore } from "../primitives";
 import type { WordForm } from "../types";
+import { lexPoint } from "../semantics/meaningPoint";
 
 /**
  * store.ts — low-level primitives for the canonical lexeme record store (`lang.lexemes`).
@@ -42,10 +43,39 @@ export function seededFormViewOf(store: LexemeStore): Record<string, WordForm> {
 }
 
 /** The KEYLESS records of the store — point-native lexemes with no concept/gloss key (their label is
- *  the emergent nearest-anchor gloss). Excluded from the seam (`lexKeys` et al.) and, until task 4,
- *  from the sound-change sweep. */
+ *  the emergent nearest-anchor gloss). Excluded from the seam (`lexKeys` et al.). */
 export function keylessRecords(store: LexemeStore): LexemeRecord[] {
   return Object.keys(store).filter((id) => store[id]!.gloss === undefined).map((id) => store[id]!);
+}
+
+/**
+ * Back-compat load shim (store unification S1 task 5). Converts an OLD-shape language — a form-only
+ * `lexicon: Record<LexemeId, WordForm>` (+ gloss→id `lexemeIds`) and a separate
+ * `keylessLexemes: Record<id, {form, point}>` — into the canonical `lang.lexemes` record store, then
+ * drops the legacy fields. No-op for new-shape saves (`lang.lexemes` already present). Seeded records
+ * materialize their point from `lexPoint(gloss)` (the same value `rekeyLexiconToLexemeIds` bakes at
+ * birth); keyless records carry over their stored point and stay gloss-less.
+ */
+export function migrateLexemeStore(lang: {
+  lexemes?: LexemeStore;
+  lexemeIds?: Record<string, string>;
+  lexicon?: Record<string, WordForm>;
+  keylessLexemes?: Record<string, { form: WordForm; point: number[] }>;
+}): void {
+  if (lang.lexemes) return;
+  const store: LexemeStore = {};
+  const idToGloss = new Map<string, string>();
+  for (const gloss of Object.keys(lang.lexemeIds ?? {})) idToGloss.set(lang.lexemeIds![gloss]!, gloss);
+  for (const id of Object.keys(lang.lexicon ?? {})) {
+    const gloss = idToGloss.get(id);
+    store[id] = { form: lang.lexicon![id]!, point: Array.from(lexPoint(gloss ?? id)), gloss };
+  }
+  for (const id of Object.keys(lang.keylessLexemes ?? {})) {
+    store[id] = { form: lang.keylessLexemes![id]!.form, point: lang.keylessLexemes![id]!.point };
+  }
+  lang.lexemes = store;
+  delete lang.lexicon;
+  delete lang.keylessLexemes;
 }
 
 /**

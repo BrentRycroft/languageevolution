@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  recordForm, setRecordForm, formViewOf, seededFormViewOf, mergeFormsIntoStore,
+  recordForm, setRecordForm, formViewOf, seededFormViewOf, mergeFormsIntoStore, migrateLexemeStore,
 } from "../lexicon/store";
 import type { LexemeStore } from "../primitives";
 import { createSimulation } from "../simulation";
@@ -64,5 +64,30 @@ describe("lang.lexemes is the canonical store after birth (S1 task 2)", () => {
 
   it("the legacy `lexicon` field is gone", () => {
     expect((root() as unknown as { lexicon?: unknown }).lexicon).toBeUndefined();
+  });
+});
+
+describe("migrateLexemeStore — old-save back-compat (S1 task 5)", () => {
+  it("converts an old-shape language (lexicon + keylessLexemes) into lang.lexemes", () => {
+    const old = {
+      lexemeIds: { water: "id-w" },
+      lexicon: { "id-w": ["w", "a"] },
+      keylessLexemes: { "id-k": { form: ["z"], point: [1, 2] } },
+    };
+    migrateLexemeStore(old);
+    const lang = old as unknown as { lexemes: LexemeStore; lexicon?: unknown; keylessLexemes?: unknown };
+    expect(lang.lexemes["id-w"]).toEqual({ form: ["w", "a"], point: expect.any(Array), gloss: "water" });
+    expect(lang.lexemes["id-w"]!.point).toEqual(Array.from(lexPoint("water"))); // materialized
+    expect(lang.lexemes["id-k"]).toEqual({ form: ["z"], point: [1, 2] }); // keyless, no gloss
+    expect(lang.lexemes["id-k"]!.gloss).toBeUndefined();
+    expect(lang.lexicon).toBeUndefined();
+    expect(lang.keylessLexemes).toBeUndefined();
+  });
+
+  it("is a no-op when lang.lexemes already exists (new-shape save)", () => {
+    const fresh = { lexemes: { "id-1": { form: ["q"], point: [3], gloss: "x" } } } as { lexemes: LexemeStore };
+    const sameRef = fresh.lexemes;
+    migrateLexemeStore(fresh);
+    expect(fresh.lexemes).toBe(sameRef); // untouched
   });
 });

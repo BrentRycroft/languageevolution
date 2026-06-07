@@ -39,6 +39,7 @@ import { timeStep } from "./modules/profile";
 import "./modules";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { rebuildFormKeyIndex } from "./lexicon/word";
+import { migrateLexemeStore } from "./lexicon/store";
 import { seedTierTwoOrthography } from "./phonology/orthography";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
@@ -497,6 +498,10 @@ export function createSimulation(
       for (const id of Object.keys(cloneTree)) {
         const lang = cloneTree[id]?.language;
         if (!lang) continue;
+        // S1 task 5: convert an old-shape save (form-only `lexicon` + separate `keylessLexemes`) into
+        // the canonical `lang.lexemes` record store before anything reads it via the seam. No-op for
+        // new saves. Must run before rebuildFormKeyIndex (which reads forms through lexGet).
+        migrateLexemeStore(lang);
         if (lang.words) rebuildFormKeyIndex(lang);
         if (lang.activeModules && !(lang.activeModules instanceof Set)) {
           const arr = Array.isArray(lang.activeModules)

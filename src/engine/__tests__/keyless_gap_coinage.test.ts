@@ -6,6 +6,11 @@ import { presetEnglish } from "../presets/english";
 import { meaningPointFor } from "../semantics/meaningPoint";
 import { lexKeys } from "../lexicon/access";
 import { keylessRecords } from "../lexicon/store";
+import { stepPhonology } from "../steps/phonology";
+import { coinKeylessLexeme } from "../lexicon/lexemeIdentity";
+import { fromFloats } from "../semantics/vec";
+import { embed } from "../semantics/embeddings";
+import { makeRng } from "../rng";
 import type { Language } from "../types";
 
 function rootLang(): Language {
@@ -99,5 +104,24 @@ describe("coinKeylessForGap — keyless gap-coinage path", () => {
     expect(id1).toBe(id2);
     expect(lang1.lexemes[id1!]!.form).toEqual(lang2.lexemes[id2!]!.form);
     expect(lang1.lexemes[id1!]!.point).toEqual(lang2.lexemes[id2!]!.point);
+  });
+});
+
+describe("keyless words are first-class in the sound-change sweep (S1 task 4 lock)", () => {
+  it("a coined keyless word's form changes under sound change over 30 gens, deterministically", () => {
+    const run = () => {
+      const config = presetEnglish();
+      const sim = createSimulation(config);
+      const lang = sim.getState().tree[sim.getState().rootId]!.language;
+      const id = coinKeylessLexeme(lang, fromFloats(embed("fire")), ["k", "a", "t", "a", "p", "u", "l", "t", "a", "s"]);
+      const before = lang.lexemes[id]!.form.join("");
+      const rng = makeRng("keyless-evolve-lock");
+      for (let g = 1; g <= 30; g++) stepPhonology(lang, config, rng, g);
+      return { before, after: lang.lexemes[id]!.form.join("") };
+    };
+    const a = run();
+    expect(a.after).not.toBe(a.before); // it evolved (was inert before task 4)
+    // determinism: a second identical run yields the identical evolved form
+    expect(run().after).toBe(a.after);
   });
 });
