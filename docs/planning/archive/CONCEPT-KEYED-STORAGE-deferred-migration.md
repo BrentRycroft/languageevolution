@@ -74,8 +74,28 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
     regular exceptionless `applyOneRegularChange` — deliberate GENN re-bake, **tokipona only**
     581f39fd→a8166cb8); T5 `919af66` (old-save `migrateLexemeStore` shim + keyless-evolve lock test).
     GATE each task: tsc 0 + FAST green + RUN_SLOW baseline (GEN0 always byte-identical).
-  - **Sub-projects 2-6 REMAIN:** S2 re-key the 15 per-meaning satellite maps → LexemeId; S3 thread
-    LexemeId through the ~381 seam call sites; S4 point-native `WordSense` identity; S5 intrinsic
+  - **Sub-project 2a (satellite re-key) — DONE (2026-06-07), byte-identical.** The 14 per-meaning
+    satellite maps (`wordFrequencyHints`, `lastChangeGeneration`, `wordOrigin`, `localNeighbors`,
+    `registerOf`, `variants`, `wordOriginChain`, `colexifiedAs`, `inflectionClass`,
+    `nounDeclensionClass`, `ablautClassAssignment`, `grammaticalizationStage`, `suppletion`,
+    `etymology`) are now LexemeId-keyed behind a typed accessor seam. (`meaningPoints` deferred to S4;
+    plan `docs/superpowers/plans/2026-06-07-storage-step5-s2a-satellite-rekey.md` + per-map playbook
+    `docs/superpowers/plans/S2A-PERMAP-PLAYBOOK.md`.) Ledger:
+    T1 `693d7fd` (typed seam `lexicon/satellites.ts`: `satGet/Set/Has/Delete/Keys/Entries` +
+    `glossKeyedView` + `seedKeylessBirthSatellites`); T2 `5e45d05` (registry `keyedBy` discriminator +
+    keyless birth-seed helper); T3 `5e21c6f` (`wordFrequencyHints`); seam hardened **non-minting**
+    `4b5e9fe` (mint-free key resolution + registry purge — the systemic determinism fix that lets a
+    satellite write never advance `conceptIdSeq`); T4–T14 the remaining 13 maps routed via per-task
+    worktree branches `s2a-t4…s2a-t14` (merged); consolidation + 2 production determinism fixes
+    (`registerOf` init-seed re-key, `localNeighbors` gloss-view to `driftOneMeaning`) + all test-fixture
+    re-keys `f927f37`; T15 `cb148a3` (birth-time satellite data for keyless coinages); T16 `7c5c803`
+    (load-time `migrateSatelliteMaps` in `restoreState`, mint-free + idempotent). Determinism: GEN0 +
+    GENN **byte-identical across all 6 presets** (12/12 RUN_SLOW `meaning_layer_baseline`) — no re-bake;
+    FAST suite green (2021 passed). Audit: no direct `lang.<satelliteField>[…]` indexing remains
+    outside the seam.
+  - **Sub-projects 2b-6 REMAIN:** S2b (process-widening) — widen the ~7 lazily-owned processes that
+    still author satellite data by gloss so keyless words participate; S3 thread LexemeId through the
+    ~381 seam call sites; S4 point-native `WordSense` identity (+ `meaningPoints` re-key); S5 intrinsic
     LexemeId RNG order (determinism re-bake); S6 translation via anchor index + persistence.
 
 ## The deferred migration (true keyless point-native store)
