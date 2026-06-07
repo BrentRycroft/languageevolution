@@ -4,6 +4,7 @@ import { harmonizeAffix } from "./harmony";
 import { genderOf } from "./gender";
 import { reduplicate } from "./reduplication";
 import { getInflectionClass, getNounDeclensionClass } from "./inflectionClass";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * Phase 52 T1: morphology-application abstraction.
@@ -74,7 +75,8 @@ export function applyParadigm(
       if (
         paradigm.ablautMap &&
         meaning &&
-        lang?.ablautClassAssignment?.[meaning]
+        lang &&
+        satGet(lang, "ablautClassAssignment", meaning)
       ) {
         return applyAblaut(stem, paradigm.ablautMap);
       }

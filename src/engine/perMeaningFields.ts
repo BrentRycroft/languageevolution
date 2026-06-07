@@ -141,7 +141,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "ablautClassAssignment",
     inherit: "shallow-clone",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Phase 64 T2 ablaut class assignment",
   },
   {

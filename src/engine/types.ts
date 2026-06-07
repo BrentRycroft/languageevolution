@@ -654,7 +654,7 @@ export interface Language {
    * series the language has developed. Read by inflectVerb to decide
    * whether to apply an ablaut paradigm vs the regular tense suffix.
    */
-  ablautClassAssignment?: Record<Meaning, number>;
+  ablautClassAssignment?: Record<LexemeId, number>;
   /**
    * Phase 66 T1: per-meaning grammaticalization stage tracking.
    * Real chains (Latin habere → Romance aux → synthetic perfect →
