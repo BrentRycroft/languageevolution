@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import type { LexemeStore } from "../types";
 import { deleteMeaning } from "../lexicon/mutate";
 import { lexGet, lexSet } from "../lexicon/access";
-import { satGet } from "../lexicon/satellites";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
+import { satGet } from "../lexicon/satellites";
 import type { Language, Phoneme } from "../types";
 
 /**
@@ -31,17 +31,13 @@ function fakeLang(): Language {
     words: [],
   } as unknown as Language;
   rekeyLexiconToLexemeIds(lang);
-  // S2a: satellite maps already flipped to LexemeId keying (wordFrequencyHints,
-  // ablautClassAssignment) must follow the minted ids so purge-by-id finds them.
-  for (const field of ["wordFrequencyHints", "ablautClassAssignment"] as const) {
-    const f = lang[field] as Record<string, number>;
-    for (const g of Object.keys(f)) {
-      const id = lang.lexemeIds?.[g];
-      if (id && id !== g) {
-        f[id] = f[g]!;
-        delete f[g];
-      }
-    }
+  // S2a task 10: grammaticalizationStage is now LexemeId-keyed; the fixture
+  // authors it by gloss, so re-key it after ids are minted (mirrors how the
+  // wordFrequencyHints re-key loop in T3 handles minted fixtures).
+  const _gs = lang.grammaticalizationStage as Record<string, unknown>;
+  for (const _g of Object.keys(_gs)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _gs[_id] = _gs[_g]!; delete _gs[_g]; }
   }
   return lang;
 }
@@ -52,15 +48,15 @@ describe("Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata", () => {
     deleteMeaning(lang, "king");
 
     expect(lexGet(lang, "king")).toBeUndefined();
-    expect(satGet(lang, "wordFrequencyHints", "king")).toBeUndefined();
+    expect((lang.wordFrequencyHints as Record<string, number>)["king"]).toBeUndefined();
     expect(lang.wordOrigin["king"]).toBeUndefined();
     expect(lang.localNeighbors["king"]).toBeUndefined();
 
     // Phase 68a T1: these were leaking pre-fix.
     expect(lang.inflectionClass?.["king"]).toBeUndefined();
     expect(lang.nounDeclensionClass?.["king"]).toBeUndefined();
-    expect(satGet(lang, "ablautClassAssignment", "king")).toBeUndefined();
-    expect(lang.grammaticalizationStage?.["king"]).toBeUndefined();
+    expect(lang.ablautClassAssignment?.["king"]).toBeUndefined();
+    expect(satGet(lang, "grammaticalizationStage", "king")).toBeUndefined();
   });
 
   it("idempotent on a meaning that's already gone", () => {

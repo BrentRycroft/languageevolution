@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { satSet } from "../lexicon/satellites";
+import { satGet, satSet } from "../lexicon/satellites";
 import { lexSet } from "../lexicon/access";
 import { maybeGrammaticalize } from "../morphology/evolve";
 import { makeRng } from "../rng";
@@ -70,7 +70,7 @@ describe("grammaticalization pathways", () => {
     let bound: ReturnType<typeof maybeGrammaticalize> = null;
     for (let i = 0; i < 200 && !bound; i++) {
       const shift = maybeGrammaticalize(lang, rng, 1.0);
-      if (shift?.source && lang.grammaticalizationStage?.[shift.source.meaning]?.stage === 2) {
+      if (shift?.source && satGet(lang, "grammaticalizationStage", shift.source.meaning)?.stage === 2) {
         bound = shift;
       }
     }

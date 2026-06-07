@@ -121,7 +121,7 @@ describe("Lane B #2 — grammaticalisation cline cadence", () => {
         affixForm: ["d", "e"] as Phoneme[],
         lastTransitionGen: 0,
       },
-    };
+    } as typeof lang.grammaticalizationStage;
     return lang;
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { satGet } from "../lexicon/satellites";
+import { satGet, satEntries } from "../lexicon/satellites";
 import {
   maybeGrammaticalize,
   progressGrammaticalizationChain,
@@ -40,7 +40,7 @@ describe("Phase 66 T1 — grammaticalization multi-step chains", () => {
     expect(lexGet(lang, m)).toBeDefined();
     // 4b: it enters the cline at the clitic stage (1) or, if a prior clitic was
     // bound, the bound-affix stage (2) — never deleted or teleported past both.
-    const stage = lang.grammaticalizationStage?.[m]?.stage;
+    const stage = satGet(lang, "grammaticalizationStage", m)?.stage;
     expect(stage === 1 || stage === 2).toBe(true);
     // Frequency was reduced as the lexeme bleaches.
     expect(satGet(lang, "wordFrequencyHints", m)).toBeLessThan(0.7);
@@ -55,23 +55,23 @@ describe("Phase 66 T1 — grammaticalization multi-step chains", () => {
     let m: string | null = null;
     for (let i = 0; i < 400 && !m; i++) {
       maybeGrammaticalize(lang, rng, 1.0);
-      for (const [mm, st] of Object.entries(lang.grammaticalizationStage ?? {})) {
+      for (const [mm, st] of satEntries(lang, "grammaticalizationStage")) {
         if (st?.stage === 2) { m = mm; break; }
       }
     }
     if (!m) return; // no candidate reached the bound-affix stage — skip
-    expect(lang.grammaticalizationStage![m]!.stage).toBe(2);
+    expect(satGet(lang, "grammaticalizationStage", m)!.stage).toBe(2);
 
     // Now advance via progressGrammaticalizationChain (internal 4% gate; retry).
     let advanced = false;
     for (let g = 100; g < 400 && !advanced; g++) {
       progressGrammaticalizationChain(lang, rng, g);
-      const cur = lang.grammaticalizationStage![m]?.stage;
+      const cur = satGet(lang, "grammaticalizationStage", m)?.stage;
       if (cur && cur > 2) advanced = true;
     }
     expect(advanced).toBe(true);
     // Either stage 3 (still in lexicon, affix reduced) or stage 4 (deleted).
-    const stage = lang.grammaticalizationStage![m]?.stage;
+    const stage = satGet(lang, "grammaticalizationStage", m)?.stage;
     expect([3, 4]).toContain(stage);
   });
 

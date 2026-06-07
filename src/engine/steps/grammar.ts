@@ -28,6 +28,7 @@ import { simplificationFactor, realismMultiplier } from "../phonology/rate";
 import { maybeReanalyse } from "../lexicon/reanalysis";
 import { maybeSpawnSynonym, maybeSuppressHomonym, maybeReplacePrimary } from "../lexicon/synonyms";
 import type { Rng } from "../rng";
+import { satGet } from "../lexicon/satellites";
 import { pushEvent } from "./helpers";
 import { activateModule, deactivateModule } from "../modules/registry";
 import { wordOrderModuleId, WORD_ORDER_MODULE_IDS } from "../modules/syntactical";
@@ -216,8 +217,9 @@ export function stepMorphology(
   // Phase 66 T1: stamp the lastTransitionGen on the freshly-promoted
   // stage-2 meaning so the cooldown in progressGrammaticalizationChain
   // works correctly.
-  if (gShift?.source && lang.grammaticalizationStage?.[gShift.source.meaning]) {
-    lang.grammaticalizationStage[gShift.source.meaning]!.lastTransitionGen = generation;
+  if (gShift?.source) {
+    const gStage = satGet(lang, "grammaticalizationStage", gShift.source.meaning);
+    if (gStage) gStage.lastTransitionGen = generation;
   }
   if (gShift) {
     pushEvent(lang, {
