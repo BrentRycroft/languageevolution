@@ -11,6 +11,7 @@ import {
 import { reverseLookupForm, reverseTranslate } from "../translator/reverse";
 import type { Language } from "../types";
 import { lexSet } from "../lexicon/access";
+import { migrateSatelliteMaps } from "../lexicon/store";
 
 /**
  * words_phase21b.test.ts
@@ -57,6 +58,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
       lexSet(lang, g, form);
     }
   }
+  migrateSatelliteMaps(lang);
   return lang;
 }
 
@@ -83,7 +85,7 @@ describe("Phase 21b — disambiguateSense", () => {
       localNeighbors: {
         "bank.financial": ["money", "loan"],
         "bank.river": ["water", "stream"],
-      },
+      } as Record<string, string[]>,
     });
     // Context is finance-y → financial sense wins.
     const pickedFin = disambiguateSense(
@@ -182,7 +184,7 @@ describe("Phase 21b — reverseParseToTokens disambiguates polysemous forms", ()
       localNeighbors: {
         "bank.financial": ["money"],
         "bank.river": ["water"],
-      },
+      } as Record<string, string[]>,
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });
@@ -242,7 +244,7 @@ describe("Phase 21b — reverseTranslate gathers two-pass context", () => {
         "bank.river": ["b", "æ", "ŋ", "k"],
         money: ["m", "ʌ", "n", "i"],
       } as unknown as LexemeStore,
-      localNeighbors: { "bank.financial": ["money"] },
+      localNeighbors: { "bank.financial": ["money"] } as Record<string, string[]>,
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });

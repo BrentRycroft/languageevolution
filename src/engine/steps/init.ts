@@ -245,6 +245,20 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // which all assume lexemeIds is populated. Mints in preset insertion order,
   // so the downstream lexKeys gloss sequence is byte-identical.
   rekeyLexiconToLexemeIds(rootLang);
+  // S2a (registerOf fix): seedRegister built `registerOf` GLOSS-keyed (above);
+  // re-key it to LexemeId now that ids exist, MINT-NEUTRAL — otherwise production
+  // (which reads register by id via the seam / glossKeyedView) sees no seeded
+  // register and the register-gated drift + sound-change rates diverge at GENN.
+  if (rootLang.registerOf) {
+    const rg = rootLang.registerOf as Record<string, "high" | "low">;
+    for (const gloss of Object.keys(rg)) {
+      const id = rootLang.lexemeIds?.[gloss];
+      if (id && id !== gloss) {
+        rg[id] = rg[gloss]!;
+        delete rg[gloss];
+      }
+    }
+  }
   // S2a: seed frequency hints by LexemeId now that ids exist. MINT-NEUTRAL —
   // only seed glosses that already have an id (lexicon members). The pre-flip
   // gloss-keyed spread minted nothing; minting here (via the seam) for a

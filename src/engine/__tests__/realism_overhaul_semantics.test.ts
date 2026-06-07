@@ -4,6 +4,7 @@ import { presetEnglish } from "../presets/english";
 import { makeRng } from "../rng";
 import { classifyShift, driftOneMeaning } from "../semantics/drift";
 import { isClosedClass, posOf } from "../lexicon/pos";
+import { glossKeyedView } from "../lexicon/satellites";
 
 /**
  * realism_overhaul_semantics.test.ts — Lane C of the realism overhaul (#3).
@@ -48,7 +49,10 @@ describe("Lane C #3 — Zipfian frequency-retention (Pagel/Zipf)", () => {
     for (let i = 0; i < 8; i++) sim.step();
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
     // Snapshot frequencies BEFORE driving drift (drift mutates the lexicon).
-    const snap: Record<string, number> = { ...lang.wordFrequencyHints };
+    // S2a: wordFrequencyHints is LexemeId-keyed in storage; this test reasons in
+    // GLOSSES (posOf, and driftOneMeaning's gloss-keyed `from`), so snapshot the
+    // gloss-keyed view rather than the raw id-keyed map.
+    const snap: Record<string, number> = { ...glossKeyedView(lang, "wordFrequencyHints") };
     const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
     // Population baseline = mean frequency of the drift-ELIGIBLE meanings
     // (content words; closed-class never drifts). Comparing against this

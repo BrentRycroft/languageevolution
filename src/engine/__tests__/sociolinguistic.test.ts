@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satGet, satSet } from "../lexicon/satellites";
 import { recordInnovation, stepSocialContagion } from "../lexicon/socialContagion";
 import { computeBilingualLinks } from "../contact/bilingual";
 import { stepLearner } from "../steps/learner";
@@ -65,7 +66,7 @@ describe("agent-based actuation via social contagion", () => {
     // diagnosed and fixed.
     const lang = makeLang({}, { water: ["w", "a", "θ"] });
     recordInnovation(lang, "water", ["w", "a", "t"], ["w", "a", "θ"], 0, "phonology");
-    const variants = lang.variants?.water ?? [];
+    const variants = satGet(lang, "variants", "water") ?? [];
     expect(variants.length).toBe(2);
     const newone = variants.find((v) => v.form.join("") === "waθ");
     expect(newone?.adoptionFraction).toBeGreaterThan(0.8);
@@ -76,13 +77,13 @@ describe("agent-based actuation via social contagion", () => {
   it("majority variant grows logistically (S-curve) toward 1.0", () => {
     const lang = makeLang({}, { water: ["w", "a", "t"] });
     recordInnovation(lang, "water", ["w", "a", "t"], ["w", "a", "θ"], 0, "phonology");
-    const winning = lang.variants!.water!.find((v) => v.form.join("") === "waθ")!;
+    const winning = satGet(lang, "variants", "water")!.find((v) => v.form.join("") === "waθ")!;
     winning.adoptionFraction = 0.65;
-    const losing = lang.variants!.water!.find((v) => v.form.join("") === "wat")!;
+    const losing = satGet(lang, "variants", "water")!.find((v) => v.form.join("") === "wat")!;
     losing.adoptionFraction = 0.35;
     const rng = makeRng("contagion-1");
     for (let i = 0; i < 30; i++) stepSocialContagion(lang, i + 1, rng);
-    const finalWinning = lang.variants?.water?.find((v) => v.form.join("") === "waθ");
+    const finalWinning = satGet(lang, "variants", "water")?.find((v) => v.form.join("") === "waθ");
     if (finalWinning) {
       expect(finalWinning.adoptionFraction ?? 0).toBeGreaterThan(0.85);
     } else {
@@ -92,11 +93,10 @@ describe("agent-based actuation via social contagion", () => {
 
   it("innovation crossing 50% triggers actuation event", () => {
     const lang = makeLang({}, { water: ["w", "a", "t"] });
-    if (!lang.variants) lang.variants = {};
-    lang.variants.water = [
+    satSet(lang, "variants", "water", [
       { form: ["w", "a", "t"], weight: 1, bornGeneration: 0, adoptionFraction: 0.4 },
       { form: ["w", "a", "θ"], weight: 1, bornGeneration: 0, adoptionFraction: 0.6 },
-    ];
+    ]);
     const rng = makeRng("act-1");
     let actuated = false;
     for (let i = 0; i < 30; i++) {

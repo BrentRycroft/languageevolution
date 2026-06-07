@@ -3,7 +3,8 @@ import type { LexemeStore } from "../types";
 import { deleteMeaning } from "../lexicon/mutate";
 import { lexGet, lexSet } from "../lexicon/access";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { satGet } from "../lexicon/satellites";
+import { satGet, satSet } from "../lexicon/satellites";
+import { migrateSatelliteMaps } from "../lexicon/store";
 import type { Language, Phoneme } from "../types";
 
 /**
@@ -34,14 +35,7 @@ function fakeLang(): Language {
   // S2a: the flipped satellite maps (wordFrequencyHints, wordOrigin) are
   // LexemeId-keyed in production, so re-key their gloss-seeded entries to the
   // minted id — otherwise the id-keyed registry purge can't find them.
-  const _id = lang.lexemeIds![m]!;
-  for (const _f of ["wordFrequencyHints", "wordOrigin"] as const) {
-    const _map = lang[_f] as Record<string, unknown>;
-    if (_map && _id !== m && _map[m] !== undefined) {
-      _map[_id] = _map[m]!;
-      delete _map[m];
-    }
-  }
+  migrateSatelliteMaps(lang);
   return lang;
 }
 
@@ -53,13 +47,13 @@ describe("Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata", () => {
     expect(lexGet(lang, "king")).toBeUndefined();
     expect((lang.wordFrequencyHints as Record<string, number>)["king"]).toBeUndefined();
     expect(satGet(lang, "wordOrigin", "king")).toBeUndefined();
-    expect(lang.localNeighbors["king"]).toBeUndefined();
+    expect(satGet(lang, "localNeighbors", "king")).toBeUndefined();
 
     // Phase 68a T1: these were leaking pre-fix.
-    expect(lang.inflectionClass?.["king"]).toBeUndefined();
-    expect(lang.nounDeclensionClass?.["king"]).toBeUndefined();
-    expect(lang.ablautClassAssignment?.["king"]).toBeUndefined();
-    expect(lang.grammaticalizationStage?.["king"]).toBeUndefined();
+    expect(satGet(lang, "inflectionClass", "king")).toBeUndefined();
+    expect(satGet(lang, "nounDeclensionClass", "king")).toBeUndefined();
+    expect(satGet(lang, "ablautClassAssignment", "king")).toBeUndefined();
+    expect(satGet(lang, "grammaticalizationStage", "king")).toBeUndefined();
   });
 
   it("idempotent on a meaning that's already gone", () => {
@@ -71,9 +65,9 @@ describe("Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata", () => {
   it("doesn't affect other meanings", () => {
     const lang = fakeLang();
     lexSet(lang, "wolf", ["w", "ʊ", "l", "f"] as Phoneme[]);
-    lang.nounDeclensionClass!["wolf"] = 2;
+    satSet(lang, "nounDeclensionClass", "wolf", 2);
     deleteMeaning(lang, "king");
     expect(lexGet(lang, "wolf")).toBeDefined();
-    expect(lang.nounDeclensionClass?.["wolf"]).toBe(2);
+    expect(satGet(lang, "nounDeclensionClass", "wolf")).toBe(2);
   });
 });

@@ -3,6 +3,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { LexiconView } from "../LexiconView";
 import { useSimStore } from "../../state/store";
 import { lexHas, lexKeys } from "../../engine/lexicon/access";
+import { satSet } from "../../engine/lexicon/satellites";
 
 /**
  * lexicon_badges.test.tsx
@@ -31,10 +32,10 @@ function setNounClass(meaning: string, cls: 1 | 2 | 3 | 4 | 5) {
   const state = store.state;
   const proto = state.tree[state.rootId]?.language;
   if (!proto) return;
-  proto.nounDeclensionClass = {
-    ...(proto.nounDeclensionClass ?? {}),
-    [meaning]: cls,
-  };
+  // S2a: write through the seam so the key resolves the same way LexiconView
+  // reads it (satGet → LexemeId). A raw `proto.nounDeclensionClass[gloss] = cls`
+  // lands on a gloss key the id-keyed read never finds.
+  satSet(proto, "nounDeclensionClass", meaning, cls);
   // Trigger re-render via shallow-clone setState.
   useSimStore.setState({ state: { ...state, tree: { ...state.tree } } });
 }

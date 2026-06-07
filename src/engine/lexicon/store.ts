@@ -78,6 +78,43 @@ export function migrateLexemeStore(lang: {
   delete lang.keylessLexemes;
 }
 
+/** The 14 satellite fields re-keyed gloss→LexemeId in storage step 5 sub-project 2a. */
+const SATELLITE_FIELDS = [
+  "wordFrequencyHints", "lastChangeGeneration", "wordOrigin", "localNeighbors",
+  "registerOf", "variants", "wordOriginChain", "colexifiedAs", "inflectionClass",
+  "nounDeclensionClass", "ablautClassAssignment", "grammaticalizationStage",
+  "suppletion", "etymology",
+] as const;
+
+/**
+ * Back-compat (S2a): re-key OLD-shape gloss-keyed satellite maps to LexemeId. A key already present
+ * in `lang.lexemes` (a record id) is left as-is, so this is a no-op for new saves and idempotent.
+ * MINT-FREE — only a gloss that already has a minted id (in `lang.lexemeIds`) is moved; the value is
+ * carried over verbatim (only the OUTER key changes — value arrays of glosses stay gloss-valued).
+ * Deterministic: glosses processed in sorted order. Also used by test fixture builders that author
+ * satellite data by gloss before id minting.
+ */
+export function migrateSatelliteMaps(lang: {
+  lexemes?: Record<string, unknown>;
+  lexemeIds?: Record<string, string>;
+}): void {
+  const rec = lang as unknown as Record<string, unknown>;
+  for (const field of SATELLITE_FIELDS) {
+    const map = rec[field] as Record<string, unknown> | undefined;
+    if (!map) continue;
+    const glossKeys = Object.keys(map)
+      .filter((k) => !(lang.lexemes && k in lang.lexemes))
+      .sort();
+    for (const gloss of glossKeys) {
+      const id = lang.lexemeIds?.[gloss];
+      if (id && id !== gloss) {
+        map[id] = map[gloss];
+        delete map[gloss];
+      }
+    }
+  }
+}
+
 /**
  * Reconcile the SWEPT set back into the store after sound change. `before` is the form-view that was
  * handed to the engine (the swept records); `after` is what the engine returned. The swept records

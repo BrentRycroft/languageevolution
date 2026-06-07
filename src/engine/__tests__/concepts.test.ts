@@ -13,6 +13,7 @@ import { maybeRecarve } from "../semantics/recarve";
 import { makeRng } from "../rng";
 import type { Language, LanguageTree } from "../types";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
+import { migrateSatelliteMaps } from "../lexicon/store";
 import { lexGet, lexHas } from "../lexicon/access";
 import { satGet } from "../lexicon/satellites";
 
@@ -56,6 +57,10 @@ function testLang(overrides: Partial<Language> = {}): Language {
     ...overrides,
   };
   rekeyLexiconToLexemeIds(lang);
+  // S2a: satellite maps supplied via overrides (e.g. wordFrequencyHints) are
+  // authored gloss-keyed; re-key them to LexemeId so seam reads (recarve's
+  // frequency-based winner pick) resolve, matching production storage.
+  migrateSatelliteMaps(lang);
   return lang;
 }
 

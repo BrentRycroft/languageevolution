@@ -4,7 +4,7 @@ import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { lexSet, lexGet, lexKeys } from "../lexicon/access";
-import { satGet } from "../lexicon/satellites";
+import { satGet, satEntries } from "../lexicon/satellites";
 import type { Language } from "../types";
 
 /**
@@ -76,10 +76,10 @@ describe("morphology evolution", () => {
     const m = shift!.source!.meaning;
     // 4b: a fresh word becomes a CLITIC first (stage 1) — it does NOT teleport
     // to a bound affix, so no new paradigm appears on this transition.
-    expect(lang.grammaticalizationStage?.[m]?.stage).toBe(1);
+    expect(satGet(lang, "grammaticalizationStage", m)?.stage).toBe(1);
     expect(Object.keys(lang.morphology.paradigms).length).toBe(paradigmsBefore);
     expect(satGet(lang, "wordOrigin", m)).toMatch(/^clitic:/);
-    expect(lang.grammaticalizationStage?.[m]?.affixForm).toBeDefined();
+    expect(satGet(lang, "grammaticalizationStage", m)?.affixForm).toBeDefined();
     // 4c: the free dictionary lemma is INTACT (not slice(0,-1)'d).
     expect(lexGet(lang, m)!.join("")).toBe(before.get(m));
   });
@@ -90,16 +90,16 @@ describe("morphology evolution", () => {
     let bound: string | null = null;
     for (let i = 0; i < 50 && !bound; i++) {
       maybeGrammaticalize(lang, rng, 1);
-      for (const [m, st] of Object.entries(lang.grammaticalizationStage ?? {})) {
+      for (const [m, st] of satEntries(lang, "grammaticalizationStage")) {
         if (st?.stage === 2) { bound = m; break; }
       }
     }
     expect(bound).not.toBeNull();
-    const st = lang.grammaticalizationStage![bound!]!;
+    const st = satGet(lang, "grammaticalizationStage", bound!)!;
     const pdm = lang.morphology.paradigms[st.targetCategory!];
     expect(pdm).toBeDefined();
     // The bound affix is the REDUCED allomorph — no longer than the free lemma.
-    expect(pdm!.affix.length).toBeLessThanOrEqual(lexGet(lang, bound!)!.length);
+    expect(pdm!.affix.length).toBeLessThanOrEqual(lang.lexemes[bound!]!.form.length);
   });
 
   it("paradigm merge collapses identical affixes in same position", () => {

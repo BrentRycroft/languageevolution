@@ -592,7 +592,7 @@ function renderVariantSparkline(
   lang: import("../engine/types").Language,
   meaning: string,
 ): import("react").ReactNode {
-  const variants = lang.variants?.[meaning];
+  const variants = satGet(lang, "variants", meaning);
   if (!variants || variants.length === 0) return null;
   // Bin the last 8 generation windows of activity. Use bornGeneration
   // as the sole timestamp; weights act as a stand-in for currentness.
