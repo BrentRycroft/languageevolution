@@ -12,6 +12,8 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 When in doubt, **check for an applicable skill and use it** — don't improvise a process a skill already encodes. In particular: `superpowers:brainstorming` (turn an idea into an approved design *before* coding), `superpowers:writing-plans` (break a design into bite-sized task plans), `superpowers:subagent-driven-development` (execute a plan task-by-task via fresh subagents with two-stage review), `superpowers:dispatching-parallel-agents` (fan out independent work). Default to **subagent-driven execution** for plan work (saved preference). Invoke the skill at the start of the matching activity, not after you've already winged it.
 
+**Subagents work in worktrees when applicable (saved preference).** When dispatching agents to do real edits — especially several in parallel, one per task — give each its own git worktree (`isolation: "worktree"`, or the `superpowers:using-git-worktrees` skill) so they don't collide on disk. Each agent works on an isolated checkout off the current HEAD, commits there, and the controller reconciles by merging the branches sequentially (re-running the determinism baseline on the merged result). Don't dismiss parallel-per-task as unsafe just because tasks share files — worktrees plus a merge step are exactly how that's handled; only fall back to sequential when the merge/interaction cost genuinely outweighs the parallelism. Read-only agents (search/review) don't need a worktree.
+
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
