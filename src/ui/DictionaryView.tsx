@@ -9,6 +9,7 @@ import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import type { Language, Meaning } from "../engine/types";
 import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 import { cosineFixed } from "../engine/semantics/vec";
 import { meaningPointFor } from "../engine/semantics/meaningPoint";
 import { readoutProfile, READOUT_AXES, type ReadoutAxis } from "../engine/semantics/readoutAxes";
@@ -50,7 +51,7 @@ export function DictionaryView() {
         )
       : meanings;
     const data = filtered.map((m) => {
-      const origin = lang.wordOrigin?.[m];
+      const origin = satGet(lang, "wordOrigin", m);
       const isLoan = origin?.startsWith("borrow:");
       const pos = posOf(m);
       // Phase 26b: render verbs in their citation form (infinitive). For

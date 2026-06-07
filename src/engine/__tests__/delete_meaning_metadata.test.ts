@@ -31,13 +31,16 @@ function fakeLang(): Language {
     words: [],
   } as unknown as Language;
   rekeyLexiconToLexemeIds(lang);
-  // S2a task 10: grammaticalizationStage is now LexemeId-keyed; the fixture
-  // authors it by gloss, so re-key it after ids are minted (mirrors how the
-  // wordFrequencyHints re-key loop in T3 handles minted fixtures).
-  const _gs = lang.grammaticalizationStage as Record<string, unknown>;
-  for (const _g of Object.keys(_gs)) {
-    const _id = lang.lexemeIds?.[_g];
-    if (_id && _id !== _g) { _gs[_id] = _gs[_g]!; delete _gs[_g]; }
+  // S2a: the flipped satellite maps (wordFrequencyHints, wordOrigin) are
+  // LexemeId-keyed in production, so re-key their gloss-seeded entries to the
+  // minted id — otherwise the id-keyed registry purge can't find them.
+  const _id = lang.lexemeIds![m]!;
+  for (const _f of ["wordFrequencyHints", "wordOrigin"] as const) {
+    const _map = lang[_f] as Record<string, unknown>;
+    if (_map && _id !== m && _map[m] !== undefined) {
+      _map[_id] = _map[m]!;
+      delete _map[m];
+    }
   }
   return lang;
 }
@@ -49,14 +52,14 @@ describe("Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata", () => {
 
     expect(lexGet(lang, "king")).toBeUndefined();
     expect((lang.wordFrequencyHints as Record<string, number>)["king"]).toBeUndefined();
-    expect(lang.wordOrigin["king"]).toBeUndefined();
+    expect(satGet(lang, "wordOrigin", "king")).toBeUndefined();
     expect(lang.localNeighbors["king"]).toBeUndefined();
 
     // Phase 68a T1: these were leaking pre-fix.
     expect(lang.inflectionClass?.["king"]).toBeUndefined();
     expect(lang.nounDeclensionClass?.["king"]).toBeUndefined();
     expect(lang.ablautClassAssignment?.["king"]).toBeUndefined();
-    expect(satGet(lang, "grammaticalizationStage", "king")).toBeUndefined();
+    expect(lang.grammaticalizationStage?.["king"]).toBeUndefined();
   });
 
   it("idempotent on a meaning that's already gone", () => {

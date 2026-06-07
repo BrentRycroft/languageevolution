@@ -15,6 +15,7 @@ import { derivationFor, DERIVATION_TARGETS } from "../lexicon/derivation_targets
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 import { lexSet } from "../lexicon/access";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * targeted_derivation.test.ts
@@ -232,7 +233,7 @@ describe("attemptTargetedDerivation", () => {
       rootMeaning: "free",
       suffixTag: "-dom",
     });
-    expect(lang.wordOriginChain?.freedom).toEqual({
+    expect(satGet(lang, "wordOriginChain", "freedom")).toEqual({
       tag: "derivation",
       from: "free",
       via: "-dom",

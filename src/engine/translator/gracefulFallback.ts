@@ -14,6 +14,7 @@ import { isFormLegal } from "../phonology/wordShape";
 import { setLexiconForm } from "../lexicon/mutate";
 import { findWordByForm } from "../lexicon/word";
 import { lexHas } from "../lexicon/access";
+import { satSet } from "../lexicon/satellites";
 
 /**
  * Phase 50 T3 + Phase 53 T1 + Phase 58.5: graceful translator
@@ -111,8 +112,7 @@ export function attemptGracefulFallback(
     bornGeneration: generation,
     origin: "translator-coined",
   });
-  if (!lang.wordOrigin) lang.wordOrigin = {};
-  lang.wordOrigin[lemma] = `translator-coined:${best.mechanism}`;
+  satSet(lang, "wordOrigin", lemma, `translator-coined:${best.mechanism}`);
   // Phase 53 T4: structural etymology on the new Word.
   const word = findWordByForm(lang, best.form);
   if (word) {

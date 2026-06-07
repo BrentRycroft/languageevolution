@@ -3,6 +3,7 @@ import type { Rng } from "../../rng";
 import { derivationFor } from "../../lexicon/derivation_targets";
 import { findSuffixByCategory, type DerivationalSuffix } from "../../lexicon/derivation";
 import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
+import { satSet } from "../../lexicon/satellites";
 import { recordedParts } from "../../lexicon/word";
 import { posOf } from "../../lexicon/pos";
 import type { DerivationCategory } from "../../lexicon/derivation";
@@ -65,12 +66,11 @@ export function recordDerivationChain(
   lang: Language,
   result: TargetedDerivationResult,
 ): void {
-  if (!lang.wordOriginChain) lang.wordOriginChain = {};
-  lang.wordOriginChain[result.meaning] = {
+  satSet(lang, "wordOriginChain", result.meaning, {
     tag: "derivation",
     from: result.rootMeaning,
     via: result.suffixTag,
-  };
+  });
 }
 
 /**

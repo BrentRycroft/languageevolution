@@ -8,6 +8,7 @@ import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
 import { lexGet, lexSize, lexSet } from "../lexicon/access";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * taboo_clusters.test.ts
@@ -107,7 +108,7 @@ describe("taboo replacement", () => {
     expect(ev.meaning).toBe("snake");
     expect(lexSize(lang)).toBe(before);
     expect(lexGet(lang, ev.meaning)!.join("")).not.toBe(ev.oldForm);
-    expect(lang.wordOrigin[ev.meaning]).toMatch(/^taboo:/);
+    expect(satGet(lang, "wordOrigin", ev.meaning)).toMatch(/^taboo:/);
   });
 
   it("tagged meanings keep a new form shorter than 10 phonemes", () => {

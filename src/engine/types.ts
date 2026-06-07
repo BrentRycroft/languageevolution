@@ -373,14 +373,14 @@ export interface Language {
   moduleState?: Record<string, unknown>;
   conservatism: number;
   speakers?: number;
-  wordOrigin: Record<Meaning, string>;
+  wordOrigin: Record<LexemeId, string>;
   /**
    * Detailed derivation chain — parallel to wordOrigin (which is a single
    * tag string for backwards-compat). Populated by the targeted-derivation
    * mechanism so the UI can surface "freedom ← free + -dom" etymology
    * info. Optional; old runs and primitives leave it empty.
    */
-  wordOriginChain?: Record<Meaning, {
+  wordOriginChain?: Record<LexemeId, {
     tag: string;
     from?: Meaning;
     via?: string;

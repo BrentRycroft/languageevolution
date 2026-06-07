@@ -188,7 +188,7 @@ function trySplit(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   if (reg !== undefined) {
     satSet(lang, "registerOf", pick.target, reg);
   }
-  lang.wordOrigin[pick.target] = `split:${pick.source}`;
+  satSet(lang, "wordOrigin", pick.target, `split:${pick.source}`);
   stampRecarve(lang, pick.source, pick.target, generation);
   return { kind: "split", source: pick.source, newTarget: pick.target };
 }

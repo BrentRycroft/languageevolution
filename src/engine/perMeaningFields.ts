@@ -84,7 +84,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "wordOrigin",
     inherit: "shallow-clone",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Per-meaning provenance string (Phase 21)",
   },
   {
@@ -112,7 +112,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "wordOriginChain",
     inherit: "shallow-clone",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Etymology trace chain",
   },
   {

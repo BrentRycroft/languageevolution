@@ -241,13 +241,13 @@ describe("B12 (code-review) — inheritMeaningFields fills empty-container child
     cfg.seed = "p72-b12-no-override";
     const sim = createSimulation(cfg);
     const parent = sim.getState().tree["L-0"]!.language;
-    parent.wordOrigin = { water: "parent-origin" };
+    parent.wordOrigin = { water: "parent-origin" } as Record<string, string>;
     const child = {
       ...parent,
-      wordOrigin: { water: "child-already-set" },
+      wordOrigin: { water: "child-already-set" } as Record<string, string>,
     } as Language;
     inheritMeaningFields(parent, child);
-    expect(child.wordOrigin.water).toBe("child-already-set");
+    expect((child.wordOrigin as Record<string, string>).water).toBe("child-already-set");
   });
 
   it("Sets (e.g. boundMorphemes) are treated as populated even when empty", () => {

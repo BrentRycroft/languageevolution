@@ -308,7 +308,7 @@ export function driftOneMeaning(
           rng.chance(0.3)) ||
         PROTECTED_MEANINGS.has(m);
       // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
-      setLexiconForm(lang, target, form, { bornGeneration: 0, origin: lang.wordOrigin[m] ?? "drift" });
+      setLexiconForm(lang, target, form, { bornGeneration: 0, origin: satGet(lang, "wordOrigin", m) ?? "drift" });
       const oldFreq = satGet(lang, "wordFrequencyHints", m);
       if (oldFreq !== undefined) {
         satSet(lang, "wordFrequencyHints", target, oldFreq);
@@ -319,8 +319,8 @@ export function driftOneMeaning(
         satSet(lang, "registerOf", target, oldReg);
       }
       if (!polysemous && oldReg !== undefined) satDelete(lang, "registerOf", m);
-      if (lang.wordOrigin[m] !== undefined && !lang.wordOrigin[target]) {
-        lang.wordOrigin[target] = lang.wordOrigin[m]!;
+      if (satGet(lang, "wordOrigin", m) !== undefined && !satGet(lang, "wordOrigin", target)) {
+        satSet(lang, "wordOrigin", target, satGet(lang, "wordOrigin", m)!);
       }
       const lastChange = satGet(lang, "lastChangeGeneration", m);
       if (lastChange !== undefined && satGet(lang, "lastChangeGeneration", target) === undefined) {

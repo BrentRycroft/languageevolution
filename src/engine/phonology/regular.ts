@@ -119,7 +119,7 @@ export function applyOneRegularChange(
     lexDelete(lang, m);
     satDelete(lang, "wordFrequencyHints", m);
     satDelete(lang, "lastChangeGeneration", m);
-    delete lang.wordOrigin[m];
+    satDelete(lang, "wordOrigin", m);
     satDelete(lang, "localNeighbors", m);
     if (lang.registerOf) satDelete(lang, "registerOf", m);
   }
