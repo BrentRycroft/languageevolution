@@ -63,6 +63,21 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
      Stage it module-by-module, re-baking per module.
   Step 4 is green/additive; step 5 is the deliberate re-baseline. Drive subagent-driven.
 
+- **STEP 5 ("fully retire gloss addressing") IN PROGRESS** — decomposed into 6 sub-projects (spec
+  `docs/superpowers/specs/2026-06-06-storage-step5-store-unification-design.md`, plan
+  `docs/superpowers/plans/2026-06-06-storage-step5-store-unification.md`).
+  - **Sub-project 1 (lexeme store unification) — DONE (2026-06-07), green.** Both `lang.lexicon` and
+    `lang.keylessLexemes` are RETIRED; one canonical `lang.lexemes: Record<LexemeId, {form; point;
+    gloss?}>` store. Tasks: T1 `8da700b` (record type + store primitives); T2 `fb7257d` (seeded words
+    → `lang.lexemes`, ~110-file tsc-driven rename, byte-identical); T3 `fdb7d08` (keyless fold in as
+    gloss-less records, byte-identical); T4 `5b26dfb` (keyless FIRST-CLASS in the sweep incl. the
+    regular exceptionless `applyOneRegularChange` — deliberate GENN re-bake, **tokipona only**
+    581f39fd→a8166cb8); T5 `919af66` (old-save `migrateLexemeStore` shim + keyless-evolve lock test).
+    GATE each task: tsc 0 + FAST green + RUN_SLOW baseline (GEN0 always byte-identical).
+  - **Sub-projects 2-6 REMAIN:** S2 re-key the 15 per-meaning satellite maps → LexemeId; S3 thread
+    LexemeId through the ~381 seam call sites; S4 point-native `WordSense` identity; S5 intrinsic
+    LexemeId RNG order (determinism re-bake); S6 translation via anchor index + persistence.
+
 ## The deferred migration (true keyless point-native store)
 
 Replacing `lang.lexicon` (ConceptId-keyed) with a point-native lexeme store unlocks the last bits:
