@@ -5,6 +5,7 @@ import { levenshtein } from "../phonology/ipa";
 import { SWADESH_LIST } from "../semantics/lexicostat";
 import { embed, cosine } from "../semantics/embeddings";
 import { colexWith } from "../lexicon/concepts";
+import { satGet } from "../lexicon/satellites";
 import { neighborsOf } from "../semantics/neighbors";
 import { areAntonyms } from "../semantics/antonyms";
 
@@ -304,14 +305,13 @@ export function antonymCosine(lang: Language): { mean: number; max: number; n: n
  * related senses). Cross-linguistically pervasive; realism wants this NON-zero.
  */
 export function colexificationRate(lang: Language): { rate: number; meanDegree: number } {
-  const colex = lang.colexifiedAs ?? {};
   let lexemes = 0;
   let withEdge = 0;
   let edgeSum = 0;
   for (const m of lexKeys(lang)) {
     if (!isLexeme(lang, m)) continue;
     lexemes++;
-    const edges = colex[m];
+    const edges = satGet(lang, "colexifiedAs", m);
     if (edges && edges.length > 0) {
       withEdge++;
       edgeSum += edges.length;
@@ -344,7 +344,7 @@ export function homophonyRate(lang: Language): number {
   for (const ms of byForm.values()) {
     if (ms.length < 2) continue;
     for (const m of ms) {
-      const colex = new Set(lang.colexifiedAs?.[m] ?? []);
+      const colex = new Set(satGet(lang, "colexifiedAs", m) ?? []);
       if (ms.some((o) => o !== m && !colex.has(o))) collide++;
     }
   }

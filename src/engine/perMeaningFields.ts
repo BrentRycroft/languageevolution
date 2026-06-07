@@ -119,7 +119,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "colexifiedAs",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Per-meaning colexification list",
   },
   // Phase 64 fields

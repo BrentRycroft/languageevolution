@@ -1,4 +1,5 @@
 import type { Language, Meaning } from "../types";
+import { satGet, satSet } from "../lexicon/satellites";
 
 /**
  * Records that two meanings now share a single lexical form (i.e. are
@@ -21,8 +22,8 @@ export function recordColexification(
 ): void {
   if (a === b) return;
   if (!lang.colexifiedAs) lang.colexifiedAs = {};
-  appendUnique(lang.colexifiedAs, a, b);
-  appendUnique(lang.colexifiedAs, b, a);
+  appendUnique(lang, a, b);
+  appendUnique(lang, b, a);
 }
 
 /**
@@ -37,17 +38,17 @@ export function recordOneSidedColexification(
 ): void {
   if (winner === loser) return;
   if (!lang.colexifiedAs) lang.colexifiedAs = {};
-  appendUnique(lang.colexifiedAs, winner, loser);
+  appendUnique(lang, winner, loser);
 }
 
 function appendUnique(
-  map: Record<Meaning, Meaning[]>,
+  lang: Language,
   key: Meaning,
   value: Meaning,
 ): void {
-  const bag = map[key] ?? [];
+  const bag = satGet(lang, "colexifiedAs", key) ?? [];
   if (!bag.includes(value)) bag.push(value);
-  map[key] = bag;
+  satSet(lang, "colexifiedAs", key, bag);
 }
 
 /**
@@ -79,5 +80,5 @@ export function getColexifications(
     }
     if (out.size > 0) return Array.from(out);
   }
-  return lang.colexifiedAs?.[meaning]?.slice() ?? [];
+  return satGet(lang, "colexifiedAs", meaning)?.slice() ?? [];
 }
