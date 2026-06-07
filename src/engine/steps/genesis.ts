@@ -353,14 +353,12 @@ export function stepGenesis(
     if (!isReplacement) {
       const pos = posOf(outcome.meaning);
       if (pos === "verb") {
-        if (!lang.inflectionClass) lang.inflectionClass = {};
-        if (!lang.inflectionClass[outcome.meaning]) {
-          lang.inflectionClass[outcome.meaning] = assignInflectionClass(outcome.form, rng);
+        if (!satGet(lang, "inflectionClass", outcome.meaning)) {
+          satSet(lang, "inflectionClass", outcome.meaning, assignInflectionClass(outcome.form, rng));
         }
       } else if (pos === "noun" || pos === "other") {
-        if (!lang.nounDeclensionClass) lang.nounDeclensionClass = {};
-        if (!lang.nounDeclensionClass[outcome.meaning]) {
-          lang.nounDeclensionClass[outcome.meaning] = assignNounDeclensionClass(outcome.form, rng);
+        if (!satGet(lang, "nounDeclensionClass", outcome.meaning)) {
+          satSet(lang, "nounDeclensionClass", outcome.meaning, assignNounDeclensionClass(outcome.form, rng));
         }
       }
     }
