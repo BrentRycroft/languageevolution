@@ -195,14 +195,12 @@ export function tryBorrow(
   if (!alreadyHas) {
     const pos = posOf(meaning);
     if (pos === "verb") {
-      if (!recipient.inflectionClass) recipient.inflectionClass = {};
-      if (!recipient.inflectionClass[meaning]) {
-        recipient.inflectionClass[meaning] = assignInflectionClass(adapted, rng);
+      if (!satGet(recipient, "inflectionClass", meaning)) {
+        satSet(recipient, "inflectionClass", meaning, assignInflectionClass(adapted, rng));
       }
     } else if (pos === "noun" || pos === "other") {
-      if (!recipient.nounDeclensionClass) recipient.nounDeclensionClass = {};
-      if (!recipient.nounDeclensionClass[meaning]) {
-        recipient.nounDeclensionClass[meaning] = assignNounDeclensionClass(adapted, rng);
+      if (!satGet(recipient, "nounDeclensionClass", meaning)) {
+        satSet(recipient, "nounDeclensionClass", meaning, assignNounDeclensionClass(adapted, rng));
       }
     }
   }

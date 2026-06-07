@@ -127,14 +127,14 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "inflectionClass",
     inherit: "shallow-clone",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Phase 29 Tranche 5e inflection class assignment",
   },
   {
     key: "nounDeclensionClass",
     inherit: "shallow-clone",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Phase 64 T1 noun declension class",
   },
   {

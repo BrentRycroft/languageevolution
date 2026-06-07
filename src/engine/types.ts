@@ -639,14 +639,14 @@ export interface Language {
    * with no classification system leave this undefined for all
    * meanings (the default).
    */
-  inflectionClass?: Record<Meaning, import("./morphology/types").InflectionClass>;
+  inflectionClass?: Record<LexemeId, import("./morphology/types").InflectionClass>;
   /**
    * Phase 64 T1: per-noun declension class assignment. Latin's 5
    * declensions, Russian's 3, etc. Drives variant lookup in
    * `pickAffixVariant` for `noun.*` paradigms when the paradigm
    * declares `variants` keyed on `class:N`.
    */
-  nounDeclensionClass?: Record<Meaning, import("./morphology/types").NounDeclensionClass>;
+  nounDeclensionClass?: Record<LexemeId, import("./morphology/types").NounDeclensionClass>;
   /**
    * Phase 64 T2: per-verb ablaut class assignment. Strong verbs
    * (sing/sang/sung) belong to ablaut class ≥ 1; "weak" / regular

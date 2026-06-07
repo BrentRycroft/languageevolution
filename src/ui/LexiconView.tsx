@@ -9,6 +9,7 @@ import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 import { prettyGloss } from "../engine/lexicon/word";
 import { lexGet } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * LexiconView.tsx
@@ -375,7 +376,7 @@ export function LexiconView() {
                       // (stable across the family). Class numbers
                       // 1/2/3/4 render as I/II/III/IV.
                       const proto = state.tree[state.rootId]?.language;
-                      const cls = proto?.inflectionClass?.[meaning];
+                      const cls = proto ? satGet(proto, "inflectionClass", meaning) : undefined;
                       if (!cls) return null;
                       const NUMERAL = { 1: "I", 2: "II", 3: "III", 4: "IV" } as const;
                       return (
@@ -401,8 +402,8 @@ export function LexiconView() {
                       // assignment per noun.
                       const proto = state.tree[state.rootId]?.language;
                       // nounDeclensionClass is a per-meaning satellite map —
-                      // GLOSS-keyed (unaffected by the R2 LexemeId store flip).
-                      const cls = proto?.nounDeclensionClass?.[meaning];
+                      // LexemeId-keyed (S2a); read via the seam by gloss.
+                      const cls = proto ? satGet(proto, "nounDeclensionClass", meaning) : undefined;
                       if (!cls) return null;
                       return (
                         <span
