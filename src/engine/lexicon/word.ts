@@ -867,9 +867,9 @@ export function areMeaningsRelated(
   if (semA.includes(b)) return true;
   const semB = neighborsOf(b);
   if (semB.includes(a)) return true;
-  const localA = lang.localNeighbors?.[a] ?? [];
+  const localA = satGet(lang, "localNeighbors", a) ?? [];
   if (localA.includes(b)) return true;
-  const localB = lang.localNeighbors?.[b] ?? [];
+  const localB = satGet(lang, "localNeighbors", b) ?? [];
   if (localB.includes(a)) return true;
   // Phase 48 T1: extend with derivational chain + compound-part
   // membership. This lets the homonym-avoidance check (T2/T3) treat
@@ -1058,7 +1058,7 @@ export function disambiguateSense(
     for (const c of candidates) {
       const neighbors = new Set<Meaning>([
         ...neighborsOf(c),
-        ...(lang.localNeighbors?.[c] ?? []),
+        ...(satGet(lang, "localNeighbors", c) ?? []),
       ]);
       let score = 0;
       for (const ctxLemma of ctx) {
@@ -1067,7 +1067,7 @@ export function disambiguateSense(
         else {
           const ctxNeighbors = new Set<Meaning>([
             ...neighborsOf(ctxLemma),
-            ...(lang.localNeighbors?.[ctxLemma] ?? []),
+            ...(satGet(lang, "localNeighbors", ctxLemma) ?? []),
           ]);
           if (ctxNeighbors.has(c)) score += 1;
         }
