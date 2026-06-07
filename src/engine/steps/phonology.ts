@@ -1,5 +1,5 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
-import { glossKeyedView, satDelete } from "../lexicon/satellites";
+import { glossKeyedView, satDelete, satGet, satSet } from "../lexicon/satellites";
 import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority, voicedObstruentShareOf } from "../phonology/apply";
 import { buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
 import { invalidateClosedClassCache } from "../translator/closedClass";
@@ -185,13 +185,13 @@ export function stepPhonology(
   const glossByCid = buildLexemeIdToGloss(lang);
   for (const cid of Object.keys(before)) {
     const m = glossByCid.get(cid) ?? cid;
-    const last = lang.lastChangeGeneration[m];
+    const last = satGet(lang, "lastChangeGeneration", m);
     ages[m] = last === undefined ? 99 : generation - last;
     const nbrs = lang.localNeighbors[m];
     if (!nbrs || nbrs.length === 0) continue;
     let recentlyChanged = 0;
     for (const n of nbrs) {
-      const lastN = lang.lastChangeGeneration[n];
+      const lastN = satGet(lang, "lastChangeGeneration", n);
       if (lastN !== undefined && generation - lastN <= NEIGHBOUR_WINDOW) {
         recentlyChanged++;
       }
@@ -390,7 +390,7 @@ export function stepPhonology(
     const m = glossOfCid.get(cid);
     if (m === undefined) continue;
     satDelete(lang, "wordFrequencyHints", m);
-    delete lang.lastChangeGeneration[m];
+    satDelete(lang, "lastChangeGeneration", m);
     delete lang.wordOrigin[m];
     delete lang.localNeighbors[m];
     if (lang.registerOf) delete lang.registerOf[m];
@@ -434,7 +434,7 @@ export function stepPhonology(
     const b = cur.join("");
     if (a !== b) {
       mutated++;
-      lang.lastChangeGeneration[m] = generation;
+      satSet(lang, "lastChangeGeneration", m, generation);
       // Phase 6a: NO frequency bump on sound change. A word changing its form
       // is not evidence it is used more often; the old +0.04 (with +0.06 per
       // actuation below) swamped the ×0.998 decay and saturated every word at
@@ -472,7 +472,7 @@ export function stepPhonology(
     ...socialActuations.map((a) => ({ ...a, source: "social" as const })),
   ];
   for (const a of allActuations) {
-    lang.lastChangeGeneration[a.meaning] = generation;
+    satSet(lang, "lastChangeGeneration", a.meaning, generation);
     // Phase 6a: actuation is a sound-change diffusion event, not a usage event —
     // no frequency bump (see the mutation loop above).
   }

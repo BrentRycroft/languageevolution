@@ -67,7 +67,8 @@ export function LexiconView() {
       } else if (sort === "last-changed") {
         let maxGen = -1;
         for (const lid of visibleLeaves) {
-          const g = state.tree[lid]?.language.lastChangeGeneration?.[m];
+          const leafLang = state.tree[lid]?.language;
+          const g = leafLang ? satGet(leafLang, "lastChangeGeneration", m) : undefined;
           if (typeof g === "number" && g > maxGen) maxGen = g;
         }
         out[m] = -maxGen;

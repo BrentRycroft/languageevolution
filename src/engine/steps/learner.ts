@@ -1,5 +1,5 @@
 import type { Language, SimulationConfig, WordForm } from "../types";
-import { satGet } from "../lexicon/satellites";
+import { satGet, satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { recordInnovation } from "../lexicon/socialContagion";
@@ -97,7 +97,7 @@ export function stepLearner(
       recordInnovation(lang, m, form, next, generation, "learner");
       // Phase 29 Tranche 1 round 2: route through chokepoint.
       setLexiconForm(lang, m, next, { bornGeneration: generation, origin: "learner-markedness" });
-      lang.lastChangeGeneration[m] = generation;
+      satSet(lang, "lastChangeGeneration", m, generation);
       mutated++;
     }
     lang.phonemeInventory.segmental = lang.phonemeInventory.segmental.filter(
@@ -125,7 +125,7 @@ export function stepLearner(
         recordInnovation(lang, m, form, simplified, generation, "learner");
         // Phase 29 Tranche 1 round 2: route through chokepoint.
         setLexiconForm(lang, m, simplified, { bornGeneration: generation, origin: "learner-coda-simplification" });
-        lang.lastChangeGeneration[m] = generation;
+        satSet(lang, "lastChangeGeneration", m, generation);
         codaSimplifications++;
         if (codaSimplifications >= 3) break;
       }

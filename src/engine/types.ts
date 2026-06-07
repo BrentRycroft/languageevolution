@@ -505,7 +505,7 @@ export interface Language {
    */
   lexicalSpelling?: Record<Meaning, string>;
   otRanking: string[];
-  lastChangeGeneration: Record<Meaning, number>;
+  lastChangeGeneration: Record<LexemeId, number>;
   /**
    * Evolution-realism Phase 3e: per-pair recarve memory. Maps an unordered
    * meaning-pair key (`a|b`, sorted) → the generation it was last merged or
