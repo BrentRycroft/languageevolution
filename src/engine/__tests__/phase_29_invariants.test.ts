@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satGet } from "../lexicon/satellites";
 import fc from "fast-check";
 import { presetEnglish } from "../presets/english";
 import { presetTokipona } from "../presets/tokipona";
@@ -120,7 +121,7 @@ describe("Phase 29 Tranche 7b — cross-system invariants", () => {
             deleteMeaning(lang, m);
             // After delete, the meaning is gone everywhere.
             if (lexHas(lang, m)) return false;
-            if (lang.wordFrequencyHints[m] !== undefined) return false;
+            if (satGet(lang, "wordFrequencyHints", m) !== undefined) return false;
             if (lang.wordOrigin[m] !== undefined) return false;
             if (lang.lastChangeGeneration[m] !== undefined) return false;
             if (lang.words) {

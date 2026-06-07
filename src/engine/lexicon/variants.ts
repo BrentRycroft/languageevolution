@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { satGet } from "./satellites";
 import { setLexiconForm } from "./mutate";
 import { lexGet } from "./access";
 
@@ -104,7 +105,7 @@ export function decayAndActuate(
     // (freq=0.5) actuates at 0.5; Swadesh-core (freq=1.0) needs 0.7.
     // Real diachrony: variants compete for frequency over 5-10 gens
     // before one dominates; high-freq core resists displacement.
-    const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     const threshold = 0.5 + 0.4 * Math.max(0, freq - 0.5);
     // Phase 40b: lengthening-bias dampening. When the variant is
     // *longer* than the canonical, dampen its actuation by adding

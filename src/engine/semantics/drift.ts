@@ -1,4 +1,5 @@
 import type { Language } from "../types";
+import { satGet, satSet, satDelete } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { neighborsOf } from "./neighbors";
 import { relatedMeanings, clusterOf } from "./clusters";
@@ -234,7 +235,7 @@ export function driftOneMeaning(
       // its frequency (≈0.85 for the core, ≈0.1 for the periphery), falling
       // through to the next shuffled meaning. The RNG draw is APPENDED after
       // the high-register draw above to keep the per-step draw order local.
-      const freqHint = lang.wordFrequencyHints[m] ?? zipfFrequencyFor(m);
+      const freqHint = satGet(lang, "wordFrequencyHints", m) ?? zipfFrequencyFor(m);
       if (rng.chance(freqHint * RETENTION_STRENGTH)) continue;
       // Phase 26e: removed Swadesh-coreness drift-skip. The coreness-
       // based protection was redundant with Phase 24c's frequency-
@@ -308,11 +309,11 @@ export function driftOneMeaning(
         PROTECTED_MEANINGS.has(m);
       // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
       setLexiconForm(lang, target, form, { bornGeneration: 0, origin: lang.wordOrigin[m] ?? "drift" });
-      const oldFreq = lang.wordFrequencyHints[m];
+      const oldFreq = satGet(lang, "wordFrequencyHints", m);
       if (oldFreq !== undefined) {
-        lang.wordFrequencyHints[target] = oldFreq;
+        satSet(lang, "wordFrequencyHints", target, oldFreq);
       }
-      if (!polysemous) delete lang.wordFrequencyHints[m];
+      if (!polysemous) satDelete(lang, "wordFrequencyHints", m);
       if (lang.registerOf?.[m] !== undefined) {
         lang.registerOf[target] = lang.registerOf[m]!;
       }

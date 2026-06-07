@@ -87,7 +87,7 @@ describe("altForms", () => {
   it("pruneAlts removes the last alt when its meaning's frequency is low", () => {
     const lang = makeLang({
       lexemes: { x: ["a"] } as unknown as LexemeStore,
-      wordFrequencyHints: { x: 0.1 }, // low — high decay
+      wordFrequencyHints: { x: 0.1 } as Record<string, number>, // low — high decay
     });
     addAlt(lang, "x", ["b"], "low");
     pruneAlts(lang, 1.0, makeRng("prune-1")); // chance(1) → always fires
@@ -97,7 +97,7 @@ describe("altForms", () => {
   it("pruneAlts protects high-frequency meanings", () => {
     const lang = makeLang({
       lexemes: { x: ["a"] } as unknown as LexemeStore,
-      wordFrequencyHints: { x: 0.95 }, // high — low decay
+      wordFrequencyHints: { x: 0.95 } as Record<string, number>, // high — low decay
     });
     addAlt(lang, "x", ["b"], "low");
     // Run 20 times with chance(0.05); should usually keep at least one

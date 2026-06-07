@@ -171,7 +171,7 @@ describe("realism round 4 — population-feedback mechanics", () => {
           father: ["p", "a", "t", "e", "r"],
           uncle: ["a", "v", "u"],
         } as unknown as LexemeStore,
-        wordFrequencyHints: { mother: 0.9, aunt: 0.4, father: 0.9, uncle: 0.4 },
+        wordFrequencyHints: { mother: 0.9, aunt: 0.4, father: 0.9, uncle: 0.4 } as Record<string, number>,
       });
       const rng = makeRng("kinship-urb");
       const merges = applyKinshipSimplification(lang, rng, 2);

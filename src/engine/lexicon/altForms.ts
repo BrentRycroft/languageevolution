@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { satGet } from "./satellites";
 import { setLexiconForm } from "./mutate";
 import { lexGet, lexHas } from "./access";
 
@@ -61,7 +62,7 @@ export function pruneAlts(lang: Language, decayProbability: number, rng: { chanc
   for (const m of meanings) {
     const alts = lang.altForms[m];
     if (!alts || alts.length === 0) continue;
-    const freq = lang.wordFrequencyHints[m] ?? 0.4;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.4;
     // Higher freq = lower decay. The "primary plus alts" stays alive
     // while frequency holds; once a meaning's freq drops, alts go first.
     const effectiveDecay = decayProbability * Math.max(0.2, 1 - freq);

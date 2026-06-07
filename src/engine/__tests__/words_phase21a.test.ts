@@ -63,6 +63,11 @@ function makeLang(overrides: Partial<Language> = {}): Language {
       lexSet(lang, g, form);
     }
   }
+  const _fh = lang.wordFrequencyHints as Record<string, number>;
+  for (const _g of Object.keys(_fh)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
+  }
   return lang;
 }
 
@@ -200,7 +205,7 @@ describe("Phase 21a — sync between lexicon and words", () => {
         cat: ["k", "æ", "t"],
         dog: ["d", "ɔ", "g"],
       } as unknown as LexemeStore,
-      wordFrequencyHints: { cat: 0.8, dog: 0.7 },
+      wordFrequencyHints: { cat: 0.8, dog: 0.7 } as Record<string, number>,
     });
     syncWordsFromLexicon(lang, 0);
     expect(lang.words).toHaveLength(2);

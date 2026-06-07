@@ -6,6 +6,7 @@ import type {
   SimulationConfig,
   SimulationState,
 } from "../types";
+import { satSet, satHas } from "../lexicon/satellites";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
@@ -114,8 +115,8 @@ function seedClosedClassLexicon(lang: Language): void {
     if (!form || form.length === 0) continue;
     lexSet(lang, lemma, form);
     if (!lang.wordOrigin[lemma]) lang.wordOrigin[lemma] = "closed-class";
-    if (lang.wordFrequencyHints[lemma] === undefined) {
-      lang.wordFrequencyHints[lemma] = 0.95;
+    if (!satHas(lang, "wordFrequencyHints", lemma)) {
+      satSet(lang, "wordFrequencyHints", lemma, 0.95);
     }
   }
 }
@@ -189,7 +190,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     birthGeneration: 0,
     grammar: { ...DEFAULT_GRAMMAR, ...(config.seedGrammar ?? {}) },
     events: [],
-    wordFrequencyHints: { ...(config.seedFrequencyHints ?? {}) },
+    wordFrequencyHints: {},
     phonemeInventory: inventoryFromLexicon(seedLex),
     morphology: cloneMorphology(config.seedMorphology),
     localNeighbors: {},
@@ -242,6 +243,20 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // which all assume lexemeIds is populated. Mints in preset insertion order,
   // so the downstream lexKeys gloss sequence is byte-identical.
   rekeyLexiconToLexemeIds(rootLang);
+  // S2a: seed frequency hints by LexemeId now that ids exist. MINT-NEUTRAL —
+  // only seed glosses that already have an id (lexicon members). The pre-flip
+  // gloss-keyed spread minted nothing; minting here (via the seam) for a
+  // seedFrequencyHints gloss NOT in the lexicon would advance conceptIdSeq and
+  // shift every downstream LexemeId / per-word sub-rng seed (GENN divergence).
+  // Non-lexicon freq seeds are dead data the engine never reads (it iterates
+  // the lexicon), exactly as the post-flip gloss view already drops them.
+  {
+    const fh = rootLang.wordFrequencyHints as Record<string, number>;
+    for (const [gloss, hint] of Object.entries(config.seedFrequencyHints ?? {})) {
+      const id = rootLang.lexemeIds?.[gloss];
+      if (id) fh[id] = hint;
+    }
+  }
   // Phase 6a: give EVERY content concept a Zipfian-by-rank seed frequency (by
   // concept tier), not just the ~89 in seedFrequencyHints. Without this most
   // words fell back to a flat 0.5 default, so the content/function + Swadesh
@@ -249,8 +264,8 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // distribution couldn't be Zipfian. Explicit seedFrequencyHints (and the
   // closed-class anchors poured in below) keep precedence — this only fills gaps.
   for (const m of lexKeys(rootLang)) {
-    if (rootLang.wordFrequencyHints[m] === undefined) {
-      rootLang.wordFrequencyHints[m] = zipfFrequencyFor(m);
+    if (!satHas(rootLang, "wordFrequencyHints", m)) {
+      satSet(rootLang, "wordFrequencyHints", m, zipfFrequencyFor(m));
     }
   }
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);

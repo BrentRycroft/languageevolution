@@ -1,4 +1,5 @@
 import type { Language, LexemeStore, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
+import { satGet } from "./satellites";
 import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
@@ -701,7 +702,7 @@ export function syncWordsFromLexicon(
   for (const { form, meanings } of byKey.values()) {
     const senses: WordSense[] = meanings.map((meaning) => ({
       meaning,
-      weight: lang.wordFrequencyHints?.[meaning] ?? 0.4,
+      weight: satGet(lang, "wordFrequencyHints", meaning) ?? 0.4,
       register: lang.registerOf?.[meaning],
       bornGeneration,
       origin:
@@ -1072,7 +1073,7 @@ export function disambiguateSense(
         }
       }
       // Tiny frequency bonus to break true ties.
-      score += (lang.wordFrequencyHints?.[c] ?? 0.4) * 0.1;
+      score += (satGet(lang, "wordFrequencyHints", c) ?? 0.4) * 0.1;
       if (score > bestScore) {
         bestScore = score;
         best = c;
@@ -1087,11 +1088,11 @@ export function disambiguateSense(
   //    order decide.
   let bestFreq = -1;
   for (const c of candidates) {
-    const f = lang.wordFrequencyHints?.[c] ?? 0.4;
+    const f = satGet(lang, "wordFrequencyHints", c) ?? 0.4;
     if (f > bestFreq) bestFreq = f;
   }
   const tied = candidates.filter(
-    (c) => (lang.wordFrequencyHints?.[c] ?? 0.4) === bestFreq,
+    (c) => (satGet(lang, "wordFrequencyHints", c) ?? 0.4) === bestFreq,
   );
   return tied.slice().sort()[0]!;
 }

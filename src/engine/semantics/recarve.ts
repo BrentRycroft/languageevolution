@@ -1,4 +1,5 @@
 import type { Language, Meaning } from "../types";
+import { satGet, satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { isFormLegal } from "../phonology/wordShape";
@@ -97,8 +98,8 @@ function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   }
   if (pairs.length === 0) return null;
   const [a, b] = pairs[rng.int(pairs.length)]!;
-  const fa = lang.wordFrequencyHints[a] ?? 0.4;
-  const fb = lang.wordFrequencyHints[b] ?? 0.4;
+  const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
+  const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
   const winner = fa > fb ? a : fa < fb ? b : a < b ? a : b;
   const loser = winner === a ? b : a;
   // LANE-C — frequency-retention on merger (Zipf / entrenchment): a
@@ -144,8 +145,8 @@ export function applyKinshipSimplification(
   for (let attempts = 0; attempts < maxEvents * 3 && out.length < maxEvents; attempts++) {
     const [a, b] = KINSHIP_PAIRS[rng.int(KINSHIP_PAIRS.length)]!;
     if (!lexHas(lang, a) || !lexHas(lang, b)) continue;
-    const fa = lang.wordFrequencyHints[a] ?? 0.4;
-    const fb = lang.wordFrequencyHints[b] ?? 0.4;
+    const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
+    const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
     const winner = fa >= fb ? a : b;
     const loser = winner === a ? b : a;
     // Phase 72d-2 (defer-1a): record kinship-simplification pathway.
@@ -181,8 +182,8 @@ function trySplit(lang: Language, rng: Rng, generation: number): RecarveEvent | 
     bornGeneration: 0,
     origin: "recarve-split",
   });
-  const freq = lang.wordFrequencyHints[pick.source] ?? 0.4;
-  lang.wordFrequencyHints[pick.target] = freq;
+  const freq = satGet(lang, "wordFrequencyHints", pick.source) ?? 0.4;
+  satSet(lang, "wordFrequencyHints", pick.target, freq);
   const reg = lang.registerOf?.[pick.source];
   if (reg !== undefined) {
     if (!lang.registerOf) lang.registerOf = {};

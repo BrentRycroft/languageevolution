@@ -1,4 +1,5 @@
 import type { Rng } from "./rng";
+import type { LexemeId } from "./lexicon/lexemeIdentity";
 
 /**
  * types.ts — engine-wide shared types.
@@ -307,7 +308,7 @@ export interface Language {
   lexiconURRefreshPolicy?: "each-gen" | "manual";
   grammar: GrammarFeatures;
   events: LanguageEvent[];
-  wordFrequencyHints: Record<Meaning, number>;
+  wordFrequencyHints: Record<LexemeId, number>;
   /**
    * Track A plan 7: sparse glided meaning positions (fixed-point ints as number[] for
    * clone/JSON-persist). A meaning absent here sits at its static `lexPoint`; drift's

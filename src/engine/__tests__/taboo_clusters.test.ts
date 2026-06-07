@@ -70,7 +70,7 @@ describe("taboo replacement", () => {
       // high-freq words. `snake` (a predator) is the eligible target here;
       // mother/father/hand/foot are present as the surrounding lexicon /
       // potential euphemism donors.
-      wordFrequencyHints: { mother: 0.95, father: 0.95, hand: 0.9, foot: 0.9, snake: 0.6 },
+      wordFrequencyHints: { mother: 0.95, father: 0.95, hand: 0.9, foot: 0.9, snake: 0.6 } as Record<string, number>,
       phonemeInventory: { segmental: [], tones: [], usesTones: false },
       morphology: { paradigms: {} },
       localNeighbors: {},

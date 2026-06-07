@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { satGet } from "../lexicon/satellites";
 import { makeRng, type Rng } from "../rng";
 import { formToString } from "../phonology/ipa";
 import { formatForm, type DisplayScript } from "../phonology/display";
@@ -127,7 +128,7 @@ function pickMeaningByPOS(
     // Concept-native (item 4): skip words with recorded compound/derivation
     // structure (read from lang.compounds) rather than gloss-hyphen guessing.
     if (recordedParts(lang, m) !== null) continue; // skip compounds for shape simplicity
-    const freq = lang.wordFrequencyHints[m] ?? 0.4;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.4;
     // Phase 61: smoothing floor 0.05 → 0.12 widens the long tail
     // without flattening the frequency curve. Pre-Phase-61 only the
     // top ~50 frequent lemmas surfaced in a 1500-word lexicon; the

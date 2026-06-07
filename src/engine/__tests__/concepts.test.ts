@@ -133,7 +133,7 @@ describe("re-carving", () => {
   it("merges two colexified concepts when both have forms", () => {
     const lang = testLang({
       lexemes: { arm: ["a", "r", "m"], hand: ["h", "a", "n", "d"] } as unknown as LexemeStore,
-      wordFrequencyHints: { arm: 0.6, hand: 0.85 },
+      wordFrequencyHints: { arm: 0.6, hand: 0.85 } as Record<string, number>,
     });
     const rng = makeRng("merge-seed");
     const ev = maybeRecarve(lang, rng, 1);
@@ -153,7 +153,7 @@ describe("re-carving", () => {
   it("splits a slot into a colex target the language lacks", () => {
     const lang = testLang({
       lexemes: { tongue: ["t", "o", "n"] } as unknown as LexemeStore,
-      wordFrequencyHints: { tongue: 0.8 },
+      wordFrequencyHints: { tongue: 0.8 } as Record<string, number>,
     });
     const rng = makeRng("split-seed");
     const ev = maybeRecarve(lang, rng, 1);
@@ -181,7 +181,7 @@ describe("re-carving", () => {
     // guard (cold→cool→cold flip-flop) at the unit level.
     const lang = testLang({
       lexemes: { arm: ["a", "r", "m"], hand: ["h", "a", "n", "d"] } as unknown as LexemeStore,
-      wordFrequencyHints: { arm: 0.6, hand: 0.85 },
+      wordFrequencyHints: { arm: 0.6, hand: 0.85 } as Record<string, number>,
       recarveHistory: { "arm|hand": 0 }, // key is sorted: arm < hand
     });
     const rng = makeRng("merge-seed");

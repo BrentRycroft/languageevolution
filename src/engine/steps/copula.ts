@@ -1,4 +1,5 @@
 import type { Language, SimulationConfig } from "../types";
+import { satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
@@ -76,7 +77,7 @@ export function stepCopulaGenesis(
     origin: `grammaticalization:${pathway}:${donor}`,
   });
   lang.wordOrigin["be"] = `grammaticalization:${pathway}:${donor}`;
-  lang.wordFrequencyHints["be"] = 0.95;
+  satSet(lang, "wordFrequencyHints", "be", 0.95);
   lang.lastChangeGeneration["be"] = generation;
 
   pushEvent(lang, {

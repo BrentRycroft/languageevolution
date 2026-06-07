@@ -17,7 +17,7 @@ function fakeLang(): Language {
   const m = "king";
   const lang = {
     lexemes: { [m]: ["k", "i", "ŋ"] as Phoneme[] } as unknown as LexemeStore,
-    wordFrequencyHints: { [m]: 0.9 },
+    wordFrequencyHints: { [m]: 0.9 } as Record<string, number>,
     lastChangeGeneration: { [m]: 5 },
     wordOrigin: { [m]: "preset-seed" },
     localNeighbors: { [m]: [] },
@@ -39,7 +39,7 @@ describe("Phase 68a T1 — deleteMeaning purges Phase 64/66 metadata", () => {
     deleteMeaning(lang, "king");
 
     expect(lexGet(lang, "king")).toBeUndefined();
-    expect(lang.wordFrequencyHints["king"]).toBeUndefined();
+    expect((lang.wordFrequencyHints as Record<string, number>)["king"]).toBeUndefined();
     expect(lang.wordOrigin["king"]).toBeUndefined();
     expect(lang.localNeighbors["king"]).toBeUndefined();
 

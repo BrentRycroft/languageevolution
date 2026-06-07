@@ -51,6 +51,11 @@ function minimalLanguage(overrides: Partial<Language> = {}): Language {
     ...overrides,
   };
   rekeyLexiconToLexemeIds(lang);
+  const _fh = lang.wordFrequencyHints as Record<string, number>;
+  for (const _g of Object.keys(_fh)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
+  }
   return lang;
 }
 
@@ -104,7 +109,7 @@ describe("realism round 3", () => {
       };
       const lang = minimalLanguage({
         lexemes: { go: ["g", "o"], walk: ["w", "a", "l", "k"] } as unknown as LexemeStore,
-        wordFrequencyHints: { go: 0.9, walk: 0.4 },
+        wordFrequencyHints: { go: 0.9, walk: 0.4 } as Record<string, number>,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
       });
       const rng = makeRng("seed-sup");

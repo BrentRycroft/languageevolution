@@ -224,7 +224,7 @@ describe("B12 (code-review) — inheritMeaningFields fills empty-container child
     cfg.seed = "p72-b12";
     const sim = createSimulation(cfg);
     const parent = sim.getState().tree["L-0"]!.language;
-    parent.wordFrequencyHints = { water: 0.9, fire: 0.8 };
+    parent.wordFrequencyHints = { water: 0.9, fire: 0.8 } as Record<string, number>;
     // Synthesise a child with the SAME shape but an EMPTY wordFrequencyHints.
     const child = {
       ...parent,
@@ -232,8 +232,8 @@ describe("B12 (code-review) — inheritMeaningFields fills empty-container child
     } as Language;
     inheritMeaningFields(parent, child);
     // After inheritance, the empty container should be filled from parent.
-    expect(child.wordFrequencyHints.water).toBe(0.9);
-    expect(child.wordFrequencyHints.fire).toBe(0.8);
+    expect((child.wordFrequencyHints as Record<string, number>).water).toBe(0.9);
+    expect((child.wordFrequencyHints as Record<string, number>).fire).toBe(0.8);
   });
 
   it("a child with a NON-empty value for a registered field keeps its own value", () => {

@@ -156,7 +156,7 @@ describe("Phase 21d — obsolescence respects polysemy", () => {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
       } as unknown as LexemeStore,
-      wordFrequencyHints: { "bank.financial": 0.5, "bank.river": 0.5 },
+      wordFrequencyHints: { "bank.financial": 0.5, "bank.river": 0.5 } as Record<string, number>,
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });
@@ -178,7 +178,7 @@ describe("Phase 21d — obsolescence respects polysemy", () => {
         cat: ["k", "æ", "t"],
         bat: ["b", "æ", "t"],
       } as unknown as LexemeStore,
-      wordFrequencyHints: { cat: 0.5, bat: 0.4 },
+      wordFrequencyHints: { cat: 0.5, bat: 0.4 } as Record<string, number>,
     });
     addWord(lang, ["k", "æ", "t"], "cat", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "t"], "bat", { bornGeneration: 0 });
@@ -200,7 +200,7 @@ describe("Phase 21d — obsolescence respects polysemy", () => {
         cat: ["k", "æ", "t"],
         bat: ["b", "æ", "t"],
       } as unknown as LexemeStore,
-      wordFrequencyHints: { cat: 0.5, bat: 0.4 },
+      wordFrequencyHints: { cat: 0.5, bat: 0.4 } as Record<string, number>,
     });
     addWord(lang, ["k", "æ", "t"], "cat", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "t"], "bat", { bornGeneration: 0 });

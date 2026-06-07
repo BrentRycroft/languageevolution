@@ -68,7 +68,7 @@ describe("Phase 21b — disambiguateSense", () => {
 
   it("prefers the discourse topic when it's among the candidates", () => {
     const lang = makeLang({
-      wordFrequencyHints: { "bank.financial": 0.9, "bank.river": 0.1 },
+      wordFrequencyHints: { "bank.financial": 0.9, "bank.river": 0.1 } as Record<string, number>,
     });
     // Even though .financial has higher frequency, the discourse topic
     // should win.
@@ -103,7 +103,7 @@ describe("Phase 21b — disambiguateSense", () => {
 
   it("falls back to highest-frequency sense when context is uninformative", () => {
     const lang = makeLang({
-      wordFrequencyHints: { "bank.financial": 0.9, "bank.river": 0.2 },
+      wordFrequencyHints: { "bank.financial": 0.9, "bank.river": 0.2 } as Record<string, number>,
     });
     const picked = disambiguateSense(lang, ["bank.financial", "bank.river"]);
     expect(picked).toBe("bank.financial");
@@ -216,7 +216,7 @@ describe("Phase 21b — reverseLookupForm exposes alternateLemmas", () => {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
       } as unknown as LexemeStore,
-      wordFrequencyHints: { "bank.financial": 0.8, "bank.river": 0.2 },
+      wordFrequencyHints: { "bank.financial": 0.8, "bank.river": 0.2 } as Record<string, number>,
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });

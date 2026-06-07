@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satGet } from "../lexicon/satellites";
 import {
   maybeGrammaticalize,
   progressGrammaticalizationChain,
@@ -42,7 +43,7 @@ describe("Phase 66 T1 — grammaticalization multi-step chains", () => {
     const stage = lang.grammaticalizationStage?.[m]?.stage;
     expect(stage === 1 || stage === 2).toBe(true);
     // Frequency was reduced as the lexeme bleaches.
-    expect(lang.wordFrequencyHints[m]).toBeLessThan(0.7);
+    expect(satGet(lang, "wordFrequencyHints", m)).toBeLessThan(0.7);
   });
 
   it("Phase 4b: a bound affix advances stage 2 → 3 → 4 over time", () => {

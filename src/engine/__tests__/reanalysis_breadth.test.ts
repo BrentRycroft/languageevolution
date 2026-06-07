@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satSet } from "../lexicon/satellites";
 import { lexSet } from "../lexicon/access";
 import { maybeReanalyse } from "../lexicon/reanalysis";
 import { presetEnglish } from "../presets/english";
@@ -20,7 +21,7 @@ describe("Phase 28e — verb grammaticalization", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
     lang.culturalTier = 2;
-    lang.wordFrequencyHints["go"] = 0.95;
+    satSet(lang, "wordFrequencyHints", "go", 0.95);
     lexSet(lang, "go", ["g", "o"]);
     if (!lang.morphology) throw new Error("expected morphology block");
     delete lang.morphology.paradigms["verb.tense.fut"];
@@ -51,7 +52,7 @@ describe("Phase 28e — verb grammaticalization", () => {
     const sim = createSimulation(presetEnglish());
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
     lang.culturalTier = 0;
-    lang.wordFrequencyHints["go"] = 0.95;
+    satSet(lang, "wordFrequencyHints", "go", 0.95);
     lexSet(lang, "go", ["g", "o"]);
     if (!lang.morphology) throw new Error("expected morphology block");
     delete lang.morphology.paradigms["verb.tense.fut"];

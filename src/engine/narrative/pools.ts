@@ -1,4 +1,5 @@
 import type { Language, Meaning } from "../types";
+import { satGet } from "../lexicon/satellites";
 import { posOf } from "../lexicon/pos";
 import { lexKeys } from "../lexicon/access";
 import type { Rng } from "../rng";
@@ -45,8 +46,8 @@ export function poolByPOS(lang: Language, pos: ReturnType<typeof posOf>): Meanin
     if (posOf(m) === pos) out.push(m);
   }
   out.sort((a, b) => {
-    const fa = lang.wordFrequencyHints[a] ?? 0.4;
-    const fb = lang.wordFrequencyHints[b] ?? 0.4;
+    const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
+    const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
     return fb - fa;
   });
   return out;
@@ -89,8 +90,8 @@ export function nounLikePool(lang: Language): Meaning[] {
     }
   }
   return out.sort((a, b) => {
-    const fa = lang.wordFrequencyHints[a] ?? 0.4;
-    const fb = lang.wordFrequencyHints[b] ?? 0.4;
+    const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
+    const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
     return fb - fa;
   });
 }
@@ -135,8 +136,8 @@ const PLACE_HINTS = new Set([
  */
 function sortByFrequencyDesc(lang: Language, list: Meaning[]): Meaning[] {
   return list.slice().sort((a, b) => {
-    const fa = lang.wordFrequencyHints[a] ?? 0.4;
-    const fb = lang.wordFrequencyHints[b] ?? 0.4;
+    const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
+    const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
     return fb - fa;
   });
 }
@@ -164,12 +165,12 @@ export function pickWeighted(lang: Language, pool: Meaning[], rng: Rng): Meaning
   if (pool.length === 0) return null;
   let total = 0;
   for (const m of pool) {
-    total += lang.wordFrequencyHints[m] ?? 0.4;
+    total += satGet(lang, "wordFrequencyHints", m) ?? 0.4;
   }
   if (total <= 0) return pool[rng.int(pool.length)] ?? null;
   let r = rng.next() * total;
   for (const m of pool) {
-    r -= lang.wordFrequencyHints[m] ?? 0.4;
+    r -= satGet(lang, "wordFrequencyHints", m) ?? 0.4;
     if (r <= 0) return m;
   }
   return pool[pool.length - 1] ?? null;

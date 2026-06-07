@@ -1,4 +1,5 @@
 import type { Language, LanguageTree, Meaning } from "../types";
+import { satGet } from "../lexicon/satellites";
 import { SEMANTIC_CLUSTERS, clusterOf } from "../semantics/clusters";
 import { BASIC_240 } from "../lexicon/basic240";
 import { CONCEPT_IDS, CONCEPTS, conceptsAtOrBelow, tierOf, type Tier } from "../lexicon/concepts";
@@ -86,7 +87,7 @@ export function lexicalNeed(
         const seedLen = seedLengths[m];
         const cur = lexGet(lang, m);
         if (seedLen && cur && cur.length < Math.ceil(seedLen * 0.7)) {
-          const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+          const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
           if (freq > 0.4) {
             shrinkage = 0.5 * (1 - cur.length / seedLen);
           }

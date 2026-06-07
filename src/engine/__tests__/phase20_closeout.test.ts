@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satSet } from "../lexicon/satellites";
 import { lexSet } from "../lexicon/access";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
@@ -30,7 +31,7 @@ describe("Phase 20 close-out: pruneAlts wired into stepSemantics", () => {
     const lang = englishLang();
     // Seed an alt for a low-frequency meaning so pruning has something to bite.
     lexSet(lang, "__decoy__", ["a"]);
-    lang.wordFrequencyHints["__decoy__"] = 0.05;
+    satSet(lang, "wordFrequencyHints", "__decoy__", 0.05);
     addAlt(lang, "__decoy__", ["b"], "low");
     expect(lang.altForms?.["__decoy__"]).toEqual([["b"]]);
     // Drive stepSemantics directly with high decay (deterministic via seeded rng).

@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { satGet } from "./satellites";
 import type { Rng } from "../rng";
 import { posOf } from "./pos";
 import { lexGet, lexSet, lexHas, lexKeys } from "./access";
@@ -89,7 +90,7 @@ function maybeVerbGrammaticalization(
   for (const [meaning, tag] of Object.entries(GRAMMATICAL_VERB_PATHWAYS)) {
     if (!lexHas(lang, meaning)) continue;
     if (posOf(meaning) !== "verb") continue;
-    const freq = lang.wordFrequencyHints[meaning] ?? 0;
+    const freq = satGet(lang, "wordFrequencyHints", meaning) ?? 0;
     if (freq < 0.7) continue;
     if (lang.morphology.paradigms[tag as keyof typeof lang.morphology.paradigms]) continue;
     candidates.push({ meaning, tag });

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satSet } from "../lexicon/satellites";
 import { lexSet } from "../lexicon/access";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
@@ -84,7 +85,7 @@ describe("Phase 73c Phase 1 — grammaticalisedAxes gating", () => {
       delete lang.morphology.paradigms[c];
     }
     lexSet(lang, "go", ["g", "o"]);
-    lang.wordFrequencyHints.go = 0.95;
+    satSet(lang, "wordFrequencyHints", "go", 0.95);
     // Fire many times; with the gate, no gated paradigm should
     // ever be seeded from 'go'.
     for (let i = 0; i < 50; i++) {

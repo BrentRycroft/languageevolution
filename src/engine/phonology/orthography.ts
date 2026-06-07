@@ -1,4 +1,5 @@
 import type { Language, Phoneme, WordForm } from "../types";
+import { satGet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { stripTone } from "./tone";
 import { lexGet, lexKeys } from "../lexicon/access";
@@ -491,7 +492,7 @@ export function freezeLexicalSpelling(
   const candidates: string[] = [];
   for (const m of lexKeys(lang)) {
     if (lang.lexicalSpelling?.[m]) continue;
-    const f = lang.wordFrequencyHints[m] ?? 0.4;
+    const f = satGet(lang, "wordFrequencyHints", m) ?? 0.4;
     if (f >= 0.6 && lexGet(lang, m)!.length > 0) candidates.push(m);
   }
   if (candidates.length === 0) return null;

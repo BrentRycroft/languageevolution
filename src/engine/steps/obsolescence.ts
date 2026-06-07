@@ -1,4 +1,5 @@
 import type { Language, SimulationConfig } from "../types";
+import { satGet } from "../lexicon/satellites";
 import { levenshtein } from "../phonology/ipa";
 import { complexityFor } from "../lexicon/complexity";
 import type { Rng } from "../rng";
@@ -69,7 +70,7 @@ function attemptDisuseDeath(
   if (config.modes.swadeshProtection !== false && tierOf(m) === 0) return false;
   if (isClosedClass(posOf(m))) return false;
   if (recordedParts(lang, m) !== null) return false;
-  const freq = lang.wordFrequencyHints[m] ?? 0.5;
+  const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
   if (freq >= LOW_FREQ_THRESHOLD) return false;
   // Probability rises as frequency drops below the threshold. The multiplier
   // sharpens the gradient so words near the discard floor die quickly while
@@ -112,8 +113,8 @@ export function stepObsolescence(
     // Phase 21d: skip rivalry when both meanings already share a Word
     // (i.e., they're polysemous senses, not competing rivals).
     if (shareWord(lang, a, b)) continue;
-    const scoreA = (lang.wordFrequencyHints[a] ?? 0.5) + 0.1 * complexityFor(a);
-    const scoreB = (lang.wordFrequencyHints[b] ?? 0.5) + 0.1 * complexityFor(b);
+    const scoreA = (satGet(lang, "wordFrequencyHints", a) ?? 0.5) + 0.1 * complexityFor(a);
+    const scoreB = (satGet(lang, "wordFrequencyHints", b) ?? 0.5) + 0.1 * complexityFor(b);
     const loser = scoreA < scoreB ? a : scoreB < scoreA ? b : rng.chance(0.5) ? a : b;
     const winner = loser === a ? b : a;
     const p = config.obsolescence.probabilityPerPairPerGeneration * lang.conservatism;

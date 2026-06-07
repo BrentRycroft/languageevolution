@@ -1,4 +1,5 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
+import { glossKeyedView, satDelete } from "../lexicon/satellites";
 import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority, voicedObstruentShareOf } from "../phonology/apply";
 import { buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
 import { invalidateClosedClassCache } from "../translator/closedClass";
@@ -271,7 +272,7 @@ export function stepPhonology(
       PER_WORD_ACTUATION_SCALE,
     weights: lang.changeWeights,
     rateMultiplier: mult * strataMult,
-    frequencyHints: lang.wordFrequencyHints,
+    frequencyHints: glossKeyedView(lang, "wordFrequencyHints"),
     agesSinceChange: ages,
     registerOf: lang.registerOf,
     stressPattern: lang.stressPattern,
@@ -388,7 +389,7 @@ export function stepPhonology(
     if (after[cid] !== undefined) continue;
     const m = glossOfCid.get(cid);
     if (m === undefined) continue;
-    delete lang.wordFrequencyHints[m];
+    satDelete(lang, "wordFrequencyHints", m);
     delete lang.lastChangeGeneration[m];
     delete lang.wordOrigin[m];
     delete lang.localNeighbors[m];

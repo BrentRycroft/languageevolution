@@ -54,6 +54,11 @@ function makeLang(
   for (const [m, f] of Object.entries(glossLexicon)) {
     lexSet(lang, m as Meaning, f);
   }
+  const _fh = lang.wordFrequencyHints as Record<string, number>;
+  for (const _g of Object.keys(_fh)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
+  }
   return lang;
 }
 
@@ -121,7 +126,7 @@ describe("freezeLexicalSpelling", () => {
   it("never fires for tier-0/1/2 languages", () => {
     for (const tier of [0, 1, 2] as const) {
       const lang = makeLang(
-        { culturalTier: tier, wordFrequencyHints: { house: 0.9 } },
+        { culturalTier: tier, wordFrequencyHints: { house: 0.9 } as Record<string, number> },
         { house: ["h", "a", "w", "s"] },
       );
       for (let i = 0; i < 100; i++) {
@@ -134,7 +139,7 @@ describe("freezeLexicalSpelling", () => {
 
   it("freezes a high-frequency word for tier-3 languages", () => {
     const lang = makeLang(
-      { culturalTier: 3, wordFrequencyHints: { house: 0.9 } },
+      { culturalTier: 3, wordFrequencyHints: { house: 0.9 } as Record<string, number> },
       { house: ["h", "a", "w", "s"] },
     );
     let result: { meaning: string; spelling: string } | null = null;
@@ -149,7 +154,7 @@ describe("freezeLexicalSpelling", () => {
 
   it("ignores low-frequency words", () => {
     const lang = makeLang(
-      { culturalTier: 3, wordFrequencyHints: { obscure: 0.2 } },
+      { culturalTier: 3, wordFrequencyHints: { obscure: 0.2 } as Record<string, number> },
       { obscure: ["o", "b", "s"] },
     );
     for (let i = 0; i < 50; i++) {
@@ -160,7 +165,7 @@ describe("freezeLexicalSpelling", () => {
 
   it("doesn't re-freeze a meaning that already has a spelling", () => {
     const lang = makeLang(
-      { culturalTier: 3, wordFrequencyHints: { house: 0.9 }, lexicalSpelling: { house: "hous" } },
+      { culturalTier: 3, wordFrequencyHints: { house: 0.9 } as Record<string, number>, lexicalSpelling: { house: "hous" } },
       { house: ["h", "a", "w", "s"] },
     );
     for (let i = 0; i < 50; i++) {

@@ -135,7 +135,7 @@ describe("cross-feature integration", () => {
       };
       const lang = testLang({
         lexemes: { go: ["g", "o"], walk: ["w", "a", "l", "k"] } as unknown as LexemeStore,
-        wordFrequencyHints: { go: 0.9, walk: 0.4 },
+        wordFrequencyHints: { go: 0.9, walk: 0.4 } as Record<string, number>,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
         enabledChangeIds: ["lenition.p_to_f"],
       });
@@ -199,7 +199,7 @@ describe("cross-feature integration", () => {
       };
       const lang = testLang({
         lexemes: { go: ["g", "o"] } as unknown as LexemeStore,
-        wordFrequencyHints: { go: 0.9 },
+        wordFrequencyHints: { go: 0.9 } as Record<string, number>,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
         suppletion: { go: { "verb.tense.past": ["w", "e", "n", "t"] } },
       });

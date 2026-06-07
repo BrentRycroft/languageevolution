@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satGet } from "../lexicon/satellites";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
@@ -35,7 +36,7 @@ describe("lexicogenesis e2e", () => {
         // primary loan dropped then restored via sense churn) legitimately
         // leave it unset. If a hint IS present it must be a valid [0,1].
         expect(lang.wordOrigin[m]!.length).toBeGreaterThan(0);
-        const f = lang.wordFrequencyHints[m];
+        const f = satGet(lang, "wordFrequencyHints", m);
         if (f !== undefined) {
           expect(f, `freq range for coined ${m}`).toBeGreaterThanOrEqual(0);
           expect(f, `freq range for coined ${m}`).toBeLessThanOrEqual(1);

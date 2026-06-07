@@ -1,4 +1,5 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { satGet } from "./satellites";
 import type { Rng } from "../rng";
 import { addSynonym, setLexiconForm } from "./mutate";
 import { selectSynonyms, formKeyOf, findWordsByMeaning } from "./word";
@@ -48,7 +49,7 @@ export function maybeSpawnSynonym(
   const candidates: Array<{ meaning: Meaning; form: WordForm }> = [];
   for (const m of lexKeys(lang)) {
     if (isClosedClass(posOf(m))) continue;
-    const freq = lang.wordFrequencyHints[m] ?? 0.5;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     if (freq < 0.4) continue;
     if (selectSynonyms(lang, m).length >= 3) continue; // already saturated
     const f = lexGet(lang, m)!;
@@ -139,7 +140,7 @@ export function maybeSuppressHomonym(
       // words (freq ≥ 0.85) carry historical reconstruction signal.
       // Vacating their primary form to a synonym would muddy comparative
       // reconstruction with no real-language counterpart.
-      const freq = lang.wordFrequencyHints[m] ?? 0.5;
+      const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
       if (freq >= 0.85) continue;
       const synonyms = selectSynonyms(lang, m).filter((sw) => sw !== w);
       if (synonyms.length === 0) continue;

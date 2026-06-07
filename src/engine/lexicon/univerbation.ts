@@ -1,4 +1,5 @@
 import type { Language, Meaning } from "../types";
+import { satGet, satSet } from "./satellites";
 import type { Rng } from "../rng";
 import { addCompound } from "./compound";
 import { lexHas } from "./access";
@@ -57,7 +58,7 @@ export function tryUniverbation(
     if (lexHas(lang, c.meaning)) return false;
     for (const p of c.parts) {
       if (!lexHas(lang, p)) return false;
-      const freq = lang.wordFrequencyHints[p] ?? 0.5;
+      const freq = satGet(lang, "wordFrequencyHints", p) ?? 0.5;
       if (freq < c.freqMin) return false;
     }
     return true;
@@ -76,7 +77,7 @@ export function tryUniverbation(
   }
   // Set a high frequency hint so the new word isn't immediately
   // discarded by erosion.
-  lang.wordFrequencyHints[chosen.meaning] = 0.8;
+  satSet(lang, "wordFrequencyHints", chosen.meaning, 0.8);
   if (!lang.wordOrigin) lang.wordOrigin = {};
   lang.wordOrigin[chosen.meaning] = "univerbation";
   return { meaning: chosen.meaning, parts: chosen.parts };

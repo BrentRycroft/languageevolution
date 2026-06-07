@@ -25,7 +25,7 @@ function makeLang(): Language {
     birthGeneration: 0,
     grammar: { ...DEFAULT_GRAMMAR },
     events: [],
-    wordFrequencyHints: { go: 0.9, come: 0.9 },
+    wordFrequencyHints: { go: 0.9, come: 0.9 } as Record<string, number>,
     phonemeInventory: { segmental: [], tones: [], usesTones: false },
     morphology: {
       paradigms: {
@@ -44,6 +44,11 @@ function makeLang(): Language {
   };
   lexSet(lang, "go", ["g", "a", "n"]);
   lexSet(lang, "come", ["k", "o", "m"]);
+  const _fh = lang.wordFrequencyHints as Record<string, number>;
+  for (const _g of Object.keys(_fh)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
+  }
   return lang;
 }
 

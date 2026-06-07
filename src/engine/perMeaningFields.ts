@@ -71,7 +71,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "wordFrequencyHints",
     inherit: "shallow-clone",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Per-meaning frequency seed (Phase 24)",
   },
   {

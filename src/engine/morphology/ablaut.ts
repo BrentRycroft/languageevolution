@@ -1,4 +1,5 @@
 import type { Language, Meaning } from "../types";
+import { satGet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { isVowel } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
@@ -140,7 +141,7 @@ export function proposeAblautEmergence(
   for (const m of lexKeys(lang)) {
     if (posOf(m) !== "verb") continue;
     if (lang.ablautClassAssignment?.[m]) continue;
-    const freq = lang.wordFrequencyHints[m] ?? 0.4;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.4;
     if (freq < 0.7) continue; // strong verbs are typically high-freq
     candidates.push(m);
   }

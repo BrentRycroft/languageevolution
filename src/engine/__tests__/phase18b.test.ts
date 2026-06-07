@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satGet } from "../lexicon/satellites";
 import { glossToEnglish } from "../translator/glossToEnglish";
 import { translateSentence } from "../translator/sentence";
 import { classifyShift } from "../semantics/drift";
@@ -53,6 +54,11 @@ function makeLang(
   };
   for (const [m, f] of Object.entries(glossLexicon)) {
     lexSet(lang, m as Meaning, f);
+  }
+  const _fh = lang.wordFrequencyHints as Record<string, number>;
+  for (const _g of Object.keys(_fh)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
   }
   return lang;
 }
@@ -157,7 +163,7 @@ describe("Phase 18b — deeper engine work", () => {
               "noun.num.pl": { affix: ["s"], position: "suffix", category: "noun.num.pl" },
             },
           },
-          wordFrequencyHints: { foot: 0.95 },
+          wordFrequencyHints: { foot: 0.95 } as Record<string, number>,
         },
         { foot: ["f", "u", "t"] },
       );
@@ -215,7 +221,7 @@ describe("Phase 18b — deeper engine work", () => {
               },
             },
           },
-          wordFrequencyHints: { go: 0.85 },
+          wordFrequencyHints: { go: 0.85 } as Record<string, number>,
         },
         { go: ["g", "o"] },
       );
@@ -226,7 +232,7 @@ describe("Phase 18b — deeper engine work", () => {
       }
       expect(result).not.toBeNull();
       expect(result!.meaning).toBe("go");
-      expect(lang.wordFrequencyHints.go ?? 1).toBeLessThan(0.85);
+      expect(satGet(lang, "wordFrequencyHints", "go") ?? 1).toBeLessThan(0.85);
     });
   });
 });

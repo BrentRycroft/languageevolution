@@ -1,4 +1,5 @@
 import type { Language, Phoneme, WordForm } from "../types";
+import { satGet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { featuresOf } from "./features";
 import { stripTone, capToneStacking } from "./tone";
@@ -289,7 +290,7 @@ export function prunePhonemes(
       let hasCand = false;
       for (const raw of form) if (stripTone(raw) === candidate) { hasCand = true; break; }
       if (!hasCand) continue;
-      const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+      const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
       if (protect && freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) continue;
       const projected: WordForm = form.map((raw) => {
         const tone = raw.length > stripTone(raw).length ? raw.slice(stripTone(raw).length) : "";
@@ -329,7 +330,7 @@ export function prunePhonemes(
       if (stripTone(raw) === candidate) { containsCandidate = true; break; }
     }
     if (!containsCandidate) continue;
-    const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     if (protect && freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) {
       swadeshSkipped++;
       continue;

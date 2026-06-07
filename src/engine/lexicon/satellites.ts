@@ -85,3 +85,18 @@ export function seedKeylessBirthSatellites(lang: Language, id: LexemeId, generat
   satSet(lang, "wordOrigin", id, "keyless-gap");
   satSet(lang, "registerOf", id, "low");
 }
+
+/**
+ * Rebuild a GLOSS-keyed view of a satellite field (gloss-bearing records only).
+ * The phonology engine still indexes these maps by gloss at its boundary
+ * (apply.ts), so the per-gen pass-through builds this adapter from the now
+ * LexemeId-keyed storage. Byte-identical to the pre-flip gloss-keyed map.
+ */
+export function glossKeyedView<K extends SatField>(lang: Language, field: K): Record<Meaning, SatelliteTypes[K]> {
+  const out: Record<string, SatelliteTypes[K]> = {};
+  for (const [id, v] of satEntries(lang, field)) {
+    const gloss = lang.lexemes?.[id]?.gloss;
+    if (gloss !== undefined) out[gloss] = v;
+  }
+  return out;
+}

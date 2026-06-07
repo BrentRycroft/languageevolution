@@ -1,4 +1,5 @@
 import type { Morphology, MorphCategory, Paradigm } from "./types";
+import { satGet, satSet, satHas } from "../lexicon/satellites";
 import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { semanticTagOf, pathwayTargetsForLang } from "../semantics/grammaticalization";
@@ -114,7 +115,7 @@ export function maybeGrammaticalize(
     const form = lexGet(lang, m)!;
     if (form.length === 0 || form.length > 4) continue;
     const isClitic = (lang.wordOrigin?.[m] ?? "").startsWith("clitic:");
-    const freq = lang.wordFrequencyHints[m] ?? 0.5;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     const freqFloor = isClitic ? 0.4 : 0.6;
     if (freq < freqFloor) continue;
     // Phase 73c Tier C Phase 1: filter pathway targets through the
@@ -159,8 +160,8 @@ export function maybeGrammaticalize(
     existing.stage = 2;
     existing.targetCategory = target;
     existing.lastTransitionGen = 0;
-    if (lang.wordFrequencyHints[candidate] !== undefined) {
-      lang.wordFrequencyHints[candidate] = Math.max(0.1, lang.wordFrequencyHints[candidate]! * 0.5);
+    if (satHas(lang, "wordFrequencyHints", candidate)) {
+      satSet(lang, "wordFrequencyHints", candidate, Math.max(0.1, satGet(lang, "wordFrequencyHints", candidate)! * 0.5));
     }
     return {
       kind: "grammaticalization",
@@ -180,8 +181,8 @@ export function maybeGrammaticalize(
   if (!lang.wordOrigin) lang.wordOrigin = {};
   lang.wordOrigin[candidate] = `clitic:${chosen.tag}`;
   // Clitics lose stress and frequency-as-a-lexeme as they bleach.
-  if (lang.wordFrequencyHints[candidate] !== undefined) {
-    lang.wordFrequencyHints[candidate] = Math.max(0.1, lang.wordFrequencyHints[candidate]! * 0.6);
+  if (satHas(lang, "wordFrequencyHints", candidate)) {
+    satSet(lang, "wordFrequencyHints", candidate, Math.max(0.1, satGet(lang, "wordFrequencyHints", candidate)! * 0.6));
   }
   return {
     kind: "grammaticalization",
@@ -321,7 +322,7 @@ function maybeArticleEmergence(
   // and reduce its frequency hint slightly (function words erode).
   if (!lexHas(lang, "the")) {
     lexSet(lang, "the", lexGet(lang, donor)!.slice());
-    lang.wordFrequencyHints["the"] = 0.97;
+    satSet(lang, "wordFrequencyHints", "the", 0.97);
     lang.wordOrigin["the"] = `grammaticalization:${donor}`;
   }
   lang.grammar.articlePresence = next;
@@ -495,7 +496,7 @@ export function maybeCliticize(
     if ((lang.wordOrigin?.[m] ?? "").startsWith("clitic:")) continue;
     const form = lexGet(lang, m)!;
     if (form.length < 2 || form.length > 5) continue;
-    const freq = lang.wordFrequencyHints[m] ?? 0.5;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     if (freq < 0.7) continue;
     candidates.push({ m, tag, form });
   }
@@ -518,7 +519,7 @@ export function maybeCliticize(
     lastTransitionGen: 0,
   };
   lang.wordOrigin[chosen.m] = `clitic:${chosen.tag}`;
-  lang.wordFrequencyHints[chosen.m] = 0.45;
+  satSet(lang, "wordFrequencyHints", chosen.m, 0.45);
   return {
     meaning: chosen.m,
     from: chosen.form.join(""),
@@ -814,7 +815,7 @@ export function maybeSuppletion(
   );
   if (verbMeanings.length < 2) return null;
   const highFreq = verbMeanings.filter(
-    (m) => (lang.wordFrequencyHints[m] ?? 0.4) >= 0.6,
+    (m) => (satGet(lang, "wordFrequencyHints", m) ?? 0.4) >= 0.6,
   );
   if (highFreq.length === 0) return null;
   const meaning = highFreq[rng.int(highFreq.length)]!;
@@ -902,7 +903,7 @@ export function maybeVowelMutationIrregular(
   });
   if (candidates.length === 0) return null;
   const highFreq = candidates.filter(
-    (m) => (lang.wordFrequencyHints[m] ?? 0.4) >= 0.55,
+    (m) => (satGet(lang, "wordFrequencyHints", m) ?? 0.4) >= 0.55,
   );
   if (highFreq.length === 0) return null;
   const meaning = highFreq[rng.int(highFreq.length)]!;

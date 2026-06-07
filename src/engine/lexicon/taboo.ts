@@ -1,4 +1,5 @@
 import type { Language, Meaning } from "../types";
+import { satSet } from "./satellites";
 import type { Rng } from "../rng";
 import { relatedMeanings } from "../semantics/clusters";
 import { neighborsOf } from "../semantics/neighbors";
@@ -113,7 +114,7 @@ export function maybeTabooReplace(
     origin: donor ? `taboo:${donor}` : "taboo:self",
   });
   lang.wordOrigin[target] = donor ? `taboo:${donor}` : "taboo:self";
-  lang.wordFrequencyHints[target] = 0.55;
+  satSet(lang, "wordFrequencyHints", target, 0.55);
 
   return {
     meaning: target,

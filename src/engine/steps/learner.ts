@@ -1,4 +1,5 @@
 import type { Language, SimulationConfig, WordForm } from "../types";
+import { satGet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { recordInnovation } from "../lexicon/socialContagion";
@@ -115,7 +116,7 @@ export function stepLearner(
     let codaSimplifications = 0;
     for (const m of lexKeys(lang)) {
       const form = lexGet(lang, m)!;
-      const freq = lang.wordFrequencyHints[m] ?? 0.5;
+      const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
       if (freq > 0.4) continue;
       const simplified = simplifyCoda(form);
       if (!simplified) continue;

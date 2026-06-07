@@ -5,6 +5,7 @@ import type {
   WordMorphStructure,
   WordMorphStructureOrigin,
 } from "../types";
+import { satGet, satSet } from "../lexicon/satellites";
 import type { CoinageOutcome } from "../genesis/apply";
 import { tryCoin } from "../genesis/apply";
 import { lexicalNeed } from "../genesis/need";
@@ -184,7 +185,7 @@ export function stepGenesis(
           );
           if (!commit.committed) continue;
           lexSet(lang, derived.meaning, derived.form);
-          lang.wordFrequencyHints[derived.meaning] = 0.4;
+          satSet(lang, "wordFrequencyHints", derived.meaning, 0.4);
           lang.wordOrigin[derived.meaning] = "derivation";
           recordDerivationChain(lang, derived);
           // Record the derived word's structure so recordedParts() sees coined
@@ -327,7 +328,7 @@ export function stepGenesis(
       rebuildFormKeyIndex(lang);
     }
     lexSet(lang, outcome.meaning, outcome.form);
-    lang.wordFrequencyHints[outcome.meaning] = 0.4;
+    satSet(lang, "wordFrequencyHints", outcome.meaning, 0.4);
     lang.wordOrigin[outcome.meaning] = isReplacement
       ? `lexical-replacement:${outcome.originTag}`
       : outcome.originTag;
@@ -462,12 +463,12 @@ export function bootstrapNeologismNeighbors(lang: Language): void {
     const parts = recordedParts(lang, m, { contentOnly: true });
     if (!parts) continue;
     for (const p of parts) {
-      const hint = lang.wordFrequencyHints[p];
-      if (hint && !lang.wordFrequencyHints[m]) {
-        lang.wordFrequencyHints[m] = Math.max(
-          lang.wordFrequencyHints[m] ?? 0,
+      const hint = satGet(lang, "wordFrequencyHints", p);
+      if (hint && !satGet(lang, "wordFrequencyHints", m)) {
+        satSet(lang, "wordFrequencyHints", m, Math.max(
+          satGet(lang, "wordFrequencyHints", m) ?? 0,
           hint * 0.7,
-        );
+        ));
       }
     }
     if (neighborsOf(m).length > 0 || (lang.localNeighbors[m] ?? []).length > 0) continue;

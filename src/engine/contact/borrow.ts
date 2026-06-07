@@ -1,4 +1,5 @@
 import type { Language, LanguageTree, WordForm } from "../types";
+import { satGet, satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { leafIds } from "../tree/split";
 import { isVowel, isSyllabic } from "../phonology/ipa";
@@ -207,10 +208,10 @@ export function tryBorrow(
   }
   if (!recipient.registerOf) recipient.registerOf = {};
   if (!alreadyHas) recipient.registerOf[meaning] = prestige;
-  recipient.wordFrequencyHints[meaning] = Math.max(
-    recipient.wordFrequencyHints[meaning] ?? 0,
+  satSet(recipient, "wordFrequencyHints", meaning, Math.max(
+    satGet(recipient, "wordFrequencyHints", meaning) ?? 0,
     prestige === "high" ? 0.55 : 0.45,
-  );
+  ));
   return {
     donor: donor.name,
     donorId,

@@ -1,4 +1,5 @@
 import type { Language, Lexicon, Meaning, SoundChange, WordForm } from "../types";
+import { satDelete } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { isFormLegal } from "./wordShape";
 import {
@@ -116,7 +117,7 @@ export function applyOneRegularChange(
   }
   for (const m of dropped) {
     lexDelete(lang, m);
-    delete lang.wordFrequencyHints[m];
+    satDelete(lang, "wordFrequencyHints", m);
     delete lang.lastChangeGeneration[m];
     delete lang.wordOrigin[m];
     delete lang.localNeighbors[m];

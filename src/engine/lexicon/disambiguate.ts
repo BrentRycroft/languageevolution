@@ -1,4 +1,5 @@
 import type { Language, WordForm } from "../types";
+import { satGet } from "./satellites";
 import type { Rng } from "../rng";
 import { setLexiconForm } from "./mutate";
 import { posOf } from "./pos";
@@ -167,7 +168,7 @@ function disambiguateCoreCollisionsOnce(
 ): number {
   const coreMeanings: string[] = [];
   for (const m of lexKeys(lang)) {
-    const freq = lang.wordFrequencyHints[m] ?? 0.5;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     if (freq >= CORE_FREQ_THRESHOLD && isCoreMeaning(m)) {
       coreMeanings.push(m);
     } else if (ALWAYS_CORE.has(m)) {
@@ -201,8 +202,8 @@ function disambiguateCoreCollisionsOnce(
   for (const [, meanings] of byForm) {
     if (meanings.length < 2) continue;
     meanings.sort((a, b) => {
-      const fa = lang.wordFrequencyHints[a] ?? 0.5;
-      const fb = lang.wordFrequencyHints[b] ?? 0.5;
+      const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.5;
+      const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.5;
       if (fb !== fa) return fb - fa;
       return a < b ? -1 : 1; // deterministic tie-break
     });
