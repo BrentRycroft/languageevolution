@@ -1,11 +1,11 @@
 import type { Language, LexemeStore, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
-import { satGet } from "./satellites";
+import { satGet, satEntries } from "./satellites";
 import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
 import { lexGet, lexHas, lexEntries } from "./access";
-import { lexemeIdFor } from "./lexemeIdentity";
+import { lexemeIdFor, meaningForLexemeId } from "./lexemeIdentity";
 import { lexPoint } from "../semantics/meaningPoint";
 import { CONCEPT_IDS } from "./concepts";
 
@@ -571,7 +571,9 @@ export function removeSense(lang: Language, meaning: Meaning): void {
 export function syncLexiconFromWords(lang: Language): void {
   if (!lang.words) return;
   const nextStore: LexemeStore = {};
-  const colex: Record<Meaning, Meaning[]> = {};
+  // colexifiedAs is LexemeId-keyed storage (S2a); the partner VALUE arrays stay
+  // gloss lists. Outer key is the meaning's id; value entries are gloss partners.
+  const colex: Record<string, Meaning[]> = {};
   // For each meaning, track the (word, sense) pair with the highest weight.
   const bestBySense: Record<Meaning, { word: Word; weight: number }> = {};
   for (const w of lang.words) {
@@ -585,11 +587,12 @@ export function syncLexiconFromWords(lang: Language): void {
     // pair of meanings on the word.
     if (w.senses.length >= 2) {
       for (const a of w.senses) {
+        const aId = lexemeIdFor(lang, a.meaning);
         for (const b of w.senses) {
           if (a.meaning === b.meaning) continue;
-          (colex[a.meaning] ??= []);
-          if (!colex[a.meaning].includes(b.meaning)) {
-            colex[a.meaning].push(b.meaning);
+          (colex[aId] ??= []);
+          if (!colex[aId].includes(b.meaning)) {
+            colex[aId].push(b.meaning);
           }
         }
       }
@@ -686,7 +689,9 @@ export function syncWordsFromLexicon(
   // recorded as colexified should land on the same word even if their
   // forms briefly differ during migration.
   if (lang.colexifiedAs) {
-    for (const [m, partners] of Object.entries(lang.colexifiedAs)) {
+    for (const [id, partners] of satEntries(lang, "colexifiedAs")) {
+      const m = meaningForLexemeId(lang, id);
+      if (m === undefined) continue;
       const formA = lexGet(lang, m);
       if (!formA) continue;
       const keyA = formKeyOf(formA);

@@ -14,6 +14,7 @@ import { makeRng } from "../rng";
 import type { Language, LanguageTree } from "../types";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { lexGet, lexHas } from "../lexicon/access";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * concepts.test.ts
@@ -144,7 +145,7 @@ describe("re-carving", () => {
       expect(ev.loser).toBe("arm");
       expect(lexGet(lang, "hand")).toBeDefined();
       expect(lexHas(lang, "arm")).toBe(false);
-      expect(lang.colexifiedAs?.["hand"]).toContain("arm");
+      expect(satGet(lang, "colexifiedAs", "hand")).toContain("arm");
     } else {
       expect(["arm", "hand"]).toContain(ev.source);
     }

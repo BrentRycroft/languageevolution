@@ -11,6 +11,8 @@ import {
   attemptClusterComposition,
 } from "./synthesis";
 import { lexGet, lexHas } from "./access";
+import { satEntries } from "./satellites";
+import { meaningForLexemeId } from "./lexemeIdentity";
 import { nearestLexicalisedMeaning } from "../semantics/grounding";
 
 /**
@@ -123,7 +125,9 @@ export function lookupFormWithResolution(
   // novel form for the absorbed sense. (The registry colexWith *tendency*
   // stays a later, weaker fallback at rung 7b.)
   if (lang.colexifiedAs) {
-    for (const [winner, losers] of Object.entries(lang.colexifiedAs)) {
+    for (const [winnerId, losers] of satEntries(lang, "colexifiedAs")) {
+      const winner = meaningForLexemeId(lang, winnerId);
+      if (winner === undefined) continue;
       if (losers.includes(meaning) && lexHas(lang, winner)) {
         return {
           form: lexGet(lang, winner)!.slice(),

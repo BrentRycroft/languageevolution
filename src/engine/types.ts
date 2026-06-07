@@ -967,7 +967,7 @@ export interface Language {
   /** Generation at which `historicalRole` was assigned. */
   historicalRoleAssignedGen?: number;
   lexicalCapacity?: number;
-  colexifiedAs?: Record<Meaning, Meaning[]>;
+  colexifiedAs?: Record<LexemeId, Meaning[]>;
   /**
    * Per-meaning alternative forms (synonyms / lexical doublets) ranked by
    * frequency. The primary form lives in `lexicon[m]`; alternates compete

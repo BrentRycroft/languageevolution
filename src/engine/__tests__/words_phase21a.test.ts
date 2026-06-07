@@ -17,6 +17,7 @@ import { migrateSavedRun, LATEST_SAVE_VERSION } from "../../persistence/migrate"
 import { defaultConfig } from "../config";
 import type { Language, SavedRun, SimulationState } from "../types";
 import { lexGet, lexKeys, lexSet } from "../lexicon/access";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * words_phase21a.test.ts
@@ -67,6 +68,13 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   for (const _g of Object.keys(_fh)) {
     const _id = lang.lexemeIds?.[_g];
     if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
+  }
+  if (lang.colexifiedAs) {
+    const _cx = lang.colexifiedAs as Record<string, string[]>;
+    for (const _g of Object.keys(_cx)) {
+      const _id = lang.lexemeIds?.[_g];
+      if (_id && _id !== _g) { _cx[_id] = _cx[_g]!; delete _cx[_g]; }
+    }
   }
   return lang;
 }
@@ -195,8 +203,8 @@ describe("Phase 21a — sync between lexicon and words", () => {
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });
     syncLexiconFromWords(lang);
-    expect(lang.colexifiedAs?.["bank.financial"]).toEqual(["bank.river"]);
-    expect(lang.colexifiedAs?.["bank.river"]).toEqual(["bank.financial"]);
+    expect(satGet(lang, "colexifiedAs", "bank.financial")).toEqual(["bank.river"]);
+    expect(satGet(lang, "colexifiedAs", "bank.river")).toEqual(["bank.financial"]);
   });
 
   it("syncWordsFromLexicon builds words from a meaning-keyed lexicon", () => {
@@ -234,7 +242,7 @@ describe("Phase 21a — sync between lexicon and words", () => {
         // into one word.
         "bank.river": ["b", "æ", "ŋ", "k"],
       } as unknown as LexemeStore,
-      colexifiedAs: { "bank.financial": ["bank.river"] },
+      colexifiedAs: { "bank.financial": ["bank.river"] } as Record<string, string[]>,
     });
     syncWordsFromLexicon(lang, 0);
     expect(lang.words).toHaveLength(1);

@@ -4,6 +4,7 @@ import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
 import { lexSet } from "../lexicon/access";
+import { satSet } from "../lexicon/satellites";
 
 /**
  * translator.test.ts
@@ -84,7 +85,7 @@ describe("translator", () => {
     // `water`, which the shared resolution cascade recovers via its
     // reverse-colex rung. Pre-fix, word-level translate() never consulted
     // the cascade and returned "missing" here.
-    lang.colexifiedAs = { water: ["democracy"] };
+    satSet(lang, "colexifiedAs", "water", ["democracy"]);
     const r = translate(lang, "democracy");
     expect(r.source).not.toBe("missing");
     expect(r.form).toBe("water");

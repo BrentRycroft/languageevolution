@@ -279,7 +279,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   if (config.seedColexification) {
     rootLang.colexifiedAs = {};
     for (const [winner, absorbed] of Object.entries(config.seedColexification)) {
-      rootLang.colexifiedAs[winner] = absorbed.slice();
+      satSet(rootLang, "colexifiedAs", winner, absorbed.slice());
     }
   }
   // MEGA overhaul: seed SYNONYMS / lexical doublets (the inverse of colexification —
