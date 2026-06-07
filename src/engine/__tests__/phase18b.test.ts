@@ -174,7 +174,7 @@ describe("Phase 18b — deeper engine work", () => {
       }
       expect(result).not.toBeNull();
       expect(result!.meaning).toBe("foot");
-      expect(lang.suppletion?.foot?.["noun.num.pl"]).toBeDefined();
+      expect(satGet(lang, "suppletion", "foot")?.["noun.num.pl"]).toBeDefined();
     });
   });
 

@@ -5,6 +5,7 @@ import { defaultConfig } from "../config";
 import { prunePhonemes } from "../phonology/pruning";
 import { makeRng } from "../rng";
 import { lexSet, lexGet } from "../lexicon/access";
+import { satGet } from "../lexicon/satellites";
 import type { Language, Meaning, WordForm } from "../types";
 
 /**
@@ -38,8 +39,8 @@ describe("Phase 18a — quick fixes", () => {
       const sim = createSimulation(presetEnglish());
       const proto = sim.getState().tree["L-0"]!.language;
       expect(proto.culturalTier).toBe(3);
-      expect(proto.suppletion?.be).toBeDefined();
-      expect(proto.suppletion?.go).toBeDefined();
+      expect(satGet(proto, "suppletion", "be")).toBeDefined();
+      expect(satGet(proto, "suppletion", "go")).toBeDefined();
     });
   });
 

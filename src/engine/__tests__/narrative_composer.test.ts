@@ -5,6 +5,7 @@ import { composeTargetSentence, type AbstractTemplate, type SlotAssignment } fro
 import { makeDiscourse, mention } from "../narrative/discourse";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
 import type { Language } from "../types";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * narrative_composer.test.ts
@@ -183,7 +184,7 @@ describe("Narrative composer — target-side composition", () => {
 
   it("plural irregular survives: subject 'man' produces 'men' in English when pluralized", () => {
     const lang = englishLang();
-    expect(lang.suppletion?.man?.["noun.num.pl"]).toBeDefined();
+    expect(satGet(lang, "suppletion", "man")?.["noun.num.pl"]).toBeDefined();
     const tpl: AbstractTemplate = {
       shape: "intransitive",
       tense: "present",

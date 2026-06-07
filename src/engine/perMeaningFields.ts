@@ -156,7 +156,7 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "suppletion",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
-    keyedBy: "gloss",
+    keyedBy: "lexemeId",
     description: "Phase 70 suppletion table; purged on delete by Phase 71b",
   },
   // Phase 72d (full-delivery defer-2): stable concept-identity UUIDs.

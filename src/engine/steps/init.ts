@@ -121,14 +121,16 @@ function seedClosedClassLexicon(lang: Language): void {
   }
 }
 
+type SuppletionSlots = NonNullable<SimulationConfig["seedSuppletion"]>[string];
+
 function cloneSuppletion(
-  s: NonNullable<Language["suppletion"]>,
-): NonNullable<Language["suppletion"]> {
-  const out: NonNullable<Language["suppletion"]> = {};
+  s: Record<string, SuppletionSlots>,
+): Record<string, SuppletionSlots> {
+  const out: Record<string, SuppletionSlots> = {};
   for (const m of Object.keys(s)) {
     const slots = s[m];
     if (!slots) continue;
-    const cloned: NonNullable<Language["suppletion"]>[string] = {};
+    const cloned: SuppletionSlots = {};
     for (const cat of Object.keys(slots) as Array<keyof typeof slots>) {
       const f = slots[cat];
       if (f && f.length > 0) cloned[cat] = f.slice();
@@ -255,6 +257,21 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     for (const [gloss, hint] of Object.entries(config.seedFrequencyHints ?? {})) {
       const id = rootLang.lexemeIds?.[gloss];
       if (id) fh[id] = hint;
+    }
+  }
+  // S2a: the suppletion table is cloned gloss-keyed (cloneSuppletion runs above,
+  // before the lexicon re-key), so re-key it to LexemeId now that ids exist —
+  // matching its keyedBy:"lexemeId" storage. MINT-NEUTRAL: only re-key glosses
+  // that already have an id (seed suppletion only targets lexicon verbs/nouns);
+  // a gloss with no id passes through gloss-keyed, exactly as the seam resolves.
+  if (rootLang.suppletion) {
+    const supp = rootLang.suppletion as Record<string, SuppletionSlots>;
+    for (const gloss of Object.keys(supp)) {
+      const id = rootLang.lexemeIds?.[gloss];
+      if (id && id !== gloss) {
+        supp[id] = supp[gloss]!;
+        delete supp[gloss];
+      }
     }
   }
   // Phase 6a: give EVERY content concept a Zipfian-by-rank seed frequency (by

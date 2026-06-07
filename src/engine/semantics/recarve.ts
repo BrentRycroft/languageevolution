@@ -1,5 +1,5 @@
 import type { Language, Meaning } from "../types";
-import { satGet, satSet } from "../lexicon/satellites";
+import { satGet, satSet, satDelete } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { isFormLegal } from "../phonology/wordShape";
@@ -120,7 +120,7 @@ function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | 
     generation,
     reason: "semantic-merger",
   });
-  if (lang.suppletion) delete lang.suppletion[loser];
+  if (lang.suppletion) satDelete(lang, "suppletion", loser);
   recordOneSidedColexification(lang, winner, loser);
   stampRecarve(lang, winner, loser, generation);
   return { kind: "merge", winner, loser };
@@ -155,7 +155,7 @@ export function applyKinshipSimplification(
       generation,
       reason: "kinship-simplification",
     });
-    if (lang.suppletion) delete lang.suppletion[loser];
+    if (lang.suppletion) satDelete(lang, "suppletion", loser);
     recordOneSidedColexification(lang, winner, loser);
     out.push({ kind: "merge", winner, loser });
   }

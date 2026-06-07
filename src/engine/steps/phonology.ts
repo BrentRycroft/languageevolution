@@ -1,5 +1,5 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
-import { glossKeyedView, satDelete } from "../lexicon/satellites";
+import { glossKeyedView, satDelete, satGet, satKeys } from "../lexicon/satellites";
 import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority, voicedObstruentShareOf } from "../phonology/apply";
 import { buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
 import { invalidateClosedClassCache } from "../translator/closedClass";
@@ -409,8 +409,8 @@ export function stepPhonology(
   };
   applyPhonologyToAffixes(lang.morphology, evolveForm);
   if (lang.suppletion) {
-    for (const meaning of Object.keys(lang.suppletion)) {
-      const slots = lang.suppletion[meaning]!;
+    for (const id of satKeys(lang, "suppletion")) {
+      const slots = satGet(lang, "suppletion", id)!;
       for (const cat of Object.keys(slots) as Array<keyof typeof slots>) {
         const form = slots[cat];
         if (!form || form.length === 0) continue;

@@ -670,7 +670,7 @@ export function inflect(
   meaning?: string,
 ): WordForm {
   if (paradigm && lang?.suppletion && meaning) {
-    const forMeaning = lang.suppletion[meaning];
+    const forMeaning = satGet(lang, "suppletion", meaning);
     const override = forMeaning?.[paradigm.category];
     if (override && override.length > 0) return override.slice();
   }
@@ -829,7 +829,7 @@ export function maybeSuppletion(
   const availableCats = ELIGIBLE_CATS.filter((c) => lang.morphology.paradigms[c]);
   if (availableCats.length === 0) return null;
   const category = availableCats[rng.int(availableCats.length)]!;
-  const existing = lang.suppletion?.[meaning]?.[category];
+  const existing = satGet(lang, "suppletion", meaning)?.[category];
   if (existing) return null;
   const donors = verbMeanings.filter(
     (m) => m !== meaning && (lexGet(lang, m)?.length ?? 0) >= 2,
@@ -837,9 +837,12 @@ export function maybeSuppletion(
   if (donors.length === 0) return null;
   const donorMeaning = donors[rng.int(donors.length)]!;
   const donorForm = lexGet(lang, donorMeaning)!;
-  if (!lang.suppletion) lang.suppletion = {};
-  if (!lang.suppletion[meaning]) lang.suppletion[meaning] = {};
-  lang.suppletion[meaning]![category] = donorForm.slice();
+  let slots = satGet(lang, "suppletion", meaning);
+  if (!slots) {
+    slots = {};
+    satSet(lang, "suppletion", meaning, slots);
+  }
+  slots[category] = donorForm.slice();
   return { meaning, category, donorMeaning };
 }
 
@@ -914,14 +917,17 @@ export function maybeVowelMutationIrregular(
       ? "adj.degree.cmp"
       : "adj.degree.sup";
   if (!lang.morphology.paradigms[category]) return null;
-  const existing = lang.suppletion?.[meaning]?.[category];
+  const existing = satGet(lang, "suppletion", meaning)?.[category];
   if (existing) return null;
   const baseForm = lexGet(lang, meaning);
   if (!baseForm || baseForm.length < 2) return null;
   const mutated = vowelMutationOf(baseForm, lang);
   if (!mutated) return null;
-  if (!lang.suppletion) lang.suppletion = {};
-  if (!lang.suppletion[meaning]) lang.suppletion[meaning] = {};
-  lang.suppletion[meaning]![category] = mutated;
+  let slots = satGet(lang, "suppletion", meaning);
+  if (!slots) {
+    slots = {};
+    satSet(lang, "suppletion", meaning, slots);
+  }
+  slots[category] = mutated;
   return { meaning, category };
 }

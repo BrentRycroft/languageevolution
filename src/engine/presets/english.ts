@@ -668,7 +668,9 @@ const BOUND_MORPHEMES = new Set<string>([
   "un-", "dis-", "non-", "in-",
 ]);
 
-const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+const SUPPLETION: NonNullable<
+  import("../types").SimulationConfig["seedSuppletion"]
+> = {
   be: {
     "verb.tense.past": ["w", "a", "z"],
     "verb.tense.fut": ["w", "ɪ", "l", "b", "iː"],

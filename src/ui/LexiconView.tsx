@@ -9,6 +9,7 @@ import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 import { prettyGloss } from "../engine/lexicon/word";
 import { lexGet } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * LexiconView.tsx
@@ -504,8 +505,8 @@ export function LexiconView() {
                     // Languages that have evolved or seeded irregular forms
                     // for this meaning (Latin esse → fui; English go → went)
                     // get a visible badge so users can find them at a glance.
-                    const suppletiveSlots = lang.suppletion?.[meaning]
-                      ? Object.keys(lang.suppletion[meaning] ?? {})
+                    const suppletiveSlots = satGet(lang, "suppletion", meaning)
+                      ? Object.keys(satGet(lang, "suppletion", meaning) ?? {})
                       : [];
                     // Phase 29 Tranche 4c: social-contagion sparkline.
                     // Renders the per-meaning variant trace as a tiny
