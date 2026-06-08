@@ -33,16 +33,57 @@ import { lexPoint } from "../semantics/meaningPoint";
  * coined.
  */
 
+// --- S3: barcode-native primary accessors ---
+/** Form for a record id, or undefined. Primary read. */
+export function lexFormById(lang: LexiconState, id: LexemeId): WordForm | undefined {
+  return lang.lexemes[id]?.form;
+}
+/** Set an EXISTING record's form in place (preserving point + gloss). Never mints; no-op if absent. */
+export function lexSetFormById(lang: LexiconState, id: LexemeId, form: WordForm): void {
+  const rec = lang.lexemes[id];
+  if (rec) rec.form = form;
+}
+/** Whether a record id exists in the store. */
+export function lexHasById(lang: LexiconState, id: LexemeId): boolean {
+  return lang.lexemes[id] !== undefined;
+}
+/** Delete a record by id. */
+export function lexDeleteById(lang: LexiconState, id: LexemeId): void {
+  if (lang.lexemes[id] !== undefined) delete lang.lexemes[id];
+}
+/** Seeded ids in INSERTION order — gloss-bearing records only (keyless excluded). Positional twin of
+ *  `lexKeys`. NOT sorted (use `orderedLexemeIds` for the RNG-draw order). */
+export function lexIds(lang: LexiconState): LexemeId[] {
+  const g = buildLexemeIdToGloss(lang);
+  const out: LexemeId[] = [];
+  for (const cid of Object.keys(lang.lexemes)) if (g.has(cid)) out.push(cid as LexemeId);
+  return out;
+}
+/** Non-minting boundary resolver: gloss → id, or undefined if the word does not exist. */
+export function idForGloss(lang: LexiconState, m: Meaning): LexemeId | undefined {
+  return lang.lexemeIds?.[m] as LexemeId | undefined;
+}
+/** Coin a NEW seeded word (or update an existing one's form) by gloss — the single blessed seeded-mint
+ *  boundary. Mints a LexemeId + record (materialized point + gloss) for a new meaning; an existing
+ *  meaning updates its form in place. Returns the id. */
+export function coinSeededLexeme(lang: LexiconState, m: Meaning, form: WordForm): LexemeId {
+  const id = lexemeIdFor(lang, m);
+  const rec = lang.lexemes[id];
+  if (rec) rec.form = form;
+  else lang.lexemes[id] = { form, point: Array.from(lexPoint(m)), gloss: m };
+  return id;
+}
+
 /** Form for a meaning, or undefined. */
 export function lexGet(lang: LexiconState, m: Meaning): WordForm | undefined {
-  const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
-  return cid === undefined ? undefined : lang.lexemes[cid]?.form;
+  const id = idForGloss(lang, m);
+  return id === undefined ? undefined : lexFormById(lang, id);
 }
 
 /** Whether the lexicon has a form for this meaning. */
 export function lexHas(lang: LexiconState, m: Meaning): boolean {
-  const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
-  return cid !== undefined && lang.lexemes[cid] !== undefined;
+  const id = idForGloss(lang, m);
+  return id !== undefined && lexHasById(lang, id);
 }
 
 /** Set/replace the form for a meaning. Mints a LexemeId + record (materialized
@@ -50,24 +91,18 @@ export function lexHas(lang: LexiconState, m: Meaning): boolean {
  * (insertion parity with the old gloss store). An existing meaning updates its
  * record's form in place, preserving its point + gloss. */
 export function lexSet(lang: LexiconState, m: Meaning, form: WordForm): void {
-  const id = lexemeIdFor(lang, m);
-  const rec = lang.lexemes[id];
-  if (rec) rec.form = form;
-  else lang.lexemes[id] = { form, point: Array.from(lexPoint(m)), gloss: m };
+  coinSeededLexeme(lang, m, form);
 }
 
 /** Remove a meaning's record. (`lang.lexemeIds` is purged separately by
  * deleteMeaning's registry pass.) */
 export function lexDelete(lang: LexiconState, m: Meaning): void {
-  const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
-  if (cid !== undefined) {
-    delete lang.lexemes[cid];
-    return;
-  }
+  const id = idForGloss(lang, m);
+  if (id !== undefined) { lexDeleteById(lang, id); return; }
   // S2b: a KEYLESS (gloss-less) record has no lexemeIds entry; if `m` is itself a store key (its
   // LexemeId, e.g. a keyless recarve loser), delete it directly. Seeded glosses are never store keys
   // post-flip, so this branch only fires for an id and leaves seeded deletion byte-identical.
-  if (lang.lexemes[m as LexemeId] !== undefined) delete lang.lexemes[m as LexemeId];
+  if (lexHasById(lang, m as unknown as LexemeId)) lexDeleteById(lang, m as unknown as LexemeId);
 }
 
 /** Meanings (glosses) in INSERTION order — gloss-bearing records only (keyless
