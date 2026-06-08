@@ -4,16 +4,7 @@ import type { Meaning } from "../types";
 import { buildLexemeIdToGloss, type LexemeId } from "./lexemeIdentity";
 import { satGet } from "./satellites";
 import { glossOf } from "../semantics/anchors";
-import { posOfPoint, type PosClass } from "../semantics/anchorQueries";
 import { posOf, type POS } from "./pos";
-
-/** Widen the geometric 4-way `PosClass` (keyless) to the 18-way `POS` the callers + `isClosedClass` use. */
-const POS_OF_CLASS: Record<PosClass, POS> = {
-  noun: "noun",
-  verb: "verb",
-  adjective: "adjective",
-  closed: "other", // keyless coinages are content words; "closed" geometry → neutral open-class default
-};
 
 export const KEYLESS_MATURITY_FREQ = 0.5;
 
@@ -43,10 +34,14 @@ export function effectiveFormOf(lang: LexiconState, id: LexemeId): WordForm | un
   return lang.lexemes[id]?.form;
 }
 
+/**
+ * Effective POS via the EMERGENT gloss: seeded → `posOf(storedGloss)` (byte-identical to before);
+ * keyless → `posOf(glossOf(point))`, i.e. the POS of the nearest-anchor concept. This gives keyless
+ * words a real 18-way POS (S2b: "give keyless words real POS"), derived from geometry without mutating
+ * the stored point — so a keyless word coined near a verb concept participates in verb-gated processes.
+ */
 export function effectivePosOf(lang: LexiconState, id: LexemeId): POS {
-  const rec = lang.lexemes[id];
-  if (rec?.gloss !== undefined) return posOf(rec.gloss); // seeded: unchanged 18-way POS
-  return POS_OF_CLASS[posOfPoint(Int32Array.from(rec!.point))];
+  return posOf(effectiveGlossFor(lang, id));
 }
 
 export function keylessMature(lang: Language, id: LexemeId): boolean {
