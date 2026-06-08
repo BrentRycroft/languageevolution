@@ -1,7 +1,8 @@
 import type { Language, Meaning, Phoneme, WordForm } from "../types";
 import { featuresOf } from "./features";
 import { stripTone } from "./tone";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * Phase 27b: functional-load measurement.
@@ -97,9 +98,10 @@ function buildLexiconView(lang: Language): LexiconView {
   const toneTags: string[][] = [];
   const joined: string[] = [];
   const existingForms = new Set<string>();
-  for (const m of lexKeys(lang)) {
-    const f = lexGet(lang, m);
+  for (const id of lexIds(lang)) {
+    const f = lexFormById(lang, id);
     if (!f) continue;
+    const m = meaningForLexemeId(lang, id)!;
     meanings.push(m);
     rawForms.push(f);
     const bases: Phoneme[] = new Array(f.length);

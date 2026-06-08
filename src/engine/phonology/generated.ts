@@ -5,7 +5,7 @@ import { featuresOf, matchesQuery, isIntervocalic } from "./features";
 import { isVowel } from "./ipa";
 import type { Rng } from "../rng";
 import type { RuleFamily, RuleContext, GeneratedRule } from "./generated-types";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
 
 /**
  * generated.ts
@@ -163,16 +163,16 @@ function familyToCategory(family: RuleFamily): SoundChange["category"] {
 }
 
 export function hasAnyMatch(rule: GeneratedRule, lang: Language): boolean {
-  for (const m of lexKeys(lang)) {
-    if (hasMatch(rule, lexGet(lang, m)!)) return true;
+  for (const id of lexIds(lang)) {
+    if (hasMatch(rule, lexFormById(lang, id)!)) return true;
   }
   return false;
 }
 
 export function countAffectedForms(rule: GeneratedRule, lang: Language): number {
   let n = 0;
-  for (const m of lexKeys(lang)) {
-    if (hasMatch(rule, lexGet(lang, m)!)) n++;
+  for (const id of lexIds(lang)) {
+    if (hasMatch(rule, lexFormById(lang, id)!)) n++;
   }
   return n;
 }
