@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { CONCEPTS } from "../lexicon/concepts";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { lexFormById, lexHasById, lexIds, idForGloss } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * Phase 51 T2: English → abstract concept → target-language pivot.
@@ -48,9 +49,10 @@ export function attemptAbstractPivot(
 
   // Direct hit — already handled at Rung 1 of resolveLemma, but guard
   // defensively in case this is called on an unsanitised path.
-  if (lexHas(lang, lemma)) {
+  const lemmaId = idForGloss(lang, lemma);
+  if (lemmaId !== undefined && lexHasById(lang, lemmaId)) {
     return {
-      form: lexGet(lang, lemma)!.slice(),
+      form: lexFormById(lang, lemmaId)!.slice(),
       via: lemma,
       glossNote: "",
     };
@@ -60,9 +62,10 @@ export function attemptAbstractPivot(
   // marked semantic neighbours.
   if (concept.colexWith) {
     for (const partner of concept.colexWith) {
-      if (lexHas(lang, partner)) {
+      const partnerId = idForGloss(lang, partner);
+      if (partnerId !== undefined && lexHasById(lang, partnerId)) {
         return {
-          form: lexGet(lang, partner)!.slice(),
+          form: lexFormById(lang, partnerId)!.slice(),
           via: partner,
           glossNote: `↔ ${partner}`,
         };
@@ -71,18 +74,23 @@ export function attemptAbstractPivot(
   }
 
   // Same cluster + same POS, prefer ≤ same frequency class.
+  // lexIds returns insertion-order LexemeIds; resolve each to its gloss.
   let bestMatch: Meaning | null = null;
-  for (const otherId of lexKeys(lang)) {
-    const otherConcept = CONCEPTS[otherId];
+  let bestMatchId = null;
+  for (const otherId of lexIds(lang)) {
+    const otherGloss = meaningForLexemeId(lang, otherId);
+    if (otherGloss === undefined) continue;
+    const otherConcept = CONCEPTS[otherGloss];
     if (!otherConcept) continue;
     if (otherConcept.cluster !== concept.cluster) continue;
     if (otherConcept.pos !== concept.pos) continue;
-    bestMatch = otherId;
+    bestMatch = otherGloss;
+    bestMatchId = otherId;
     break;
   }
-  if (bestMatch) {
+  if (bestMatch && bestMatchId) {
     return {
-      form: lexGet(lang, bestMatch)!.slice(),
+      form: lexFormById(lang, bestMatchId)!.slice(),
       via: bestMatch,
       glossNote: `* ${bestMatch}`,
     };
