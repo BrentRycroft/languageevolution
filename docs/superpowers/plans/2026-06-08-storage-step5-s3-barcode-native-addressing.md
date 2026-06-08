@@ -135,14 +135,14 @@ describe("S3 B0 — barcode-native seam agrees with gloss-in seam", () => {
     const lang = rootLang();
     const id = lexIds(lang)[0]!;
     const before = lang.conceptIdSeq;
-    lexSetFormById(lang, id, [{ onset: "", nucleus: "a", coda: "" }] as never);
-    expect(lexFormById(lang, id)).toEqual([{ onset: "", nucleus: "a", coda: "" }]);
+    lexSetFormById(lang, id, ["a"]);
+    expect(lexFormById(lang, id)).toEqual(["a"]);
     expect(lang.conceptIdSeq).toBe(before); // no mint
   });
 
   it("coinSeededLexeme mints a new word and is the id of its gloss", () => {
     const lang = rootLang();
-    const id = coinSeededLexeme(lang, "zzqx-new-concept", [{ onset: "", nucleus: "i", coda: "" }] as never);
+    const id = coinSeededLexeme(lang, "zzqx-new-concept", ["i"]);
     expect(idForGloss(lang, "zzqx-new-concept")).toBe(id);
     expect(meaningForLexemeId(lang, id)).toBe("zzqx-new-concept");
     lexDeleteById(lang, id);
