@@ -10,6 +10,7 @@ import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
 import { isSyllabic } from "../phonology/ipa";
 import { lexGet, lexSet, lexHas, lexKeys, lexValues } from "../lexicon/access";
+import { evolvableLexemes, effectiveGlossFor, effectiveFormOf, effectivePosOf } from "../lexicon/evolvable";
 
 /**
  * evolve.ts
@@ -813,15 +814,15 @@ export function maybeSuppletion(
   probability: number,
 ): { meaning: string; category: MorphCategory; donorMeaning: string } | null {
   if (!rng.chance(probability)) return null;
-  const verbMeanings = lexKeys(lang).filter(
-    (m) => posOf(m) === "verb",
-  );
-  if (verbMeanings.length < 2) return null;
-  const highFreq = verbMeanings.filter(
-    (m) => (satGet(lang, "wordFrequencyHints", m) ?? 0.4) >= 0.6,
+  // S2b: iterate evolvable ids (seeded first, keyless appended). Verb POS + form via per-id resolvers,
+  // so a keyless word coined near a verb concept participates. Form-based → no maturity gate.
+  const verbIds = evolvableLexemes(lang).filter((id) => effectivePosOf(lang, id) === "verb");
+  if (verbIds.length < 2) return null;
+  const highFreq = verbIds.filter(
+    (id) => (satGet(lang, "wordFrequencyHints", id) ?? 0.4) >= 0.6,
   );
   if (highFreq.length === 0) return null;
-  const meaning = highFreq[rng.int(highFreq.length)]!;
+  const targetId = highFreq[rng.int(highFreq.length)]!;
   const ELIGIBLE_CATS: MorphCategory[] = [
     "verb.tense.past",
     "verb.aspect.pfv",
@@ -832,21 +833,21 @@ export function maybeSuppletion(
   const availableCats = ELIGIBLE_CATS.filter((c) => lang.morphology.paradigms[c]);
   if (availableCats.length === 0) return null;
   const category = availableCats[rng.int(availableCats.length)]!;
-  const existing = satGet(lang, "suppletion", meaning)?.[category];
+  const existing = satGet(lang, "suppletion", targetId)?.[category];
   if (existing) return null;
-  const donors = verbMeanings.filter(
-    (m) => m !== meaning && (lexGet(lang, m)?.length ?? 0) >= 2,
+  const donors = verbIds.filter(
+    (id) => id !== targetId && (effectiveFormOf(lang, id)?.length ?? 0) >= 2,
   );
   if (donors.length === 0) return null;
-  const donorMeaning = donors[rng.int(donors.length)]!;
-  const donorForm = lexGet(lang, donorMeaning)!;
-  let slots = satGet(lang, "suppletion", meaning);
+  const donorId = donors[rng.int(donors.length)]!;
+  const donorForm = effectiveFormOf(lang, donorId)!;
+  let slots = satGet(lang, "suppletion", targetId);
   if (!slots) {
     slots = {};
-    satSet(lang, "suppletion", meaning, slots);
+    satSet(lang, "suppletion", targetId, slots);
   }
   slots[category] = donorForm.slice();
-  return { meaning, category, donorMeaning };
+  return { meaning: effectiveGlossFor(lang, targetId), category, donorMeaning: effectiveGlossFor(lang, donorId) };
 }
 
 const VOWEL_MUTATIONS: Record<string, string> = {
