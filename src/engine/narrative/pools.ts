@@ -1,7 +1,8 @@
 import type { Language, Meaning } from "../types";
 import { satGet } from "../lexicon/satellites";
 import { posOf } from "../lexicon/pos";
-import { lexKeys } from "../lexicon/access";
+import { lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import type { Rng } from "../rng";
 
 /**
@@ -42,7 +43,9 @@ export function isAnimate(meaning: Meaning): boolean {
  */
 export function poolByPOS(lang: Language, pos: ReturnType<typeof posOf>): Meaning[] {
   const out: Meaning[] = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     if (posOf(m) === pos) out.push(m);
   }
   out.sort((a, b) => {
@@ -79,7 +82,9 @@ const NON_NOUN_POS = new Set([
 
 export function nounLikePool(lang: Language): Meaning[] {
   const out: Meaning[] = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     const pos = posOf(m);
     if (pos === "noun") {
       out.push(m);
@@ -143,17 +148,21 @@ function sortByFrequencyDesc(lang: Language, list: Meaning[]): Meaning[] {
 }
 
 export function timePool(lang: Language): Meaning[] {
-  return sortByFrequencyDesc(
-    lang,
-    lexKeys(lang).filter((m) => TIME_HINTS.has(m)),
-  );
+  const filtered: Meaning[] = [];
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m !== undefined && TIME_HINTS.has(m)) filtered.push(m);
+  }
+  return sortByFrequencyDesc(lang, filtered);
 }
 
 export function placePool(lang: Language): Meaning[] {
-  return sortByFrequencyDesc(
-    lang,
-    lexKeys(lang).filter((m) => PLACE_HINTS.has(m)),
-  );
+  const filtered: Meaning[] = [];
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m !== undefined && PLACE_HINTS.has(m)) filtered.push(m);
+  }
+  return sortByFrequencyDesc(lang, filtered);
 }
 
 /**

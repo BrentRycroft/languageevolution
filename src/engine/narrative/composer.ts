@@ -12,7 +12,7 @@ import { closedClassForm } from "../translator/closedClass";
 import { derivedMeaningParts, tryDerivedFormFromMeaning } from "../morphology/derivation";
 import { derivationGloss } from "../lexicon/derivation";
 import { peelDerivation } from "../lexicon/word";
-import { lexGet, lexHas } from "../lexicon/access";
+import { lexFormById, idForGloss, lexHasById } from "../lexicon/access";
 import { composeTargetClause } from "./roleProjection";
 import type { RoleClause } from "../translator/syntax";
 
@@ -136,7 +136,8 @@ const PRONOUN_OBLIQUE: Readonly<Record<string, string>> = {
 
 function fallbackForm(lang: Language, candidates: Meaning[]): { meaning: Meaning; form: WordForm } | null {
   for (const m of candidates) {
-    const f = lexGet(lang, m);
+    const _id = idForGloss(lang, m);
+    const f = _id !== undefined ? lexFormById(lang, _id) : undefined;
     if (f && f.length > 0) return { meaning: m, form: f };
   }
   return null;
@@ -181,7 +182,8 @@ function pickFormWithAlts(
   meaning: Meaning,
   options: ComposeOptions,
 ): WordForm | null {
-  const primary = lexGet(lang, meaning);
+  const _primaryId = idForGloss(lang, meaning);
+  const primary = _primaryId !== undefined ? lexFormById(lang, _primaryId) : undefined;
   if (!primary) return null;
   const {
     rng,
@@ -357,10 +359,14 @@ function articleRoleToken(
     if (count <= 1) lemma = "a";
     else lemma = "the";
   }
-  let form = lexGet(lang, lemma);
+  const _lemmaId = idForGloss(lang, lemma);
+  let form = _lemmaId !== undefined ? lexFormById(lang, _lemmaId) : undefined;
   // If indefinite isn't lexicalised, fall back to definite — better
   // a slight definiteness mismatch than no article at all.
-  if (!form && lemma === "a") form = lexGet(lang, "the");
+  if (!form && lemma === "a") {
+    const _theId = idForGloss(lang, "the");
+    form = _theId !== undefined ? lexFormById(lang, _theId) : undefined;
+  }
   if (!form) return null;
   return {
     role: "DET",
@@ -531,7 +537,13 @@ function placeRoleTokens(
   script: DisplayScript,
 ): RoleToken[] {
   const out: RoleToken[] = [];
-  const prepForm = lexGet(lang, "at") ?? lexGet(lang, "in") ?? lexGet(lang, "on");
+  const _atId = idForGloss(lang, "at");
+  const _inId = idForGloss(lang, "in");
+  const _onId = idForGloss(lang, "on");
+  const prepForm =
+    (_atId !== undefined ? lexFormById(lang, _atId) : undefined) ??
+    (_inId !== undefined ? lexFormById(lang, _inId) : undefined) ??
+    (_onId !== undefined ? lexFormById(lang, _onId) : undefined);
   if (prepForm) {
     out.push({
       role: "PREP",
@@ -546,7 +558,8 @@ function placeRoleTokens(
   }
   const detTok = articleRoleToken(lang, script);
   if (detTok) out.push(detTok);
-  const placeForm = lexGet(lang, meaning);
+  const _placeId = idForGloss(lang, meaning);
+  const placeForm = _placeId !== undefined ? lexFormById(lang, _placeId) : undefined;
   if (placeForm) {
     out.push({
       role: "O",
@@ -571,7 +584,11 @@ function timePrefixRoleTokens(
   // Deictic adverbs (today/yesterday/tomorrow) surface bare — no adposition,
   // no article. Temporal nouns take "in" (+ optional article).
   const isDeictic = DEICTIC_TIME.has(meaning);
-  const prepForm = lexGet(lang, "in") ?? lexGet(lang, "at");
+  const _inId2 = idForGloss(lang, "in");
+  const _atId2 = idForGloss(lang, "at");
+  const prepForm =
+    (_inId2 !== undefined ? lexFormById(lang, _inId2) : undefined) ??
+    (_atId2 !== undefined ? lexFormById(lang, _atId2) : undefined);
   if (!isDeictic && prepForm) {
     out.push({
       role: "PREP",
@@ -586,7 +603,8 @@ function timePrefixRoleTokens(
   }
   const detTok = isDeictic ? null : articleRoleToken(lang, script);
   if (detTok) out.push(detTok);
-  const timeForm = lexGet(lang, meaning);
+  const _timeId = idForGloss(lang, meaning);
+  const timeForm = _timeId !== undefined ? lexFormById(lang, _timeId) : undefined;
   if (timeForm) {
     out.push({
       role: "TIME",
@@ -617,18 +635,21 @@ function adjunctRoleTokens(
   script: DisplayScript,
 ): RoleToken[] {
   const out: RoleToken[] = [];
-  let prepForm = lexGet(lang, prepLemma);
+  const _prepId = idForGloss(lang, prepLemma);
+  let prepForm = _prepId !== undefined ? lexFormById(lang, _prepId) : undefined;
   let prepUsedLemma = prepLemma;
   if (!prepForm) {
     for (const fb of fallbackLemmas) {
-      if (lexHas(lang, fb)) {
-        prepForm = lexGet(lang, fb);
+      const _fbId = idForGloss(lang, fb);
+      if (_fbId !== undefined && lexHasById(lang, _fbId)) {
+        prepForm = lexFormById(lang, _fbId);
         prepUsedLemma = fb;
         break;
       }
     }
   }
-  const nounForm = lexGet(lang, meaning);
+  const _nounId = idForGloss(lang, meaning);
+  const nounForm = _nounId !== undefined ? lexFormById(lang, _nounId) : undefined;
   if (!nounForm) return out;
   const prepTok: RoleToken | null = prepForm
     ? {
@@ -668,7 +689,8 @@ function adjunctRoleTokens(
 function longAgoRoleToken(lang: Language, script: DisplayScript): RoleToken | null {
   const cand = ["long-ago", "before", "ancient", "past"];
   for (const m of cand) {
-    const f = lexGet(lang, m);
+    const _cid = idForGloss(lang, m);
+    const f = _cid !== undefined ? lexFormById(lang, _cid) : undefined;
     if (f) {
       return {
         role: "ADV",
@@ -854,8 +876,10 @@ export function projectRoleClauseToTokens(
   // emits the negator at the language's own `negationPosition`. We inflect
   // "do" via verbRoleToken so suppletion fires → past "did", present 3sg "does".
   const negated = !!template.negated;
-  const auxNot = lexGet(lang, "not");
-  const doForm = lexGet(lang, "do");
+  const _notId = idForGloss(lang, "not");
+  const auxNot = _notId !== undefined ? lexFormById(lang, _notId) : undefined;
+  const _doId = idForGloss(lang, "do");
+  const doForm = _doId !== undefined ? lexFormById(lang, _doId) : undefined;
   let didDoSupport = false;
   if (negated && auxNot && doForm && lang.grammar.doSupport) {
     const auxTok = verbRoleToken(
@@ -892,7 +916,8 @@ export function projectRoleClauseToTokens(
   }
 
   if (tense === "future") {
-    const willForm = lexGet(lang, "will");
+    const _willId = idForGloss(lang, "will");
+    const willForm = _willId !== undefined ? lexFormById(lang, _willId) : undefined;
     if (willForm) {
       verbTokens.push({
         role: "V",
@@ -915,7 +940,8 @@ export function projectRoleClauseToTokens(
   const wantsPerfect = template.aspect === "perfect" && !didDoSupport && tense !== "future";
   let perfectAux: RoleToken | null = null;
   if (wantsPerfect) {
-    const haveForm = lexGet(lang, "have");
+    const _haveId = idForGloss(lang, "have");
+    const haveForm = _haveId !== undefined ? lexFormById(lang, _haveId) : undefined;
     if (haveForm) {
       const auxLemma = tense === "past" ? "had" : subjectIs3sg ? "has" : "have";
       perfectAux = {
