@@ -5,7 +5,7 @@ import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { isFormLegal } from "../phonology/wordShape";
 import { recordOneSidedColexification } from "./colexification";
 import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
-import { lexGet, lexHas } from "../lexicon/access";
+import { idForGloss } from "../lexicon/access";
 import { evolvableLexemes, isKeyless, keylessMature, effectiveGlossFor, effectiveFormOf } from "../lexicon/evolvable";
 import type { LexemeId } from "../lexicon/lexemeIdentity";
 
@@ -115,7 +115,7 @@ function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   const seen = new Set<string>();
   for (const a of meanings) {
     for (const b of colexWith(a)) {
-      if (!lexHas(lang, b)) continue;
+      if (idForGloss(lang, b) === undefined) continue;
       const k = a < b ? `${a}|${b}` : `${b}|${a}`;
       if (seen.has(k)) continue;
       seen.add(k);
@@ -178,7 +178,7 @@ export function applyKinshipSimplification(
   ];
   for (let attempts = 0; attempts < maxEvents * 3 && out.length < maxEvents; attempts++) {
     const [a, b] = KINSHIP_PAIRS[rng.int(KINSHIP_PAIRS.length)]!;
-    if (!lexHas(lang, a) || !lexHas(lang, b)) continue;
+    if (idForGloss(lang, a) === undefined || idForGloss(lang, b) === undefined) continue;
     const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
     const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
     const winner = fa >= fb ? a : b;
@@ -203,7 +203,7 @@ function trySplit(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   const candidates: Array<{ source: Meaning; target: Meaning }> = [];
   for (const source of meanings) {
     for (const target of colexWith(source)) {
-      if (lexHas(lang, target)) continue;
+      if (idForGloss(lang, target) !== undefined) continue;
       // Phase 3e: skip a pair that merged/split within the cooldown.
       if (recarvedRecently(lang, source, target, generation)) continue;
       candidates.push({ source, target });
@@ -214,7 +214,8 @@ function trySplit(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   // S2b: read the source's form/freq/register by its id where it is a candidate (keyless form/freq live
   // under the id; a seeded source resolves to the same record → byte-identical for seeded).
   const srcId = idByGloss.get(pick.source);
-  const form = (srcId !== undefined ? effectiveFormOf(lang, srcId) : lexGet(lang, pick.source))!;
+  const resolvedId = srcId ?? idForGloss(lang, pick.source);
+  const form = (resolvedId !== undefined ? effectiveFormOf(lang, resolvedId) : undefined)!;
   if (!isFormLegal(pick.target, form)) return null;
   // Phase 29 Tranche 1 round 3: route through chokepoint.
   setLexiconForm(lang, pick.target, form.slice(), {

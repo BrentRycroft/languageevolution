@@ -15,7 +15,8 @@
 import type { Language, Meaning } from "../types";
 import type { Morpheme, MorphemeType } from "./morphemeSpace";
 import { zeroVec } from "./vec";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexGet, lexIds, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { recordedParts } from "../lexicon/word";
 import { satGet } from "../lexicon/satellites";
 import { posOf, isClosedClass } from "../lexicon/pos";
@@ -43,11 +44,14 @@ function morphemeFor(lang: Language, id: string, bound: ReadonlySet<string>): Mo
 export function languageMorphemes(lang: Language): Morpheme[] {
   const bound = boundSet(lang);
   const out: Morpheme[] = [];
-  for (const id of lexKeys(lang)) {
-    if (bound.has(id)) continue; // affixes added below, not as roots
-    if (isClosedClass(posOf(id))) continue; // function words aren't composable content roots
-    const m = morphemeFor(lang, id, bound);
-    if (m) out.push(m);
+  for (const lexId of lexIds(lang)) {
+    const gloss = meaningForLexemeId(lang, lexId);
+    if (gloss === undefined) continue;
+    if (bound.has(gloss)) continue; // affixes added below, not as roots
+    if (isClosedClass(posOf(gloss))) continue; // function words aren't composable content roots
+    const form = lexFormById(lang, lexId);
+    if (!form || form.length === 0) continue;
+    out.push({ id: gloss, form: form.slice(), point: lexPoint(gloss), type: "root" });
   }
   for (const affix of bound) {
     const m = morphemeFor(lang, affix, bound);

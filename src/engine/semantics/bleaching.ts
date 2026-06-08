@@ -2,7 +2,7 @@ import type { Language } from "../types";
 import { satGet, satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { deleteMeaning } from "../lexicon/mutate";
-import { lexHas } from "../lexicon/access";
+import { idForGloss } from "../lexicon/access";
 
 /**
  * bleaching.ts
@@ -36,7 +36,7 @@ export function stepSemanticBleaching(
     const p = morph[cat];
     if (!p?.source) continue;
     const m = p.source.meaning;
-    if (lexHas(lang, m)) grammaticalizedSources.push(m);
+    if (idForGloss(lang, m) !== undefined) grammaticalizedSources.push(m);
   }
   if (grammaticalizedSources.length === 0) return null;
 
