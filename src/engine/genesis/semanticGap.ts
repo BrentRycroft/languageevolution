@@ -9,7 +9,8 @@ import type { Vec } from "../semantics/vec";
 import { distanceSq } from "../semantics/vec";
 import { ANCHORS } from "../semantics/anchors";
 import { meaningPointFor } from "../semantics/meaningPoint";
-import { lexKeys, lexHas } from "../lexicon/access";
+import { lexIds, lexHas } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { keylessRecords } from "../lexicon/store";
 import type { Language, Meaning } from "../types";
 import { composeForGap } from "../semantics/gapComposition";
@@ -46,7 +47,7 @@ export interface SemanticGap {
 export function findSemanticGap(lang: Language): SemanticGap | null {
   // Gather all existing word points (seeded lexemes + keyless gloss-less records).
   const existingPoints: Vec[] = [];
-  for (const m of lexKeys(lang)) existingPoints.push(meaningPointFor(lang, m));
+  for (const id of lexIds(lang)) existingPoints.push(meaningPointFor(lang, meaningForLexemeId(lang, id)!));
   for (const r of keylessRecords(lang.lexemes)) existingPoints.push(Int32Array.from(r.point));
   const n = existingPoints.length;
   if (n === 0) return null;

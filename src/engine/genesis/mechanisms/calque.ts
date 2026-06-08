@@ -1,6 +1,6 @@
 import type { CoinageMechanism } from "./types";
 import type { Meaning, WordForm } from "../../types";
-import { lexGet, lexHas } from "../../lexicon/access";
+import { lexFormById, lexHasById, idForGloss } from "../../lexicon/access";
 
 /**
  * calque.ts
@@ -20,14 +20,18 @@ export const MECHANISM_CALQUE: CoinageMechanism = {
     if (!target.includes("-")) return null;
     const parts = target.split("-") as Meaning[];
     if (parts.length !== 2) return null;
-    const a = lexGet(lang, parts[0]!);
-    const b = lexGet(lang, parts[1]!);
+    const aId = idForGloss(lang, parts[0]!);
+    const bId = idForGloss(lang, parts[1]!);
+    if (!aId || !bId) return null;
+    const a = lexFormById(lang, aId);
+    const b = lexFormById(lang, bId);
     if (!a || !b) return null;
     let donorId: string | null = null;
     for (const id of Object.keys(tree)) {
       if (id === lang.id) continue;
       if (tree[id]!.language.extinct) continue;
-      if (lexHas(tree[id]!.language, target)) {
+      const dId = idForGloss(tree[id]!.language, target);
+      if (dId !== undefined && lexHasById(tree[id]!.language, dId)) {
         donorId = id;
         break;
       }

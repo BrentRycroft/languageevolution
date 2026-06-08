@@ -2,7 +2,8 @@ import type { Language, Meaning, WordForm } from "../../types";
 import type { Rng } from "../../rng";
 import { derivationFor } from "../../lexicon/derivation_targets";
 import { findSuffixByCategory, type DerivationalSuffix } from "../../lexicon/derivation";
-import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
+import { lexIds, lexHas, lexFormById, idForGloss } from "../../lexicon/access";
+import { meaningForLexemeId } from "../../lexicon/lexemeIdentity";
 import { satSet } from "../../lexicon/satellites";
 import { recordedParts } from "../../lexicon/word";
 import { posOf } from "../../lexicon/pos";
@@ -41,7 +42,9 @@ export function attemptTargetedDerivation(
   const target = derivationFor(meaning);
   if (!target) return null;
 
-  const root = lexGet(lang, target.root);
+  const rootId = idForGloss(lang, target.root);
+  if (!rootId) return null;
+  const root = lexFormById(lang, rootId);
   if (!root || root.length === 0) return null;
 
   const suffix: DerivationalSuffix | null = findSuffixByCategory(lang, target.via);
@@ -108,7 +111,7 @@ export function attemptProductiveDerivation(
   // Filter potential roots by suffix category. agentive/nominalisation
   // wants verb roots; adjectival wants noun roots; abstractNoun wants
   // adjective roots (freedom < free); etc.
-  const allMeanings = lexKeys(lang);
+  const allMeanings = lexIds(lang).map((id) => meaningForLexemeId(lang, id) ?? "").filter(Boolean);
   const wantsVerb = suffix.category === "agentive" || suffix.category === "nominalisation";
   const wantsAdj = suffix.category === "abstractNoun";
   const wantsNoun =
@@ -143,7 +146,9 @@ export function attemptProductiveDerivation(
   }
   if (candidates.length === 0) return null;
   const rootMeaning = candidates[rng.int(candidates.length)]!;
-  const root = lexGet(lang, rootMeaning)!;
+  const rootId = idForGloss(lang, rootMeaning);
+  if (!rootId) return null;
+  const root = lexFormById(lang, rootId)!;
   const form: WordForm = [...root, ...suffix.affix];
   // Phase 34 Tranche 34b: tag is sometimes "-hood" (leading dash);
   // strip it so the meaning is "dry-hood" not "dry--hood".

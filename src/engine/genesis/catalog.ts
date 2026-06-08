@@ -6,7 +6,8 @@ import { relatedMeanings } from "../semantics/clusters";
 import { phonotacticFit } from "./phonotactics";
 import { otFit } from "../phonology/ot";
 import { complexityFor } from "../lexicon/complexity";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { lexHas, lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * catalog.ts
@@ -45,16 +46,17 @@ export const GENESIS_CATALOG: GenesisRule[] = [
     enabledByDefault: true,
     baseWeight: 1,
     tryCoin: (lang, rng) => {
-      const meanings = lexKeys(lang);
-      if (meanings.length === 0) return null;
+      const ids = lexIds(lang);
+      if (ids.length === 0) return null;
       // Phase 2c (evolution-realism): a spontaneous compound must glue two
       // SEMANTICALLY-RELATED lexemes. The old path had a fully-random
       // pickMeanings(rng, 2) fallback — a SECOND unfixed mashup generator,
       // gluing two unrelated words (the "very weird" coinages the audit and
       // the user flagged). Drop it: if the seed word has no related partner
       // in the lexicon, refuse to coin (the caller's cascade moves on).
-      const a: Meaning | undefined = meanings[rng.int(meanings.length)];
-      if (!a) return null;
+      const aId = ids[rng.int(ids.length)];
+      if (!aId) return null;
+      const a: Meaning = meaningForLexemeId(lang, aId)!;
       const pool = relatedMeanings(a).filter((n) => lexHas(lang, n));
       const legacy = neighborsOf(a).filter((n) => lexHas(lang, n));
       const combined = pool.length > 0 ? pool : legacy;
@@ -63,8 +65,10 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       const b: Meaning = candidates[rng.int(candidates.length)]!;
       const newMeaning: Meaning = `${a}-${b}`;
       if (lexHas(lang, newMeaning)) return null;
-      const fa = lexGet(lang, a)!;
-      const fb = lexGet(lang, b)!;
+      const fa = lexFormById(lang, aId)!;
+      const bId = idForGloss(lang, b);
+      if (!bId) return null;
+      const fb = lexFormById(lang, bId)!;
       if (fa.length + fb.length > 10) return null;
       let form = [...fa, ...fb];
       const minLen = 2 + complexityFor(newMeaning);
@@ -83,14 +87,15 @@ export const GENESIS_CATALOG: GenesisRule[] = [
     enabledByDefault: true,
     baseWeight: 1,
     tryCoin: (lang, rng) => {
-      const meanings = lexKeys(lang);
-      if (meanings.length === 0) return null;
-      const base = meanings[rng.int(meanings.length)]!;
+      const ids = lexIds(lang);
+      if (ids.length === 0) return null;
+      const baseId = ids[rng.int(ids.length)]!;
+      const base: Meaning = meaningForLexemeId(lang, baseId)!;
       const pool = suffixPool(lang);
       const suffix = pool[rng.int(pool.length)]!;
       const newMeaning: Meaning = `${base}${suffix.semanticSuffix}`;
       if (lexHas(lang, newMeaning)) return null;
-      const baseForm = lexGet(lang, base)!;
+      const baseForm = lexFormById(lang, baseId)!;
       if (baseForm.length + suffix.affix.length > 10) return null;
       const form = [...baseForm, ...suffix.affix];
       if (combinedFit(form, lang) < 0.25) return null;
@@ -105,12 +110,13 @@ export const GENESIS_CATALOG: GenesisRule[] = [
     enabledByDefault: false,
     baseWeight: 1,
     tryCoin: (lang, rng) => {
-      const meanings = lexKeys(lang);
-      if (meanings.length === 0) return null;
-      const base = meanings[rng.int(meanings.length)]!;
+      const ids = lexIds(lang);
+      if (ids.length === 0) return null;
+      const baseId = ids[rng.int(ids.length)]!;
+      const base: Meaning = meaningForLexemeId(lang, baseId)!;
       const newMeaning: Meaning = `${base}-intens`;
       if (lexHas(lang, newMeaning)) return null;
-      const form = lexGet(lang, base)!;
+      const form = lexFormById(lang, baseId)!;
       if (form.length === 0 || form.length > 4) return null;
       const first = form[0]!;
       const second = form[1];

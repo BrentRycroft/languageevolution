@@ -4,7 +4,8 @@ import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
 import { langPhonotacticScore } from "../../phonology/phonotactics";
 import { relatedMeanings } from "../../semantics/clusters";
-import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
+import { lexIds, lexHas, lexFormById, idForGloss } from "../../lexicon/access";
+import { meaningForLexemeId } from "../../lexicon/lexemeIdentity";
 
 /**
  * Phase 53 T1: derivation now requires the language to actually carry
@@ -26,12 +27,18 @@ export const MECHANISM_DERIVATION: CoinageMechanism = {
   baseWeight: 1,
   tryCoin: (lang, target, _tree, rng) => {
     const related = relatedMeanings(target).filter((m) => lexHas(lang, m));
-    const base =
-      related.length > 0
-        ? related[rng.int(related.length)]!
-        : lexKeys(lang)[rng.int(lexKeys(lang).length)];
+    let base: string | undefined;
+    if (related.length > 0) {
+      base = related[rng.int(related.length)]!;
+    } else {
+      const ids = lexIds(lang);
+      if (ids.length === 0) return null;
+      base = meaningForLexemeId(lang, ids[rng.int(ids.length)]!);
+    }
     if (!base) return null;
-    const baseForm = lexGet(lang, base)!;
+    const baseId = idForGloss(lang, base);
+    if (!baseId) return null;
+    const baseForm = lexFormById(lang, baseId)!;
     // Realism #1 (productivity hierarchies; language-agnostic affix order):
     // derivation must follow the language's OWN affix typology, not assume a
     // suffix. A prefixing language (grammar.affixPosition === "prefix") derives

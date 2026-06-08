@@ -5,7 +5,7 @@ import { complexityFor } from "../../lexicon/complexity";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
 import { langPhonotacticScore } from "../../phonology/phonotactics";
-import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
+import { lexIds, lexHas, lexFormById, idForGloss } from "../../lexicon/access";
 import { attemptConceptDecomposition } from "../../lexicon/synthesis";
 import { CONCEPTS } from "../../lexicon/concepts";
 
@@ -23,8 +23,7 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
   originTag: "compound",
   baseWeight: 1.2,
   tryCoin: (lang, target, _tree, rng) => {
-    const meanings = lexKeys(lang);
-    if (meanings.length < 2) return null;
+    if (lexIds(lang).length < 2) return null;
 
     // Phase 2a (evolution-realism): prefer the concept's curated cross-
     // linguistic decomposition — an authentic MODIFIER+HEAD kenning that is
@@ -78,8 +77,11 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
     if (otherPool.length === 0) return null;
     const partB = otherPool[rng.int(otherPool.length)]!;
 
-    const fa = lexGet(lang, partA)!;
-    const fb = lexGet(lang, partB)!;
+    const partAId = idForGloss(lang, partA);
+    const partBId = idForGloss(lang, partB);
+    if (!partAId || !partBId) return null;
+    const fa = lexFormById(lang, partAId)!;
+    const fb = lexFormById(lang, partBId)!;
     if (fa.length + fb.length > 10) return null;
     let form = [...fa, ...fb];
     const minLen = 2 + complexityFor(target);
