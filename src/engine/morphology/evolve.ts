@@ -9,7 +9,7 @@ import { posOf, isClosedClass } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
 import { isSyllabic } from "../phonology/ipa";
-import { lexGet, lexSet, lexHas, lexKeys, lexValues } from "../lexicon/access";
+import { lexFormById, lexIds, idForGloss, coinSeededLexeme, lexValues } from "../lexicon/access";
 import { evolvableLexemes, isKeyless, keylessMature, effectiveGlossFor, effectiveFormOf, effectivePosOf } from "../lexicon/evolvable";
 
 /**
@@ -318,11 +318,11 @@ function maybeArticleEmergence(
   // dominant donor for definite articles; "this" is rarer; "the" if
   // already present (closed-class seeded) means we already half-have
   // it and just need to flip articlePresence.
-  const donor = lexHas(lang, "that")
+  const donor = idForGloss(lang, "that") !== undefined
     ? "that"
-    : lexHas(lang, "this")
+    : idForGloss(lang, "this") !== undefined
       ? "this"
-      : lexHas(lang, "the")
+      : idForGloss(lang, "the") !== undefined
         ? "the"
         : null;
   if (!donor) return null;
@@ -337,10 +337,11 @@ function maybeArticleEmergence(
     r < 0.6 ? "free" : r < 0.9 ? "proclitic" : "enclitic";
   // Promote: copy donor form to "the" if it isn't already there,
   // and reduce its frequency hint slightly (function words erode).
-  if (!lexHas(lang, "the")) {
-    lexSet(lang, "the", lexGet(lang, donor)!.slice());
-    satSet(lang, "wordFrequencyHints", "the", 0.97);
-    satSet(lang, "wordOrigin", "the", `grammaticalization:${donor}`);
+  if (idForGloss(lang, "the") === undefined) {
+    const donorId = idForGloss(lang, donor)!;
+    const theId = coinSeededLexeme(lang, "the", lexFormById(lang, donorId)!.slice());
+    satSet(lang, "wordFrequencyHints", theId, 0.97);
+    satSet(lang, "wordOrigin", theId, `grammaticalization:${donor}`);
   }
   lang.grammar.articlePresence = next;
   return {
@@ -374,7 +375,9 @@ export function maybeAffixReplacement(
   for (const m of lang.boundMorphemes) {
     const origin = lang.boundMorphemeOrigin?.[m];
     if (origin?.obsolescentGen !== undefined) continue;
-    const f = lexGet(lang, m);
+    const mid = idForGloss(lang, m);
+    if (!mid) continue;
+    const f = lexFormById(lang, mid);
     if (!f || f.length === 0) continue;
     candidates.push(m);
   }
@@ -410,11 +413,11 @@ export function maybeMoodEmergence(
   rng: Rng,
 ): MorphShift | null {
   if ((lang.grammar.moodMarking ?? "declarative") !== "declarative") return null;
-  const donor = lexHas(lang, "if")
+  const donor = idForGloss(lang, "if") !== undefined
     ? "if"
-    : lexHas(lang, "that")
+    : idForGloss(lang, "that") !== undefined
       ? "that"
-      : lexHas(lang, "because")
+      : idForGloss(lang, "because") !== undefined
         ? "because"
         : null;
   if (!donor) return null;
@@ -423,7 +426,8 @@ export function maybeMoodEmergence(
   // de novo): tier 0 → 0.1%, tier 3 → 0.4%.
   const baseRate = 0.001 * (1 + tier);
   if (!rng.chance(baseRate)) return null;
-  const donorForm = lexGet(lang, donor)!;
+  const donorId = idForGloss(lang, donor)!;
+  const donorForm = lexFormById(lang, donorId)!;
   const affix = donorForm.slice(0, Math.min(2, donorForm.length));
   if (affix.length === 0) return null;
   if (lang.morphology.paradigms["verb.mood.subj"]) return null;
@@ -468,10 +472,14 @@ export function maybeBackformation(
   for (const meaning of Object.keys(lang.compounds)) {
     const meta = lang.compounds[meaning]!;
     if (!meta.fossilized) continue;
-    const surface = lexGet(lang, meaning);
+    const mid = idForGloss(lang, meaning);
+    if (!mid) continue;
+    const surface = lexFormById(lang, mid);
     if (!surface) continue;
     for (const morph of lang.boundMorphemes) {
-      const affixForm = lexGet(lang, morph);
+      const morphId = idForGloss(lang, morph);
+      if (!morphId) continue;
+      const affixForm = lexFormById(lang, morphId);
       if (!affixForm || affixForm.length === 0) continue;
       if (surface.length <= affixForm.length) continue;
       const tail = surface.slice(surface.length - affixForm.length);
@@ -481,7 +489,7 @@ export function maybeBackformation(
       // Skip if base is already a known lexeme.
       const baseStr = base.join("");
       const newLemma = `bf:${baseStr}`;
-      if (lexHas(lang, newLemma)) continue;
+      if (idForGloss(lang, newLemma) !== undefined) continue;
       candidates.push({ meaning, surface, base, suffix: morph });
     }
   }
@@ -502,19 +510,21 @@ export function maybeCliticize(
   probability: number,
 ): { meaning: string; from: string; to: string; pathway: string } | null {
   if (!rng.chance(probability)) return null;
-  const meanings = lexKeys(lang);
-  if (meanings.length === 0) return null;
-  type Cand = { m: string; tag: SemanticTag; form: WordForm };
+  const ids = lexIds(lang);
+  if (ids.length === 0) return null;
+  type Cand = { id: LexemeId; gloss: string; tag: SemanticTag; form: WordForm };
   const candidates: Cand[] = [];
-  for (const m of meanings) {
-    const tag = semanticTagOf(m);
+  for (const id of ids) {
+    const gloss = meaningForLexemeId(lang, id);
+    if (!gloss) continue;
+    const tag = semanticTagOf(gloss);
     if (!tag) continue;
-    if ((satGet(lang, "wordOrigin", m) ?? "").startsWith("clitic:")) continue;
-    const form = lexGet(lang, m)!;
-    if (form.length < 2 || form.length > 5) continue;
-    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
+    if ((satGet(lang, "wordOrigin", id) ?? "").startsWith("clitic:")) continue;
+    const form = lexFormById(lang, id);
+    if (!form || form.length < 2 || form.length > 5) continue;
+    const freq = satGet(lang, "wordFrequencyHints", id) ?? 0.5;
     if (freq < 0.7) continue;
-    candidates.push({ m, tag, form });
+    candidates.push({ id, gloss, tag, form });
   }
   if (candidates.length === 0) return null;
   const chosen = candidates[rng.int(candidates.length)]!;
@@ -523,21 +533,21 @@ export function maybeCliticize(
   // Pre-4c it did `form.slice(0,-1)` and wrote that back to the lexicon,
   // ERODING THE FREE DICTIONARY LEMMA itself (belly→/kʷefoː/-style corruption).
   // The free word is now left intact; only the bound allomorph is recorded.
-  if (satHas(lang, "grammaticalizationStage", chosen.m)) return null; // already in chain
+  if (satHas(lang, "grammaticalizationStage", chosen.id)) return null; // already in chain
   const affixForm = reduceToClitic(chosen.form, lang.grammar.affixPosition);
   if (affixForm.length < 1) return null;
   const target = pathwayTargetsForLang(chosen.tag, lang)[0];
   if (!lang.grammaticalizationStage) lang.grammaticalizationStage = {};
-  satSet(lang, "grammaticalizationStage", chosen.m, {
+  satSet(lang, "grammaticalizationStage", chosen.id, {
     stage: 1,
     targetCategory: target,
     affixForm,
     lastTransitionGen: 0,
   });
-  satSet(lang, "wordOrigin", chosen.m, `clitic:${chosen.tag}`);
-  satSet(lang, "wordFrequencyHints", chosen.m, 0.45);
+  satSet(lang, "wordOrigin", chosen.id, `clitic:${chosen.tag}`);
+  satSet(lang, "wordFrequencyHints", chosen.id, 0.45);
   return {
-    meaning: chosen.m,
+    meaning: chosen.gloss,
     from: chosen.form.join(""),
     to: affixForm.join(""),
     pathway: chosen.tag,
@@ -916,34 +926,37 @@ export function maybeVowelMutationIrregular(
   probability: number,
 ): { meaning: string; category: MorphCategory } | null {
   if (!rng.chance(probability)) return null;
-  const candidates = lexKeys(lang).filter((m) => {
-    const pos = posOf(m);
+  const candidates = lexIds(lang).filter((id) => {
+    const gloss = meaningForLexemeId(lang, id);
+    if (!gloss) return false;
+    const pos = posOf(gloss);
     return pos === "noun" || pos === "adjective";
   });
   if (candidates.length === 0) return null;
   const highFreq = candidates.filter(
-    (m) => (satGet(lang, "wordFrequencyHints", m) ?? 0.4) >= 0.55,
+    (id) => (satGet(lang, "wordFrequencyHints", id) ?? 0.4) >= 0.55,
   );
   if (highFreq.length === 0) return null;
-  const meaning = highFreq[rng.int(highFreq.length)]!;
-  const isNoun = posOf(meaning) === "noun";
+  const targetId = highFreq[rng.int(highFreq.length)]!;
+  const targetGloss = meaningForLexemeId(lang, targetId)!;
+  const isNoun = posOf(targetGloss) === "noun";
   const category: MorphCategory = isNoun
     ? "noun.num.pl"
     : rng.chance(0.5)
       ? "adj.degree.cmp"
       : "adj.degree.sup";
   if (!lang.morphology.paradigms[category]) return null;
-  const existing = satGet(lang, "suppletion", meaning)?.[category];
+  const existing = satGet(lang, "suppletion", targetId)?.[category];
   if (existing) return null;
-  const baseForm = lexGet(lang, meaning);
+  const baseForm = lexFormById(lang, targetId);
   if (!baseForm || baseForm.length < 2) return null;
   const mutated = vowelMutationOf(baseForm, lang);
   if (!mutated) return null;
-  let slots = satGet(lang, "suppletion", meaning);
+  let slots = satGet(lang, "suppletion", targetId);
   if (!slots) {
     slots = {};
-    satSet(lang, "suppletion", meaning, slots);
+    satSet(lang, "suppletion", targetId, slots);
   }
   slots[category] = mutated;
-  return { meaning, category };
+  return { meaning: targetGloss, category };
 }
