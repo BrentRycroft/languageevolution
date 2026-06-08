@@ -4,7 +4,7 @@ import type { Rng } from "../rng";
 import { isVowel } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
 import { pushEvent } from "../steps/helpers";
-import { lexGet } from "../lexicon/access";
+import { idForGloss, lexFormById } from "../lexicon/access";
 import { evolvableLexemes, effectivePosOf, effectiveFormOf, effectiveGlossFor } from "../lexicon/evolvable";
 import type { LexemeId } from "../lexicon/lexemeIdentity";
 
@@ -85,7 +85,8 @@ function pickAlternation(
   rng: Rng,
   suppliedForm?: WordForm,
 ): [string, string] | null {
-  const form = suppliedForm ?? lexGet(lang, meaning);
+  const _id = idForGloss(lang, meaning);
+  const form = suppliedForm ?? (_id !== undefined ? lexFormById(lang, _id) : undefined);
   if (!form) return null;
   const inventory = new Set(lang.phonemeInventory.segmental);
 

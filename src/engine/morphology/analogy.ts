@@ -4,7 +4,7 @@ import { clusterOf, relatedMeanings } from "../semantics/clusters";
 import { isFormLegal } from "../phonology/wordShape";
 import { isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm } from "../lexicon/mutate";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById, lexHasById, lexKeys } from "../lexicon/access";
 import { satGet } from "../lexicon/satellites";
 
 /**
@@ -48,13 +48,20 @@ export function maybeAnalogicalLevel(
     if (supp && Object.keys(supp).length > 0) continue;
     const cluster = clusterOf(m);
     if (!cluster) continue;
-    const mates = relatedMeanings(m).filter(
-      (x) => x !== m && lexHas(lang, x),
-    );
+    const mates = relatedMeanings(m).filter((x) => {
+      if (x === m) return false;
+      const xId = idForGloss(lang, x);
+      return xId !== undefined && lexHasById(lang, xId);
+    });
     if (mates.length < 2) continue;
-    const mateLens = mates.map((x) => lexGet(lang, x)!.length);
+    const mateLens = mates.map((x) => {
+      const xId = idForGloss(lang, x)!;
+      return lexFormById(lang, xId)!.length;
+    });
     const mean = mateLens.reduce((a, b) => a + b, 0) / mateLens.length;
-    const form = lexGet(lang, m)!;
+    const mId = idForGloss(lang, m);
+    const form = mId !== undefined ? lexFormById(lang, mId)! : undefined;
+    if (!form) continue;
     if (Math.abs(form.length - mean) >= 2) {
       candidates.push({ meaning: m, mean, form });
     }

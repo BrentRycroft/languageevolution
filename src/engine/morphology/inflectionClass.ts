@@ -3,7 +3,8 @@ import type { InflectionClass, NounDeclensionClass } from "./types";
 import { isVowel } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
 import { posOf } from "../lexicon/pos";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexFormById, lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { satGet, satSet } from "../lexicon/satellites";
 
 /**
@@ -109,20 +110,22 @@ export function classifyLexicon(
   lang: Language,
   rng: MinimalRng,
 ): void {
-  for (const meaning of lexKeys(lang)) {
-    const form = lexGet(lang, meaning);
+  for (const id of lexIds(lang)) {
+    const meaning = meaningForLexemeId(lang, id);
+    if (meaning === undefined) continue;
+    const form = lexFormById(lang, id);
     if (!form || form.length === 0) continue;
     const pos = posOf(meaning);
     if (pos === "verb") {
-      if (!satGet(lang, "inflectionClass", meaning)) {
-        satSet(lang, "inflectionClass", meaning, assignInflectionClass(form, rng));
+      if (!satGet(lang, "inflectionClass", id)) {
+        satSet(lang, "inflectionClass", id, assignInflectionClass(form, rng));
       }
     } else if (pos === "noun" || pos === "other") {
       // Treat unclassified content meanings as candidate nouns for
       // declension assignment — many concrete nouns return "other"
       // from the sparse POS table (see lexicon/pos.ts).
-      if (!satGet(lang, "nounDeclensionClass", meaning)) {
-        satSet(lang, "nounDeclensionClass", meaning, assignNounDeclensionClass(form, rng));
+      if (!satGet(lang, "nounDeclensionClass", id)) {
+        satSet(lang, "nounDeclensionClass", id, assignNounDeclensionClass(form, rng));
       }
     }
   }

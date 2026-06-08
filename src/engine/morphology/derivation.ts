@@ -1,7 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { applyParadigm } from "./apply";
-import { lexGet, lexHas } from "../lexicon/access";
+import { idForGloss, lexFormById, lexHasById } from "../lexicon/access";
 import { evolvableLexemes, isKeyless, keylessMature, effectiveGlossFor } from "../lexicon/evolvable";
 import type { LexemeId } from "../lexicon/lexemeIdentity";
 import { recordedParts } from "../lexicon/word";
@@ -100,7 +100,8 @@ export function tryDerivedFormFromMeaning(
 ): WordForm | null {
   const best = derivedMeaningParts(lang, meaning);
   if (!best) return null;
-  const baseForm = lexGet(lang, best.base);
+  const _baseId = idForGloss(lang, best.base);
+  const baseForm = _baseId !== undefined ? lexFormById(lang, _baseId) : undefined;
   if (!baseForm) return null;
   const pdm = {
     affix: best.suffix.affix,
@@ -159,7 +160,8 @@ export function pickRuntimeDerivedMeaning(
   for (const id of evolvableLexemes(lang)) {
     if (!derivationBaseEligible(lang, id)) continue;
     const m = effectiveGlossFor(lang, id);
-    if (lexHas(lang, `${m}-${suffix.tag}`)) continue;
+    const _derivedId = idForGloss(lang, `${m}-${suffix.tag}`);
+    if (_derivedId !== undefined && lexHasById(lang, _derivedId)) continue;
     if (wantsVerb && !VERB_HINTS.has(m)) continue;
     if (wantsAdj && !ADJECTIVE_HINTS.has(m)) continue;
     if (!wantsVerb && !wantsAdj && (VERB_HINTS.has(m) || ADJECTIVE_HINTS.has(m))) continue;

@@ -4,7 +4,7 @@ import type {
   MorphemeEntry,
   MorphemeInventory,
 } from "../types";
-import { lexGet } from "../lexicon/access";
+import { idForGloss, lexFormById } from "../lexicon/access";
 import { recordedParts } from "../lexicon/word";
 
 /**
@@ -50,7 +50,8 @@ export function buildMorphemeInventory(lang: Language): MorphemeInventory {
   );
   if (lang.boundMorphemes) {
     for (const affix of lang.boundMorphemes) {
-      const form = lexGet(lang, affix);
+      const _affixId = idForGloss(lang, affix);
+      const form = _affixId !== undefined ? lexFormById(lang, _affixId) : undefined;
       if (!form || form.length === 0) continue;
       const meta = suffixByTag.get(affix);
       const position: "prefix" | "suffix" =
@@ -76,7 +77,8 @@ export function buildMorphemeInventory(lang: Language): MorphemeInventory {
       if (!parts) continue;
       for (const part of parts) {
         if (entries[part]) continue; // already an affix or root entry
-        const form = lexGet(lang, part);
+        const _partId = idForGloss(lang, part);
+        const form = _partId !== undefined ? lexFormById(lang, _partId) : undefined;
         if (!form || form.length === 0) continue;
         entries[part] = {
           meaning: part,
