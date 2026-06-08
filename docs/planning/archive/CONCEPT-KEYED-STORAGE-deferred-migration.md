@@ -93,8 +93,23 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
     GENN **byte-identical across all 6 presets** (12/12 RUN_SLOW `meaning_layer_baseline`) — no re-bake;
     FAST suite green (2021 passed). Audit: no direct `lang.<satelliteField>[…]` indexing remains
     outside the seam.
-  - **Sub-projects 2b-6 REMAIN:** S2b (process-widening) — widen the ~7 lazily-owned processes that
-    still author satellite data by gloss so keyless words participate; S3 thread LexemeId through the
+  - **Sub-project 2b (process-widening) — DONE (2026-06-07), GENN re-baked (tokipona + english).** The
+    7 lazily-owned evolution processes now let keyless (gloss-less) words participate. Shared primitives
+    `lexicon/evolvable.ts` (`evolvableLexemes` — seeded ids in `lexKeys` order then keyless appended;
+    `effectiveGlossFor`/`effectiveFormOf`/`effectivePosOf` (POS via the EMERGENT gloss → keyless words
+    get real noun/verb/adjective POS); `isKeyless`; `keylessMature` (freq ≥ `KEYLESS_MATURITY_FREQ`=0.5)).
+    Per-process eligibility: variants/suppletion/ablaut take keyless immediately; grammaticalization/
+    derivation/recarve are maturity-gated; colexification falls out of recarve. Plan
+    `docs/superpowers/plans/2026-06-07-storage-step5-s2b-process-widening.md`. Ledger: T1 `cc79c27`+`0c38b50`
+    (evolvable.ts + keyless real POS); T2 `568ecbe` (variants — keyless recorded in the regular-sweep
+    path); T3 `da0adf5` (suppletion); T4 `743b9f7` (ablaut, `pickAlternation` gains optional form); T5
+    `6514081` (grammaticalization via exported `isGrammaticalizationSource`); T6 `b9a686e` (derivation via
+    `derivationBaseEligible`); T7 `0ec712f` (recarve split/merge + colexification via
+    `recarveMergeCandidateIds`, gloss→id map, `lexDelete` keyless-id branch); T8 `eec0096` (canary +
+    re-bake). Determinism: GEN0 byte-identical; **GENN re-baked tokipona (`a8166cb8`→`c8a2f719`) +
+    english (`db425ca5`→`843f52f2`)** — the presets that coin + sweep a keyless word (variants is
+    immediate); pie/bantu/romance/germanic byte-identical; reproducible. FAST 2033 passed / 0 failed.
+  - **Sub-projects 3-6 REMAIN:** S3 thread LexemeId through the
     ~381 seam call sites; S4 point-native `WordSense` identity (+ `meaningPoints` re-key); S5 intrinsic
     LexemeId RNG order (determinism re-bake); S6 translation via anchor index + persistence.
 
