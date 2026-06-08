@@ -1,7 +1,8 @@
 import type { Language, Meaning } from "../types";
 import { satGet, satSet } from "./satellites";
 import { zipfFrequencyFor } from "./concepts";
-import { lexKeys } from "./access";
+import { lexIds } from "./access";
+import { meaningForLexemeId } from "./lexemeIdentity";
 
 /**
  * frequencyDynamics.ts
@@ -62,7 +63,9 @@ export function decayFrequencies(lang: Language): void {
   // no hint is treated as sitting at its rank seed and then subjected to the same
   // mean-reversion + disuse drift, so the disuse-death channel can actually reach
   // long-tail registry vocabulary.
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     const seed = zipfFrequencyFor(m);
     const cur = satGet(lang, "wordFrequencyHints", m) ?? seed;
     // Mild mean-reversion toward the rank seed (the USED-word attractor)…

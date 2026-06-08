@@ -1,7 +1,8 @@
 import type { Language, Meaning } from "../types";
 import { fnv1a } from "../rng";
 import { posOf } from "./pos";
-import { lexKeys } from "./access";
+import { lexIds } from "./access";
+import { meaningForLexemeId } from "./lexemeIdentity";
 
 /**
  * Phase 36 Tranche 36b: Bantu-style noun-class assignment.
@@ -75,7 +76,9 @@ export function assignNounClass(
  */
 export function assignAllNounClasses(lang: Language): void {
   if (!lang.nounClassAssignments) lang.nounClassAssignments = {};
-  for (const meaning of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const meaning = meaningForLexemeId(lang, id);
+    if (meaning === undefined) continue;
     if (lang.nounClassAssignments[meaning] !== undefined) continue;
     const c = assignNounClass(meaning, lang);
     if (c !== null) lang.nounClassAssignments[meaning] = c;

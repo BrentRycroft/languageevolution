@@ -2,7 +2,7 @@ import type { Language, Meaning } from "../types";
 import { satGet, satSet } from "./satellites";
 import type { Rng } from "../rng";
 import { addCompound } from "./compound";
-import { lexHas } from "./access";
+import { lexHasById, idForGloss } from "./access";
 
 /**
  * Phase 34 Tranche 34f: univerbation.
@@ -55,9 +55,11 @@ export function tryUniverbation(
   // Find a candidate whose parts are all present and avg freq is
   // above its threshold.
   const eligible = CANDIDATES.filter((c) => {
-    if (lexHas(lang, c.meaning)) return false;
+    const cmid = idForGloss(lang, c.meaning);
+    if (cmid !== undefined && lexHasById(lang, cmid)) return false;
     for (const p of c.parts) {
-      if (!lexHas(lang, p)) return false;
+      const pid = idForGloss(lang, p);
+      if (pid === undefined || !lexHasById(lang, pid)) return false;
       const freq = satGet(lang, "wordFrequencyHints", p) ?? 0.5;
       if (freq < c.freqMin) return false;
     }

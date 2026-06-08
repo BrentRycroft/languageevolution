@@ -1,7 +1,7 @@
 import type { Language, WordForm, Meaning } from "../types";
 import type { Rng } from "../rng";
 import { setLexiconForm } from "./mutate";
-import { lexGet } from "./access";
+import { lexFormById, idForGloss } from "./access";
 
 /**
  * Phase 34 Tranche 34a: compound-word maintenance.
@@ -31,7 +31,8 @@ export function recomposeCompound(
   if (!meta || meta.fossilized) return null;
   const parts: WordForm[] = [];
   for (const partMeaning of meta.parts) {
-    const f = lexGet(lang, partMeaning);
+    const pid = idForGloss(lang, partMeaning);
+    const f = pid !== undefined ? lexFormById(lang, pid) : undefined;
     if (!f || f.length === 0) return null; // a part dropped — bail
     parts.push(f);
   }
@@ -66,7 +67,8 @@ export function updateCompounds(
     }
     const next = recomposeCompound(lang, meaning);
     if (!next) continue;
-    const current = lexGet(lang, meaning);
+    const cid = idForGloss(lang, meaning);
+    const current = cid !== undefined ? lexFormById(lang, cid) : undefined;
     if (current && current.join("") === next.join("")) continue;
     setLexiconForm(lang, meaning, next, {
       bornGeneration: generation,

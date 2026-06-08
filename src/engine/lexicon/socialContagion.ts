@@ -2,7 +2,7 @@ import type { Language, Meaning, WordForm } from "../types";
 import { satGet, satSet, satKeys, satDelete } from "./satellites";
 import { meaningForLexemeId } from "./lexemeIdentity";
 import { setLexiconForm } from "./mutate";
-import { lexGet } from "./access";
+import { lexFormById, idForGloss } from "./access";
 
 const NEW_VARIANT_FRACTION = 0.05;
 const CONTAGION_RATE = 0.18;
@@ -126,7 +126,8 @@ export function stepSocialContagion(
       for (const v of list) v.adoptionFraction = (v.adoptionFraction ?? 0) / totalFrac;
     }
 
-    const canonical = lexGet(lang, m);
+    const _cid = idForGloss(lang, m);
+    const canonical = _cid !== undefined ? lexFormById(lang, _cid) : undefined;
     let leader = list[0]!;
     let leaderFrac = leader.adoptionFraction ?? 0;
     for (const v of list) {

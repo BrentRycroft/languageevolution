@@ -4,7 +4,8 @@ import type { Rng } from "../rng";
 import { addSynonym, setLexiconForm } from "./mutate";
 import { selectSynonyms, formKeyOf, findWordsByMeaning } from "./word";
 import { posOf, isClosedClass } from "./pos";
-import { lexGet, lexKeys } from "./access";
+import { lexFormById, lexIds, idForGloss } from "./access";
+import { meaningForLexemeId } from "./lexemeIdentity";
 
 /**
  * Phase 37: synonym genesis + homonym suppression.
@@ -47,13 +48,15 @@ export function maybeSpawnSynonym(
   // frequency ≥ 0.4 (frequent enough to stylistically split, not so
   // rare that nobody would coin an alternative).
   const candidates: Array<{ meaning: Meaning; form: WordForm }> = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     if (isClosedClass(posOf(m))) continue;
     const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     if (freq < 0.4) continue;
     if (selectSynonyms(lang, m).length >= 3) continue; // already saturated
-    const f = lexGet(lang, m)!;
-    if (f.length < 2) continue;
+    const f = lexFormById(lang, id);
+    if (!f || f.length < 2) continue;
     candidates.push({ meaning: m, form: f });
   }
   if (candidates.length === 0) return null;
@@ -182,7 +185,9 @@ export function maybeReplacePrimary(
   // Find a meaning with ≥ 2 senses across all words, where one is
   // primary and at least one is a synonym.
   const candidates: Meaning[] = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     const syns = selectSynonyms(lang, m);
     if (syns.length >= 2) candidates.push(m);
   }
@@ -192,7 +197,8 @@ export function maybeReplacePrimary(
   // First entry is current primary; pick a non-primary synonym.
   const newPrimaryWord = syns[1 + rng.int(syns.length - 1)]!;
   const newForm = newPrimaryWord.form.slice();
-  const oldForm = lexGet(lang, meaning)!.slice();
+  const meaningId = idForGloss(lang, meaning);
+  const oldForm = (meaningId !== undefined ? lexFormById(lang, meaningId) : undefined)!.slice();
   // Promote the synonym to primary by re-routing setLexiconForm,
   // which also demotes the old form to a synonym entry.
   setLexiconForm(lang, meaning, newForm, {

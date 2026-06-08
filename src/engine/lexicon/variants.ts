@@ -2,7 +2,7 @@ import type { Language, Meaning, WordForm } from "../types";
 import { satGet, satSet, satKeys, satDelete } from "./satellites";
 import { meaningForLexemeId } from "./lexemeIdentity";
 import { setLexiconForm } from "./mutate";
-import { lexGet } from "./access";
+import { lexFormById, idForGloss } from "./access";
 
 /**
  * variants.ts
@@ -80,7 +80,8 @@ export function decayAndActuate(
   for (const id of ids) {
     const m = meaningForLexemeId(lang, id) ?? id;
     const list = satGet(lang, "variants", id)!;
-    const canonical = lexGet(lang, m);
+    const _cid = idForGloss(lang, m);
+    const canonical = _cid !== undefined ? lexFormById(lang, _cid) : undefined;
     for (let i = 0; i < list.length; i++) {
       const v = list[i]!;
       if (canonical && formsEqual(v.form, canonical)) {
