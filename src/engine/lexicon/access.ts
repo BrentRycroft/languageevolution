@@ -60,7 +60,14 @@ export function lexSet(lang: LexiconState, m: Meaning, form: WordForm): void {
  * deleteMeaning's registry pass.) */
 export function lexDelete(lang: LexiconState, m: Meaning): void {
   const cid = lang.lexemeIds?.[m] as LexemeId | undefined;
-  if (cid !== undefined) delete lang.lexemes[cid];
+  if (cid !== undefined) {
+    delete lang.lexemes[cid];
+    return;
+  }
+  // S2b: a KEYLESS (gloss-less) record has no lexemeIds entry; if `m` is itself a store key (its
+  // LexemeId, e.g. a keyless recarve loser), delete it directly. Seeded glosses are never store keys
+  // post-flip, so this branch only fires for an id and leaves seeded deletion byte-identical.
+  if (lang.lexemes[m as LexemeId] !== undefined) delete lang.lexemes[m as LexemeId];
 }
 
 /** Meanings (glosses) in INSERTION order — gloss-bearing records only (keyless

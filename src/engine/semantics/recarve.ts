@@ -5,7 +5,9 @@ import { colexWith, isRegisteredConcept } from "../lexicon/concepts";
 import { isFormLegal } from "../phonology/wordShape";
 import { recordOneSidedColexification } from "./colexification";
 import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { lexGet, lexHas } from "../lexicon/access";
+import { evolvableLexemes, isKeyless, keylessMature, effectiveGlossFor, effectiveFormOf } from "../lexicon/evolvable";
+import type { LexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * recarve.ts
@@ -81,8 +83,34 @@ export function maybeRecarve(
   return tryMerge(lang, rng, generation);
 }
 
+/**
+ * S2b: the ids eligible to participate in recarve — seeded words plus MATURE keyless words whose
+ * emergent gloss is a registered concept. Seeded ids come first (lexKeys order) and resolve to their
+ * stored gloss, so for a seeded-only language this reproduces `lexKeys(lang).filter(isRegisteredConcept)`
+ * exactly (byte-identical); keyless words appear only once mature (freq ≥ KEYLESS_MATURITY_FREQ).
+ */
+export function recarveMergeCandidateIds(lang: Language): LexemeId[] {
+  return evolvableLexemes(lang).filter((id) => {
+    if (isKeyless(lang, id) && !keylessMature(lang, id)) return false; // concept-coupled gate
+    return isRegisteredConcept(effectiveGlossFor(lang, id));
+  });
+}
+
+/** A gloss→id map over the recarve candidates; seeded (first) wins on an emergent-gloss collision. */
+function candidateIdByGloss(lang: Language): Map<Meaning, LexemeId> {
+  const m = new Map<Meaning, LexemeId>();
+  for (const id of recarveMergeCandidateIds(lang)) {
+    const g = effectiveGlossFor(lang, id);
+    if (!m.has(g)) m.set(g, id);
+  }
+  return m;
+}
+
 function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | null {
-  const meanings = lexKeys(lang).filter(isRegisteredConcept);
+  // S2b: candidates incl. mature keyless words; the pair logic (colex/cooldown) stays gloss-based, but
+  // the gloss→id map lets satellite reads + deletion address a keyless member by its id.
+  const idByGloss = candidateIdByGloss(lang);
+  const meanings = [...idByGloss.keys()];
   const pairs: Array<readonly [Meaning, Meaning]> = [];
   const seen = new Set<string>();
   for (const a of meanings) {
@@ -98,8 +126,10 @@ function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   }
   if (pairs.length === 0) return null;
   const [a, b] = pairs[rng.int(pairs.length)]!;
-  const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
-  const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
+  // S2b: read frequency by the candidate's id where it is one (a keyless word's freq lives under its id;
+  // for a seeded member the id resolves to the same record, so the value — and seeded behaviour — is unchanged).
+  const fa = satGet(lang, "wordFrequencyHints", idByGloss.get(a) ?? a) ?? 0.4;
+  const fb = satGet(lang, "wordFrequencyHints", idByGloss.get(b) ?? b) ?? 0.4;
   const winner = fa > fb ? a : fa < fb ? b : a < b ? a : b;
   const loser = winner === a ? b : a;
   // LANE-C — frequency-retention on merger (Zipf / entrenchment): a
@@ -111,17 +141,21 @@ function tryMerge(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   // above; it consumes the event when it fires (anti-runaway-merger).
   const loserFreq = winner === a ? fb : fa;
   if (rng.chance(loserFreq * MERGE_RETENTION_STRENGTH)) return null;
-  // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
+  // S2b: a KEYLESS member is addressed by its id for deletion + colex writes; a seeded member keeps
+  // using its gloss exactly as before (resolves to the same record → seeded byte-identical).
+  const loserId = idByGloss.get(loser);
+  const loserKey = loserId !== undefined && isKeyless(lang, loserId) ? loserId : loser;
+  const winnerId = idByGloss.get(winner);
+  const winnerKey = winnerId !== undefined && isKeyless(lang, winnerId) ? winnerId : winner;
   // Phase 72d-2 (defer-1a): pass merger context so meaningHistory
-  // records the pathway loser → winner. Reverse translation /
-  // reconstruction can recover the loser via mergedInto.
-  deleteMeaning(lang, loser, {
+  // records the pathway loser → winner.
+  deleteMeaning(lang, loserKey, {
     mergedInto: winner,
     generation,
     reason: "semantic-merger",
   });
-  if (lang.suppletion) satDelete(lang, "suppletion", loser);
-  recordOneSidedColexification(lang, winner, loser);
+  if (lang.suppletion) satDelete(lang, "suppletion", loserKey);
+  recordOneSidedColexification(lang, winnerKey, loser);
   stampRecarve(lang, winner, loser, generation);
   return { kind: "merge", winner, loser };
 }
@@ -163,7 +197,9 @@ export function applyKinshipSimplification(
 }
 
 function trySplit(lang: Language, rng: Rng, generation: number): RecarveEvent | null {
-  const meanings = lexKeys(lang).filter(isRegisteredConcept);
+  // S2b: sources incl. mature keyless words (same candidate set as merge); resolve to effective gloss.
+  const idByGloss = candidateIdByGloss(lang);
+  const meanings = [...idByGloss.keys()];
   const candidates: Array<{ source: Meaning; target: Meaning }> = [];
   for (const source of meanings) {
     for (const target of colexWith(source)) {
@@ -175,16 +211,19 @@ function trySplit(lang: Language, rng: Rng, generation: number): RecarveEvent | 
   }
   if (candidates.length === 0) return null;
   const pick = candidates[rng.int(candidates.length)]!;
-  const form = lexGet(lang, pick.source)!;
+  // S2b: read the source's form/freq/register by its id where it is a candidate (keyless form/freq live
+  // under the id; a seeded source resolves to the same record → byte-identical for seeded).
+  const srcId = idByGloss.get(pick.source);
+  const form = (srcId !== undefined ? effectiveFormOf(lang, srcId) : lexGet(lang, pick.source))!;
   if (!isFormLegal(pick.target, form)) return null;
   // Phase 29 Tranche 1 round 3: route through chokepoint.
   setLexiconForm(lang, pick.target, form.slice(), {
     bornGeneration: 0,
     origin: "recarve-split",
   });
-  const freq = satGet(lang, "wordFrequencyHints", pick.source) ?? 0.4;
+  const freq = satGet(lang, "wordFrequencyHints", srcId ?? pick.source) ?? 0.4;
   satSet(lang, "wordFrequencyHints", pick.target, freq);
-  const reg = satGet(lang, "registerOf", pick.source);
+  const reg = satGet(lang, "registerOf", srcId ?? pick.source);
   if (reg !== undefined) {
     satSet(lang, "registerOf", pick.target, reg);
   }
