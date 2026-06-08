@@ -1,0 +1,54 @@
+import type { LexiconState } from "../domains";
+import type { Language, WordForm } from "../types";
+import type { Meaning } from "../types";
+import { buildLexemeIdToGloss, type LexemeId } from "./lexemeIdentity";
+import { satGet } from "./satellites";
+import { glossOf } from "../semantics/anchors";
+import { posOfPoint, type PosClass } from "../semantics/anchorQueries";
+import { posOf, type POS } from "./pos";
+
+/** Widen the geometric 4-way `PosClass` (keyless) to the 18-way `POS` the callers + `isClosedClass` use. */
+const POS_OF_CLASS: Record<PosClass, POS> = {
+  noun: "noun",
+  verb: "verb",
+  adjective: "adjective",
+  closed: "other", // keyless coinages are content words; "closed" geometry → neutral open-class default
+};
+
+export const KEYLESS_MATURITY_FREQ = 0.5;
+
+export function evolvableLexemes(lang: LexiconState): LexemeId[] {
+  const g = buildLexemeIdToGloss(lang);
+  const seeded: LexemeId[] = [];
+  const keyless: LexemeId[] = [];
+  for (const id of Object.keys(lang.lexemes) as LexemeId[]) {
+    if (g.has(id)) seeded.push(id);
+    else keyless.push(id);
+  }
+  keyless.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return [...seeded, ...keyless];
+}
+
+export function isKeyless(lang: LexiconState, id: LexemeId): boolean {
+  return lang.lexemes[id]?.gloss === undefined;
+}
+
+export function effectiveGlossFor(lang: LexiconState, id: LexemeId): Meaning {
+  const rec = lang.lexemes[id];
+  if (rec?.gloss !== undefined) return rec.gloss;
+  return glossOf(Int32Array.from(rec!.point));
+}
+
+export function effectiveFormOf(lang: LexiconState, id: LexemeId): WordForm | undefined {
+  return lang.lexemes[id]?.form;
+}
+
+export function effectivePosOf(lang: LexiconState, id: LexemeId): POS {
+  const rec = lang.lexemes[id];
+  if (rec?.gloss !== undefined) return posOf(rec.gloss); // seeded: unchanged 18-way POS
+  return POS_OF_CLASS[posOfPoint(Int32Array.from(rec!.point))];
+}
+
+export function keylessMature(lang: Language, id: LexemeId): boolean {
+  return (satGet(lang, "wordFrequencyHints", id) ?? 0.4) >= KEYLESS_MATURITY_FREQ;
+}
