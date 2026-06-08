@@ -2,8 +2,8 @@ import type { Language, Meaning } from "../types";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassTable } from "./closedClass";
 import { disambiguateSense, glossLemma } from "../lexicon/word";
-import { lexGet } from "../lexicon/access";
-import { orderedLexiconKeys, meaningForLexemeId } from "../lexicon/lexemeIdentity";
+import { lexFormById } from "../lexicon/access";
+import { meaningForLexemeId, orderedLexemeIds } from "../lexicon/lexemeIdentity";
 import { satKeys, satGet } from "../lexicon/satellites";
 
 /**
@@ -96,13 +96,16 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
       }
     }
   } else {
-    const openLemmas = orderedLexiconKeys(lang);
-    for (const lemma of openLemmas) {
+    // orderedLexemeIds = seeded ids in GLOSS-SORTED order (keyless appended, skipped below by the
+    // undefined-gloss guard) — byte-identical to the prior orderedLexiconKeys(lang) iteration.
+    for (const id of orderedLexemeIds(lang.lexemes, lang)) {
+      const lemma = meaningForLexemeId(lang, id);
+      if (lemma === undefined) continue;
       // Phase 29-2i: null-guard. The `!` was wrong — `Object.keys`
       // can race with concurrent mutations and a meaning may be
       // mid-deletion when this runs (the engine never deletes during
       // a render but defensive code should not assume).
-      const form = lexGet(lang, lemma);
+      const form = lexFormById(lang, id);
       if (!form) continue;
       const surface = form.join("");
       if (!surface) continue;

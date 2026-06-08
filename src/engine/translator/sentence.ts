@@ -7,7 +7,8 @@ import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym, glossLemma } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { lookupFormWithResolution } from "../lexicon/lookup";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { lexGet, lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { astToTokens, astToSentence } from "./ast";
@@ -671,7 +672,7 @@ function resolveLemma(
   // abstraction. resolveLemma is a thin adapter that preserves the
   // legacy signature for in-file callers.
   void posOf;
-  const canonical = lexHas(lang, lemma) ? lemma : (ENGLISH_SYNONYM_CONCEPT[lemma] ?? lemma);
+  const canonical = idForGloss(lang, lemma) !== undefined ? lemma : (ENGLISH_SYNONYM_CONCEPT[lemma] ?? lemma);
   return lookupFormWithResolution(lang, canonical);
 }
 
@@ -706,8 +707,10 @@ export function buildReverseIndex(lang: Language): Map<string, Meaning[]> {
       }
     }
   } else {
-    for (const m of lexKeys(lang)) {
-      const form = lexGet(lang, m);
+    for (const id of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, id);
+      if (m === undefined) continue;
+      const form = lexFormById(lang, id);
       if (!form || form.length === 0) continue;
       const ipa = form.join("");
       push(ipa, m);
