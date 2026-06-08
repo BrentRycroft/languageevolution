@@ -5,7 +5,7 @@ import { complexityFor } from "../../lexicon/complexity";
 import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
 import { langPhonotacticScore } from "../../phonology/phonotactics";
-import { lexIds, lexHas, lexFormById, idForGloss } from "../../lexicon/access";
+import { lexIds, lexFormById, idForGloss, lexHasById } from "../../lexicon/access";
 import { attemptConceptDecomposition } from "../../lexicon/synthesis";
 import { CONCEPTS } from "../../lexicon/concepts";
 
@@ -61,8 +61,8 @@ export const MECHANISM_COMPOUND: CoinageMechanism = {
       return null;
     }
 
-    const clusterPool = relatedMeanings(target).filter((m) => lexHas(lang, m));
-    const neighborPool = neighborsOf(target).filter((m) => lexHas(lang, m));
+    const clusterPool = relatedMeanings(target).filter((m) => lexHasById(lang, idForGloss(lang, m)));
+    const neighborPool = neighborsOf(target).filter((m) => lexHasById(lang, idForGloss(lang, m)));
     const pool = clusterPool.length > 0 ? clusterPool : neighborPool;
     // A compound must be built from two SEMANTICALLY-RELATED existing lexemes
     // (kenning/calque: "firewater" = fire + water), never a random mash of two

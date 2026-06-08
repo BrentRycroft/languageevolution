@@ -6,7 +6,8 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { findWordsByMeaning, recordedParts } from "../lexicon/word";
 import { deleteMeaning } from "../lexicon/mutate";
-import { idForGloss, lexFormById, lexIds, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById, lexIds } from "../lexicon/access";
+import { buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
 import { tierOf } from "../lexicon/concepts";
 import { isClosedClass, posOf } from "../lexicon/pos";
 
@@ -97,10 +98,27 @@ export function stepObsolescence(
   // rate tracks the (size-scaled) birth rate → emergent stationarity.
   const lexemes = lexIds(lang);
   const disuseAttempts = Math.max(1, Math.round(lexemes.length / DISUSE_ATTEMPT_PER_LEXEMES));
+  // Rebuild the gloss list FRESH on each use: attemptDisuseDeath deletes words, so each disuse attempt
+  // (and the rivalry pass below) must observe the current, shrinking lexicon — exactly as the prior
+  // per-iteration `lexKeys(lang)` calls did. A single upfront snapshot would keep sampling deleted
+  // meanings and diverge (pie/english, where disuse death fires within 30 gens).
+  const glossList = (): string[] => {
+    // buildLexemeIdToGloss = a FRESH gloss⇆id inversion (exactly what lexKeys does). NOT
+    // meaningForLexemeId, whose size-cached reverse index can read STALE here: disuse deaths delete
+    // words mid-loop and the cache's size check can cycle back to a prior size with different entries,
+    // resolving an id to the wrong gloss. The fresh inverter is byte-identical to the prior lexKeys.
+    const g = buildLexemeIdToGloss(lang);
+    const out: string[] = [];
+    for (const cid of Object.keys(lang.lexemes)) {
+      const m = g.get(cid);
+      if (m !== undefined) out.push(m);
+    }
+    return out;
+  };
   for (let i = 0; i < disuseAttempts; i++) {
-    attemptDisuseDeath(lang, config, rng, generation, lexKeys(lang));
+    attemptDisuseDeath(lang, config, rng, generation, glossList());
   }
-  const meanings = lexKeys(lang);
+  const meanings = glossList();
   if (meanings.length < 2) return;
   for (let attempt = 0; attempt < 6; attempt++) {
     const a = meanings[rng.int(meanings.length)]!;

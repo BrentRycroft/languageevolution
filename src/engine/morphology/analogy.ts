@@ -4,7 +4,8 @@ import { clusterOf, relatedMeanings } from "../semantics/clusters";
 import { isFormLegal } from "../phonology/wordShape";
 import { isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm } from "../lexicon/mutate";
-import { idForGloss, lexFormById, lexHasById, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById, lexHasById, lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { satGet } from "../lexicon/satellites";
 
 /**
@@ -27,14 +28,16 @@ export function maybeAnalogicalLevel(
   probability: number,
 ): AnalogyEvent | null {
   if (!rng.chance(probability)) return null;
-  const meanings = lexKeys(lang);
-  if (meanings.length < 3) return null;
+  const ids = lexIds(lang);
+  if (ids.length < 3) return null;
   const candidates: Array<{
     meaning: string;
     mean: number;
     form: WordForm;
   }> = [];
-  for (const m of meanings) {
+  for (const id of ids) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     // Phase 26c: closed-class words don't undergo analogical leveling.
     // Articles, prepositions, conjunctions don't reshape their forms
     // based on cluster mates (real cross-linguistic pattern: function

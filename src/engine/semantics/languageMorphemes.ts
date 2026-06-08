@@ -15,7 +15,7 @@
 import type { Language, Meaning } from "../types";
 import type { Morpheme, MorphemeType } from "./morphemeSpace";
 import { zeroVec } from "./vec";
-import { lexGet, lexIds, lexFormById } from "../lexicon/access";
+import { lexIds, lexFormById, idForGloss } from "../lexicon/access";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { recordedParts } from "../lexicon/word";
 import { satGet } from "../lexicon/satellites";
@@ -32,7 +32,8 @@ function affixType(affix: string): MorphemeType {
 
 /** One morpheme entry (root or affix) with a LIVE form, or null if it has no usable form. */
 function morphemeFor(lang: Language, id: string, bound: ReadonlySet<string>): Morpheme | null {
-  const form = lexGet(lang, id);
+  const lid = idForGloss(lang, id);
+  const form = lid !== undefined ? lexFormById(lang, lid) : undefined;
   if (!form || form.length === 0) return null;
   if (bound.has(id)) {
     return { id, form: form.slice(), point: zeroVec(), type: affixType(id) };

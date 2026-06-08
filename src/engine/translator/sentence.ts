@@ -7,7 +7,7 @@ import { pickAspect } from "../narrative/verbClasses";
 import { disambiguateSense, pickSynonym, glossLemma } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { lookupFormWithResolution } from "../lexicon/lookup";
-import { lexGet, lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { lexIds, lexFormById, idForGloss } from "../lexicon/access";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
@@ -781,12 +781,13 @@ export function reverseParseToTokens(
         ? choices[0]!
         : disambiguateSense(lang, choices, { contextLemmas });
     const otherSenses = choices.filter((c) => c !== meaning);
+    const meaningId = idForGloss(lang, meaning);
     tokens.push({
       // Stage B: render a clean derivation gloss ("build-AGT") instead of
       // leaking the raw key ("build-tér.agt"); form lookup keeps the real key.
       englishLemma: glossLemma(lang, meaning),
       englishTag: "N",
-      targetForm: lexGet(lang, meaning) ?? [],
+      targetForm: meaningId !== undefined ? lexFormById(lang, meaningId) ?? [] : [],
       targetSurface: raw,
       glossNote:
         otherSenses.length > 0 ? `↔ ${otherSenses.join("/")}` : "",
@@ -982,7 +983,8 @@ function translateFragment(
         } else if (WH_LEMMAS.has(tok.lemma)) {
           emitClosedClass(tok.lemma, "PUNCT", "wh");
         } else if (INTERJECTIONS.has(tok.lemma)) {
-          const lex = lexGet(lang, tok.lemma);
+          const lexId = idForGloss(lang, tok.lemma);
+          const lex = lexId !== undefined ? lexFormById(lang, lexId) : undefined;
           const form = lex ?? closedClassForm(lang, tok.lemma) ?? [];
           if (form.length > 0) {
             targetTokens.push({
@@ -1047,7 +1049,8 @@ function translateFragment(
         if (numValue !== null && (lang.grammar.numeralBase || lang.grammar.numeralOrder)) {
           const formatted = formatNumeral(numValue, lang);
           for (const ft of formatted) {
-            const lex = lexGet(lang, ft.lemma);
+            const ftId = idForGloss(lang, ft.lemma);
+            const lex = ftId !== undefined ? lexFormById(lang, ftId) : undefined;
             const form = lex ?? closedClassForm(lang, ft.lemma) ?? [];
             if (form.length === 0) continue;
             if (ft.connector) {
@@ -1074,7 +1077,8 @@ function translateFragment(
           }
           continue;
         }
-        const lex = lexGet(lang, tok.lemma);
+        const numLexId = idForGloss(lang, tok.lemma);
+        const lex = numLexId !== undefined ? lexFormById(lang, numLexId) : undefined;
         const form = lex ?? closedClassForm(lang, tok.lemma) ?? [];
         if (form.length > 0) {
           targetTokens.push({
@@ -1339,7 +1343,8 @@ function translateViaTree(
   for (const tok of englishTokens) {
     if (tok.tag !== "PUNCT") continue;
     if (!INTERJECTIONS.has(tok.lemma)) continue;
-    const lex = lexGet(lang, tok.lemma);
+    const interjId = idForGloss(lang, tok.lemma);
+    const lex = interjId !== undefined ? lexFormById(lang, interjId) : undefined;
     const form = lex ?? closedClassForm(lang, tok.lemma) ?? [];
     if (form.length === 0) continue;
     translated.unshift({

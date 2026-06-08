@@ -1,6 +1,6 @@
 import type { CoinageMechanism } from "./types";
 import { relatedMeanings } from "../../semantics/clusters";
-import { lexIds, lexHas, lexFormById, idForGloss } from "../../lexicon/access";
+import { lexIds, lexFormById, idForGloss, lexHasById } from "../../lexicon/access";
 
 /**
  * blending.ts
@@ -18,7 +18,7 @@ export const MECHANISM_BLENDING: CoinageMechanism = {
   baseWeight: 0.5,
   tryCoin: (lang, target, _tree, rng) => {
     if (lexIds(lang).length < 2) return null;
-    const related = relatedMeanings(target).filter((m) => lexHas(lang, m));
+    const related = relatedMeanings(target).filter((m) => lexHasById(lang, idForGloss(lang, m)));
     if (related.length < 2) return null;
     const a = related[rng.int(related.length)]!;
     const remaining = related.filter((m) => m !== a);

@@ -9,7 +9,7 @@ import { posOf, isClosedClass } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
 import { isSyllabic } from "../phonology/ipa";
-import { lexFormById, lexIds, idForGloss, coinSeededLexeme, lexValues } from "../lexicon/access";
+import { lexFormById, lexIds, idForGloss, coinSeededLexeme } from "../lexicon/access";
 import { evolvableLexemes, isKeyless, keylessMature, effectiveGlossFor, effectiveFormOf, effectivePosOf } from "../lexicon/evolvable";
 
 /**
@@ -628,7 +628,8 @@ export function maybeSplitParadigm(
   if (paradigm.affix.length === 0) return null;
   let vowelFinal = 0;
   let consonantFinal = 0;
-  for (const form of lexValues(lang)) {
+  for (const id of lexIds(lang)) {
+    const form = lexFormById(lang, id)!;
     const last = form[form.length - 1];
     if (!last) continue;
     if (isVowelLike(last)) vowelFinal++;

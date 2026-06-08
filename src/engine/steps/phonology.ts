@@ -30,7 +30,7 @@ import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
-import { lexGet, lexSetFormById, lexKeys, idForGloss } from "../lexicon/access";
+import { lexFormById, lexSetFormById, lexIds } from "../lexicon/access";
 import { formViewOf, mergeFormsIntoStore } from "../lexicon/store";
 
 /**
@@ -564,14 +564,14 @@ export function stepPhonology(
     const preInv = new Set(lang.phonemeInventory.segmental);
     const preLex: Record<string, WordForm> = {};
     if (inventorySizePressure(lang) > 0) {
-      for (const m of lexKeys(lang)) preLex[m] = lexGet(lang, m)!;
+      for (const id of lexIds(lang)) preLex[id] = lexFormById(lang, id)!;
     }
     const ruleId = applyOneRegularChange(lang, changes, rng);
     if (ruleId) {
       if (Object.keys(preLex).length > 0) {
         let introducesNovel = false;
-        outer: for (const m of lexKeys(lang)) {
-          for (const raw of lexGet(lang, m)!) {
+        outer: for (const id of lexIds(lang)) {
+          for (const raw of lexFormById(lang, id)!) {
             const base = stripTone(raw);
             if (!preInv.has(base) && !preInv.has(raw)) {
               introducesNovel = true;
@@ -580,7 +580,7 @@ export function stepPhonology(
           }
         }
         if (introducesNovel) {
-          for (const m of Object.keys(preLex)) { const _id = idForGloss(lang, m); if (_id) lexSetFormById(lang, _id, preLex[m]!); }
+          for (const id of lexIds(lang)) { if (preLex[id]) lexSetFormById(lang, id, preLex[id]!); }
         }
       }
       refreshInventory(lang);
@@ -688,8 +688,8 @@ export function stepPhonology(
 
   if (lang.activeRules && lang.activeRules.length > 0) {
     lang.activeRules = lang.activeRules.map((rule) => {
-      for (const m of lexKeys(lang)) {
-        if (matchSites(rule, lexGet(lang, m)!).length > 0) {
+      for (const id of lexIds(lang)) {
+        if (matchSites(rule, lexFormById(lang, id)!).length > 0) {
           return reinforce(rule, generation);
         }
       }

@@ -16,7 +16,8 @@ import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { lexGet, lexSetFormById, coinSeededLexeme, lexHas, lexKeys, idForGloss } from "../lexicon/access";
+import { lexFormById, lexSetFormById, coinSeededLexeme, lexIds, idForGloss, lexHasById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { zipfFrequencyFor } from "../lexicon/concepts";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
@@ -65,15 +66,14 @@ function tonaliseLexicon(lang: Language): void {
   // Phase 39f: pitch-accent regime marks ONE tone per word (the
   // accented syllable). Tonal regime marks every tone-bearing syllable.
   const isPitchAccent = lang.toneRegime === "pitch-accent";
-  for (const m of lexKeys(lang)) {
-    const f = lexGet(lang, m)!;
+  for (const id of lexIds(lang)) {
+    const f = lexFormById(lang, id)!;
     let needsRewrite = false;
     for (const p of f) {
       if (isToneBearing(p) && !toneOf(p)) { needsRewrite = true; break; }
     }
     if (!needsRewrite) continue;
-    const _id = idForGloss(lang, m);
-    if (!_id) continue;
+    const _id = id;
     if (isPitchAccent) {
       // Mark only the FIRST tone-bearing position with HIGH (accent),
       // leave the rest untoned. Models Japanese/Norwegian.
@@ -112,7 +112,7 @@ function initialLexicalCapacity(lang: Language): number {
 function seedClosedClassLexicon(lang: Language): void {
   for (const lemma of CLOSED_CLASS_LEMMAS) {
     if (lemma === "Q" || lemma === "CLF") continue;
-    if (lexHas(lang, lemma)) continue;
+    if (lexHasById(lang, idForGloss(lang, lemma))) continue;
     const form = closedClassForm(lang, lemma);
     if (!form || form.length === 0) continue;
     coinSeededLexeme(lang, lemma, form);
@@ -296,7 +296,9 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   // brakes had no real frequency signal for non-core vocabulary and the
   // distribution couldn't be Zipfian. Explicit seedFrequencyHints (and the
   // closed-class anchors poured in below) keep precedence — this only fills gaps.
-  for (const m of lexKeys(rootLang)) {
+  for (const id of lexIds(rootLang)) {
+    const m = meaningForLexemeId(rootLang, id);
+    if (m === undefined) continue;
     if (!satHas(rootLang, "wordFrequencyHints", m)) {
       satSet(rootLang, "wordFrequencyHints", m, zipfFrequencyFor(m));
     }
@@ -321,7 +323,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   if (config.seedAltForms) {
     rootLang.altForms = rootLang.altForms ?? {};
     for (const [meaning, forms] of Object.entries(config.seedAltForms)) {
-      if (!lexHas(rootLang, meaning)) continue;
+      if (!lexHasById(rootLang, idForGloss(rootLang, meaning))) continue;
       const valid = forms.filter((f) => f.length > 0).map((f) => f.slice());
       if (valid.length > 0) rootLang.altForms[meaning] = valid;
     }
@@ -378,8 +380,8 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   if (config.seedEtymologies) {
     for (const [meaning, def] of Object.entries(config.seedEtymologies)) {
       if (rootLang.compounds?.[meaning]) continue; // a real compound/derivation takes precedence
-      if (!lexHas(rootLang, meaning)) continue; // need an existing word to attribute ancestry to
-      if (!def.parts.every((p) => lexHas(rootLang, p))) continue; // parts must be lexicalised
+      if (!lexHasById(rootLang, idForGloss(rootLang, meaning))) continue; // need an existing word to attribute ancestry to
+      if (!def.parts.every((p) => lexHasById(rootLang, idForGloss(rootLang, p)))) continue; // parts must be lexicalised
       satSet(rootLang, "etymology", meaning, def.parts.slice());
     }
   }
@@ -409,7 +411,8 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       // silently skipped, leaving "-dom" with random phonemes and
       // productive=false — the user-reported "waterdom doesn't work"
       // bug stemmed from exactly this collision.
-      const affix = lexGet(rootLang, m);
+      const _affixId = idForGloss(rootLang, m);
+      const affix = _affixId !== undefined ? lexFormById(rootLang, _affixId) : undefined;
       if (affix && affix.length > 0) {
         // Phase 47 T2: detect position from tag shape. Tags ending
         // with "-" (e.g. "re-", "un-") are prefixes; otherwise default

@@ -3,7 +3,7 @@ import { satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { deleteMeaning, setLexiconForm } from "../lexicon/mutate";
-import { idForGloss, lexFormById, lexHas } from "../lexicon/access";
+import { idForGloss, lexFormById, lexHasById } from "../lexicon/access";
 
 /**
  * copula.ts
@@ -19,7 +19,7 @@ export function stepCopulaErosion(
   rng: Rng,
   generation: number,
 ): void {
-  if (!lexHas(lang, "be")) return;
+  if (!lexHasById(lang, idForGloss(lang, "be"))) return;
   const baseP = config.obsolescence.copulaLossProbability ?? 0.005;
   const p = Math.min(1, baseP / Math.max(0.3, lang.conservatism));
   if (!rng.chance(p)) return;
@@ -50,7 +50,7 @@ export function stepCopulaGenesis(
   rng: Rng,
   generation: number,
 ): void {
-  if (lexHas(lang, "be")) return;
+  if (lexHasById(lang, idForGloss(lang, "be"))) return;
   const baseP = config.obsolescence.copulaGenesisProbability ?? 0.0025;
   const p = Math.min(1, baseP / Math.max(0.3, lang.conservatism));
   if (!rng.chance(p)) return;
@@ -58,7 +58,7 @@ export function stepCopulaGenesis(
   let donor: string | null = null;
   let pathway: string | null = null;
   for (const candidates of COPULA_DONORS) {
-    const found = candidates.find((m) => lexHas(lang, m));
+    const found = candidates.find((m) => lexHasById(lang, idForGloss(lang, m)));
     if (found) {
       donor = found;
       pathway =

@@ -17,7 +17,8 @@ import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 import { clusterOf } from "../semantics/clusters";
-import { lexKeys, idForGloss, lexFormById, lexHasById, coinSeededLexeme } from "../lexicon/access";
+import { lexIds, idForGloss, lexFormById, lexHasById, coinSeededLexeme } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * borrow.ts
@@ -131,7 +132,11 @@ export function tryBorrow(
   const distance =
     recipCoords && donor.coords ? geoDistance(recipCoords, donor.coords) : 0;
 
-  const donorMeanings = lexKeys(donor);
+  const donorMeanings: string[] = [];
+  for (const id of lexIds(donor)) {
+    const m = meaningForLexemeId(donor, id);
+    if (m !== undefined) donorMeanings.push(m);
+  }
   const candidates = donorMeanings.filter((m) => idForGloss(recipient, m) === undefined);
   const pool = candidates.length > 0 ? candidates : donorMeanings;
   if (pool.length === 0) return null;

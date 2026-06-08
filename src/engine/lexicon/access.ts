@@ -43,9 +43,13 @@ export function lexSetFormById(lang: LexiconState, id: LexemeId, form: WordForm)
   const rec = lang.lexemes[id];
   if (rec) rec.form = form;
 }
-/** Whether a record id exists in the store. */
-export function lexHasById(lang: LexiconState, id: LexemeId): boolean {
-  return lang.lexemes[id] !== undefined;
+/** Whether a record id exists in the store. Accepts undefined (a gloss with no id → false) so callers
+ *  can write `lexHasById(lang, idForGloss(lang, gloss))` as a faithful `lexHas`: that checks BOTH the
+ *  gloss→id mapping AND record existence. They differ — a word killed via `lexDelete` can keep a stale
+ *  `lexemeIds` entry (the registry purge is separate), so `idForGloss(...) !== undefined` alone would
+ *  still count the dead word. */
+export function lexHasById(lang: LexiconState, id: LexemeId | undefined): boolean {
+  return id !== undefined && lang.lexemes[id] !== undefined;
 }
 /** Delete a record by id. */
 export function lexDeleteById(lang: LexiconState, id: LexemeId): void {

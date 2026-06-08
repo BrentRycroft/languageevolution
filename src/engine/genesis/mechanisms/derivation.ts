@@ -4,7 +4,7 @@ import { phonotacticFit } from "../phonotactics";
 import { otFit } from "../../phonology/ot";
 import { langPhonotacticScore } from "../../phonology/phonotactics";
 import { relatedMeanings } from "../../semantics/clusters";
-import { lexIds, lexHas, lexFormById, idForGloss } from "../../lexicon/access";
+import { lexIds, lexFormById, idForGloss, lexHasById } from "../../lexicon/access";
 import { meaningForLexemeId } from "../../lexicon/lexemeIdentity";
 
 /**
@@ -26,7 +26,7 @@ export const MECHANISM_DERIVATION: CoinageMechanism = {
   originTag: "derivation",
   baseWeight: 1,
   tryCoin: (lang, target, _tree, rng) => {
-    const related = relatedMeanings(target).filter((m) => lexHas(lang, m));
+    const related = relatedMeanings(target).filter((m) => lexHasById(lang, idForGloss(lang, m)));
     let base: string | undefined;
     if (related.length > 0) {
       base = related[rng.int(related.length)]!;

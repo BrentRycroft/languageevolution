@@ -6,7 +6,7 @@ import { relatedMeanings } from "../semantics/clusters";
 import { phonotacticFit } from "./phonotactics";
 import { otFit } from "../phonology/ot";
 import { complexityFor } from "../lexicon/complexity";
-import { lexHas, lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { lexIds, lexFormById, idForGloss, lexHasById } from "../lexicon/access";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
@@ -57,14 +57,14 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       const aId = ids[rng.int(ids.length)];
       if (!aId) return null;
       const a: Meaning = meaningForLexemeId(lang, aId)!;
-      const pool = relatedMeanings(a).filter((n) => lexHas(lang, n));
-      const legacy = neighborsOf(a).filter((n) => lexHas(lang, n));
+      const pool = relatedMeanings(a).filter((n) => lexHasById(lang, idForGloss(lang, n)));
+      const legacy = neighborsOf(a).filter((n) => lexHasById(lang, idForGloss(lang, n)));
       const combined = pool.length > 0 ? pool : legacy;
       const candidates = combined.filter((n) => n !== a);
       if (candidates.length === 0) return null;
       const b: Meaning = candidates[rng.int(candidates.length)]!;
       const newMeaning: Meaning = `${a}-${b}`;
-      if (lexHas(lang, newMeaning)) return null;
+      if (lexHasById(lang, idForGloss(lang, newMeaning))) return null;
       const fa = lexFormById(lang, aId)!;
       const bId = idForGloss(lang, b);
       if (!bId) return null;
@@ -94,7 +94,7 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       const pool = suffixPool(lang);
       const suffix = pool[rng.int(pool.length)]!;
       const newMeaning: Meaning = `${base}${suffix.semanticSuffix}`;
-      if (lexHas(lang, newMeaning)) return null;
+      if (lexHasById(lang, idForGloss(lang, newMeaning))) return null;
       const baseForm = lexFormById(lang, baseId)!;
       if (baseForm.length + suffix.affix.length > 10) return null;
       const form = [...baseForm, ...suffix.affix];
@@ -115,7 +115,7 @@ export const GENESIS_CATALOG: GenesisRule[] = [
       const baseId = ids[rng.int(ids.length)]!;
       const base: Meaning = meaningForLexemeId(lang, baseId)!;
       const newMeaning: Meaning = `${base}-intens`;
-      if (lexHas(lang, newMeaning)) return null;
+      if (lexHasById(lang, idForGloss(lang, newMeaning))) return null;
       const form = lexFormById(lang, baseId)!;
       if (form.length === 0 || form.length > 4) return null;
       const first = form[0]!;

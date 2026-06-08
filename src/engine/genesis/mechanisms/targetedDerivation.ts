@@ -2,7 +2,7 @@ import type { Language, Meaning, WordForm } from "../../types";
 import type { Rng } from "../../rng";
 import { derivationFor } from "../../lexicon/derivation_targets";
 import { findSuffixByCategory, type DerivationalSuffix } from "../../lexicon/derivation";
-import { lexIds, lexHas, lexFormById, idForGloss } from "../../lexicon/access";
+import { lexIds, lexFormById, idForGloss, lexHasById } from "../../lexicon/access";
 import { meaningForLexemeId } from "../../lexicon/lexemeIdentity";
 import { satSet } from "../../lexicon/satellites";
 import { recordedParts } from "../../lexicon/word";
@@ -130,7 +130,7 @@ export function attemptProductiveDerivation(
     // excluding them explicitly — the old `m.includes("-")` did so via the dash.
     if (recordedParts(lang, m) !== null || lang.boundMorphemes?.has(m)) continue;
     // Skip if the derived meaning would already exist.
-    if (lexHas(lang, `${m}-${suffix.tag}`)) continue;
+    if (lexHasById(lang, idForGloss(lang, `${m}-${suffix.tag}`))) continue;
     // Skip closed-class.
     if (m.length <= 1) continue;
     // Phase 5a: POS-match via the engine's own `posOf`, not a hardcoded

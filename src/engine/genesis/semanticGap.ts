@@ -9,7 +9,7 @@ import type { Vec } from "../semantics/vec";
 import { distanceSq } from "../semantics/vec";
 import { ANCHORS } from "../semantics/anchors";
 import { meaningPointFor } from "../semantics/meaningPoint";
-import { lexIds, lexHas } from "../lexicon/access";
+import { lexIds, idForGloss, lexHasById } from "../lexicon/access";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { keylessRecords } from "../lexicon/store";
 import type { Language, Meaning } from "../types";
@@ -63,7 +63,7 @@ export function findSemanticGap(lang: Language): SemanticGap | null {
   // visiting all anchors yields the SAME qualifying set as a neighbourhood-union gather.
   let best: SemanticGap | null = null;
   for (const a of ANCHORS) {
-    if (lexHas(lang, a.concept)) continue;
+    if (lexHasById(lang, idForGloss(lang, a.concept))) continue;
     let nearest = Infinity;
     let support = 0;
     let disqualified = false;

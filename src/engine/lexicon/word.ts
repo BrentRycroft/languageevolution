@@ -4,7 +4,7 @@ import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
-import { lexFormById, lexHasById, lexEntries, idForGloss } from "./access";
+import { lexFormById, lexHasById, lexIds, idForGloss } from "./access";
 import { lexemeIdFor, meaningForLexemeId } from "./lexemeIdentity";
 import { lexPoint } from "../semantics/meaningPoint";
 import { CONCEPT_IDS } from "./concepts";
@@ -678,7 +678,10 @@ export function syncWordsFromLexicon(
   lang.words = [];
   // Group meanings that share a form.
   const byKey = new Map<string, { form: WordForm; meanings: Meaning[] }>();
-  for (const [meaning, form] of lexEntries(lang)) {
+  for (const id of lexIds(lang)) {
+    const meaning = meaningForLexemeId(lang, id);
+    if (meaning === undefined) continue;
+    const form = lexFormById(lang, id)!;
     if (!form || form.length === 0) continue;
     const key = formKeyOf(form);
     const existing = byKey.get(key);
