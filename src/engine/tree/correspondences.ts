@@ -1,5 +1,6 @@
 import type { LanguageTree, WordForm } from "../types";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, idForGloss, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * Sound-correspondence tracking across a language tree.
@@ -81,9 +82,12 @@ export function buildCorrespondenceMatrix(
   const a = tree[langAId]?.language;
   const b = tree[langBId]?.language;
   if (!a || !b) return { langAId, langBId, pairs, totalColumns };
-  for (const meaning of lexKeys(a)) {
-    const formA = lexGet(a, meaning);
-    const formB = lexGet(b, meaning);
+  for (const aId of lexIds(a)) {
+    const meaning = meaningForLexemeId(a, aId);
+    if (meaning === undefined) continue;
+    const formA = lexFormById(a, aId);
+    const bId = idForGloss(b, meaning);
+    const formB = bId !== undefined ? lexFormById(b, bId) : undefined;
     if (!formA || !formB) continue;
     if (formA.length === 0 || formB.length === 0) continue;
     for (const [segA, segB] of alignPhonemes(formA, formB)) {

@@ -7,7 +7,8 @@ import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 import { inventorySizePressure } from "../steps/inventoryManagement";
 import { setLexiconForm } from "../lexicon/mutate";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * areal_phonology.ts
@@ -86,19 +87,20 @@ export function maybeArealPhonemeShare(
   const replaced = candidates[rng.int(candidates.length)]!;
   if (replaced === target) return null;
 
-  const meanings = lexKeys(recipient).filter((m) =>
-    lexGet(recipient, m)!.includes(replaced),
+  const ids = lexIds(recipient).filter((id) =>
+    lexFormById(recipient, id)!.includes(replaced),
   );
-  if (meanings.length === 0) return null;
+  if (ids.length === 0) return null;
   const affected: string[] = [];
-  const howMany = Math.min(meanings.length, 1 + rng.int(3));
+  const howMany = Math.min(ids.length, 1 + rng.int(3));
   const used = new Set<number>();
-  while (affected.length < howMany && used.size < meanings.length) {
-    const idx = rng.int(meanings.length);
+  while (affected.length < howMany && used.size < ids.length) {
+    const idx = rng.int(ids.length);
     if (used.has(idx)) continue;
     used.add(idx);
-    const m = meanings[idx]!;
-    const form = lexGet(recipient, m)!;
+    const id = ids[idx]!;
+    const m = meaningForLexemeId(recipient, id) ?? id as unknown as string;
+    const form = lexFormById(recipient, id)!;
     const newForm = form.slice();
     for (let i = 0; i < newForm.length; i++) {
       if (newForm[i] === replaced) {

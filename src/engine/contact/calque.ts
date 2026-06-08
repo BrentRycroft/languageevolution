@@ -1,7 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { setLexiconForm } from "../lexicon/mutate";
-import { lexGet, lexHas } from "../lexicon/access";
+import { idForGloss, lexHasById, lexFormById } from "../lexicon/access";
 
 /**
  * Phase 36 Tranche 36m: calques (loan translation) and reborrowing.
@@ -39,13 +39,15 @@ export function tryCalque(
     const meta = donor.compounds[meaning]!;
     if (meta.fossilized) continue;
     // Recipient already has this meaning — no calque opportunity.
-    if (lexHas(recipient, meaning)) continue;
+    const meaningId = idForGloss(recipient, meaning);
+    if (meaningId !== undefined && lexHasById(recipient, meaningId)) continue;
     // Each part must exist in the recipient's lexicon for a
     // morpheme-by-morpheme translation to work.
     const recipientParts: Meaning[] = [];
     let ok = true;
     for (const part of meta.parts) {
-      if (!lexHas(recipient, part)) {
+      const partId = idForGloss(recipient, part);
+      if (partId === undefined || !lexHasById(recipient, partId)) {
         ok = false;
         break;
       }
@@ -55,7 +57,8 @@ export function tryCalque(
     // Stitch the recipient's part forms together.
     const out: WordForm = [];
     for (const p of recipientParts) {
-      out.push(...lexGet(recipient, p)!);
+      const pId = idForGloss(recipient, p)!;
+      out.push(...lexFormById(recipient, pId)!);
     }
     if (out.length === 0) continue;
     setLexiconForm(recipient, meaning, out, {

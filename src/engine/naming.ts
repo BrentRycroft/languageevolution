@@ -1,8 +1,8 @@
 import type { Language } from "./types";
 import type { Rng } from "./rng";
 import { formToString, isVowel } from "./phonology/ipa";
-import { orderedLexiconKeys } from "./lexicon/lexemeIdentity";
-import { lexGet } from "./lexicon/access";
+import { orderedLexemeIds, meaningForLexemeId } from "./lexicon/lexemeIdentity";
+import { lexFormById } from "./lexicon/access";
 
 /**
  * naming.ts
@@ -19,9 +19,12 @@ const ENDINGS = [
 ];
 
 export function generateName(parent: Language, rng: Rng): string {
-  const meanings = orderedLexiconKeys(parent);
-  if (meanings.length === 0) return parent.id;
-  const seed = lexGet(parent, meanings[rng.int(meanings.length)]!)!;
+  // SEEDED ids only, gloss-sorted — byte-identical to the prior orderedLexiconKeys(parent) (which
+  // excluded keyless): the rng.int(ids.length) draw bound must match exactly, so the appended keyless
+  // ids that orderedLexemeIds adds are filtered out.
+  const ids = orderedLexemeIds(parent.lexemes, parent).filter((id) => meaningForLexemeId(parent, id) !== undefined);
+  if (ids.length === 0) return parent.id;
+  const seed = lexFormById(parent, ids[rng.int(ids.length)]!)!;
   let root = "";
   let letters = 0;
   let prevWasVowel: boolean | null = null;
