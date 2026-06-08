@@ -6,7 +6,7 @@ import { CloseIcon } from "./icons";
 import { Z } from "./zIndex";
 import { speakForm, ttsAvailable } from "./audio";
 import { ScriptPicker } from "./ScriptPicker";
-import { lexGet } from "../engine/lexicon/access";
+import { idForGloss, lexFormById } from "../engine/lexicon/access";
 import { satGet } from "../engine/lexicon/satellites";
 
 /**
@@ -42,7 +42,7 @@ export function ReproduceForm({ langId, meaning, onClose }: Props) {
   }, [langId, state.tree]);
 
   const seedForm = seedForms[meaning];
-  const currentForm = lang ? lexGet(lang, meaning) : undefined;
+  const currentForm = lang ? (() => { const id = idForGloss(lang, meaning); return id !== undefined ? lexFormById(lang, id) : undefined; })() : undefined;
   const origin = lang ? satGet(lang, "wordOrigin", meaning) : undefined;
 
   const stitchedHistory = useMemo(() => {

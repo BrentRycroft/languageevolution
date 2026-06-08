@@ -7,7 +7,8 @@ import { affixCoverageReport, affixCoverageScore } from "../engine/diagnostics/a
 import { topRegularCorrespondences } from "../engine/phonology/soundLaws";
 import { closedClassForm } from "../engine/translator/closedClass";
 import { selectSynonyms } from "../engine/lexicon/word";
-import { lexKeys, lexGet, lexHas } from "../engine/lexicon/access";
+import { lexIds, idForGloss, lexFormById } from "../engine/lexicon/access";
+import { meaningForLexemeId } from "../engine/lexicon/lexemeIdentity";
 
 /**
  * Phase 32 Tranche 32d: language profile card. The TL;DR view —
@@ -63,7 +64,8 @@ export function LanguageProfile() {
     "sun", "moon", "go", "see",
   ];
   const sampleWords = SAMPLES.map((m) => {
-    const f = lexGet(lang, m);
+    const id = idForGloss(lang, m);
+    const f = id !== undefined ? lexFormById(lang, id) : undefined;
     return { meaning: m, form: f ? formatForm(f, lang, script, m) : null };
   }).filter((s) => s.form);
 
@@ -318,13 +320,14 @@ function PronounParadigm({
       <tbody>
         {ROWS.map((r) => {
           const lemmas = [r.nom, r.acc, r.poss];
-          const present = lemmas.some((l) => l && lexHas(lang, l));
+          const present = lemmas.some((l) => l && idForGloss(lang, l) !== undefined);
           if (!present) return null;
           return (
             <tr key={r.label}>
               <td style={{ color: "var(--muted)", width: 60 }}>{r.label}</td>
               {lemmas.map((l, i) => {
-                const f = l ? lexGet(lang, l) : null;
+                const _lid = l ? idForGloss(lang, l) : undefined;
+                const f = _lid !== undefined ? lexFormById(lang, _lid) : null;
                 return (
                   <td key={i} style={{ fontFamily: "var(--font-mono)" }}>
                     {f ? formatForm(f, lang, script, l ?? undefined) : <span className="t-muted">—</span>}
@@ -389,11 +392,13 @@ function LexiconStats({
 }: {
   lang: import("../engine/types").Language;
 }) {
-  const meanings = lexKeys(lang);
-  const totalMeanings = meanings.length;
+  const ids = lexIds(lang);
+  const totalMeanings = ids.length;
   let synonymTotal = 0;
   let meaningsWithSynonym = 0;
-  for (const m of meanings) {
+  for (const id of ids) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     const syns = selectSynonyms(lang, m);
     if (syns.length > 1) {
       meaningsWithSynonym++;
@@ -487,7 +492,8 @@ function BoundMorphemesPanel({ lang }: { lang: import("../engine/types").Languag
     <table className="paradigm-table" style={{ width: "100%", fontSize: "var(--fs-1)" }}>
       <tbody>
         {list.map((m) => {
-          const form = lexGet(lang, m);
+          const _bmid = idForGloss(lang, m);
+          const form = _bmid !== undefined ? lexFormById(lang, _bmid) : undefined;
           const origin = lang.boundMorphemeOrigin?.[m];
           return (
             <tr key={m}>

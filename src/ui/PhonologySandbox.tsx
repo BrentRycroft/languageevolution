@@ -6,7 +6,8 @@ import { formatForm } from "../engine/phonology/display";
 import { makeRng } from "../engine/rng";
 import { ListSearch } from "./ListSearch";
 import { CopyButton } from "./CopyButton";
-import { lexKeys, lexGet } from "../engine/lexicon/access";
+import { lexIds, idForGloss, lexFormById } from "../engine/lexicon/access";
+import { meaningForLexemeId } from "../engine/lexicon/lexemeIdentity";
 
 /**
  * Phonology sandbox.
@@ -31,13 +32,24 @@ export function PhonologySandbox() {
 
   const sortedMeanings = useMemo(() => {
     if (!lang) return [];
-    return lexKeys(lang).sort();
+    const meanings: string[] = [];
+    for (const id of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, id);
+      if (m !== undefined) meanings.push(m);
+    }
+    return meanings.sort();
   }, [lang]);
 
   const baseForm = useMemo(() => {
     if (!lang) return [];
     if (customIpa.trim()) return textToIpa(customIpa.trim());
-    if (meaning && lexGet(lang, meaning)) return lexGet(lang, meaning)!.slice();
+    if (meaning) {
+      const id = idForGloss(lang, meaning);
+      if (id !== undefined) {
+        const form = lexFormById(lang, id);
+        if (form) return form.slice();
+      }
+    }
     return [];
   }, [lang, meaning, customIpa]);
 
