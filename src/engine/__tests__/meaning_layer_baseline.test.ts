@@ -342,13 +342,22 @@ const GEN0: Record<string, string> = {
 // so the move is purely the downstream shared-rng perturbation. GEN0 unchanged (no keyless at gen 0).
 // Byte-identity-vs-old waived by the user; reproducibility preserved — a8166cb8 captured twice on
 // consecutive runs, identical.
+// GENN re-baselined 2026-06-07 (storage step-5 S2b — process-widening). Keyless words now participate
+// in the 7 lazily-owned evolution processes; variants is IMMEDIATE, so once a preset coins a keyless
+// word that the regular sweep changes, that keyless word records variants and feeds stepSocialContagion
+// — appending draws to the shared stream (after all seeded draws) and shifting the downstream
+// trajectory. Only tokipona (a8166cb8 → c8a2f719) and english (db425ca5 → 843f52f2) shifted: they are
+// the presets whose 30-gen run coins + sweeps a keyless word; pie/bantu/romance/germanic are
+// BYTE-IDENTICAL (no qualifying keyless word in their 30-gen window). GEN0 unchanged (no keyless at
+// gen 0). Byte-identity-vs-old waived by the user; reproducibility preserved — both new hashes captured
+// twice on consecutive runs, identical, and the s2b reproducibility canary (english sig===sig) is green.
 const GENN: Record<string, string> = {
   pie: "96539fb4",
   bantu: "9cc04867",
   romance: "622cb632",
   germanic: "42b92e41",
-  tokipona: "a8166cb8",
-  english: "db425ca5",
+  tokipona: "c8a2f719",
+  english: "843f52f2",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {
