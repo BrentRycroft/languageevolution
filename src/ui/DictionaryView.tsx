@@ -8,7 +8,8 @@ import { formatForm } from "../engine/phonology/display";
 import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import type { Language, Meaning } from "../engine/types";
-import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
+import { lexIds, idForGloss, lexFormById, lexSize } from "../engine/lexicon/access";
+import { meaningForLexemeId } from "../engine/lexicon/lexemeIdentity";
 import { satGet } from "../engine/lexicon/satellites";
 import { cosineFixed } from "../engine/semantics/vec";
 import { meaningPointFor } from "../engine/semantics/meaningPoint";
@@ -41,7 +42,11 @@ export function DictionaryView() {
 
   const rows = useMemo(() => {
     if (!lang) return [];
-    const meanings = lexKeys(lang);
+    const meanings: string[] = [];
+    for (const id of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, id);
+      if (m !== undefined) meanings.push(m);
+    }
     const q = search.toLowerCase();
     const filtered = search
       ? meanings.filter(
@@ -57,7 +62,8 @@ export function DictionaryView() {
       // Phase 26b: render verbs in their citation form (infinitive). For
       // English: "to go". For Romance: "amare". For bare-strategy
       // languages: same as the bare lexicon form.
-      let displayForm = formatForm(lexGet(lang, m)!, lang, script);
+      const _id = idForGloss(lang, m)!;
+      let displayForm = formatForm(lexFormById(lang, _id)!, lang, script);
       if (pos === "verb") {
         const cit = verbCitationForm(lang, m);
         if (cit) {
@@ -220,8 +226,9 @@ function SemanticProfile({
 }) {
   const data = useMemo(() => {
     const target = meaningPointFor(lang, meaning);
-    const nearest = lexKeys(lang)
-      .filter((k) => k !== meaning)
+    const nearest = lexIds(lang)
+      .map((id) => meaningForLexemeId(lang, id))
+      .filter((k): k is string => k !== undefined && k !== meaning)
       .map((k) => ({ m: k, s: cosineFixed(target, meaningPointFor(lang, k)) }))
       .filter((x) => x.s > 0.2)
       .sort((a, b) => b.s - a.s)
@@ -233,7 +240,8 @@ function SemanticProfile({
     return { nearest, axes, breakdown, homonyms, drifted };
   }, [lang, meaning]);
 
-  const selfForm = lexGet(lang, meaning);
+  const _selfId = idForGloss(lang, meaning);
+  const selfForm = _selfId !== undefined ? lexFormById(lang, _selfId) : undefined;
 
   return (
     <div
@@ -278,7 +286,8 @@ function SemanticProfile({
         <div className="row-8 items-center fs-1" style={{ marginTop: 8, flexWrap: "wrap" }}>
           <span className="label-line">morphemes</span>
           {data.breakdown.map((p, i) => {
-            const pf = lexGet(lang, p);
+            const _pid = idForGloss(lang, p);
+            const pf = _pid !== undefined ? lexFormById(lang, _pid) : undefined;
             return (
               <span key={`${p}-${i}`} className="row-4 items-center">
                 {i > 0 && <span className="t-muted">+</span>}
@@ -302,7 +311,8 @@ function SemanticProfile({
             homonyms
           </span>
           {data.homonyms.map((h) => {
-            const hf = lexGet(lang, h);
+            const _hid = idForGloss(lang, h);
+            const hf = _hid !== undefined ? lexFormById(lang, _hid) : undefined;
             return (
               <span key={h} className="row-4 items-center">
                 <span>{prettyGloss(h)}</span>
@@ -329,7 +339,8 @@ function SemanticProfile({
             <div className="t-muted fs-1">no close neighbours in this lexicon.</div>
           )}
           {data.nearest.map(({ m, s }) => {
-            const f = lexGet(lang, m);
+            const _nid = idForGloss(lang, m);
+            const f = _nid !== undefined ? lexFormById(lang, _nid) : undefined;
             return (
               <div key={m} className="row-8 items-center fs-1" style={{ padding: "1px 0" }}>
                 <span style={{ flex: 1 }}>{prettyGloss(m)}</span>

@@ -8,7 +8,7 @@ import { ScriptPicker } from "./ScriptPicker";
 import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 import { prettyGloss } from "../engine/lexicon/word";
-import { lexGet } from "../engine/lexicon/access";
+import { idForGloss, lexFormById } from "../engine/lexicon/access";
 import { satGet } from "../engine/lexicon/satellites";
 
 /**
@@ -119,7 +119,8 @@ export function LexiconView() {
     for (const lid of visibleLeaves) {
       const lang = state.tree[lid]!.language;
       for (const meaning of meanings) {
-        const form = lexGet(lang, meaning);
+        const _mid = idForGloss(lang, meaning);
+        const form = _mid !== undefined ? lexFormById(lang, _mid) : undefined;
         if (!form) continue;
         m.set(`${lid}|${meaning}`, formatForm(form, lang, script, meaning));
       }
@@ -492,7 +493,8 @@ export function LexiconView() {
                         : "";
                     // Phase 21e: polysemy badge — when this meaning's form
                     // is shared with other meanings, show "×N" with a tooltip.
-                    const formStr = lexGet(lang, meaning);
+                    const _fid = idForGloss(lang, meaning);
+                    const formStr = _fid !== undefined ? lexFormById(lang, _fid) : undefined;
                     const polysemyMatches = formStr && lang.words
                       ? lang.words.find((w) => w.formKey === formStr.join(""))
                       : undefined;
