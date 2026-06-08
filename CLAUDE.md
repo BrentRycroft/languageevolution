@@ -80,6 +80,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **Decide the test plan up front; defer the full suite to the merge.** During planning, name *which* existing tests gate each task and *which* new tests (if any are necessary) must be written (with their assertions) — don't discover test scope mid-implementation. Some tasks need no new test (a mechanical re-key covered by existing assertions, say); decide that deliberately up front rather than defaulting to writing one. While executing per-task in parallel worktrees, each task runs only its own targeted tests (+ a fast determinism canary where relevant); the **full suite + RUN_SLOW baseline is reserved for once, after all worktree branches are merged back**. Running the whole suite inside every worktree is wasted minutes and can't catch cross-branch interactions anyway — those only exist on the merged result. The merge step is the single full-verification gate.
 
+**Don't go dark during long operations (saved preference).** Whenever you kick off a long-running test/build or otherwise expect to wait or go idle, arm a recurring wakeup (`ScheduleWakeup`, every ~5 minutes) as a safety net, and re-arm it on each wake until the work returns. The harness usually re-invokes you when a background task completes, but the timer guards against a hung run or a missed notification stranding the session. Stop arming it once the operation has reported back and you're actively working again.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
