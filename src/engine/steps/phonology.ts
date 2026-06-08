@@ -120,6 +120,15 @@ export function stepPhonology(
   // unchanged. Seeded SOUND trajectories stay byte-identical; the gen-N divergence is the deliberate
   // re-bake (keyless now participate in the shared cross-word stream).
   const before = formViewOf(lang.lexemes);
+  // S2b: snapshot keyless forms before the sweep. Keyless words change via the regular-sweep path
+  // (applyOneRegularChange) below, which the seeded before/after recording loop never observes, so we
+  // record their variants/innovations by comparing afterward. Seeded-only runs have no keyless records
+  // here → this map is empty → a no-op, so seeded trajectories stay byte-identical.
+  const keylessFormsBefore = new Map<string, WordForm>();
+  for (const id of Object.keys(lang.lexemes)) {
+    const rec = lang.lexemes[id]!;
+    if (rec.gloss === undefined) keylessFormsBefore.set(id, rec.form.slice());
+  }
   const changes = changesForLang(lang);
   // Phase 69a T1: hoist the sortByPriority computation. Pre-fix
   // applyChangesToLexicon ran sortByPriority(changes) once per call
@@ -587,6 +596,19 @@ export function stepPhonology(
         description: `sound law: ${ruleId} applied exceptionlessly`,
       });
     }
+  }
+
+  // S2b: record variants/innovations for KEYLESS words whose form changed during the sweep above,
+  // keyed by their LexemeId — so keyless words feed the variant / social-contagion machinery like
+  // seeded words. recordInnovation/recordVariant draw no RNG, and this only touches keyless records,
+  // so seeded trajectories are unaffected (a run with no keyless word stays byte-identical).
+  for (const [id, oldForm] of keylessFormsBefore) {
+    const rec = lang.lexemes[id];
+    if (!rec || rec.form.join("") === oldForm.join("")) continue;
+    recordVariant(lang, id, oldForm, generation, 0.55);
+    recordVariant(lang, id, rec.form, generation, 0.7);
+    recordInnovation(lang, id, oldForm, rec.form, generation, "phonology");
+    satSet(lang, "lastChangeGeneration", id, generation);
   }
 
   // Phase 27.1: the historical 4% per-gen prunePhonemes call here was
