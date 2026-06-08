@@ -1,6 +1,6 @@
 import type { WordForm } from "../types";
 import type { PhonologyState, LexiconState } from "../domains";
-import { lexGet } from "../lexicon/access";
+import { idForGloss, lexFormById } from "../lexicon/access";
 import type { LexemeId } from "../lexicon/lexemeIdentity";
 
 /**
@@ -82,7 +82,8 @@ export function getUR(lang: PhonologyState & LexiconState, meaning: string): Wor
   if (lang.lexiconUR && cid && lang.lexiconUR[cid]) {
     return lang.lexiconUR[cid];
   }
-  return lexGet(lang, meaning);
+  const sid = idForGloss(lang, meaning);
+  return sid !== undefined ? lexFormById(lang, sid) : undefined;
 }
 
 /**
@@ -96,7 +97,8 @@ export function isOpaque(lang: PhonologyState & LexiconState, meaning: string): 
   if (!lang.lexiconUR) return false;
   const cid = lang.lexemeIds?.[meaning] as LexemeId | undefined;
   const ur = cid ? lang.lexiconUR[cid] : undefined;
-  const sr = lexGet(lang, meaning);
+  const srId = idForGloss(lang, meaning);
+  const sr = srId !== undefined ? lexFormById(lang, srId) : undefined;
   if (!ur || !sr) return false;
   if (ur.length !== sr.length) return true;
   for (let i = 0; i < ur.length; i++) {

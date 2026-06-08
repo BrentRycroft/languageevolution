@@ -24,7 +24,7 @@
 
 import type { Language, Phoneme } from "../types";
 import { isVowel } from "./ipa";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
 
 export type ContextType =
   | "V_V" // intervocalic
@@ -43,8 +43,8 @@ export type ContextType =
  */
 export function analyzeContexts(lang: Language): Record<Phoneme, Set<ContextType>> {
   const out: Record<Phoneme, Set<ContextType>> = Object.create(null);
-  for (const meaning of lexKeys(lang)) {
-    const form = lexGet(lang, meaning)!;
+  for (const id of lexIds(lang)) {
+    const form = lexFormById(lang, id)!;
     for (let i = 0; i < form.length; i++) {
       const p = form[i]!;
       const left = i > 0 ? form[i - 1]! : "#";

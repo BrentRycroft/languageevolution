@@ -2,7 +2,7 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isVowel, isConsonant } from "./ipa";
 import { stripTone } from "./tone";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
 
 /**
  * ot.ts
@@ -137,14 +137,14 @@ export function maybeLearnOt(
   if (!rng.chance(probability)) return null;
   const ranking = (lang.otRanking?.length ? lang.otRanking : DEFAULT_OT_RANKING).slice();
   if (ranking.length < 2) return null;
-  const meanings = lexKeys(lang);
-  if (meanings.length === 0) return null;
+  const ids = lexIds(lang);
+  if (ids.length === 0) return null;
   const violations = new Map<string, number>();
   for (const cid of ranking) {
     const c = OT_CONSTRAINTS_BY_ID[cid];
     if (!c) continue;
     let v = 0;
-    for (const m of meanings) v += c.violations(lexGet(lang, m)!);
+    for (const id of ids) v += c.violations(lexFormById(lang, id)!);
     violations.set(cid, v);
   }
   const candidates: number[] = [];
