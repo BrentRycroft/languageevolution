@@ -10,7 +10,7 @@ import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { applyParadigm, isVowelLike } from "./apply";
 import { isSyllabic } from "../phonology/ipa";
 import { lexGet, lexSet, lexHas, lexKeys, lexValues } from "../lexicon/access";
-import { evolvableLexemes, effectiveGlossFor, effectiveFormOf, effectivePosOf } from "../lexicon/evolvable";
+import { evolvableLexemes, isKeyless, keylessMature, effectiveGlossFor, effectiveFormOf, effectivePosOf } from "../lexicon/evolvable";
 
 /**
  * evolve.ts
@@ -78,6 +78,24 @@ function reduceToClitic(form: WordForm, position: "prefix" | "suffix"): WordForm
   return form.slice();
 }
 
+/**
+ * S2b: is `id` an eligible grammaticalization SOURCE? Open-class + has a semantic tag + short form
+ * (≤4) + above the freq floor (0.4 clitic / 0.6 else). Concept-coupled → keyless words are
+ * maturity-gated. For a SEEDED id this reproduces the pre-S2b per-candidate filter exactly (the
+ * resolvers return the stored gloss/form), so the seeded candidate set is byte-identical.
+ */
+export function isGrammaticalizationSource(lang: Language, id: LexemeId): boolean {
+  if (isKeyless(lang, id) && !keylessMature(lang, id)) return false;
+  const m = effectiveGlossFor(lang, id);
+  if (isClosedClass(effectivePosOf(lang, id))) return false;
+  if (!semanticTagOf(m)) return false;
+  const form = effectiveFormOf(lang, id);
+  if (!form || form.length === 0 || form.length > 4) return false;
+  const isClitic = (satGet(lang, "wordOrigin", id) ?? "").startsWith("clitic:");
+  const freq = satGet(lang, "wordFrequencyHints", id) ?? 0.5;
+  return freq >= (isClitic ? 0.4 : 0.6);
+}
+
 export function maybeGrammaticalize(
   lang: Language,
   rng: Rng,
@@ -97,37 +115,30 @@ export function maybeGrammaticalize(
   }
 
   if (!rng.chance(probability)) return null;
-  const meanings = lexKeys(lang);
-  if (meanings.length === 0) return null;
+  // S2b: iterate evolvable ids (seeded first in lexKeys order, keyless appended). Eligibility — incl.
+  // the keyless maturity gate — lives in isGrammaticalizationSource; seeded set/order is unchanged.
+  const ids = evolvableLexemes(lang);
+  if (ids.length === 0) return null;
 
   type Candidate = {
+    id: LexemeId;
     meaning: string;
     tag: string;
     target: MorphCategory;
     form: WordForm;
   };
   const candidates: Candidate[] = [];
-  for (const m of meanings) {
-    // Phase 26c: grammaticalisation operates on OPEN-class meanings →
-    // closed-class function. Skip already-closed-class meanings (the
-    // promotion already happened, or they were always functional).
-    if (isClosedClass(posOf(m))) continue;
-    const tag = semanticTagOf(m);
-    if (!tag) continue;
-    const form = lexGet(lang, m)!;
-    if (form.length === 0 || form.length > 4) continue;
-    const isClitic = (satGet(lang, "wordOrigin", m) ?? "").startsWith("clitic:");
-    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
-    const freqFloor = isClitic ? 0.4 : 0.6;
-    if (freq < freqFloor) continue;
+  for (const id of ids) {
+    if (!isGrammaticalizationSource(lang, id)) continue;
+    const m = effectiveGlossFor(lang, id);
+    const tag = semanticTagOf(m)!; // predicate already required a tag
+    const form = effectiveFormOf(lang, id)!;
+    const isClitic = (satGet(lang, "wordOrigin", id) ?? "").startsWith("clitic:");
     // Phase 73c Tier C Phase 1: filter pathway targets through the
-    // language's declared `grammaticalisedAxes` (when set). A
-    // language with `aspect: ["pfv","ipfv"]` will no longer seed
-    // `verb.aspect.prog` etc. via the pathway map. Unset → no
-    // filtering (legacy behaviour).
+    // language's declared `grammaticalisedAxes` (when set).
     for (const target of pathwayTargetsForLang(tag, lang)) {
       if (lang.morphology.paradigms[target]) continue;
-      const entry: Candidate = { meaning: m, tag, target, form };
+      const entry: Candidate = { id, meaning: m, tag, target, form };
       candidates.push(entry);
       if (isClitic) {
         candidates.push(entry);
@@ -138,9 +149,10 @@ export function maybeGrammaticalize(
   if (candidates.length === 0) return null;
 
   const chosen = candidates[rng.int(candidates.length)]!;
-  const candidate = chosen.meaning;
+  const candidateId = chosen.id;    // S2b: satellite key (LexemeId) — distinct from the display gloss
+  const candidate = chosen.meaning; // display / provenance gloss (emergent for keyless)
   if (!lang.grammaticalizationStage) lang.grammaticalizationStage = {};
-  const existing = satGet(lang, "grammaticalizationStage", candidate);
+  const existing = satGet(lang, "grammaticalizationStage", candidateId);
 
   // Phase 4b: respect the grammaticalization cline (free → clitic → affix →
   // fusion → loss). Pre-4b a high-freq word TELEPORTED straight to a bound
@@ -162,8 +174,8 @@ export function maybeGrammaticalize(
     existing.stage = 2;
     existing.targetCategory = target;
     existing.lastTransitionGen = 0;
-    if (satHas(lang, "wordFrequencyHints", candidate)) {
-      satSet(lang, "wordFrequencyHints", candidate, Math.max(0.1, satGet(lang, "wordFrequencyHints", candidate)! * 0.5));
+    if (satHas(lang, "wordFrequencyHints", candidateId)) {
+      satSet(lang, "wordFrequencyHints", candidateId, Math.max(0.1, satGet(lang, "wordFrequencyHints", candidateId)! * 0.5));
     }
     return {
       kind: "grammaticalization",
@@ -174,16 +186,16 @@ export function maybeGrammaticalize(
 
   // ── stage 0 → 1: free word becomes a clitic (no paradigm yet) ──
   const affixForm = reduceToClitic(chosen.form, lang.grammar.affixPosition);
-  satSet(lang, "grammaticalizationStage", candidate, {
+  satSet(lang, "grammaticalizationStage", candidateId, {
     stage: 1,
     targetCategory: chosen.target,
     affixForm,
     lastTransitionGen: 0,
   });
-  satSet(lang, "wordOrigin", candidate, `clitic:${chosen.tag}`);
+  satSet(lang, "wordOrigin", candidateId, `clitic:${chosen.tag}`);
   // Clitics lose stress and frequency-as-a-lexeme as they bleach.
-  if (satHas(lang, "wordFrequencyHints", candidate)) {
-    satSet(lang, "wordFrequencyHints", candidate, Math.max(0.1, satGet(lang, "wordFrequencyHints", candidate)! * 0.6));
+  if (satHas(lang, "wordFrequencyHints", candidateId)) {
+    satSet(lang, "wordFrequencyHints", candidateId, Math.max(0.1, satGet(lang, "wordFrequencyHints", candidateId)! * 0.6));
   }
   return {
     kind: "grammaticalization",
