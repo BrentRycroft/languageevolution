@@ -13,7 +13,7 @@ import { stressClass } from "../phonology/stress";
 import { GENESIS_BY_ID } from "../genesis/catalog";
 import type { GenesisRule } from "../genesis/types";
 import type { SimulationConfig } from "../types";
-import { lexGet, lexSet, lexKeys } from "../lexicon/access";
+import { lexGet, lexSetFormById, lexKeys, idForGloss } from "../lexicon/access";
 
 /**
  * helpers.ts
@@ -154,7 +154,7 @@ function normaliseToneRegime(
         if (toneOf(p)) { needsRewrite = true; break; }
       }
       if (!needsRewrite) continue;
-      lexSet(lang, m, f.map((p) => stripTone(p)));
+      { const id = idForGloss(lang, m); if (id) lexSetFormById(lang, id, f.map((p) => stripTone(p))); }
       mutated = true;
     } else {
       // tonal — auto-fill MID into un-toned tone-bearing positions
@@ -174,7 +174,7 @@ function normaliseToneRegime(
         if (toneOf(p)) return p;
         return p + MID;
       });
-      lexSet(lang, m, next);
+      { const id = idForGloss(lang, m); if (id) lexSetFormById(lang, id, next); }
       mutated = true;
     }
   }

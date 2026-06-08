@@ -16,7 +16,7 @@ import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
+import { lexGet, lexSetFormById, coinSeededLexeme, lexHas, lexKeys, idForGloss } from "../lexicon/access";
 import { zipfFrequencyFor } from "../lexicon/concepts";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
@@ -72,11 +72,13 @@ function tonaliseLexicon(lang: Language): void {
       if (isToneBearing(p) && !toneOf(p)) { needsRewrite = true; break; }
     }
     if (!needsRewrite) continue;
+    const _id = idForGloss(lang, m);
+    if (!_id) continue;
     if (isPitchAccent) {
       // Mark only the FIRST tone-bearing position with HIGH (accent),
       // leave the rest untoned. Models Japanese/Norwegian.
       let marked = false;
-      lexSet(lang, m, f.map((p) => {
+      lexSetFormById(lang, _id, f.map((p) => {
         if (!isToneBearing(p)) return p;
         if (toneOf(p)) { marked = true; return p; }
         if (!marked) {
@@ -86,7 +88,7 @@ function tonaliseLexicon(lang: Language): void {
         return p;
       }));
     } else {
-      lexSet(lang, m, f.map((p) => {
+      lexSetFormById(lang, _id, f.map((p) => {
         if (!isToneBearing(p)) return p;
         if (toneOf(p)) return p;
         return p + MID;
@@ -113,7 +115,7 @@ function seedClosedClassLexicon(lang: Language): void {
     if (lexHas(lang, lemma)) continue;
     const form = closedClassForm(lang, lemma);
     if (!form || form.length === 0) continue;
-    lexSet(lang, lemma, form);
+    coinSeededLexeme(lang, lemma, form);
     if (!satGet(lang, "wordOrigin", lemma)) satSet(lang, "wordOrigin", lemma, "closed-class");
     if (!satHas(lang, "wordFrequencyHints", lemma)) {
       satSet(lang, "wordFrequencyHints", lemma, 0.95);

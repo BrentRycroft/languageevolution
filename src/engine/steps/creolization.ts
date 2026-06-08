@@ -4,7 +4,7 @@ import { pushEvent } from "./helpers";
 import { leafIds } from "../tree/leafIds";
 import { arealShareAffinity } from "../geo/territory";
 import { getWorldMap } from "../geo/map";
-import { lexGet, lexSet, lexKeys } from "../lexicon/access";
+import { lexGet, coinSeededLexeme, lexKeys } from "../lexicon/access";
 import { satSet } from "../lexicon/satellites";
 
 /**
@@ -93,7 +93,7 @@ export function stepCreolization(
   const lexifierMeanings = lexKeys(lexifier);
   for (const m of lexifierMeanings) {
     if (!rng.chance(0.3)) continue;
-    lexSet(substrate, m, lexGet(lexifier, m)!.slice());
+    coinSeededLexeme(substrate, m, lexGet(lexifier, m)!.slice());
     satSet(substrate, "wordOrigin", m, `borrow:${lexifier.name}`);
     borrowed++;
   }

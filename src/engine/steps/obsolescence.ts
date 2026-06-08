@@ -6,7 +6,7 @@ import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { findWordsByMeaning, recordedParts } from "../lexicon/word";
 import { deleteMeaning } from "../lexicon/mutate";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById, lexIds, lexKeys } from "../lexicon/access";
 import { tierOf } from "../lexicon/concepts";
 import { isClosedClass, posOf } from "../lexicon/pos";
 
@@ -95,7 +95,7 @@ export function stepObsolescence(
 ): void {
   // Run the disuse-death channel proportionally to lexicon size so the death
   // rate tracks the (size-scaled) birth rate → emergent stationarity.
-  const lexemes = lexKeys(lang);
+  const lexemes = lexIds(lang);
   const disuseAttempts = Math.max(1, Math.round(lexemes.length / DISUSE_ATTEMPT_PER_LEXEMES));
   for (let i = 0; i < disuseAttempts; i++) {
     attemptDisuseDeath(lang, config, rng, generation, lexKeys(lang));
@@ -106,8 +106,8 @@ export function stepObsolescence(
     const a = meanings[rng.int(meanings.length)]!;
     const b = meanings[rng.int(meanings.length)]!;
     if (a === b) continue;
-    const fa = lexGet(lang, a)!;
-    const fb = lexGet(lang, b)!;
+    const fa = lexFormById(lang, idForGloss(lang, a)!)!;
+    const fb = lexFormById(lang, idForGloss(lang, b)!)!;
     if (Math.abs(fa.length - fb.length) > 1) continue;
     if (levenshtein(fa, fb) > config.obsolescence.maxDistanceForRivalry) continue;
     // Phase 21d: skip rivalry when both meanings already share a Word

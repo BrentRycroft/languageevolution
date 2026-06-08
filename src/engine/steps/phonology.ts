@@ -30,7 +30,7 @@ import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
-import { lexGet, lexSet, lexKeys } from "../lexicon/access";
+import { lexGet, lexSetFormById, lexKeys, idForGloss } from "../lexicon/access";
 import { formViewOf, mergeFormsIntoStore } from "../lexicon/store";
 
 /**
@@ -580,7 +580,7 @@ export function stepPhonology(
           }
         }
         if (introducesNovel) {
-          for (const m of Object.keys(preLex)) lexSet(lang, m, preLex[m]!);
+          for (const m of Object.keys(preLex)) { const _id = idForGloss(lang, m); if (_id) lexSetFormById(lang, _id, preLex[m]!); }
         }
       }
       refreshInventory(lang);

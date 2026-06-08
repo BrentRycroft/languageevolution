@@ -33,7 +33,7 @@ import {
 } from "../genesis/mechanisms/targetedDerivation";
 import { tryCommitCoinage, rebuildFormKeyIndex } from "../lexicon/word";
 import { recordCoinageStructure } from "../lexicon/compound";
-import { lexGet, lexHas, lexKeys, lexSet } from "../lexicon/access";
+import { lexGet, lexHas, lexKeys, coinSeededLexeme } from "../lexicon/access";
 import {
   findSuffixByTag,
   registerSuffixUsage,
@@ -184,7 +184,7 @@ export function stepGenesis(
             },
           );
           if (!commit.committed) continue;
-          lexSet(lang, derived.meaning, derived.form);
+          coinSeededLexeme(lang, derived.meaning, derived.form);
           satSet(lang, "wordFrequencyHints", derived.meaning, 0.4);
           satSet(lang, "wordOrigin", derived.meaning, "derivation");
           recordDerivationChain(lang, derived);
@@ -327,7 +327,7 @@ export function stepGenesis(
       // filtered copy, so the form-key index is stale. Rebuild it.
       rebuildFormKeyIndex(lang);
     }
-    lexSet(lang, outcome.meaning, outcome.form);
+    coinSeededLexeme(lang, outcome.meaning, outcome.form);
     satSet(lang, "wordFrequencyHints", outcome.meaning, 0.4);
     satSet(lang, "wordOrigin", outcome.meaning, isReplacement
       ? `lexical-replacement:${outcome.originTag}`
