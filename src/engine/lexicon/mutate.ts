@@ -4,7 +4,7 @@ import { invalidateReverseLexCache } from "../translator/reverse";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { purgeMeaningFromRegistry, purgePerWordDiffusionForMeaning } from "../perMeaningFields";
 import { mintLexemeId } from "./lexemeIdentity";
-import { lexGet, lexSet, lexDelete } from "./access";
+import { lexFormById, lexHasById, lexDeleteById, coinSeededLexeme, idForGloss } from "./access";
 
 /**
  * Phase 28a: single chokepoint for writing a form to the meaning-keyed
@@ -34,11 +34,14 @@ export function setLexiconForm(
     morphStructure?: import("../types").WordMorphStructure;
   },
 ): void {
-  lexSet(lang, meaning, form);
+  coinSeededLexeme(lang, meaning, form);
   // Phase 72d (full-delivery defer-2): lazy-mint a stable LexemeId
   // for the meaning if it doesn't have one yet. Setters that coin
   // genuinely new meanings (genesis, derivation, borrowing) get
   // their identity anchor here; existing meanings keep their UUID.
+  // coinSeededLexeme already mints via lexemeIdFor, so the lexemeIds
+  // entry is guaranteed after the call above; this guard is now a no-op
+  // but preserved for safety.
   if (!lang.lexemeIds) lang.lexemeIds = {};
   if (!lang.lexemeIds[meaning]) {
     lang.lexemeIds[meaning] = mintLexemeId(lang);
@@ -115,9 +118,11 @@ export function addSynonym(
     weight?: number;
   },
 ): boolean {
-  if (!lexGet(lang, meaning)) return false;
+  const synMid = idForGloss(lang, meaning);
+  const synForm = synMid !== undefined ? lexFormById(lang, synMid) : undefined;
+  if (!synForm) return false;
   if (form.length === 0) return false;
-  const primaryKey = formKeyOf(lexGet(lang, meaning)!);
+  const primaryKey = formKeyOf(synForm);
   const newKey = formKeyOf(form);
   if (primaryKey === newKey) return false;
   if (!lang.words) return false;
@@ -242,7 +247,8 @@ export function deleteMeaning(
   }
 
   // Lexicon (primary form) is bespoke — deleted explicitly.
-  lexDelete(lang, meaning);
+  const delId = idForGloss(lang, meaning);
+  if (delId !== undefined && lexHasById(lang, delId)) lexDeleteById(lang, delId);
   // Phase 72d T1: every other per-meaning field is now purged via the
   // registry in `perMeaningFields.ts`. Pre-72d this was a manual list
   // (Phase 68a fix added 4 fields; Phase 71b T2 added suppletion;

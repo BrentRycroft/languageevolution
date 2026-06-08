@@ -10,7 +10,7 @@ import {
   attemptConceptDecomposition,
   attemptClusterComposition,
 } from "./synthesis";
-import { lexGet, lexHas } from "./access";
+import { lexFormById, lexHasById, idForGloss } from "./access";
 import { satEntries } from "./satellites";
 import { meaningForLexemeId } from "./lexemeIdentity";
 import { nearestLexicalisedMeaning } from "../semantics/grounding";
@@ -89,9 +89,10 @@ export function lookupFormWithResolution(
 ): LookupResult {
   const allowFallback = context?.allowFallbackCoinage ?? true;
   // Rung 1: direct lexicon hit.
-  if (lexHas(lang, meaning)) {
+  const mid = idForGloss(lang, meaning);
+  if (mid !== undefined && lexHasById(lang, mid)) {
     return {
-      form: lexGet(lang, meaning)!.slice(),
+      form: lexFormById(lang, mid)!.slice(),
       resolution: "direct",
       glossNote: "",
     };
@@ -102,7 +103,8 @@ export function lookupFormWithResolution(
     const parts: WordForm = [];
     let allFound = true;
     for (const partMeaning of meta.parts) {
-      const f = lexGet(lang, partMeaning);
+      const pid = idForGloss(lang, partMeaning);
+      const f = pid !== undefined ? lexFormById(lang, pid) : undefined;
       if (!f || f.length === 0) {
         allFound = false;
         break;
@@ -128,9 +130,9 @@ export function lookupFormWithResolution(
     for (const [winnerId, losers] of satEntries(lang, "colexifiedAs")) {
       const winner = meaningForLexemeId(lang, winnerId);
       if (winner === undefined) continue;
-      if (losers.includes(meaning) && lexHas(lang, winner)) {
+      if (losers.includes(meaning) && lexHasById(lang, winnerId)) {
         return {
-          form: lexGet(lang, winner)!.slice(),
+          form: lexFormById(lang, winnerId)!.slice(),
           resolution: "reverse-colex",
           glossNote: `↔ ${winner}`,
         };
@@ -154,7 +156,7 @@ export function lookupFormWithResolution(
   // productive affixes in the same DerivationCategory produce
   // synonymous realisations (e.g. -ness + -ity).
   const allowSynonymRegistration =
-    allowFallback && !lexHas(lang, meaning);
+    allowFallback && !(mid !== undefined && lexHasById(lang, mid));
   const synthGen = lang.events?.at(-1)?.generation ?? 0;
   const synthNonNeg = attemptMorphologicalSynthesis(lang, meaning, "non-neg",
     allowSynonymRegistration
@@ -203,9 +205,10 @@ export function lookupFormWithResolution(
   // recorded colexification (lang.colexifiedAs) is handled earlier at rung 2b.
   if (isRegisteredConcept(meaning)) {
     for (const partner of colexWith(meaning)) {
-      if (lexHas(lang, partner)) {
+      const partnerId = idForGloss(lang, partner);
+      if (partnerId !== undefined && lexHasById(lang, partnerId)) {
         return {
-          form: lexGet(lang, partner)!.slice(),
+          form: lexFormById(lang, partnerId)!.slice(),
           resolution: "colex",
           glossNote: `↔ ${partner}`,
         };
@@ -224,8 +227,9 @@ export function lookupFormWithResolution(
   if (allowFallback && !FALLBACK_SKIP.has(meaning)) {
     const grounded = nearestLexicalisedMeaning(lang, meaning);
     if (grounded) {
+      const groundedId = idForGloss(lang, grounded.meaning);
       return {
-        form: lexGet(lang, grounded.meaning)!.slice(),
+        form: (groundedId !== undefined ? lexFormById(lang, groundedId) : undefined)!.slice(),
         resolution: "colex",
         glossNote: `≈ ${grounded.meaning}`,
       };

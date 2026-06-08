@@ -4,7 +4,7 @@ import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
-import { lexGet, lexHas, lexEntries } from "./access";
+import { lexFormById, lexHasById, lexEntries, idForGloss } from "./access";
 import { lexemeIdFor, meaningForLexemeId } from "./lexemeIdentity";
 import { lexPoint } from "../semantics/meaningPoint";
 import { CONCEPT_IDS } from "./concepts";
@@ -488,7 +488,10 @@ export function pickSynonym(
   },
 ): WordForm | undefined {
   const candidates = selectSynonyms(lang, meaning);
-  if (candidates.length === 0) return lexGet(lang, meaning);
+  if (candidates.length === 0) {
+    const fid = idForGloss(lang, meaning);
+    return fid !== undefined ? lexFormById(lang, fid) : undefined;
+  }
   const primary = candidates[0]!;
   if (candidates.length === 1) return primary.form;
   // Register-biased pick.
@@ -690,15 +693,14 @@ export function syncWordsFromLexicon(
   // forms briefly differ during migration.
   if (lang.colexifiedAs) {
     for (const [id, partners] of satEntries(lang, "colexifiedAs")) {
-      const m = meaningForLexemeId(lang, id);
-      if (m === undefined) continue;
-      const formA = lexGet(lang, m);
+      const formA = lexFormById(lang, id);
       if (!formA) continue;
       const keyA = formKeyOf(formA);
       const entry = byKey.get(keyA);
       if (!entry) continue;
       for (const p of partners) {
-        if (!entry.meanings.includes(p) && lexHas(lang, p)) {
+        const pid = idForGloss(lang, p);
+        if (!entry.meanings.includes(p) && pid !== undefined && lexHasById(lang, pid)) {
           entry.meanings.push(p);
         }
       }
@@ -783,7 +785,8 @@ export function syncWordsAfterPhonology(
     // with senses sharing a form becomes one Word.
     const buckets = new Map<string, { form: WordForm; senses: WordSense[] }>();
     for (const sense of word.senses) {
-      const lexForm = lexGet(lang, sense.meaning);
+      const senseId = idForGloss(lang, sense.meaning);
+      const lexForm = senseId !== undefined ? lexFormById(lang, senseId) : undefined;
       if (!lexForm || lexForm.length === 0) continue; // meaning was deleted
       const key = formKeyOf(lexForm);
       const bucket = buckets.get(key);

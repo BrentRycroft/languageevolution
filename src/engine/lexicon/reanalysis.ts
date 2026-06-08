@@ -2,7 +2,8 @@ import type { Language, Meaning, WordForm } from "../types";
 import { satGet } from "./satellites";
 import type { Rng } from "../rng";
 import { posOf } from "./pos";
-import { lexGet, lexSet, lexHas, lexKeys } from "./access";
+import { lexFormById, lexHasById, coinSeededLexeme, lexIds, idForGloss } from "./access";
+import { meaningForLexemeId } from "./lexemeIdentity";
 import { recordedParts } from "./word";
 
 /**
@@ -34,7 +35,8 @@ function maybeCompoundReanalysis(
   rng: Rng,
 ): ReanalysisEvent | null {
   const compounds: Meaning[] = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id)!;
     // Concept-native (item 4): a "compound to reanalyse" is one with RECORDED
     // 2-part structure (lang.compounds, via recordedParts) — not an English
     // gloss that happens to contain one hyphen. This also finds non-hyphen
@@ -46,7 +48,8 @@ function maybeCompoundReanalysis(
   }
   if (compounds.length === 0) return null;
   const source = compounds[rng.int(compounds.length)]!;
-  const sourceForm = lexGet(lang, source)!;
+  const sourceId = idForGloss(lang, source);
+  const sourceForm = (sourceId !== undefined ? lexFormById(lang, sourceId) : undefined)!;
   const len = sourceForm.length;
   if (len < 3) return null;
   const affixLen = Math.min(3, Math.max(2, Math.floor(len / 2)));
@@ -88,7 +91,8 @@ function maybeVerbGrammaticalization(
   if (!lang.morphology?.paradigms) return null;
   const candidates: Array<{ meaning: Meaning; tag: string }> = [];
   for (const [meaning, tag] of Object.entries(GRAMMATICAL_VERB_PATHWAYS)) {
-    if (!lexHas(lang, meaning)) continue;
+    const gvId = idForGloss(lang, meaning);
+    if (gvId === undefined || !lexHasById(lang, gvId)) continue;
     if (posOf(meaning) !== "verb") continue;
     const freq = satGet(lang, "wordFrequencyHints", meaning) ?? 0;
     if (freq < 0.7) continue;
@@ -97,7 +101,8 @@ function maybeVerbGrammaticalization(
   }
   if (candidates.length === 0) return null;
   const chosen = candidates[rng.int(candidates.length)]!;
-  const sourceForm = lexGet(lang, chosen.meaning)!;
+  const chosenId = idForGloss(lang, chosen.meaning);
+  const sourceForm = (chosenId !== undefined ? lexFormById(lang, chosenId) : undefined)!;
   const len = sourceForm.length;
   if (len < 2) return null;
   // Take the last 1-2 phonemes as the new inflection. Models the
@@ -137,7 +142,8 @@ function detectReanalysisTemplate(
   for (const meaning of Object.keys(compounds)) {
     const meta = compounds[meaning]!;
     if (!meta.fossilized) continue;
-    const form = lexGet(lang, meaning);
+    const dtId = idForGloss(lang, meaning);
+    const form = dtId !== undefined ? lexFormById(lang, dtId) : undefined;
     if (!form || form.length < 3) continue;
     fossilised.push({ meaning, form });
   }
@@ -172,8 +178,9 @@ function detectReanalysisTemplate(
   // Register as a bound morpheme so productive derivation can use
   // it via the genesis pathway.
   if (!lang.boundMorphemes) lang.boundMorphemes = new Set();
-  if (!lexHas(lang, tag)) {
-    lexSet(lang, tag, chosen.affix.slice());
+  const tagId = idForGloss(lang, tag);
+  if (tagId === undefined || !lexHasById(lang, tagId)) {
+    coinSeededLexeme(lang, tag, chosen.affix.slice());
     lang.boundMorphemes.add(tag);
     if (!lang.boundMorphemeOrigin) lang.boundMorphemeOrigin = {};
     lang.boundMorphemeOrigin[tag] = {
