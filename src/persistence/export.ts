@@ -1,7 +1,8 @@
 import type { LanguageTree, SimulationState } from "../engine/types";
 import { leafIds } from "../engine/tree/split";
 import { formToString, sanitizeForNewick } from "../engine/phonology/ipa";
-import { lexKeys, lexGet, lexSize } from "../engine/lexicon/access";
+import { lexIds, lexFormById, idForGloss, lexSize } from "../engine/lexicon/access";
+import { meaningForLexemeId } from "../engine/lexicon/lexemeIdentity";
 
 /**
  * export.ts
@@ -30,8 +31,16 @@ export function exportLexiconsJSON(state: SimulationState): void {
   for (const id of leaves) {
     const lang = state.tree[id]!.language;
     out[lang.name] = {};
-    for (const m of lexKeys(lang).sort()) {
-      out[lang.name]![m] = formToString(lexGet(lang, m)!);
+    const entries: Array<[string, string]> = [];
+    for (const lid of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, lid);
+      if (m === undefined) continue;
+      const f = lexFormById(lang, lid);
+      if (f) entries.push([m, formToString(f)]);
+    }
+    entries.sort((a, b) => a[0].localeCompare(b[0]));
+    for (const [m, form] of entries) {
+      out[lang.name]![m] = form;
     }
   }
   const data = JSON.stringify(
@@ -46,7 +55,11 @@ export function exportLexiconsCSV(state: SimulationState): void {
   const leaves = leafIds(state.tree);
   const meanings = new Set<string>();
   for (const id of leaves) {
-    for (const m of lexKeys(state.tree[id]!.language)) meanings.add(m);
+    const lang = state.tree[id]!.language;
+    for (const lid of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, lid);
+      if (m !== undefined) meanings.add(m);
+    }
   }
   const sortedMeanings = Array.from(meanings).sort();
   const header = ["meaning", ...leaves.map((id) => state.tree[id]!.language.name)];
@@ -54,7 +67,9 @@ export function exportLexiconsCSV(state: SimulationState): void {
   for (const m of sortedMeanings) {
     const cells = [m];
     for (const id of leaves) {
-      const form = lexGet(state.tree[id]!.language, m);
+      const lang = state.tree[id]!.language;
+      const lid = idForGloss(lang, m);
+      const form = lid !== undefined ? lexFormById(lang, lid) : undefined;
       cells.push(form ? formToString(form) : "");
     }
     rows.push(cells.map((c) => JSON.stringify(c)).join(","));

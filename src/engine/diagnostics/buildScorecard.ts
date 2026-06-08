@@ -1,5 +1,5 @@
 import type { Language, WordForm } from "../types";
-import { lexKeys } from "../lexicon/access";
+import { lexIds } from "../lexicon/access";
 import {
   type DiagnosticRow,
   scalarRow,
@@ -100,7 +100,7 @@ export function buildScorecard(input: BuildScorecardInput): DiagnosticRow[] {
   );
 
   // ── LEXICON LIFECYCLE ──
-  const sizeRatio = lexKeys(lang).length / Math.max(1, seed.size);
+  const sizeRatio = lexIds(lang).length / Math.max(1, seed.size);
   rows.push(
     scalarRow(
       "lexicon",

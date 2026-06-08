@@ -1,6 +1,7 @@
 import type { Language, SimulationState, WordForm } from "../types";
 import { leafIds } from "../tree/split";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById, lexHasById, idForGloss } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { levenshtein } from "../phonology/ipa";
 import { SWADESH_LIST } from "../semantics/lexicostat";
 import { embed, cosine } from "../semantics/embeddings";
@@ -155,8 +156,10 @@ function isLexeme(lang: Language, m: string): boolean {
 
 export function captureSeed(lang: Language): Map<string, WordForm> {
   const out = new Map<string, WordForm>();
-  for (const m of lexKeys(lang)) {
-    const f = lexGet(lang, m);
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
+    const f = lexFormById(lang, id);
     if (f && f.length > 0) out.set(m, f.slice());
   }
   return out;
@@ -172,7 +175,8 @@ export function swadeshRetention(seed: Map<string, WordForm>, lang: Language): n
   let retained = 0;
   for (const m of SWADESH_LIST) {
     const s = seed.get(m);
-    const c = lexGet(lang, m);
+    const id = idForGloss(lang, m);
+    const c = id !== undefined ? lexFormById(lang, id) : undefined;
     if (!s || !c || c.length === 0) continue;
     attested++;
     const d = levenshtein(s, c);
@@ -188,7 +192,8 @@ export function identicalRetention(seed: Map<string, WordForm>, lang: Language):
   let total = 0;
   let same = 0;
   for (const [m, s] of seed) {
-    const c = lexGet(lang, m);
+    const id = idForGloss(lang, m);
+    const c = id !== undefined ? lexFormById(lang, id) : undefined;
     if (!c) continue;
     total++;
     if (c.join("") === s.join("")) same++;
@@ -210,9 +215,11 @@ export function onsetStats(lang: Language): {
 } {
   const counts = new Map<string, number>();
   let total = 0;
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     if (!isLexeme(lang, m)) continue;
-    const f = lexGet(lang, m);
+    const f = lexFormById(lang, id);
     if (!f || f.length === 0) continue;
     const onset = f[0]!;
     counts.set(onset, (counts.get(onset) ?? 0) + 1);
@@ -290,7 +297,9 @@ export function antonymCosine(lang: Language): { mean: number; max: number; n: n
   let max = -1;
   let n = 0;
   for (const [a, b] of ANTONYM_PAIRS) {
-    if (!lexHas(lang, a) || !lexHas(lang, b)) continue;
+    const idA = idForGloss(lang, a);
+    const idB = idForGloss(lang, b);
+    if (idA === undefined || !lexHasById(lang, idA) || idB === undefined || !lexHasById(lang, idB)) continue;
     const c = cosine(embed(a, lang), embed(b, lang));
     sum += c;
     if (c > max) max = c;
@@ -308,10 +317,12 @@ export function colexificationRate(lang: Language): { rate: number; meanDegree: 
   let lexemes = 0;
   let withEdge = 0;
   let edgeSum = 0;
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     if (!isLexeme(lang, m)) continue;
     lexemes++;
-    const edges = satGet(lang, "colexifiedAs", m);
+    const edges = satGet(lang, "colexifiedAs", id);
     if (edges && edges.length > 0) {
       withEdge++;
       edgeSum += edges.length;
@@ -330,22 +341,24 @@ export function colexificationRate(lang: Language): { rate: number; meanDegree: 
 export function homophonyRate(lang: Language): number {
   const byForm = new Map<string, string[]>();
   let total = 0;
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     if (!isLexeme(lang, m)) continue;
-    const f = lexGet(lang, m);
+    const f = lexFormById(lang, id);
     if (!f || f.length === 0) continue;
     const k = f.join("");
     const arr = byForm.get(k);
-    if (arr) arr.push(m);
-    else byForm.set(k, [m]);
+    if (arr) arr.push(id);
+    else byForm.set(k, [id]);
     total++;
   }
   let collide = 0;
-  for (const ms of byForm.values()) {
-    if (ms.length < 2) continue;
-    for (const m of ms) {
-      const colex = new Set(satGet(lang, "colexifiedAs", m) ?? []);
-      if (ms.some((o) => o !== m && !colex.has(o))) collide++;
+  for (const ids of byForm.values()) {
+    if (ids.length < 2) continue;
+    for (const id of ids) {
+      const colex = new Set(satGet(lang, "colexifiedAs", id) ?? []);
+      if (ids.some((o) => o !== id && !colex.has(o))) collide++;
     }
   }
   return total === 0 ? NaN : collide / total;
