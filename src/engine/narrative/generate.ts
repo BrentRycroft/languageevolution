@@ -8,7 +8,8 @@ import type { MorphCategory } from "../morphology/types";
 import { tokeniseEnglish, translateSentenceViaAST } from "../translator/sentence";
 import { englishTokensToAST } from "../translator/ast";
 import { posOf } from "../lexicon/pos";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { lexFormById, lexHasById, idForGloss, lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { recordedParts } from "../lexicon/word";
 
 /**
@@ -84,7 +85,7 @@ function pickShape(lang: Language, rng: Rng): SentenceShape {
   // even when the underlying language is identical. The base weights
   // give roughly even coverage across the 9 SHAPES while keeping
   // copular gated on the language having "be".
-  const hasCopula = lexHas(lang, "be");
+  const hasCopula = idForGloss(lang, "be") !== undefined;
   const supportsPlural = lang.grammar.pluralMarking === "affix";
   const baseWeights: number[] = [
     0.30, // S V O
@@ -123,12 +124,14 @@ function pickMeaningByPOS(
   rng: Rng,
 ): Meaning | null {
   const candidates: Array<{ m: Meaning; w: number }> = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     if (posOf(m) !== pos) continue;
     // Concept-native (item 4): skip words with recorded compound/derivation
     // structure (read from lang.compounds) rather than gloss-hyphen guessing.
     if (recordedParts(lang, m) !== null) continue; // skip compounds for shape simplicity
-    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.4;
+    const freq = satGet(lang, "wordFrequencyHints", id) ?? 0.4;
     // Phase 61: smoothing floor 0.05 → 0.12 widens the long tail
     // without flattening the frequency curve. Pre-Phase-61 only the
     // top ~50 frequent lemmas surfaced in a 1500-word lexicon; the
@@ -422,9 +425,11 @@ function realizeSkeleton(
   rng: Rng,
 ): NarrativeLine | null {
   const { shape, subjectNoun, verb, objectNoun, adjective } = skeleton;
-  if (!lexHas(lang, subjectNoun) || !lexHas(lang, verb)) return null;
-  if (shape.needsObject && (!objectNoun || !lexHas(lang, objectNoun))) return null;
-  if (shape.needsAdj && (!adjective || !lexHas(lang, adjective))) return null;
+  const subjectId = idForGloss(lang, subjectNoun);
+  const verbId = idForGloss(lang, verb);
+  if (subjectId === undefined || !lexHasById(lang, subjectId) || verbId === undefined || !lexHasById(lang, verbId)) return null;
+  if (shape.needsObject && (!objectNoun || idForGloss(lang, objectNoun) === undefined)) return null;
+  if (shape.needsAdj && (!adjective || idForGloss(lang, adjective) === undefined)) return null;
 
   if (usesDeepRouting(lang)) {
     const englishStr = buildEnglishSentence(
@@ -462,8 +467,8 @@ function realizeSkeleton(
     }
   }
 
-  const sForm = lexGet(lang, subjectNoun)!;
-  const vForm = lexGet(lang, verb)!;
+  const sForm = lexFormById(lang, subjectId)!;
+  const vForm = lexFormById(lang, verbId)!;
   const render = (form: WordForm): string =>
     script === "ipa" ? formToString(form) : formatForm(form, lang, script);
 
@@ -471,7 +476,9 @@ function realizeSkeleton(
   const V = render(inflectVerb(vForm, lang, verb, rng));
 
   if (shape.copular && adjective) {
-    const adjForm = lexGet(lang, adjective)!;
+    const adjId = idForGloss(lang, adjective);
+    const adjForm = adjId !== undefined ? lexFormById(lang, adjId)! : undefined;
+    if (!adjForm) return null;
     const A = render(adjForm);
     // Overt copula vs zero-copula is a typological parameter. A language
     // that has lexicalised "be" places the copula like a verb (per
@@ -480,7 +487,8 @@ function realizeSkeleton(
     // tense, Arabic nominal sentences) juxtaposes subject + predicate
     // with no copula. (Deep routing handles richer copula morphology;
     // this is the light path.)
-    const beForm = lexGet(lang, "be");
+    const beId = idForGloss(lang, "be");
+    const beForm = beId !== undefined ? lexFormById(lang, beId) : undefined;
     if (beForm && beForm.length > 0) {
       const COP = render(beForm);
       const arranged = arrange(lang.grammar.wordOrder, S, COP, A);
@@ -496,11 +504,15 @@ function realizeSkeleton(
   }
 
   if (shape.needsObject && objectNoun) {
-    const oForm = lexGet(lang, objectNoun)!;
+    const objectId = idForGloss(lang, objectNoun);
+    const oForm = objectId !== undefined ? lexFormById(lang, objectId) : undefined;
+    if (!oForm) return null;
     const O = render(inflectNoun(oForm, lang, "O", objectNoun, rng, !!shape.pluralObject));
     const arranged = arrange(lang.grammar.wordOrder, S, V, O);
     if (shape.needsAdj && adjective) {
-      const adjForm = lexGet(lang, adjective)!;
+      const adjId2 = idForGloss(lang, adjective);
+      const adjForm = adjId2 !== undefined ? lexFormById(lang, adjId2) : undefined;
+      if (!adjForm) return null;
       const A = render(adjForm);
       // Phase 61: when shape.adjOnObject, render the adj inline next to
       // the object inside the SVO arrangement; otherwise keep the
@@ -526,7 +538,9 @@ function realizeSkeleton(
   }
 
   if (shape.needsAdj && adjective) {
-    const adjForm = lexGet(lang, adjective)!;
+    const adjId3 = idForGloss(lang, adjective);
+    const adjForm = adjId3 !== undefined ? lexFormById(lang, adjId3) : undefined;
+    if (!adjForm) return null;
     const A = render(adjForm);
     return {
       text: `${A} ${S} ${V}`,
