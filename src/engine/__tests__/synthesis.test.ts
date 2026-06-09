@@ -7,7 +7,7 @@ import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { presetTokipona } from "../presets/tokipona";
 import { createSimulation } from "../simulation";
 import { CONCEPTS } from "../lexicon/concepts";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tSet as lexSet, tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * Phase 47 T1: morphological synthesis acceptance tests.

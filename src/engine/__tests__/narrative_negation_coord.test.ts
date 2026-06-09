@@ -4,7 +4,7 @@ import { composeTargetSentence } from "../narrative/composer";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeDiscourse } from "../narrative/discourse";
-import { lexHas } from "../lexicon/access";
+import { tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 
 /**
  * narrative_negation_coord.test.ts

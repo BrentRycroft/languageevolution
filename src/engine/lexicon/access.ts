@@ -78,69 +78,12 @@ export function coinSeededLexeme(lang: LexiconState, m: Meaning, form: WordForm)
   return id;
 }
 
-/** Form for a meaning, or undefined. */
-export function lexGet(lang: LexiconState, m: Meaning): WordForm | undefined {
-  const id = idForGloss(lang, m);
-  return id === undefined ? undefined : lexFormById(lang, id);
-}
+// S3 B10b: the gloss-in seam API (lexGet/lexHas/lexSet/lexDelete/lexKeys/lexValues/lexEntries) is
+// RETIRED — the engine addresses lexemes by LexemeId. Gloss→id resolution survives only at boundaries
+// via `idForGloss` (non-minting) and `coinSeededLexeme` (the seeded-coinage mint). For display/string
+// ops, resolve id→seed-gloss via `meaningForLexemeId` (lexemeIdentity.ts).
 
-/** Whether the lexicon has a form for this meaning. */
-export function lexHas(lang: LexiconState, m: Meaning): boolean {
-  const id = idForGloss(lang, m);
-  return id !== undefined && lexHasById(lang, id);
-}
-
-/** Set/replace the form for a meaning. Mints a LexemeId + record (materialized
- * point + gloss) for a new meaning, appending to the store in call order
- * (insertion parity with the old gloss store). An existing meaning updates its
- * record's form in place, preserving its point + gloss. */
-export function lexSet(lang: LexiconState, m: Meaning, form: WordForm): void {
-  coinSeededLexeme(lang, m, form);
-}
-
-/** Remove a meaning's record. (`lang.lexemeIds` is purged separately by
- * deleteMeaning's registry pass.) */
-export function lexDelete(lang: LexiconState, m: Meaning): void {
-  const id = idForGloss(lang, m);
-  if (id !== undefined) { lexDeleteById(lang, id); return; }
-  // S2b: a KEYLESS (gloss-less) record has no lexemeIds entry; if `m` is itself a store key (its
-  // LexemeId, e.g. a keyless recarve loser), delete it directly. Seeded glosses are never store keys
-  // post-flip, so this branch only fires for an id and leaves seeded deletion byte-identical.
-  if (lexHasById(lang, m as unknown as LexemeId)) lexDeleteById(lang, m as unknown as LexemeId);
-}
-
-/** Meanings (glosses) in INSERTION order — gloss-bearing records only (keyless
- * EXCLUDED, preserving today's behaviour for every gloss-iterating caller). NOT sorted. */
-export function lexKeys(lang: LexiconState): Meaning[] {
-  const g = buildLexemeIdToGloss(lang);
-  const out: Meaning[] = [];
-  for (const cid of Object.keys(lang.lexemes)) {
-    const m = g.get(cid);
-    if (m !== undefined) out.push(m);
-  }
-  return out;
-}
-
-/** Forms in insertion order — gloss-bearing records only. */
-export function lexValues(lang: LexiconState): WordForm[] {
-  const g = buildLexemeIdToGloss(lang);
-  const out: WordForm[] = [];
-  for (const cid of Object.keys(lang.lexemes)) if (g.has(cid)) out.push(lang.lexemes[cid]!.form);
-  return out;
-}
-
-/** [meaning, form] pairs in insertion order — gloss-bearing records only. */
-export function lexEntries(lang: LexiconState): [Meaning, WordForm][] {
-  const g = buildLexemeIdToGloss(lang);
-  const out: [Meaning, WordForm][] = [];
-  for (const cid of Object.keys(lang.lexemes)) {
-    const m = g.get(cid);
-    if (m !== undefined) out.push([m, lang.lexemes[cid]!.form]);
-  }
-  return out;
-}
-
-/** Number of gloss-bearing entries. */
+/** Number of gloss-bearing (seeded) entries. Keyless records are excluded. */
 export function lexSize(lang: LexiconState): number {
-  return lexKeys(lang).length;
+  return lexIds(lang).length;
 }

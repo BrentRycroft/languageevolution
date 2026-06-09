@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 import { wordMorphemes } from "../semantics/languageMorphemes";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import type { Language, SimulationConfig } from "../types";
 
 /**

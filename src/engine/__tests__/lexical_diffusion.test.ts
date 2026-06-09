@@ -5,7 +5,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { levenshtein } from "../phonology/ipa";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import { makeRng } from "../rng";
 
 /**

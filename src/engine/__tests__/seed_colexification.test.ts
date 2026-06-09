@@ -7,7 +7,7 @@ import { presetTokipona } from "../presets/tokipona";
 import { presetPIE } from "../presets/pie";
 import { presetGermanic } from "../presets/germanic";
 import { presetRomance } from "../presets/romance";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import { satGet } from "../lexicon/satellites";
 
 /**

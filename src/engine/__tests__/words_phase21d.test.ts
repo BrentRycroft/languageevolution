@@ -13,7 +13,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
-import { lexGet, lexKeys, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * words_phase21d.test.ts

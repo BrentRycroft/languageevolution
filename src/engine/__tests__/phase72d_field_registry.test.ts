@@ -7,7 +7,7 @@ import {
   BESPOKE_PER_MEANING_FIELDS,
   purgeMeaningFromRegistry,
 } from "../perMeaningFields";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import { satGet, satSet } from "../lexicon/satellites";
 
 /**

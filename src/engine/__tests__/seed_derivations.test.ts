@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetPIE } from "../presets/pie";
 import { addDerivation } from "../lexicon/compound";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * Meaning-layer Stage A1: `seedDerivations` lets a preset encode a word AS a

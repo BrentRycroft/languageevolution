@@ -8,7 +8,7 @@ import { presetPIE } from "../presets/pie";
 import { translateSentence, type TranslatedToken } from "../translator/sentence";
 import { isFeatureActive } from "../modules/legacyGate";
 import type { Language } from "../types";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * translator_agnosticism.test.ts

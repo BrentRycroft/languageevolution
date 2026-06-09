@@ -5,7 +5,7 @@ import {
 } from "../translator/sentence";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * translator_reverse.test.ts

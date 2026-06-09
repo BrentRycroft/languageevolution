@@ -4,7 +4,7 @@ import { translateSentence } from "../translator/sentence";
 import { closedClassTable } from "../translator/closedClass";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
-import { lexHas, lexSet, lexKeys, lexGet } from "../lexicon/access";
+import { tHas as lexHas, tSet as lexSet, tGlosses as lexKeys, tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language, LexemeStore, WordForm } from "../types";
 

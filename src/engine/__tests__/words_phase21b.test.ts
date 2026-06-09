@@ -10,7 +10,7 @@ import {
 } from "../translator/sentence";
 import { reverseLookupForm, reverseTranslate } from "../translator/reverse";
 import type { Language } from "../types";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { migrateSatelliteMaps } from "../lexicon/store";
 
 /**

@@ -9,7 +9,7 @@ import {
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { lexGet, lexDelete } from "../lexicon/access";
+import { tForm as lexGet, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
 
 /**
  * alt_forms.test.ts

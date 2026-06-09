@@ -4,7 +4,7 @@ import { createSimulation } from "../../simulation";
 import { presetEnglish } from "../../presets/english";
 import { meaningPointFor, lexPoint } from "../meaningPoint";
 import { cosineFixed } from "../vec";
-import { lexHas, lexGet } from "../../lexicon/access";
+import { tHas as lexHas, tForm as lexGet } from "../../lexicon/__tests__/glossSeam";
 import type { Language, SimulationConfig } from "../../types";
 
 function rootLang(cfg: SimulationConfig): Language {

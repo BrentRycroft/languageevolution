@@ -6,7 +6,7 @@ import { findSchedule, milestoneKey } from "../historical";
 import { romanceSchedule } from "../historical/romance";
 import { validateSchedule } from "../historical/validate";
 import { narrativeHistoricalVoice } from "../historical/voice";
-import { lexGet, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { satGet, satSet } from "../lexicon/satellites";
 
 /**

@@ -14,7 +14,7 @@ import { makeRng } from "../rng";
 import type { Language, LanguageTree } from "../types";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { migrateSatelliteMaps } from "../lexicon/store";
-import { lexGet, lexHas } from "../lexicon/access";
+import { tForm as lexGet, tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 import { satGet } from "../lexicon/satellites";
 
 /**

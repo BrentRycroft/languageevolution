@@ -4,7 +4,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { clusterOf } from "../semantics/clusters";
-import { lexKeys, lexDelete } from "../lexicon/access";
+import { tGlosses as lexKeys, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
 
 /**
  * genesis_need.test.ts

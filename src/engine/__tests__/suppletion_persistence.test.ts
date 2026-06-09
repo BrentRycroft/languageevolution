@@ -3,7 +3,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
 import { makeRng } from "../rng";
-import { lexGet, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { satSet } from "../lexicon/satellites";
 
 /**

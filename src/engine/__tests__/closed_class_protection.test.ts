@@ -9,7 +9,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import { isClosedClass, posOf } from "../lexicon/pos";
-import { lexKeys, lexSet } from "../lexicon/access";
+import { tGlosses as lexKeys, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * closed_class_protection.test.ts

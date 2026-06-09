@@ -6,7 +6,7 @@ import {
   tierOrthographyMultiplier,
 } from "../phonology/orthography";
 import { makeRng } from "../rng";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import type { Language, Meaning, WordForm } from "../types";
 
 /**

@@ -3,7 +3,7 @@ import { translate } from "../translator/translate";
 import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { satSet } from "../lexicon/satellites";
 
 /**

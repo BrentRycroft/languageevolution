@@ -5,7 +5,7 @@ import { defaultConfig } from "../config";
 import { levenshtein } from "../phonology/ipa";
 import type { Language, LanguageTree, WordForm } from "../types";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { lexEntries } from "../lexicon/access";
+import { tEntries as lexEntries } from "../lexicon/__tests__/glossSeam";
 
 /**
  * reconstruction.test.ts

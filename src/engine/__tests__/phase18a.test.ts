@@ -4,7 +4,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { prunePhonemes } from "../phonology/pruning";
 import { makeRng } from "../rng";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { satGet } from "../lexicon/satellites";
 import type { Language, Meaning, WordForm } from "../types";
 

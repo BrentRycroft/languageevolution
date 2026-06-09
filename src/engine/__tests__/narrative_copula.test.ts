@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { generateNarrative } from "../narrative/generate";
 import { formToString } from "../phonology/ipa";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tSet as lexSet, tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";

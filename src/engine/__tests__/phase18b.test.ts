@@ -10,7 +10,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import type { GrammarFeatures, Language, Meaning, WordForm } from "../types";
 import type { TranslatedToken } from "../translator/sentence";
 

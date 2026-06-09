@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { reconstructProtoForm } from "../tree/reconstruction";
 import type { LanguageTree, LanguageNode, Language } from "../types";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * reconstruction_msa.test.ts

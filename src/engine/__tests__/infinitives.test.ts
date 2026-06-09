@@ -3,7 +3,7 @@ import { verbCitationForm, flattenCitation } from "../morphology/citation";
 import { presetEnglish } from "../presets/english";
 import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 
 /**

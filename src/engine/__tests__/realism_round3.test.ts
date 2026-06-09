@@ -9,7 +9,7 @@ import { makeRng } from "../rng";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * realism_round3.test.ts

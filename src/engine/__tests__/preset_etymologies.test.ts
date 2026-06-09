@@ -7,7 +7,7 @@ import { presetRomance } from "../presets/romance";
 import { presetBantu } from "../presets/bantu";
 import { presetTokipona } from "../presets/tokipona";
 import { wordMorphemes } from "../semantics/languageMorphemes";
-import { lexHas } from "../lexicon/access";
+import { tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 import type { Language, SimulationConfig } from "../types";
 
 /**

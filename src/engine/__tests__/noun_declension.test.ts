@@ -5,7 +5,7 @@ import {
   getNounDeclensionClass,
 } from "../morphology/inflectionClass";
 import { applyParadigm } from "../morphology/apply";
-import { lexKeys } from "../lexicon/access";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import type { Language, Phoneme, WordForm } from "../types";
 import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";

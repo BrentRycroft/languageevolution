@@ -3,7 +3,7 @@ import { translateSentence } from "../translator/sentence";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { attemptAbstractPivot } from "../translator/abstraction";
-import { lexDelete } from "../lexicon/access";
+import { tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
 
 /**
  * abstract_pivot.test.ts

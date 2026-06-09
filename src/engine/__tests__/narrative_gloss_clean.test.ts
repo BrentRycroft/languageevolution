@@ -5,7 +5,7 @@ import { presetRomance } from "../presets/romance";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
 import { reverseTranslate } from "../translator/reverse";
 import { formToString } from "../phonology/ipa";
-import { lexKeys, lexGet } from "../lexicon/access";
+import { tGlosses as lexKeys, tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import type { SimulationConfig } from "../types";
 
 /**

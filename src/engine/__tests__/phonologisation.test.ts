@@ -3,7 +3,7 @@ import type { LexemeStore } from "../types";
 import { analyzeContexts, detectPhonologisation } from "../phonology/phonologization";
 import type { Language } from "../types";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * Phase 48 D4-D: phonologization-detection tests.

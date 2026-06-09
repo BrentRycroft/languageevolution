@@ -4,7 +4,7 @@ import type { Language, LanguageNode, LanguageTree } from "../types";
 import { makeRng } from "../rng";
 import { DEFAULT_LEXICON } from "../lexicon/defaults";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * split.test.ts

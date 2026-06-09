@@ -44,32 +44,9 @@ import { seedKeylessBirthSatellites } from "./satellites";
 
 export type LexemeId = string & { readonly __brand: "LexemeId" };
 
-/**
- * B1 (Stage B meaning re-key) — the CANONICAL lexicon iteration order.
- *
- * Several RNG-coupled sites (sound-change application in apply.ts, name
- * generation in naming.ts) iterate the lexicon and draw from the shared
- * per-language Rng PER WORD, so a word's draw POSITION depends on its rank
- * in this order. The contract is "ordered by GLOSS".
- *
- * R2 (concept re-key — the flip): `lang.lexicon` is now `Record<LexemeId,
- * WordForm>`. This function resolves each store key (a LexemeId) back to its
- * gloss and returns the GLOSSES sorted — byte-for-byte the same sequence as
- * the pre-flip `Object.keys(glossStore).sort()`. Gloss-consuming callers
- * (naming.ts, reverse.ts) stay agnostic. The RNG hot path (apply.ts) needs
- * the matching LexemeId sequence to index the store; it calls
- * `orderedLexemeIds` instead, which returns the SAME glosses' LexemeIds in
- * the SAME order. See docs/planning/CONCEPT-REKEY-PLAN.md.
- */
-export function orderedLexiconKeys(lang: LexiconState): Meaning[] {
-  const g = buildLexemeIdToGloss(lang);
-  const out: Meaning[] = [];
-  for (const cid of Object.keys(lang.lexemes)) {
-    const m = g.get(cid);
-    if (m !== undefined) out.push(m);
-  }
-  return out.sort();
-}
+// S3 B10b: `orderedLexiconKeys` (the gloss-sorted gloss list) is RETIRED. The canonical RNG-draw order
+// is `orderedLexemeIds(lexicon, lang)` below — the SAME order expressed as LexemeIds. Callers that need
+// the gloss resolve id→gloss via `meaningForLexemeId`.
 
 /**
  * Build a FRESH LexemeId → gloss map by inverting `lang.lexemeIds` (the
@@ -234,8 +211,24 @@ export function meaningForLexemeId(
   lang: LexiconState,
   conceptId: LexemeId,
 ): Meaning | undefined {
-  const idx = getReverseIndex(lang);
-  return idx?.get(conceptId);
+  const m = getReverseIndex(lang)?.get(conceptId);
+  if (m !== undefined) return m;
+  // MISS. Two causes, handled differently:
+  //  (a) KEYLESS / gloss-less id — a keyless record lives in the store with NO gloss, so it is
+  //      LEGITIMATELY absent from the gloss⇆id index. These dominate hot id-iterating loops
+  //      (orderedLexemeIds appends keyless ids; reverse-index/naming/sync loops walk them), and they
+  //      accumulate over generations. Return undefined DIRECTLY — rebuilding the O(n) reverse index on
+  //      every keyless miss thrashes late-gen sims (~10× full-suite slowdown).
+  //  (b) STALE miss — a LIVE SEEDED id (its record carries a gloss) that the SIZE-cached reverse index
+  //      dropped: when a delete and an add net zero size change in one step, `getReverseIndex`'s
+  //      `size === currentSize` check returns a stale map missing the id, yielding undefined for a real
+  //      lexeme (it bit obsolescence + findSemanticGap, which feed the gloss to embed/meaningPoint).
+  //      Force ONE rebuild + retry. Hits and keyless misses never reach here, so no perf cost.
+  const rec = lang.lexemes?.[conceptId];
+  if (rec !== undefined && rec.gloss === undefined) return undefined; // keyless — genuinely no gloss
+  if (!lang.lexemeIds) return undefined;
+  reverseIndex.delete(lang);
+  return getReverseIndex(lang)?.get(conceptId);
 }
 
 /**

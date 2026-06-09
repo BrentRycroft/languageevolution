@@ -3,7 +3,7 @@ import { translateSentence } from "../translator/sentence";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import type { Language } from "../types";
-import { lexGet, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * translator_tree.test.ts

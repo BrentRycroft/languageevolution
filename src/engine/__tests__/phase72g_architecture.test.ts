@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { enableStratalMode, getUR, isOpaque } from "../phonology/stratal";
-import { lexKeys, lexGet, lexSet } from "../lexicon/access";
+import { tGlosses as lexKeys, tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { refreshContactLinks, linksFor } from "../contact/reticulate";
 import { englishTokensToAST, astToTokens } from "../translator/ast";
 import { tryReanalyseAlignment } from "../grammar/reanalysis";

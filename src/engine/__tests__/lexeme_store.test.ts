@@ -6,7 +6,7 @@ import {
 import type { LexemeStore } from "../primitives";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import { lexPoint } from "../semantics/meaningPoint";
 
 describe("lexeme store primitives", () => {

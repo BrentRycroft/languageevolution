@@ -16,7 +16,7 @@ import { createSimulation } from "../simulation";
 import { migrateSavedRun, LATEST_SAVE_VERSION } from "../../persistence/migrate";
 import { defaultConfig } from "../config";
 import type { Language, SavedRun, SimulationState } from "../types";
-import { lexGet, lexKeys, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { satGet } from "../lexicon/satellites";
 
 /**

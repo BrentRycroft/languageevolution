@@ -10,7 +10,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
-import { lexSet, lexDelete } from "../lexicon/access";
+import { tSet as lexSet, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
 
 /**
  * cluster_expansion.test.ts

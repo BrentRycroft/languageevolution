@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { translateSentence } from "../translator/sentence";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
-import { lexSet, lexHas } from "../lexicon/access";
+import { tSet as lexSet, tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
 

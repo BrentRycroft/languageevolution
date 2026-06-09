@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { lookupForm, lookupFormWithResolution } from "../lookup";
 import { presetEnglish } from "../../presets/english";
 import { createSimulation } from "../../simulation";
-import { lexGet, lexHas, lexDelete } from "../access";
+import { tForm as lexGet, tHas as lexHas, tDelete as lexDelete } from "./glossSeam";
 
 /**
  * lookup.test.ts

@@ -5,7 +5,7 @@ import { defaultConfig } from "../config";
 import { MECHANISMS } from "../genesis/mechanisms";
 import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * genesis_mechanisms.test.ts

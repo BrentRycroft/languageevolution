@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import {
   generateRandomContinent,
   getWorldMap,

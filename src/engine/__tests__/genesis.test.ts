@@ -3,7 +3,7 @@ import { GENESIS_BY_ID } from "../genesis/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 
 /**

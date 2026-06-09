@@ -4,7 +4,7 @@ import type { DerivationalSuffix } from "../lexicon/derivation";
 import { MECHANISM_DERIVATION } from "../genesis/mechanisms/derivation";
 import { progressGrammaticalizationChain } from "../morphology/evolve";
 import { makeRng } from "../rng";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * wordform_typology_realism.test.ts

@@ -7,7 +7,7 @@ import { realiseClause, realiseSingleClause, realiseSentence } from "../translat
 import { sentenceToRoleClause, roleClauseToSentence } from "../translator/ast";
 import type { RoleClause } from "../translator/syntax";
 import type { Language } from "../types";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * Phase 73c Tier C Phase 4 — realiser consumes RoleClause.

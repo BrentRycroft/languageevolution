@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lexHas } from "../lexicon/access";
+import { tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";

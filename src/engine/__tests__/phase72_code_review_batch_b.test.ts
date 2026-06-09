@@ -9,7 +9,7 @@ import { inheritMeaningFields } from "../perMeaningFields";
 import { migrateSavedRun, LATEST_SAVE_VERSION } from "../../persistence/migrate";
 import { defaultConfig } from "../config";
 import type { Language, SavedRun } from "../types";
-import { lexGet, lexHas, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tHas as lexHas, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * phase72_code_review_batch_b.test.ts — invariants that Phase 72

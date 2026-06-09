@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { translateSentence } from "../translator/sentence";
 import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
-import { lexGet, lexHas, lexDelete } from "../lexicon/access";
+import { tForm as lexGet, tHas as lexHas, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
 import { satGet } from "../lexicon/satellites";
 
 /**

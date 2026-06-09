@@ -8,7 +8,7 @@ import { presetEnglish } from "../presets/english";
 import type { Language } from "../types";
 import type { DerivationalSuffix, DerivationCategory } from "../lexicon/derivation";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * Phase 49 acceptance tests for language-agnostic word formation.

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { deleteMeaning, PROTECTED_MEANINGS } from "../lexicon/mutate";
-import { lexKeys } from "../lexicon/access";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import { translateSentence } from "../translator/sentence";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
 

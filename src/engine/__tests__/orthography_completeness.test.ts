@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { romanize } from "../phonology/orthography";
 import { PHONE_FEATURES } from "../phonology/features";
 import { VOWELS, CONSONANTS } from "../phonology/ipa";
-import { lexEntries } from "../lexicon/access";
+import { tEntries as lexEntries } from "../lexicon/__tests__/glossSeam";
 import { leafIds } from "../tree/split";
 import { createSimulation } from "../simulation";
 import { PRESETS } from "../presets";

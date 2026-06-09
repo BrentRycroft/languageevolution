@@ -4,7 +4,7 @@ import { composeForGap } from "../semantics/gapComposition";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 import { meaningPointFor } from "../semantics/meaningPoint";
-import { lexKeys } from "../lexicon/access";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import { keylessRecords } from "../lexicon/store";
 import { satGet } from "../lexicon/satellites";
 import { stepPhonology } from "../steps/phonology";

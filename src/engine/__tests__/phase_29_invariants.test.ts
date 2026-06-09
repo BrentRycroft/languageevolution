@@ -9,7 +9,7 @@ import { leafIds } from "../tree/split";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { formKeyOf } from "../lexicon/word";
 import type { Language } from "../types";
-import { lexGet, lexKeys, lexHas } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys, tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 
 /**
  * Phase 29 Tranche 7b: cross-system invariants enforced via property

@@ -3,7 +3,7 @@ import { applyPhonologyToAffixes, maybeGrammaticalize, maybeMergeParadigms, mayb
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import { lexSet, lexGet, lexKeys } from "../lexicon/access";
+import { tSet as lexSet, tForm as lexGet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import { satGet, satEntries } from "../lexicon/satellites";
 import type { Language } from "../types";
 

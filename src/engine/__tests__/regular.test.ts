@@ -4,7 +4,7 @@ import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
-import { lexSet, lexKeys, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 
 /**
  * regular.test.ts

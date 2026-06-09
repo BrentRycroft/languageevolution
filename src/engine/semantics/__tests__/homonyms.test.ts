@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createSimulation } from "../../simulation";
 import { presetEnglish } from "../../presets/english";
-import { lexSet } from "../../lexicon/access";
+import { tSet as lexSet } from "../../lexicon/__tests__/glossSeam";
 import { homonymsOf } from "../homonyms";
 
 function freshEnglish() {

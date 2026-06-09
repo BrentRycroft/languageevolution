@@ -4,7 +4,7 @@ import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 import { tryBorrow } from "../contact/borrow";
 import { makeRng } from "../rng";
-import { lexSet, lexDelete } from "../lexicon/access";
+import { tSet as lexSet, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
 
 /**
  * contact.test.ts

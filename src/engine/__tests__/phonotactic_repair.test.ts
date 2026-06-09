@@ -7,7 +7,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
-import { lexGet, lexSet, lexKeys } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 
 /**
  * phonotactic_repair.test.ts

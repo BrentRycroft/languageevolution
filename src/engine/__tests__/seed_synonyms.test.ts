@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import { buildInitialState } from "../steps/init";
 import { presetPIE } from "../presets/pie";
 import { presetEnglish } from "../presets/english";

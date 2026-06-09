@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { LexiconView } from "../LexiconView";
 import { useSimStore } from "../../state/store";
-import { lexHas, lexKeys } from "../../engine/lexicon/access";
+import { tHas as lexHas, tGlosses as lexKeys } from "../../engine/lexicon/__tests__/glossSeam";
 import { satSet } from "../../engine/lexicon/satellites";
 
 /**

@@ -8,7 +8,7 @@ import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
 import type { Language } from "../types";
-import { lexSet, lexGet, lexKeys } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 
 /**
  * sociolinguistic.test.ts

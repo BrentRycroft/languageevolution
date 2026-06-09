@@ -9,7 +9,7 @@ import { presetEnglish } from "../presets/english";
 import { presetRomance } from "../presets/romance";
 import { makeRng } from "../rng";
 import { leafIds } from "../tree/split";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * gramm_chain.test.ts

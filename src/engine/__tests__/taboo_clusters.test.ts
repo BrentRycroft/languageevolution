@@ -7,7 +7,8 @@ import { isExpressive } from "../lexicon/expressive";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
-import { lexGet, lexSize, lexSet } from "../lexicon/access";
+import { lexSize } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { satGet } from "../lexicon/satellites";
 
 /**

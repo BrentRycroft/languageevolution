@@ -3,8 +3,9 @@ import { createSimulation } from "../../simulation";
 import { presetEnglish } from "../../presets/english";
 import {
   lexFormById, lexSetFormById, lexHasById, lexDeleteById, lexIds,
-  idForGloss, coinSeededLexeme, lexKeys, lexGet, lexHas,
+  idForGloss, coinSeededLexeme,
 } from "../access";
+import { tGlosses as lexKeys, tForm as lexGet, tHas as lexHas } from "./glossSeam";
 import { meaningForLexemeId } from "../lexemeIdentity";
 
 function rootLang() {

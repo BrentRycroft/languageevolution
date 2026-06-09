@@ -6,8 +6,8 @@ import { presetRomance } from "../presets/romance";
 import { presetGermanic } from "../presets/germanic";
 import { presetTokipona } from "../presets/tokipona";
 import { presetEnglish } from "../presets/english";
-import { orderedLexiconKeys, orderedLexemeIds, meaningForLexemeId } from "../lexicon/lexemeIdentity";
-import { lexKeys } from "../lexicon/access";
+import { orderedLexemeIds, meaningForLexemeId } from "../lexicon/lexemeIdentity";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import type { SimulationConfig } from "../types";
 
 /**
@@ -31,17 +31,15 @@ const PRESETS: Record<string, () => SimulationConfig> = {
 
 describe("concept-order seam — canonical order is sorted glosses", () => {
   for (const [name, build] of Object.entries(PRESETS)) {
-    it(`${name}: orderedLexiconKeys is the sorted gloss sequence`, () => {
+    it(`${name}: canonical order (orderedLexemeIds) is the sorted gloss sequence`, () => {
       const lang = createSimulation(build()).getState().tree["L-0"]!.language;
-      // Post-flip the store is LexemeId-keyed; the canonical order is the
-      // GLOSSES sorted (resolved from the store keys).
-      expect(orderedLexiconKeys(lang)).toEqual(lexKeys(lang).sort());
-      // orderedLexemeIds returns the SAME glosses' store keys in the SAME
-      // order, so the RNG hot path draws in the identical per-word sequence.
-      const cidGlosses = orderedLexemeIds(lang.lexemes, lang).map(
-        (cid) => meaningForLexemeId(lang, cid)!,
-      );
-      expect(cidGlosses).toEqual(orderedLexiconKeys(lang));
+      // Post-S3 the canonical RNG-draw order is orderedLexemeIds (LexemeId store keys); resolved to
+      // glosses it is the GLOSSES sorted — the byte-identity contract the RNG hot path (apply.ts,
+      // naming.ts) walks. (Keyless ids, which map to no gloss, are filtered — none exist at GEN0.)
+      const cidGlosses = orderedLexemeIds(lang.lexemes, lang)
+        .map((cid) => meaningForLexemeId(lang, cid))
+        .filter((m): m is string => m !== undefined);
+      expect(cidGlosses).toEqual(lexKeys(lang).sort());
     });
   }
 });

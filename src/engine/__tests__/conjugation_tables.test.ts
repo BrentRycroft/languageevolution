@@ -7,7 +7,7 @@ import {
 import { presetRomance } from "../presets/romance";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 
 /**
  * conjugation_tables.test.ts

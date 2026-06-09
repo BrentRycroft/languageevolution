@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { LexemeStore } from "../types";
 import { deleteMeaning } from "../lexicon/mutate";
-import { lexGet, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import { satGet, satSet } from "../lexicon/satellites";
 import { migrateSatelliteMaps } from "../lexicon/store";

@@ -8,7 +8,7 @@ import { applyChangesToWord } from "../phonology/apply";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
-import { lexGet, lexHas } from "../lexicon/access";
+import { tForm as lexGet, tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language, WordForm } from "../types";
 

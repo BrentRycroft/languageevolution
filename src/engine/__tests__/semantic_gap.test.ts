@@ -12,7 +12,7 @@ import { findSemanticGap } from "../genesis/semanticGap";
 import { anchorsWithin } from "../semantics/anchors";
 import { fromFloats } from "../semantics/vec";
 import { embed } from "../semantics/embeddings";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 
 function bareLang(): Language {

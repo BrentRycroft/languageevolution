@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 import { coinKeylessLexeme } from "../lexicon/lexemeIdentity";
-import { lexKeys } from "../lexicon/access";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import { fromFloats } from "../semantics/vec";
 import { embed } from "../semantics/embeddings";
 import { satSet } from "../lexicon/satellites";

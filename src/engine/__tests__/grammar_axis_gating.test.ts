@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { satSet } from "../lexicon/satellites";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";

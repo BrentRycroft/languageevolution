@@ -10,7 +10,7 @@ import {
 } from "../phonology/phonotactics";
 import { maybeTonogenesis } from "../phonology/tonogenesis";
 import { toneOf, HIGH, LOW } from "../phonology/tone";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 
 /**

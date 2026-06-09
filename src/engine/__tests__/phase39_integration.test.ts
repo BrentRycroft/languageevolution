@@ -6,7 +6,7 @@ import { createSimulation } from "../simulation";
 import { addSynonym } from "../lexicon/mutate";
 import { syncWordsFromLexicon } from "../lexicon/word";
 import { formatNumeral } from "../translator/numerals";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 
 /**

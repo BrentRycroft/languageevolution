@@ -3,7 +3,7 @@ import { presetEnglish } from "../presets/english";
 import { buildInitialState } from "../steps/init";
 import { addSynonym, removeSynonym, setLexiconForm } from "../lexicon/mutate";
 import { selectSynonyms, findWordsByMeaning, findPrimaryWordForMeaning, formKeyOf } from "../lexicon/word";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * synonyms.test.ts

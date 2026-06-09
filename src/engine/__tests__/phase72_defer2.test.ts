@@ -9,7 +9,7 @@ import {
   mintLexemeId,
 } from "../lexicon/lexemeIdentity";
 import { setLexiconForm } from "../lexicon/mutate";
-import { lexKeys } from "../lexicon/access";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 
 /**
  * phase72_defer2.test.ts — Phase 72 deferred item defer-2:

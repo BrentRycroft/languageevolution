@@ -8,7 +8,7 @@ import {
 } from "../translator/closedClass";
 import { translateSentence } from "../translator/sentence";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
-import { lexGet, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * phase72a_quick_wins.test.ts — guards for the seven Phase 72a fixes.

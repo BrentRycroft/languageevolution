@@ -14,7 +14,7 @@ import {
 import { derivationFor, DERIVATION_TARGETS } from "../lexicon/derivation_targets";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import { satGet } from "../lexicon/satellites";
 
 /**

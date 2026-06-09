@@ -6,7 +6,7 @@ import {
 import type { Language, Phoneme } from "../types";
 import type { DerivationalSuffix } from "../lexicon/derivation";
 import { makeRng } from "../rng";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * runtime_derivation.test.ts

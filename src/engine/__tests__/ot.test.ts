@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { otScore, otFit, maybeLearnOt, DEFAULT_OT_RANKING } from "../phonology/ot";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import type { Language, Meaning, WordForm } from "../types";
 
 /**
