@@ -109,9 +109,32 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
     re-bake). Determinism: GEN0 byte-identical; **GENN re-baked tokipona (`a8166cb8`→`c8a2f719`) +
     english (`db425ca5`→`843f52f2`)** — the presets that coin + sweep a keyless word (variants is
     immediate); pie/bantu/romance/germanic byte-identical; reproducible. FAST 2033 passed / 0 failed.
-  - **Sub-projects 3-6 REMAIN:** S3 thread LexemeId through the
-    ~381 seam call sites; S4 point-native `WordSense` identity (+ `meaningPoints` re-key); S5 intrinsic
-    LexemeId RNG order (determinism re-bake); S6 translation via anchor index + persistence.
+  - **Sub-project 3 (barcode-native addressing) — DONE (2026-06-09), byte-identical.** The engine now
+    addresses lexemes by `LexemeId` EVERYWHERE; the gloss-in accessor API is RETIRED. User chose FULL
+    blanket retirement, kept byte-identical (the iteration-order flip is deferred to S5). Spec
+    `docs/superpowers/specs/2026-06-08-storage-step5-s3-barcode-native-addressing-design.md`; plan
+    `docs/superpowers/plans/2026-06-08-storage-step5-s3-barcode-native-addressing.md`. **B0** (`cde08f4`)
+    added the id-native seam on `access.ts` (`lexFormById`/`lexSetFormById`/`lexHasById`/`lexDeleteById`/
+    `lexIds`/`idForGloss`/`coinSeededLexeme`; `meaningForLexemeId` is the id→seed-gloss resolver) as thin
+    adapters over the gloss-in functions. **B1–B9** converted each subsystem (lexicon, phonology,
+    morphology, semantics, genesis+steps, translator, narrative, contact/tree/diagnostics/naming/
+    persistence, ui) — every batch gated tsc + targeted FAST + RUN_SLOW `meaning_layer_baseline`
+    byte-identical. **B10a** (`767913c`) converted ~50 production residuals. **B10b** (`0202a7c`) DELETED
+    the gloss-in API (`lexGet/lexHas/lexSet/lexDelete/lexKeys/lexValues/lexEntries` from access.ts +
+    `orderedLexiconKeys` from lexemeIdentity.ts; `lexSize` kept, id-native), rewrote the baseline-test
+    signature id-native (same locked hashes), and re-pointed ~104 test files to a new id-native helper
+    `src/engine/lexicon/__tests__/glossSeam.ts` via aliased imports. THREE determinism regressions the
+    batch agents introduced were caught by the per-batch baseline + a pie-only `-t "pie"` bisect and
+    fixed: (1) obsolescence rebuilt its gloss list FRESH per disuse-death iteration (a single snapshot
+    sampled deleted words); (2) `lexHas(g)` restored as `lexHasById(idForGloss(g))` where it was weakened
+    to `idForGloss(g) !== undefined` (drops the record-existence check — a dead word keeps a stale
+    `lexemeIds` entry); (3) `meaningForLexemeId` now rebuilds-on-miss to defeat the SIZE-cached
+    reverse-index staleness, with a keyless guard (a gloss-less record returns undefined directly, else
+    keyless-heavy late-gen loops thrash ~10×). **Gate: full FAST 2036 passed / 0 failed; RUN_SLOW
+    `meaning_layer_baseline` 12/12 byte-identical (all 6 presets, GEN0 + GENN) — no baseline edits.**
+  - **Sub-projects 4-6 REMAIN:** S4 point-native `WordSense` identity (+ `meaningPoints` re-key); S5
+    intrinsic LexemeId RNG order (the deliberate iteration-order flip + determinism re-bake S3 deferred);
+    S6 translation via anchor index + persistence.
 
 ## The deferred migration (true keyless point-native store)
 
