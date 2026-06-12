@@ -23,9 +23,9 @@ import { lexPoint } from "../semantics/meaningPoint";
  *     `Object.keys` order, resolved to glosses). Several RNG-coupled sites feed
  *     this to `rng.int`-by-index; insertion parity holds because the cid store
  *     is built in the same order the gloss store was.
- *   - SORTED iteration is a DIFFERENT contract: use `orderedLexiconKeys(lang)`
- *     (glosses) or `orderedLexemeIds(lexicon, lang)` (the matching store keys),
- *     NOT `lexKeys().sort()`, so the canonical sorted order lives in one place.
+ *   - SORTED iteration is a DIFFERENT contract: use `orderedLexemeIds(lexicon)`
+ *     (the canonical RNG-draw order — store keys sorted by intrinsic LexemeId, S5),
+ *     NOT a local `.sort()`, so the canonical sorted order lives in one place.
  *
  * Reads (`lexGet`/`lexHas`/`lexDelete`) use the NON-minting lookup
  * (`lang.lexemeIds?.[m]`) so a miss never perturbs the LexemeId mint stream;

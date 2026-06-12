@@ -44,9 +44,9 @@ import { seedKeylessBirthSatellites } from "./satellites";
 
 export type LexemeId = string & { readonly __brand: "LexemeId" };
 
-// S3 B10b: `orderedLexiconKeys` (the gloss-sorted gloss list) is RETIRED. The canonical RNG-draw order
-// is `orderedLexemeIds(lexicon, lang)` below — the SAME order expressed as LexemeIds. Callers that need
-// the gloss resolve id→gloss via `meaningForLexemeId`.
+// S3 B10b / S5: `orderedLexiconKeys` (the gloss-sorted gloss list) is RETIRED, and the canonical
+// RNG-draw order is now `orderedLexemeIds(lexicon)` below — the store keys sorted by intrinsic
+// LexemeId (gloss-independent). Callers that need a gloss resolve id→gloss via `meaningForLexemeId`.
 
 /**
  * Build a FRESH LexemeId → gloss map by inverting `lang.lexemeIds` (the
@@ -89,35 +89,17 @@ export function glossResolverForSweep(lang: LexiconState): Map<string, Meaning> 
 }
 
 /**
- * The LexemeId store keys ordered by their GLOSS — the canonical RNG-draw
- * order, expressed as the physical keys the hot path uses to index the store.
- * `orderedLexemeIds(lexicon, lang)[i]` is the LexemeId whose gloss is at
- * position i of `orderedLexiconKeys(lang)`, so iterating it draws RNG in the
- * exact same per-word sequence as the pre-flip sorted-gloss iteration.
+ * The canonical RNG-draw order: the store keys sorted lexicographically by their intrinsic
+ * **LexemeId** (S5 — the deliberate gloss-independent flip). Replaces the prior gloss-sorted order.
+ * Every RNG-coupled per-word draw walks this sequence (the phonology sweep in apply.ts, language
+ * naming, reverse translation), so the trajectory no longer depends on any concept's English label.
  *
- * Takes `lexicon` explicitly (not `lang.lexicon`) because the stratal hot path
- * applies changes to an intermediate store distinct from `lang.lexicon`; its
- * keys are the same LexemeIds, resolved against `lang`'s identity map.
- * Decorate-sort-undecorate: resolve each gloss once, sort by gloss.
+ * Takes `lexicon` explicitly (the engine passes its form-view; callers may pass the record store) —
+ * only the KEYS are read, so the value type is loose. Identical to `Object.keys(lexicon).sort()`,
+ * which is exactly what the sweep already used when no language was supplied.
  */
-export function orderedLexemeIds(lexicon: Record<string, unknown>, lang: LexiconState): LexemeId[] {
-  // Only the KEYS are read (the engine passes its form-view; callers may pass the record store),
-  // so the value type is loose. Order contract: SEEDED ids sorted by gloss, then KEYLESS ids
-  // (gloss-less records) sorted by their intrinsic LexemeId — a determinism-stable order that never
-  // depends on the drifting emergent gloss. In S1 tasks 2-3 the swept view is seeded-only, so the
-  // keyless bucket is empty and the result is byte-identical to the pre-unification order; task 4
-  // widens the view and the append activates.
-  const g = buildLexemeIdToGloss(lang);
-  const seeded: [string, LexemeId][] = [];
-  const keyless: LexemeId[] = [];
-  for (const cid of Object.keys(lexicon) as LexemeId[]) {
-    const gloss = g.get(cid);
-    if (gloss === undefined) keyless.push(cid);
-    else seeded.push([gloss, cid]);
-  }
-  seeded.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-  keyless.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  return [...seeded.map((p) => p[1]), ...keyless];
+export function orderedLexemeIds(lexicon: Record<string, unknown>): LexemeId[] {
+  return (Object.keys(lexicon) as LexemeId[]).sort();
 }
 
 /**

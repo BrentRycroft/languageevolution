@@ -96,9 +96,9 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
       }
     }
   } else {
-    // orderedLexemeIds = seeded ids in GLOSS-SORTED order (keyless appended, skipped below by the
-    // undefined-gloss guard) — byte-identical to the prior orderedLexiconKeys(lang) iteration.
-    for (const id of orderedLexemeIds(lang.lexemes, lang)) {
+    // orderedLexemeIds = ALL store keys sorted by intrinsic LexemeId (S5, gloss-independent);
+    // keyless ids (no gloss) are skipped below by the undefined-gloss guard.
+    for (const id of orderedLexemeIds(lang.lexemes)) {
       const lemma = meaningForLexemeId(lang, id);
       if (lemma === undefined) continue;
       // Phase 29-2i: null-guard. The `!` was wrong — `Object.keys`

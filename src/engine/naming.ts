@@ -19,10 +19,10 @@ const ENDINGS = [
 ];
 
 export function generateName(parent: Language, rng: Rng): string {
-  // SEEDED ids only, gloss-sorted — byte-identical to the prior orderedLexiconKeys(parent) (which
-  // excluded keyless): the rng.int(ids.length) draw bound must match exactly, so the appended keyless
-  // ids that orderedLexemeIds adds are filtered out.
-  const ids = orderedLexemeIds(parent.lexemes, parent).filter((id) => meaningForLexemeId(parent, id) !== undefined);
+  // SEEDED ids only, sorted by intrinsic LexemeId (S5: the canonical RNG-draw order is now
+  // gloss-independent). orderedLexemeIds returns ALL store keys sorted; the keyless ones map to no
+  // seed gloss and are filtered out so the rng.int(ids.length) bound stays the seeded count.
+  const ids = orderedLexemeIds(parent.lexemes).filter((id) => meaningForLexemeId(parent, id) !== undefined);
   if (ids.length === 0) return parent.id;
   const seed = lexFormById(parent, ids[rng.int(ids.length)]!)!;
   let root = "";

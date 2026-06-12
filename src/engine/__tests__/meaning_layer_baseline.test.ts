@@ -348,13 +348,20 @@ const GEN0: Record<string, string> = {
 // BYTE-IDENTICAL (no qualifying keyless word in their 30-gen window). GEN0 unchanged (no keyless at
 // gen 0). Byte-identity-vs-old waived by the user; reproducibility preserved — both new hashes captured
 // twice on consecutive runs, identical, and the s2b reproducibility canary (english sig===sig) is green.
+// GENN re-baselined 2026-06-12 (storage step-5 S5 — intrinsic LexemeId RNG order). The canonical
+// per-word RNG draw order flipped from gloss-sorted to lexicographic-by-LexemeId
+// (orderedLexemeIds = Object.keys(lexicon).sort()), making the trajectory gloss-INDEPENDENT. ALL
+// SIX presets shift (the order reaches every sweep + every downstream lexIds draw). GEN0 unchanged
+// (no sweep at seed — the gen-0 byte-identity guard stayed green). Reproducibility confirmed (full
+// baseline run twice, identical new hashes). This is the deliberate iteration-order flip S3/S4
+// deferred — see docs/superpowers/specs/2026-06-12-storage-step5-s5-intrinsic-lexemeid-order-design.md.
 const GENN: Record<string, string> = {
-  pie: "96539fb4",
-  bantu: "9cc04867",
-  romance: "622cb632",
-  germanic: "42b92e41",
-  tokipona: "c8a2f719",
-  english: "843f52f2",
+  pie: "7fe02f8d",
+  bantu: "485e1bce",
+  romance: "b0cbab45",
+  germanic: "9749a675",
+  tokipona: "fcd537d0",
+  english: "aef8285e",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

@@ -119,12 +119,13 @@ export function maybeTonogenesis(
   if (!rng.chance(TONOGENESIS_ACTUATION_PROB)) return null;
 
   // Cascade: transphonologise the coda voicing contrast into a pitch
-  // contrast on the preceding vowel. Iterate in SORTED meaning order so
-  // the regime flip is deterministic regardless of lexicon insertion
-  // order (this rewrites forms, an order-sensitive mutation).
+  // contrast on the preceding vowel. Iterate in the canonical sorted
+  // LexemeId order (S5) so the regime flip is deterministic regardless
+  // of lexicon insertion order (this rewrites forms, an order-sensitive
+  // mutation).
   let lowered = 0;
   let raised = 0;
-  for (const id of orderedLexemeIds(lang.lexemes, lang)) {
+  for (const id of orderedLexemeIds(lang.lexemes)) {
     const form = lexFormById(lang, id)!;
     const c = conditioningCoda(form);
     if (!c) continue;

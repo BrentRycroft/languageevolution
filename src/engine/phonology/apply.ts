@@ -903,9 +903,7 @@ export function applyChangesToLexicon(
   const glossByCid = lang ? glossResolverForSweep(lang) : undefined;
   const glossOf = (key: string): Meaning =>
     glossByCid ? glossByCid.get(key) ?? (key as Meaning) : (key as Meaning);
-  const keys: string[] = lang
-    ? orderedLexemeIds(lexicon, lang)
-    : Object.keys(lexicon).sort();
+  const keys: string[] = orderedLexemeIds(lexicon);
   const optsWithOrder: ApplyOptions = opts._orderedChanges
     ? opts
     : { ...opts, _orderedChanges: sortByPriority(changes) };
