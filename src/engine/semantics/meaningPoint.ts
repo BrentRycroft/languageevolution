@@ -12,6 +12,7 @@ import { type Vec, fromFloats, sumVecs, subVecs, roundDivVec } from "./vec";
 import { embed, hasEmbedding } from "./embeddings";
 import { glossOf } from "./anchors";
 import { loadMorphemeSpace } from "./morphemeSpaceLoader";
+import { satGet, satSet } from "../lexicon/satellites";
 
 let WORD_POINTS: Map<string, Vec> | null = null;
 function wordPoints(): Map<string, Vec> {
@@ -82,7 +83,7 @@ export const GLIDE_DENOM = 8;
 
 /** A meaning's CURRENT point: its glided override if any, else the static default. Lang-aware. */
 export function meaningPointFor(lang: Language, meaning: Meaning): Vec {
-  const o = lang.meaningPoints?.[meaning];
+  const o = satGet(lang, "meaningPoints", meaning);
   return o ? Int32Array.from(o) : lexPoint(meaning);
 }
 
@@ -91,5 +92,5 @@ export function glideMeaningPoint(lang: Language, meaning: Meaning, toward: Mean
   const from = meaningPointFor(lang, meaning);
   const target = meaningPointFor(lang, toward);
   const step = roundDivVec(subVecs(target, from), GLIDE_DENOM);
-  (lang.meaningPoints ??= {})[meaning] = Array.from(sumVecs([from, step]));
+  satSet(lang, "meaningPoints", meaning, Array.from(sumVecs([from, step])));
 }

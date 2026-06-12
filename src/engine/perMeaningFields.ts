@@ -181,8 +181,8 @@ export const PER_MEANING_FIELDS: ReadonlyArray<PerMeaningFieldSpec> = [
     key: "meaningPoints",
     inherit: "deep-clone-entries",
     purgeOnDelete: true,
-    keyedBy: "gloss",
-    description: "Track A plan 7 glided meaning positions (plan 7)",
+    keyedBy: "lexemeId",
+    description: "Track A plan 7 glided meaning positions (S4: LexemeId-keyed)",
   },
   // Track C: engine-inert etymological ancestry (Record<Meaning, Meaning[]>).
   // Deep-clone-entries so daughters get independent part arrays; purged on

@@ -29,6 +29,8 @@ export interface SatelliteTypes {
   };
   suppletion: Partial<Record<MorphCategory, WordForm>>;
   etymology: Meaning[];
+  /** S4: glided meaning positions (fixed-point ints as number[]). Sparse drift override. */
+  meaningPoints: number[];
 }
 export type SatField = keyof SatelliteTypes;
 

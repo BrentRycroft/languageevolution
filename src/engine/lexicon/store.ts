@@ -78,12 +78,12 @@ export function migrateLexemeStore(lang: {
   delete lang.keylessLexemes;
 }
 
-/** The 14 satellite fields re-keyed gloss→LexemeId in storage step 5 sub-project 2a. */
+/** The satellite fields re-keyed gloss→LexemeId in storage step 5 (S2a: 14 maps; S4 adds meaningPoints). */
 const SATELLITE_FIELDS = [
   "wordFrequencyHints", "lastChangeGeneration", "wordOrigin", "localNeighbors",
   "registerOf", "variants", "wordOriginChain", "colexifiedAs", "inflectionClass",
   "nounDeclensionClass", "ablautClassAssignment", "grammaticalizationStage",
-  "suppletion", "etymology",
+  "suppletion", "etymology", "meaningPoints",
 ] as const;
 
 /**
