@@ -132,9 +132,28 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
     reverse-index staleness, with a keyless guard (a gloss-less record returns undefined directly, else
     keyless-heavy late-gen loops thrash ~10×). **Gate: full FAST 2036 passed / 0 failed; RUN_SLOW
     `meaning_layer_baseline` 12/12 byte-identical (all 6 presets, GEN0 + GENN) — no baseline edits.**
-  - **Sub-projects 4-6 REMAIN:** S4 point-native `WordSense` identity (+ `meaningPoints` re-key); S5
-    intrinsic LexemeId RNG order (the deliberate iteration-order flip + determinism re-bake S3 deferred);
-    S6 translation via anchor index + persistence.
+  - **Sub-project 4 (point-native WordSense identity + `meaningPoints` re-key) — DONE (2026-06-12),
+    byte-identical.** `meaningPoints` (the 15th satellite, S2a-deferred) is now LexemeId-keyed, and a
+    `WordSense` is identified by a new `lexemeId` field whose read path (`sensePoint`/`senseGloss`/
+    `effectiveGloss`, all now `lang`-aware) reflects drift via `currentPointForId(lang,id) =
+    meaningPoints[id] ?? lexemes[id].point`. User chose the most ambitious scope (id-link + unify drift)
+    with the S2b re-bake protocol authorized — but it proved **fully byte-identical**: the sense-based
+    trio has NO RNG-coupled consumers (only `anchorIndex.ts` + `DictionaryView`; the sim path uses
+    `evolvable.ts`'s untouched id-native `effectiveGlossFor`, which reads the static birth point). Spec
+    `docs/superpowers/specs/2026-06-11-storage-step5-s4-pointnative-wordsense-design.md`; plan
+    `docs/superpowers/plans/2026-06-11-storage-step5-s4-pointnative-wordsense.md`. Ledger: **A** `67f39c8`
+    (re-key `meaningPoints` via the `satGet/satSet` seam + registry `keyedBy:"lexemeId"` + `SATELLITE_FIELDS`
+    migration); **B1** `516201a` (`WordSense.lexemeId` stamped via non-minting `idForGloss` at the 3 creation
+    sites + `backfillSenseLexemeIds` in `restoreState`); **B2** `6571f79` (thread `lang`, add
+    `currentPointForId`, unify drift into the sense read path + drift-relabel lock test); **B3** `6644082`
+    (retire vestigial `sense.point`/`.spread`/`senseSpread`/`DEFAULT_SPREAD` + clone branch + obsolete
+    `clone_sense_point` test; the two `DictionaryView` UI tests re-keyed to drift via `meaningPoints[id]`).
+    KEY FACT (reassuring for byte-identity): seeded LexemeIds equal their gloss string, so the re-key
+    didn't change keys for seeded words; keyless words (gloss-less) never become `WordSense`s.
+    **Gate: RUN_SLOW `meaning_layer_baseline` 12/12 byte-identical (GEN0 + GENN, all 6 presets, two
+    independent full runs) — no baseline edits.**
+  - **Sub-projects 5-6 REMAIN (S5 NEXT):** S5 intrinsic LexemeId RNG order (the deliberate iteration-order
+    flip + determinism re-bake S3 deferred); S6 translation via anchor index + persistence.
 
 ## The deferred migration (true keyless point-native store)
 
