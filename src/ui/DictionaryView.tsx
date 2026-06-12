@@ -78,7 +78,7 @@ export function DictionaryView() {
         }
       }
       const word = findPrimaryWordForMeaning(lang, m);
-      const emergentGloss = word ? glossOfWord(word) : m;
+      const emergentGloss = word ? glossOfWord(lang, word) : m;
       const hasDrifted = emergentGloss !== m;
       return {
         meaning: m,

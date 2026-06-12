@@ -4,7 +4,8 @@ import { senseGloss, lexPoint, sensePoint } from "../meaningPoint";
 import { fromFloats } from "../vec";
 import { embed } from "../embeddings";
 import { CONCEPT_IDS } from "../../lexicon/concepts";
-import type { WordSense } from "../../types";
+import type { WordSense, Language } from "../../types";
+import type { LexemeId } from "../../lexicon/lexemeIdentity";
 
 describe("emergent gloss — glossOf(point)", () => {
   it("a concept's own anchor point glosses back to that concept", () => {
@@ -30,23 +31,28 @@ describe("emergent gloss — glossOf(point)", () => {
   });
 });
 
-describe("emergent gloss — senseGloss(sense)", () => {
+describe("emergent gloss — senseGloss(lang, sense)", () => {
   const base = { weight: 1, bornGeneration: 0 } as const;
+  const bareLang = () => ({} as unknown as Language);
 
-  it("falls back to the meaning's seed point when the sense hasn't glided", () => {
+  it("falls back to the meaning's seed point when nothing has drifted", () => {
+    const lang = bareLang();
     const s: WordSense = { meaning: "water", ...base };
-    expect(senseGloss(s)).toBe(glossOf(sensePoint(s)));
-    expect(senseGloss(s)).toBe("water");
+    expect(senseGloss(lang, s)).toBe(glossOf(sensePoint(lang, s)));
+    expect(senseGloss(lang, s)).toBe("water");
   });
 
-  it("a glided sense re-labels to the anchor nearest its new point", () => {
-    // Park the sense exactly on the "fire" anchor: its emergent gloss must become "fire".
-    const s: WordSense = { meaning: "water", ...base, point: Array.from(fromFloats(embed("fire"))) };
-    expect(senseGloss(s)).toBe("fire");
+  it("a drifted sense re-labels to the anchor nearest its new point", () => {
+    // Park the lexeme's drift override exactly on the "fire" anchor: emergent gloss becomes "fire".
+    const lang = bareLang();
+    const s: WordSense = { meaning: "water", lexemeId: "LX-water" as LexemeId, ...base };
+    lang.meaningPoints = { "LX-water": Array.from(fromFloats(embed("fire"))) };
+    expect(senseGloss(lang, s)).toBe("fire");
   });
 
   it("is deterministic — repeat calls agree", () => {
+    const lang = bareLang();
     const s: WordSense = { meaning: "river", ...base };
-    expect(senseGloss(s)).toBe(senseGloss(s));
+    expect(senseGloss(lang, s)).toBe(senseGloss(lang, s));
   });
 });

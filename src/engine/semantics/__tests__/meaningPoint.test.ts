@@ -5,6 +5,7 @@ import { embed } from "../embeddings";
 import { loadMorphemeSpace } from "../morphemeSpaceLoader";
 import type { WordSense } from "../../types";
 import type { Language } from "../../types";
+import type { LexemeId } from "../../lexicon/lexemeIdentity";
 
 function bareLang(): Language {
   return { meaningPoints: undefined } as unknown as Language;
@@ -28,14 +29,15 @@ describe("meaningPoint — lexPoint", () => {
 
 describe("meaningPoint — per-lexeme sensePoint / senseSpread", () => {
   const base = { weight: 1, bornGeneration: 0 } as const;
-  it("sensePoint falls back to the meaning's static point when the sense hasn't glided", () => {
+  it("sensePoint falls back to the meaning's static point when nothing has drifted", () => {
     const s: WordSense = { meaning: "water", ...base };
-    expect(Array.from(sensePoint(s))).toEqual(Array.from(lexPoint("water")));
+    expect(Array.from(sensePoint(bareLang(), s))).toEqual(Array.from(lexPoint("water")));
   });
-  it("sensePoint uses the sense's own point once it has glided", () => {
-    const moved = Array.from(lexPoint("fire"));
-    const s: WordSense = { meaning: "water", point: moved, ...base };
-    expect(Array.from(sensePoint(s))).toEqual(moved);
+  it("sensePoint reflects the drifted point once its lexeme has glided", () => {
+    const lang = bareLang();
+    const s: WordSense = { meaning: "water", lexemeId: "LX-water" as LexemeId, ...base };
+    lang.meaningPoints = { "LX-water": Array.from(lexPoint("fire")) };
+    expect(Array.from(sensePoint(lang, s))).toEqual(Array.from(lexPoint("fire")));
   });
   it("senseSpread defaults when unset, else returns the stored spread", () => {
     expect(senseSpread({ meaning: "x", ...base })).toBe(DEFAULT_SPREAD);

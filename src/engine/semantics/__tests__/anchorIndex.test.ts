@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { anchorIndexOf, glossOfWord, findWordByEmergentGloss } from "../anchorIndex";
+import { lexPoint } from "../meaningPoint";
 import { findPrimaryWordForMeaning } from "../../lexicon/word";
 import { createSimulation } from "../../simulation";
 import { presetEnglish } from "../../presets/english";
@@ -28,7 +29,16 @@ describe("anchorIndex — point-native 'what means concept X'", () => {
   it("glossOfWord reads a word's emergent label from its primary sense", () => {
     const w = findPrimaryWordForMeaning(lang, "water")!;
     expect(w).toBeTruthy();
-    expect(glossOfWord(w)).toBe("water");
+    expect(glossOfWord(lang, w)).toBe("water");
+  });
+
+  it("glossOfWord relabels to the drifted nearest-anchor after a glide (S4 unify-drift)", () => {
+    const drifted = rootLang(presetEnglish());
+    const w = drifted.words!.find((x) => x.senses[0]!.meaning === "water")!;
+    expect(glossOfWord(drifted, w)).toBe("water"); // pre-drift: labels to itself
+    const id = w.senses[0]!.lexemeId!;
+    drifted.meaningPoints = { ...(drifted.meaningPoints ?? {}), [id]: Array.from(lexPoint("fire")) };
+    expect(glossOfWord(drifted, w)).toBe("fire"); // post-drift: relabels via the override
   });
 
   it("findWordByEmergentGloss agrees with findPrimaryWordForMeaning for seeded concepts", () => {
@@ -71,7 +81,7 @@ describe("anchorIndex — works for a non-English preset (agnosticism)", () => {
     expect(idx.size).toBeGreaterThan(0);
     // at least one seeded word round-trips through the geometric lookup
     const someWord = (lang.words ?? [])[0]!;
-    const gloss = glossOfWord(someWord);
+    const gloss = glossOfWord(lang, someWord);
     expect(findWordByEmergentGloss(lang, gloss)).toBeTruthy();
   });
 });

@@ -13,6 +13,8 @@ import { embed, hasEmbedding } from "./embeddings";
 import { glossOf } from "./anchors";
 import { loadMorphemeSpace } from "./morphemeSpaceLoader";
 import { satGet, satSet } from "../lexicon/satellites";
+import { idForGloss } from "../lexicon/access";
+import type { LexemeId } from "../lexicon/lexemeIdentity";
 
 let WORD_POINTS: Map<string, Vec> | null = null;
 function wordPoints(): Map<string, Vec> {
@@ -36,9 +38,10 @@ import type { WordSense } from "../types";
 /** Default breadth for a sense that hasn't broadened/narrowed yet. Tunable. */
 export const DEFAULT_SPREAD = 1;
 
-/** This sense's point — its own glided position if set, else the meaning's static default. */
-export function sensePoint(sense: WordSense): Vec {
-  return sense.point ? Int32Array.from(sense.point) : lexPoint(sense.meaning);
+/** This sense's CURRENT point — its lexeme's glided override if any, else its birth point. Lang-aware. */
+export function sensePoint(lang: Language, sense: WordSense): Vec {
+  const id = sense.lexemeId ?? idForGloss(lang, sense.meaning);
+  return id !== undefined ? currentPointForId(lang, id) : lexPoint(sense.meaning);
 }
 
 /** This sense's breadth (region radius); DEFAULT_SPREAD until broaden/narrow moves it. */
@@ -53,8 +56,8 @@ export function senseSpread(sense: WordSense): number {
  * `lexPoint`, so the emergent gloss equals the authored meaning for all but the few concepts whose
  * baked composition or quantized anchor is nearest a different anchor.
  */
-export function senseGloss(sense: WordSense): Meaning {
-  return glossOf(sensePoint(sense));
+export function senseGloss(lang: Language, sense: WordSense): Meaning {
+  return glossOf(sensePoint(lang, sense));
 }
 
 /**
@@ -62,7 +65,7 @@ export function senseGloss(sense: WordSense): Meaning {
  * anchor) gloss fires when the sense sits at a geometrically authoritative point:
  *   - its meaning is a direct GloVe **anchor** (`hasEmbedding`) — at seed it labels back to itself
  *     99.6% of the time, the rest being genuine emergent neighbours; OR
- *   - it has been **deliberately placed** (`sense.point` set by glide/coinage).
+ *   - it has **drifted** (a `meaningPoints[id]` override has been recorded for its lexeme).
  * Otherwise the authored key stands, because there is no single faithful anchor to derive:
  *   - **compounds / derivations** (a baked morpheme composition) have a STRUCTURAL identity that sits
  *     between their parts — their nearest anchor is a part, not the whole, so the compound key is the
@@ -72,10 +75,10 @@ export function senseGloss(sense: WordSense): Meaning {
  * This is the project's settled "vector-native, can fall back" stance applied to identity. See the
  * orphan-coverage note in the flip plan.
  */
-export function effectiveGloss(sense: WordSense): Meaning {
-  return sense.point !== undefined || hasEmbedding(sense.meaning)
-    ? senseGloss(sense)
-    : sense.meaning;
+export function effectiveGloss(lang: Language, sense: WordSense): Meaning {
+  const id = sense.lexemeId ?? idForGloss(lang, sense.meaning);
+  const hasDrift = id !== undefined && satGet(lang, "meaningPoints", id) !== undefined;
+  return hasDrift || hasEmbedding(sense.meaning) ? senseGloss(lang, sense) : sense.meaning;
 }
 
 /** Fraction of the way a glide moves toward the target: 1/GLIDE_DENOM per metaphor/metonymy. */
@@ -85,6 +88,15 @@ export const GLIDE_DENOM = 8;
 export function meaningPointFor(lang: Language, meaning: Meaning): Vec {
   const o = satGet(lang, "meaningPoints", meaning);
   return o ? Int32Array.from(o) : lexPoint(meaning);
+}
+
+/** A lexeme's CURRENT point: its glided override (meaningPoints[id]) if any, else its birth point. */
+export function currentPointForId(lang: Language, id: LexemeId): Vec {
+  const o = satGet(lang, "meaningPoints", id);
+  if (o) return Int32Array.from(o);
+  const rec = lang.lexemes?.[id];
+  if (rec) return Int32Array.from(rec.point);
+  return lexPoint(id); // degenerate fallback: id with no record — treat key as a bare meaning
 }
 
 /** Nudge `meaning` a fixed 1/GLIDE_DENOM toward `toward`'s current point; record the override. */

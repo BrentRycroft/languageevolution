@@ -37,7 +37,7 @@ export function anchorIndexOf(lang: Language): Map<Meaning, AnchoredSense[]> {
   if (!lang.words) return out;
   for (const word of lang.words) {
     for (const sense of word.senses) {
-      const gloss = effectiveGloss(sense);
+      const gloss = effectiveGloss(lang, sense);
       let bucket = out.get(gloss);
       if (!bucket) {
         bucket = [];
@@ -49,10 +49,10 @@ export function anchorIndexOf(lang: Language): Map<Meaning, AnchoredSense[]> {
   return out;
 }
 
-/** A word's effective gloss: emergent (nearest anchor) where its point is real, else its authored key. */
-export function glossOfWord(word: Word): Meaning {
+/** A word's effective gloss: emergent (nearest anchor) where its point is real/drifted, else its authored key. */
+export function glossOfWord(lang: Language, word: Word): Meaning {
   const sense = word.senses[word.primarySenseIndex] ?? word.senses[0]!;
-  return effectiveGloss(sense);
+  return effectiveGloss(lang, sense);
 }
 
 /**
@@ -64,6 +64,6 @@ export function findWordByEmergentGloss(lang: Language, concept: Meaning): Word 
   if (!lang.words) return undefined;
   return lang.words.find((w) => {
     const sense = w.senses[w.primarySenseIndex];
-    return sense !== undefined && !sense.synonym && effectiveGloss(sense) === concept;
+    return sense !== undefined && !sense.synonym && effectiveGloss(lang, sense) === concept;
   });
 }
