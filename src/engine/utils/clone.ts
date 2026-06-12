@@ -148,10 +148,7 @@ export function cloneLanguage(lang: Language): Language {
       ? lang.words.map((w) => ({
           form: w.form.slice(),
           formKey: w.formKey,
-          senses: w.senses.map((s) => ({
-            ...s,
-            point: s.point ? s.point.slice() : undefined,
-          })),
+          senses: w.senses.map((s) => ({ ...s })),
           primarySenseIndex: w.primarySenseIndex,
           bornGeneration: w.bornGeneration,
           origin: w.origin,

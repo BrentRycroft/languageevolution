@@ -22,15 +22,16 @@ describe("DictionaryView — emergent gloss + drift labelling", () => {
     expect(screen.queryByText(/seeded:\s*water/i)).toBeNull();
   });
 
-  it("shows emergent gloss and a drift marker when a sense's point is moved into another anchor's region", () => {
-    // Mutate the language directly: glide "water"'s primary sense point to sit at "fire"'s anchor.
+  it("shows emergent gloss and a drift marker when a lexeme's point is moved into another anchor's region", () => {
+    // Mutate the language directly: glide "water"'s lexeme into "fire"'s anchor via the drift-override map.
     const s = useSimStore.getState();
     const lang = s.state.tree[s.state.rootId]!.language;
     const waterWord = findPrimaryWordForMeaning(lang, "water")!;
     expect(waterWord).toBeTruthy();
     const primarySense = waterWord.senses[waterWord.primarySenseIndex]!;
-    // Place the sense at fire's exact embedding — it will now resolve to "fire" as emergent gloss.
-    primarySense.point = Array.from(fromFloats(embed("fire")));
+    // Park the lexeme's current point on fire's exact embedding — it now resolves to "fire" emergent.
+    const id = primarySense.lexemeId!;
+    lang.meaningPoints = { ...(lang.meaningPoints ?? {}), [id]: Array.from(fromFloats(embed("fire"))) };
 
     render(<DictionaryView />);
 

@@ -35,18 +35,10 @@ export function lexPoint(meaning: Meaning): Vec {
 
 import type { WordSense } from "../types";
 
-/** Default breadth for a sense that hasn't broadened/narrowed yet. Tunable. */
-export const DEFAULT_SPREAD = 1;
-
 /** This sense's CURRENT point — its lexeme's glided override if any, else its birth point. Lang-aware. */
 export function sensePoint(lang: Language, sense: WordSense): Vec {
   const id = sense.lexemeId ?? idForGloss(lang, sense.meaning);
   return id !== undefined ? currentPointForId(lang, id) : lexPoint(sense.meaning);
-}
-
-/** This sense's breadth (region radius); DEFAULT_SPREAD until broaden/narrow moves it. */
-export function senseSpread(sense: WordSense): number {
-  return sense.spread ?? DEFAULT_SPREAD;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lexPoint, sensePoint, senseSpread, DEFAULT_SPREAD, meaningPointFor, glideMeaningPoint, GLIDE_DENOM } from "../meaningPoint";
+import { lexPoint, sensePoint, meaningPointFor, glideMeaningPoint, GLIDE_DENOM } from "../meaningPoint";
 import { fromFloats, subVecs, roundDivVec, sumVecs } from "../vec";
 import { embed } from "../embeddings";
 import { loadMorphemeSpace } from "../morphemeSpaceLoader";
@@ -27,7 +27,7 @@ describe("meaningPoint — lexPoint", () => {
   });
 });
 
-describe("meaningPoint — per-lexeme sensePoint / senseSpread", () => {
+describe("meaningPoint — per-lexeme sensePoint", () => {
   const base = { weight: 1, bornGeneration: 0 } as const;
   it("sensePoint falls back to the meaning's static point when nothing has drifted", () => {
     const s: WordSense = { meaning: "water", ...base };
@@ -38,10 +38,6 @@ describe("meaningPoint — per-lexeme sensePoint / senseSpread", () => {
     const s: WordSense = { meaning: "water", lexemeId: "LX-water" as LexemeId, ...base };
     lang.meaningPoints = { "LX-water": Array.from(lexPoint("fire")) };
     expect(Array.from(sensePoint(lang, s))).toEqual(Array.from(lexPoint("fire")));
-  });
-  it("senseSpread defaults when unset, else returns the stored spread", () => {
-    expect(senseSpread({ meaning: "x", ...base })).toBe(DEFAULT_SPREAD);
-    expect(senseSpread({ meaning: "x", spread: 0.5, ...base })).toBe(0.5);
   });
 });
 
