@@ -38,7 +38,7 @@ import { timeStep } from "./modules/profile";
 // (the barrel in modules/index.ts auto-runs registerXModules()).
 import "./modules";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
-import { rebuildFormKeyIndex } from "./lexicon/word";
+import { rebuildFormKeyIndex, backfillSenseLexemeIds } from "./lexicon/word";
 import { migrateLexemeStore, migrateSatelliteMaps } from "./lexicon/store";
 import { seedTierTwoOrthography } from "./phonology/orthography";
 import { stepSemantics } from "./steps/semantics";
@@ -507,6 +507,8 @@ export function createSimulation(
         // Mint-free + idempotent → no-op for new (already id-keyed) saves.
         migrateSatelliteMaps(lang);
         if (lang.words) rebuildFormKeyIndex(lang);
+        // S4: stamp lexemeId onto pre-S4 persisted senses (idempotent for new saves).
+        backfillSenseLexemeIds(lang);
         if (lang.activeModules && !(lang.activeModules instanceof Set)) {
           const arr = Array.isArray(lang.activeModules)
             ? lang.activeModules

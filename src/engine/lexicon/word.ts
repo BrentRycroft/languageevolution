@@ -350,12 +350,14 @@ export function prettyGloss(conceptId: string): string {
  * meaning is already a sense of this word, the call is a no-op.
  */
 export function addSenseToWord(
+  lang: Language,
   word: Word,
-  sense: Omit<WordSense, "weight"> & { weight?: number },
+  sense: Omit<WordSense, "weight" | "lexemeId"> & { weight?: number },
 ): void {
   if (word.senses.some((s) => s.meaning === sense.meaning)) return;
   word.senses.push({
     meaning: sense.meaning,
+    lexemeId: idForGloss(lang, sense.meaning),
     weight: sense.weight ?? 0.4,
     register: sense.register,
     bornGeneration: sense.bornGeneration,
@@ -402,7 +404,7 @@ export function addWord(
     ? lang.wordsByFormKey.get(key)
     : lang.words.find((w) => w.formKey === key);
   if (existing) {
-    addSenseToWord(existing, {
+    addSenseToWord(lang, existing, {
       meaning,
       weight: opts.weight,
       register: opts.register,
@@ -418,6 +420,7 @@ export function addWord(
     senses: [
       {
         meaning,
+        lexemeId: idForGloss(lang, meaning),
         weight: opts.weight ?? 0.4,
         register: opts.register,
         bornGeneration: opts.bornGeneration,
@@ -712,6 +715,7 @@ export function syncWordsFromLexicon(
   for (const { form, meanings } of byKey.values()) {
     const senses: WordSense[] = meanings.map((meaning) => ({
       meaning,
+      lexemeId: idForGloss(lang, meaning),
       weight: satGet(lang, "wordFrequencyHints", meaning) ?? 0.4,
       register: satGet(lang, "registerOf", meaning),
       bornGeneration,
@@ -740,6 +744,20 @@ export function syncWordsFromLexicon(
   // Phase 29 Tranche 1e: build the form-key index alongside the
   // initial words[] so future findWordByForm calls are O(1).
   rebuildFormKeyIndex(lang);
+}
+
+/**
+ * S4 back-compat: stamp `lexemeId` onto any persisted sense that predates the
+ * field. Idempotent (only fills `undefined`); a gloss with no minted id is left
+ * undefined and readers fall back to `idForGloss` lazily.
+ */
+export function backfillSenseLexemeIds(lang: Language): void {
+  if (!lang.words) return;
+  for (const w of lang.words) {
+    for (const s of w.senses) {
+      if (s.lexemeId === undefined) s.lexemeId = idForGloss(lang, s.meaning);
+    }
+  }
 }
 
 /**
@@ -1019,7 +1037,7 @@ export function tryCommitCoinage(
   if (!rng.chance(prob)) {
     return { committed: false, viaPolysemy: false };
   }
-  addSenseToWord(existing, {
+  addSenseToWord(lang, existing, {
     meaning,
     weight: opts.weight,
     register: opts.register,

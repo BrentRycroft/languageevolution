@@ -1019,6 +1019,14 @@ export interface Language {
 export interface WordSense {
   meaning: Meaning;
   /**
+   * Storage step 5 (S4): the LexemeId of the lexeme record this sense
+   * belongs to — the sense's POINT-NATIVE identity. Optional for
+   * back-compat with pre-S4 saves; readers fall back to
+   * `idForGloss(lang, meaning)` and `backfillSenseLexemeIds` populates
+   * it on load.
+   */
+  lexemeId?: LexemeId;
+  /**
    * Dominance of this sense within the word. Mirrors
    * `wordFrequencyHints[meaning]` but is per-sense so the most common
    * sense surfaces first in disambiguation.

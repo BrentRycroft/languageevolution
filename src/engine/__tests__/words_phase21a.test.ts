@@ -124,7 +124,7 @@ describe("Phase 21a — Word/WordSense data model", () => {
     const w = addWord(lang, ["l", "a", "j", "t"], "light.illumination", {
       bornGeneration: 0,
     });
-    addSenseToWord(w, {
+    addSenseToWord(lang, w, {
       meaning: "light.weight",
       bornGeneration: 10,
       origin: "polysemy",
