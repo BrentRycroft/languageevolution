@@ -7,6 +7,7 @@ import type {
 } from "../engine/types";
 import { createSimulation, type Simulation } from "../engine/simulation";
 import { defaultConfig } from "../engine/config";
+import { findPreset } from "../engine/presets";
 import {
   recordHistory,
   recordActivity,
@@ -231,7 +232,10 @@ function bootState(): {
   // fresh sim, then attempt restore in `restoreFromAutosaveAsync`
   // (called below after store creation). Users see a brief flash of
   // gen-0 state before the restore completes (~50-200ms).
-  const cfg = defaultConfig();
+  // Boot a fresh session into a real, fully-authentic preset (PIE) rather than
+  // the bare random defaultConfig() lexicon, so first load never shows made-up
+  // words. defaultConfig() is retained as a defensive fallback.
+  const cfg = findPreset("pie")?.build() ?? defaultConfig();
   const fresh = initFromConfig(cfg);
   return {
     config: cfg,

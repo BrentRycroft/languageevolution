@@ -44,7 +44,7 @@ export function PresetPicker() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  const current = config.preset ?? "default";
+  const current = config.preset ?? "pie";
   const allOptions = useMemo(
     () => [
       ...PRESETS.map((p) => ({ kind: "builtin" as const, id: p.id, label: p.label, description: p.description })),
