@@ -169,8 +169,37 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
     `42b92e41`→`9749a675`, tokipona `c8a2f719`→`fcd537d0`, english `843f52f2`→`aef8285e`. **Gate: GEN0
     byte-identical (guard stayed green — the order only affects the per-step sweep); GENN reproducible across
     two independent full runs (identical new hashes); 12/12 baseline green with the new hashes.**
-  - **Sub-project 6 REMAINS (S6 NEXT):** S6 translation via anchor index + persistence — the final
-    sub-project.
+  - **Sub-project 6 (translation via anchor index + persistence) — DONE (2026-06-13), byte-identical.**
+    The new `lexicon/conceptIndex.ts` `idForConcept(lang, m)` resolves a concept GEOMETRICALLY (the
+    gloss-bearing lexeme whose emergent gloss — nearest anchor of its current/drifted point — is `m`,
+    ties broken by sorted LexemeId, cached per-lang), falling back to `idForGloss` so it is a SAFE
+    SUPERSET (byte-identical for un-drifted words). Forward translation now resolves content words via it
+    (`realise.ts` resolveOpen + numeral/classifier, `lookup.ts` Rung-1 chokepoint, `translate.ts`,
+    narrative `composer.ts`×7 + `generate.ts`×4); the reverse caption uses the S4 hybrid `effectiveGloss`.
+    Closed-class function words, existence guards, and engine identity bookkeeping (~150 `idForGloss`
+    sites) stay stored-gloss. `mutate.ts` (`setLexiconForm`) deliberately KEPT stored-gloss — geometric
+    resolution there would corrupt `morphStructure` for drifted words (reversed during design). Because
+    the translator/narrative are display-only (not in the step pipeline), the change is byte-identical on
+    the baseline. Persistence formalized as a **v11** save-version bump: `MIGRATIONS[10]` runs the
+    point-native store migrations (`migrateLexemeStore`/`migrateSatelliteMaps`/`backfillSenseLexemeIds`)
+    so old gloss/form-keyed saves convert at migration time; new saves write v11; the `restoreState` shims
+    stay as idempotent belt-and-suspenders. Spec `…/specs/2026-06-13-storage-step5-s6-…-design.md`; plan
+    `…/plans/2026-06-13-storage-step5-s6-…`. Ledger: B1 `77ed9cf` (resolver) · B2 `8158aa6` (geometric
+    translation) · B3 `992cff6` (persistence v11). **Gate: RUN_SLOW `meaning_layer_baseline` 12/12
+    byte-identical; 225 translator/narrative/persistence targeted tests + new resolver/drift/migration
+    tests green.** `lang.lexemeIds` (gloss→id) KEPT as the authoring boundary.
+
+  ## ✅ THE VECTOR-NATIVE STORAGE MIGRATION IS COMPLETE (2026-06-13)
+
+  S1–S6 are all DONE. The lexeme store is point-native end to end: one canonical `lang.lexemes:
+  Record<LexemeId, {form; point; gloss?}>` store (S1); all per-meaning satellites + `meaningPoints`
+  LexemeId-keyed (S2a/S4); keyless words first-class in the evolution processes (S2b); the engine
+  addresses lexemes by `LexemeId` everywhere with the gloss-in API retired (S3); `WordSense` carries a
+  point-native `lexemeId` identity and the sense read path tracks drift (S4); the per-word RNG draw order
+  is gloss-independent (S5, the one deliberate re-bake — all 6 presets); and concept→word translation is
+  geometric with persistence formalized at v11 (S6). The gloss survives only as authoring input, the
+  emergent display label, and the stable `lang.lexemeIds` boundary anchor. Determinism held throughout:
+  byte-identical except S5's single intended iteration-order re-bake; reproducibility preserved.
 
 ## The deferred migration (true keyless point-native store)
 
