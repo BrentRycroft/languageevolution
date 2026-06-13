@@ -152,8 +152,25 @@ The migration is UNDERWAY on branch `auto/storage-pointnative` (off `auto/realis
     didn't change keys for seeded words; keyless words (gloss-less) never become `WordSense`s.
     **Gate: RUN_SLOW `meaning_layer_baseline` 12/12 byte-identical (GEN0 + GENN, all 6 presets, two
     independent full runs) — no baseline edits.**
-  - **Sub-projects 5-6 REMAIN (S5 NEXT):** S5 intrinsic LexemeId RNG order (the deliberate iteration-order
-    flip + determinism re-bake S3 deferred); S6 translation via anchor index + persistence.
+  - **Sub-project 5 (intrinsic LexemeId RNG order) — DONE (2026-06-12), deliberate GENN re-bake.** The
+    canonical per-word RNG draw order flipped from gloss-sorted to lexicographic-by-LexemeId:
+    `orderedLexemeIds(lexicon)` is now just `Object.keys(lexicon).sort()` (dropped the `lang` param, the
+    gloss-sort, the keyless special-case, and the `buildLexemeIdToGloss` call) — so the trajectory no longer
+    depends on any concept's English label. The flip propagates trajectory-wide because the phonology sweep
+    returns its store keyed in this order and `mergeFormsIntoStore` rebuilds `lang.lexemes` (hence `lexIds`)
+    in it every step. Four direct consumers had the `lang` arg dropped (apply.ts ternary collapsed,
+    naming.ts, reverse.ts, **tonogenesis.ts** — a 4th consumer the initial grep missed, caught by tsc);
+    `concept_order_seam` rewritten to lock the id-sorted contract. Spec
+    `docs/superpowers/specs/2026-06-12-storage-step5-s5-intrinsic-lexemeid-order-design.md`; plan
+    `docs/superpowers/plans/2026-06-12-storage-step5-s5-intrinsic-lexemeid-order.md`. Ledger: **Batch 1**
+    `ec3ddfd` (flip + 4 consumers + test + the all-6-preset GENN re-bake). **First deliberate full-trajectory
+    re-bake of the migration** (S1-T4/S2b were incidental keyless-coinage re-bakes of 1–2 presets): pie
+    `96539fb4`→`7fe02f8d`, bantu `9cc04867`→`485e1bce`, romance `622cb632`→`b0cbab45`, germanic
+    `42b92e41`→`9749a675`, tokipona `c8a2f719`→`fcd537d0`, english `843f52f2`→`aef8285e`. **Gate: GEN0
+    byte-identical (guard stayed green — the order only affects the per-step sweep); GENN reproducible across
+    two independent full runs (identical new hashes); 12/12 baseline green with the new hashes.**
+  - **Sub-project 6 REMAINS (S6 NEXT):** S6 translation via anchor index + persistence — the final
+    sub-project.
 
 ## The deferred migration (true keyless point-native store)
 
