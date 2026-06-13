@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSense, removeSynonymSense } from "./word";
 import { invalidateReverseLexCache } from "../translator/reverse";
+import { invalidateConceptIndexCache } from "./conceptIndex";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { purgeMeaningFromRegistry, purgePerWordDiffusionForMeaning } from "../perMeaningFields";
 import { mintLexemeId } from "./lexemeIdentity";
@@ -74,6 +75,7 @@ export function setLexiconForm(
   // only addSynonym / removeSynonymSense invalidated; primary-form
   // additions slipped past the cache.
   invalidateReverseLexCache(lang);
+  invalidateConceptIndexCache(lang);
   // Phase 72a T2 (Invariant 1 fix): also invalidate the closed-class
   // cache. Mutating lexicon[lemma] for a closed-class lemma (the/of/and)
   // would otherwise leave stale forms in the WeakMap.
@@ -141,6 +143,7 @@ export function addSynonym(
   // Phase 37: invalidate the reverse-lookup cache so subsequent
   // translations pick up the new sense.
   invalidateReverseLexCache(lang);
+  invalidateConceptIndexCache(lang);
   return true;
 }
 
@@ -156,6 +159,7 @@ export function removeSynonym(
 ): void {
   removeSynonymSense(lang, meaning, form);
   invalidateReverseLexCache(lang);
+  invalidateConceptIndexCache(lang);
   // Phase 72a T2 (Invariant 1 fix): also invalidate the closed-class
   // cache. Mutating lexicon[lemma] for a closed-class lemma (the/of/and)
   // would otherwise leave stale forms in the WeakMap.
