@@ -5,6 +5,7 @@ import { disambiguateSense, glossLemma } from "../lexicon/word";
 import { lexFormById } from "../lexicon/access";
 import { meaningForLexemeId, orderedLexemeIds } from "../lexicon/lexemeIdentity";
 import { satKeys, satGet } from "../lexicon/satellites";
+import { effectiveGloss } from "../semantics/meaningPoint";
 
 /**
  * reverse.ts
@@ -92,7 +93,10 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
     for (const w of lang.words) {
       if (!w.formKey) continue;
       for (const s of w.senses) {
-        append(w.formKey, s.meaning, "open");
+        // S6: caption to the sense's EFFECTIVE gloss (the S4 hybrid: emergent nearest-anchor where the
+        // point is real/drifted, else the authored key for compounds/orphans) so a drifted word reads
+        // as its current meaning. Byte-identical for un-drifted anchor words (effectiveGloss === meaning).
+        append(w.formKey, effectiveGloss(lang, s), "open");
       }
     }
   } else {

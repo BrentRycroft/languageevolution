@@ -9,6 +9,7 @@ import { tokeniseEnglish, translateSentenceViaAST } from "../translator/sentence
 import { englishTokensToAST } from "../translator/ast";
 import { posOf } from "../lexicon/pos";
 import { lexFormById, lexHasById, idForGloss, lexIds } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { recordedParts } from "../lexicon/word";
 
@@ -476,7 +477,7 @@ function realizeSkeleton(
   const V = render(inflectVerb(vForm, lang, verb, rng));
 
   if (shape.copular && adjective) {
-    const adjId = idForGloss(lang, adjective);
+    const adjId = idForConcept(lang, adjective);
     const adjForm = adjId !== undefined ? lexFormById(lang, adjId)! : undefined;
     if (!adjForm) return null;
     const A = render(adjForm);
@@ -504,13 +505,13 @@ function realizeSkeleton(
   }
 
   if (shape.needsObject && objectNoun) {
-    const objectId = idForGloss(lang, objectNoun);
+    const objectId = idForConcept(lang, objectNoun);
     const oForm = objectId !== undefined ? lexFormById(lang, objectId) : undefined;
     if (!oForm) return null;
     const O = render(inflectNoun(oForm, lang, "O", objectNoun, rng, !!shape.pluralObject));
     const arranged = arrange(lang.grammar.wordOrder, S, V, O);
     if (shape.needsAdj && adjective) {
-      const adjId2 = idForGloss(lang, adjective);
+      const adjId2 = idForConcept(lang, adjective);
       const adjForm = adjId2 !== undefined ? lexFormById(lang, adjId2) : undefined;
       if (!adjForm) return null;
       const A = render(adjForm);
@@ -538,7 +539,7 @@ function realizeSkeleton(
   }
 
   if (shape.needsAdj && adjective) {
-    const adjId3 = idForGloss(lang, adjective);
+    const adjId3 = idForConcept(lang, adjective);
     const adjForm = adjId3 !== undefined ? lexFormById(lang, adjId3) : undefined;
     if (!adjForm) return null;
     const A = render(adjForm);

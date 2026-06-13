@@ -13,6 +13,7 @@ import { derivedMeaningParts, tryDerivedFormFromMeaning } from "../morphology/de
 import { derivationGloss } from "../lexicon/derivation";
 import { peelDerivation } from "../lexicon/word";
 import { lexFormById, idForGloss, lexHasById } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
 import { composeTargetClause } from "./roleProjection";
 import type { RoleClause } from "../translator/syntax";
 
@@ -136,7 +137,7 @@ const PRONOUN_OBLIQUE: Readonly<Record<string, string>> = {
 
 function fallbackForm(lang: Language, candidates: Meaning[]): { meaning: Meaning; form: WordForm } | null {
   for (const m of candidates) {
-    const _id = idForGloss(lang, m);
+    const _id = idForConcept(lang, m);
     const f = _id !== undefined ? lexFormById(lang, _id) : undefined;
     if (f && f.length > 0) return { meaning: m, form: f };
   }
@@ -182,7 +183,7 @@ function pickFormWithAlts(
   meaning: Meaning,
   options: ComposeOptions,
 ): WordForm | null {
-  const _primaryId = idForGloss(lang, meaning);
+  const _primaryId = idForConcept(lang, meaning);
   const primary = _primaryId !== undefined ? lexFormById(lang, _primaryId) : undefined;
   if (!primary) return null;
   const {
@@ -359,7 +360,7 @@ function articleRoleToken(
     if (count <= 1) lemma = "a";
     else lemma = "the";
   }
-  const _lemmaId = idForGloss(lang, lemma);
+  const _lemmaId = idForConcept(lang, lemma);
   let form = _lemmaId !== undefined ? lexFormById(lang, _lemmaId) : undefined;
   // If indefinite isn't lexicalised, fall back to definite — better
   // a slight definiteness mismatch than no article at all.
@@ -558,7 +559,7 @@ function placeRoleTokens(
   }
   const detTok = articleRoleToken(lang, script);
   if (detTok) out.push(detTok);
-  const _placeId = idForGloss(lang, meaning);
+  const _placeId = idForConcept(lang, meaning);
   const placeForm = _placeId !== undefined ? lexFormById(lang, _placeId) : undefined;
   if (placeForm) {
     out.push({
@@ -603,7 +604,7 @@ function timePrefixRoleTokens(
   }
   const detTok = isDeictic ? null : articleRoleToken(lang, script);
   if (detTok) out.push(detTok);
-  const _timeId = idForGloss(lang, meaning);
+  const _timeId = idForConcept(lang, meaning);
   const timeForm = _timeId !== undefined ? lexFormById(lang, _timeId) : undefined;
   if (timeForm) {
     out.push({
@@ -648,7 +649,7 @@ function adjunctRoleTokens(
       }
     }
   }
-  const _nounId = idForGloss(lang, meaning);
+  const _nounId = idForConcept(lang, meaning);
   const nounForm = _nounId !== undefined ? lexFormById(lang, _nounId) : undefined;
   if (!nounForm) return out;
   const prepTok: RoleToken | null = prepForm
@@ -689,7 +690,7 @@ function adjunctRoleTokens(
 function longAgoRoleToken(lang: Language, script: DisplayScript): RoleToken | null {
   const cand = ["long-ago", "before", "ancient", "past"];
   for (const m of cand) {
-    const _cid = idForGloss(lang, m);
+    const _cid = idForConcept(lang, m);
     const f = _cid !== undefined ? lexFormById(lang, _cid) : undefined;
     if (f) {
       return {

@@ -6,6 +6,7 @@ import type { MorphCategory } from "../morphology/types";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { recordedParts } from "../lexicon/word";
 import { lexSize, lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import type { LemmaResolution } from "./syntax";
 
@@ -42,7 +43,7 @@ export function translate(
     };
   }
 
-  const exactId = idForGloss(lang, key);
+  const exactId = idForConcept(lang, key);
   const exact = exactId !== undefined ? lexFormById(lang, exactId) : undefined;
   if (exact) {
     const inflected =

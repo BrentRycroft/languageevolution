@@ -13,6 +13,7 @@ import { runRealiseStage } from "./pipeline";
 import { classifierMeaningFor, classifierFormFor } from "./classifiers";
 import { isFeatureActive } from "../modules/legacyGate";
 import { idForGloss, lexFormById, lexHasById } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
 
 /**
  * realise.ts
@@ -547,7 +548,7 @@ function realiseNP(
   });
   const numTokens: RealisedToken[] = np.numeral
     ? (() => {
-        const _numId = idForGloss(lang, np.numeral!.lemma);
+        const _numId = idForConcept(lang, np.numeral!.lemma);
         const lex = _numId !== undefined ? lexFormById(lang, _numId) : undefined;
         const nf = lex ?? closedClassForm(lang, np.numeral!.lemma) ?? [];
         const out: RealisedToken[] = [];
@@ -567,7 +568,7 @@ function realiseNP(
             // resolves.
             const clfMeaning = classifierMeaningFor(np.head.lemma, lang.grammar.classifierTable);
             const directForm = classifierFormFor(np.head.lemma, lang.grammar.classifierTable);
-            const _clfId = idForGloss(lang, clfMeaning);
+            const _clfId = idForConcept(lang, clfMeaning);
             const clfForm =
               (directForm && directForm.length > 0 ? directForm : null) ??
               (_clfId !== undefined ? lexFormById(lang, _clfId) : undefined) ??
@@ -784,7 +785,7 @@ function realiseSentenceInner(
   void parentCtx;
   return realiseSentence(s, lang, {
     resolveOpen: (lemma) => {
-      const _sid = idForGloss(lang, lemma);
+      const _sid = idForConcept(lang, lemma);
       const form = _sid !== undefined ? lexFormById(lang, _sid) : undefined;
       return { form: form ?? null, resolution: form ? "direct" : "fallback" };
     },

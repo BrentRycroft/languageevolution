@@ -11,6 +11,7 @@ import {
   attemptClusterComposition,
 } from "./synthesis";
 import { lexFormById, lexHasById, idForGloss } from "./access";
+import { idForConcept } from "./conceptIndex";
 import { satEntries } from "./satellites";
 import { meaningForLexemeId } from "./lexemeIdentity";
 import { nearestLexicalisedMeaning } from "../semantics/grounding";
@@ -88,8 +89,9 @@ export function lookupFormWithResolution(
   context?: LookupContext,
 ): LookupResult {
   const allowFallback = context?.allowFallbackCoinage ?? true;
-  // Rung 1: direct lexicon hit.
-  const mid = idForGloss(lang, meaning);
+  // Rung 1: direct lexicon hit. S6: resolve the concept GEOMETRICALLY (the lexeme whose current
+  // point means `meaning`), falling back to the stored gloss — byte-identical until a word drifts.
+  const mid = idForConcept(lang, meaning);
   if (mid !== undefined && lexHasById(lang, mid)) {
     return {
       form: lexFormById(lang, mid)!.slice(),
