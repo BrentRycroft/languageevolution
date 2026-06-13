@@ -343,7 +343,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
       },
     };
     const v5: SavedRun = {
-      version: 5 as unknown as 10,
+      version: 5 as unknown as 11,
       id: "x",
       label: "x",
       createdAt: 0,
@@ -374,7 +374,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
     syncWordsFromLexicon(lang, 0);
     const refWords = lang.words!;
     const v6: SavedRun = {
-      version: 6 as unknown as 10,
+      version: 6 as unknown as 11,
       id: "y",
       label: "y",
       createdAt: 0,

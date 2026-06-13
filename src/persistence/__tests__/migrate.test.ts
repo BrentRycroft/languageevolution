@@ -131,3 +131,55 @@ describe("migrateSavedRun", () => {
     expect(lang.endangermentLevel).toBe("vigorous");
   });
 });
+
+describe("S6 — v11 point-native store migration", () => {
+  it("converts an old-shape v10 save (id-keyed form-only lexicon) to point-native records", () => {
+    const raw = {
+      version: 10,
+      config: { preset: "english" },
+      stateSnapshot: {
+        tree: {
+          "L-0": {
+            language: {
+              id: "L-0",
+              lexemeIds: { water: "c_w" },
+              lexicon: { c_w: [] }, // id-keyed form-only (pre-S1 shape)
+            },
+          },
+        },
+        generation: 0,
+      },
+    };
+    const migrated = migrateSavedRun(raw as unknown);
+    expect(migrated).not.toBeNull();
+    expect(migrated!.version).toBe(LATEST_SAVE_VERSION);
+    const lang = (migrated!.stateSnapshot as any).tree["L-0"].language;
+    expect(lang.lexemes).toBeDefined();         // records materialized
+    expect(lang.lexemes.c_w).toBeDefined();
+    expect(lang.lexemes.c_w.gloss).toBe("water");
+    expect(lang.lexicon).toBeUndefined();       // old form-only map dropped
+  });
+
+  it("is a no-op for an already point-native save (idempotent round-trip)", () => {
+    const raw = {
+      version: 10,
+      config: { preset: "english" },
+      stateSnapshot: {
+        tree: {
+          "L-0": {
+            language: {
+              id: "L-0",
+              lexemeIds: { water: "c_w" },
+              lexemes: { c_w: { form: [], point: [0], gloss: "water" } },
+            },
+          },
+        },
+        generation: 0,
+      },
+    };
+    const migrated = migrateSavedRun(raw as unknown);
+    const lang = (migrated!.stateSnapshot as any).tree["L-0"].language;
+    expect(lang.lexemes.c_w.gloss).toBe("water"); // unchanged
+    expect(lang.lexicon).toBeUndefined();
+  });
+});

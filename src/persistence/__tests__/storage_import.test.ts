@@ -19,7 +19,7 @@ beforeEach(async () => {
 
 function fixture(): SavedRun {
   return {
-    version: 10,
+    version: 11,
     id: "run-test",
     label: "Original run",
     createdAt: 1000,

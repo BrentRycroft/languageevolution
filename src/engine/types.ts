@@ -1754,7 +1754,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 10;
+  version: 11;
   id: string;
   label: string;
   createdAt: number;
