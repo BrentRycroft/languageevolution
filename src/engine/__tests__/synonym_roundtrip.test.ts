@@ -4,7 +4,7 @@ import { createSimulation } from "../simulation";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { reverseTranslate } from "../translator/reverse";
 import { formToString } from "../phonology/ipa";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * synonym_roundtrip.test.ts

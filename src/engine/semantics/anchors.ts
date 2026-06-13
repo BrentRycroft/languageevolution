@@ -18,6 +18,7 @@ import type { Meaning } from "../types";
 import { type Vec, distanceSq, fromFloats } from "./vec";
 import { embed } from "./embeddings";
 import { CONCEPT_IDS } from "../lexicon/concepts";
+import { ANCHOR_EXTRA_TABLE } from "./anchorExtrasData";
 
 export interface Anchor {
   /** The English concept this anchor labels — the emergent gloss a lexeme adopts when nearest it. */
@@ -26,8 +27,18 @@ export interface Anchor {
   point: Vec;
 }
 
-/** The anchor table: one anchor per registered concept, in sorted (deterministic) `CONCEPT_IDS` order. */
-export const ANCHORS: readonly Anchor[] = CONCEPT_IDS.map((concept) => ({
+/**
+ * The anchor table: the curated `CONCEPT_IDS` (sorted) plus the anchor-coverage EXTRAS — basic
+ * content words the registry never covered (house/body/door/…), given real GloVe points so the
+ * translator's coordinate frame spans the vocabulary the presets actually use. Deterministic order
+ * (CONCEPT_IDS already sorted; extras sorted), and every query ranks by integer-exact distance with
+ * an id tie-break, so anchor-set order never affects results.
+ */
+const ANCHOR_CONCEPTS: readonly Meaning[] = [
+  ...CONCEPT_IDS,
+  ...Object.keys(ANCHOR_EXTRA_TABLE).sort(),
+];
+export const ANCHORS: readonly Anchor[] = ANCHOR_CONCEPTS.map((concept) => ({
   concept,
   point: fromFloats(embed(concept)),
 }));

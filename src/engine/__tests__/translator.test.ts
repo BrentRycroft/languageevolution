@@ -3,7 +3,8 @@ import { translate } from "../translator/translate";
 import type { Language } from "../types";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import { DEFAULT_MORPHOLOGY } from "../morphology/defaults";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
+import { satSet } from "../lexicon/satellites";
 
 /**
  * translator.test.ts
@@ -17,8 +18,8 @@ function sampleLang(): Language {
   const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
-    conceptIds: {},
+    lexemes: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -55,7 +56,12 @@ describe("translator", () => {
   });
 
   it("falls back to a neighbor meaning", () => {
-    const r = translate(sampleLang(), "river");
+    // "rain-water" is not in the lexicon; its top-3 geometric neighbours are
+    // ["water", "well-water", "snow"] (GloVe geometry), so the neighbor-fallback
+    // finds "water" (which IS in sampleLang) and returns source="neighbor".
+    // (Old target "river" no longer works: river's GloVe neighbours are valley/lake/shore/along/bridge,
+    // none of which are in sampleLang, so the cascade now falls through to the compound rung.)
+    const r = translate(sampleLang(), "rain-water");
     expect(r.source).toBe("neighbor");
     expect(r.form).toBe("water");
   });
@@ -79,7 +85,7 @@ describe("translator", () => {
     // `water`, which the shared resolution cascade recovers via its
     // reverse-colex rung. Pre-fix, word-level translate() never consulted
     // the cascade and returned "missing" here.
-    lang.colexifiedAs = { water: ["democracy"] };
+    satSet(lang, "colexifiedAs", "water", ["democracy"]);
     const r = translate(lang, "democracy");
     expect(r.source).not.toBe("missing");
     expect(r.form).toBe("water");

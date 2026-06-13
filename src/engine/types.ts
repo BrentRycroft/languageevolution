@@ -1,4 +1,5 @@
 import type { Rng } from "./rng";
+import type { LexemeId } from "./lexicon/lexemeIdentity";
 
 /**
  * types.ts — engine-wide shared types.
@@ -21,8 +22,8 @@ import type { Rng } from "./rng";
  * ARCHITECTURE.md for the design walkthrough.
  */
 
-export type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
-import type { Phoneme, Meaning, WordForm, Lexicon } from "./primitives";
+export type { Phoneme, Meaning, WordForm, Lexicon, LexemeRecord, LexemeStore } from "./primitives";
+import type { Phoneme, Meaning, WordForm, Lexicon, LexemeStore } from "./primitives";
 
 export type SoundChangeCategory =
   | "lenition"
@@ -212,7 +213,15 @@ export interface PhonemeInventory {
 export interface Language {
   id: string;
   name: string;
-  lexicon: Lexicon;
+  /**
+   * The canonical point-native lexeme store (store unification, step 5 S1). One LexemeRecord per
+   * lexeme, keyed by LexemeId. Seeded/concept-coined records carry a `gloss`; KEYLESS records (coined
+   * into an empty region of the space) have none — their meaning IS the point and their label is the
+   * emergent nearest-anchor gloss (`keylessGloss`). Replaces the form-only `lexicon` and the former
+   * separate `keylessLexemes`. The seam (`lexKeys` et al.) and the sound-change sweep both ignore
+   * gloss-less records, so keyless words are inert until they are made first-class (S1 task 4).
+   */
+  lexemes: LexemeStore;
   enabledChangeIds: string[];
   changeWeights: Record<string, number>;
   birthGeneration: number;
@@ -299,7 +308,7 @@ export interface Language {
   lexiconURRefreshPolicy?: "each-gen" | "manual";
   grammar: GrammarFeatures;
   events: LanguageEvent[];
-  wordFrequencyHints: Record<Meaning, number>;
+  wordFrequencyHints: Record<LexemeId, number>;
   /**
    * Track A plan 7: sparse glided meaning positions (fixed-point ints as number[] for
    * clone/JSON-persist). A meaning absent here sits at its static `lexPoint`; drift's
@@ -338,7 +347,7 @@ export interface Language {
    */
   idioms?: Record<string, { parts: Meaning[]; form: import("./types").WordForm; literal?: boolean }>;
   morphology: import("./morphology/types").Morphology;
-  localNeighbors: Record<Meaning, string[]>;
+  localNeighbors: Record<LexemeId, string[]>;
   /**
    * Track C (preset morphemization): engine-INERT etymological ancestry — a word's morphological
    * decomposition for DISPLAY / composition reference only (`wordMorphemes` falls back to this when
@@ -346,7 +355,7 @@ export interface Language {
    * simulation subsystem (drift, coinage, derivation, taboo, obsolescence) so recording it is
    * determinism-neutral — contrast `compounds`, whose presence changes those subsystems' behaviour.
    */
-  etymology?: Record<Meaning, Meaning[]>;
+  etymology?: Record<LexemeId, Meaning[]>;
   /**
    * Phase 41a: per-language active-module set. Modules in this set
    * have their `step` and `realise` hooks called; modules outside
@@ -364,14 +373,14 @@ export interface Language {
   moduleState?: Record<string, unknown>;
   conservatism: number;
   speakers?: number;
-  wordOrigin: Record<Meaning, string>;
+  wordOrigin: Record<LexemeId, string>;
   /**
    * Detailed derivation chain — parallel to wordOrigin (which is a single
    * tag string for backwards-compat). Populated by the targeted-derivation
    * mechanism so the UI can surface "freedom ← free + -dom" etymology
    * info. Optional; old runs and primitives leave it empty.
    */
-  wordOriginChain?: Record<Meaning, {
+  wordOriginChain?: Record<LexemeId, {
     tag: string;
     from?: Meaning;
     via?: string;
@@ -419,7 +428,7 @@ export interface Language {
    */
   vowelShiftPressure?: Record<string, number>;
   lexicalStress?: Record<string, number>;
-  registerOf?: Record<string, "high" | "low">;
+  registerOf?: Record<LexemeId, "high" | "low">;
   /**
    * Phase 72d T2: meaning-merger pathway tracker. When a meaning is
    * deleted via recarving (e.g., "water" merges into "liquid"),
@@ -443,7 +452,7 @@ export interface Language {
      * lets reverse inference and reconstruction probes follow merger
      * pathways across the tree without string-matching.
      */
-    mergedIntoConceptId?: string;
+    mergedIntoLexemeId?: string;
     /**
      * Phase 72d (defer-2): UUID of THIS deleted meaning at the time
      * of deletion. Pre-defer-2, once the string key was gone there
@@ -455,18 +464,18 @@ export interface Language {
   }>;
   /**
    * Phase 72d (full-delivery defer-2): per-language meaning → UUID
-   * map. Each Meaning gets a stable ConceptId on first reference.
+   * map. Each Meaning gets a stable LexemeId on first reference.
    * Daughters inherit the parent's map at split, so the same
    * proto-concept is the SAME UUID across all descendants. Used
    * for cross-tree reconstruction (which orphan in daughter X
    * corresponds to which proto-concept).
    */
-  conceptIds?: Record<string, string>;
+  lexemeIds?: Record<string, string>;
   /**
-   * Per-language monotonic sequence used to mint ConceptIds
+   * Per-language monotonic sequence used to mint LexemeIds
    * deterministically. Combined with the language `id` it namespaces
    * every mint to this language, so two runs of the same config
-   * produce identical ConceptIds (the prior module-global counter
+   * produce identical LexemeIds (the prior module-global counter
    * did not — it depended on process-wide mint order). Not inherited
    * at split: each language namespaces its own mints by its own `id`,
    * so a fresh daughter restarting at 0 cannot collide with the
@@ -496,7 +505,7 @@ export interface Language {
    */
   lexicalSpelling?: Record<Meaning, string>;
   otRanking: string[];
-  lastChangeGeneration: Record<Meaning, number>;
+  lastChangeGeneration: Record<LexemeId, number>;
   /**
    * Evolution-realism Phase 3e: per-pair recarve memory. Maps an unordered
    * meaning-pair key (`a|b`, sorted) → the generation it was last merged or
@@ -619,7 +628,7 @@ export interface Language {
     }
   >;
   suppletion?: Record<
-    Meaning,
+    LexemeId,
     Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
   >;
   /**
@@ -630,14 +639,14 @@ export interface Language {
    * with no classification system leave this undefined for all
    * meanings (the default).
    */
-  inflectionClass?: Record<Meaning, import("./morphology/types").InflectionClass>;
+  inflectionClass?: Record<LexemeId, import("./morphology/types").InflectionClass>;
   /**
    * Phase 64 T1: per-noun declension class assignment. Latin's 5
    * declensions, Russian's 3, etc. Drives variant lookup in
    * `pickAffixVariant` for `noun.*` paradigms when the paradigm
    * declares `variants` keyed on `class:N`.
    */
-  nounDeclensionClass?: Record<Meaning, import("./morphology/types").NounDeclensionClass>;
+  nounDeclensionClass?: Record<LexemeId, import("./morphology/types").NounDeclensionClass>;
   /**
    * Phase 64 T2: per-verb ablaut class assignment. Strong verbs
    * (sing/sang/sung) belong to ablaut class ≥ 1; "weak" / regular
@@ -645,7 +654,7 @@ export interface Language {
    * series the language has developed. Read by inflectVerb to decide
    * whether to apply an ablaut paradigm vs the regular tense suffix.
    */
-  ablautClassAssignment?: Record<Meaning, number>;
+  ablautClassAssignment?: Record<LexemeId, number>;
   /**
    * Phase 66 T1: per-meaning grammaticalization stage tracking.
    * Real chains (Latin habere → Romance aux → synthetic perfect →
@@ -664,7 +673,7 @@ export interface Language {
    * grammaticalising INTO so progressive stages can target the same
    * destination. `lastTransitionGen` is when the meaning last moved.
    */
-  grammaticalizationStage?: Record<Meaning, {
+  grammaticalizationStage?: Record<LexemeId, {
     stage: 0 | 1 | 2 | 3 | 4;
     targetCategory?: import("./morphology/types").MorphCategory;
     lastTransitionGen: number;
@@ -958,7 +967,7 @@ export interface Language {
   /** Generation at which `historicalRole` was assigned. */
   historicalRoleAssignedGen?: number;
   lexicalCapacity?: number;
-  colexifiedAs?: Record<Meaning, Meaning[]>;
+  colexifiedAs?: Record<LexemeId, Meaning[]>;
   /**
    * Per-meaning alternative forms (synonyms / lexical doublets) ranked by
    * frequency. The primary form lives in `lexicon[m]`; alternates compete
@@ -976,7 +985,7 @@ export interface Language {
   altRegister?: Record<Meaning, Array<"high" | "low" | "neutral">>;
   substrateAccelerationRemaining?: number;
   recentLoanGens?: number[];
-  variants?: Record<Meaning, FormVariant[]>;
+  variants?: Record<LexemeId, FormVariant[]>;
   bilingualLinks?: Record<string, number>;
   socialNetworkClustering?: number;
   /**
@@ -1010,6 +1019,14 @@ export interface Language {
 export interface WordSense {
   meaning: Meaning;
   /**
+   * Storage step 5 (S4): the LexemeId of the lexeme record this sense
+   * belongs to — the sense's POINT-NATIVE identity. Optional for
+   * back-compat with pre-S4 saves; readers fall back to
+   * `idForGloss(lang, meaning)` and `backfillSenseLexemeIds` populates
+   * it on load.
+   */
+  lexemeId?: LexemeId;
+  /**
    * Dominance of this sense within the word. Mirrors
    * `wordFrequencyHints[meaning]` but is per-sense so the most common
    * sense surfaces first in disambiguation.
@@ -1034,14 +1051,6 @@ export interface WordSense {
    * and `selectSynonyms`.
    */
   synonym?: boolean;
-  /**
-   * Track A: this sense's own position in the meaning space (fixed-point ints, as a plain
-   * number[] for clone/JSON-persist friendliness). Absent until the sense GLIDES (Plan 7);
-   * read via `sensePoint`, which falls back to the meaning's static `lexPoint`.
-   */
-  point?: number[];
-  /** Track A: this sense's breadth (region radius). Absent = DEFAULT_SPREAD. Broaden/narrow drift moves it (Plan 7). */
-  spread?: number;
 }
 
 /**
@@ -1126,7 +1135,7 @@ export type MorphemeCategory = "root" | "affix";
  * Lane D (morphology encoding): one entry in a language's morpheme
  * inventory — a root or bound affix as a first-class, queryable unit.
  *
- * `meaning` is the entry's lexical key (a gloss / ConceptId-resolvable
+ * `meaning` is the entry's lexical key (a gloss / LexemeId-resolvable
  * Meaning); `form` is its current surface form read from the lexicon, so
  * the inventory stays a derived view (rebuild after sound change rather
  * than hand-mutating). `productivity` is a coarse 0..1 signal: affixes
@@ -1476,7 +1485,10 @@ export interface SimulationConfig {
   seedStressPattern?: NonNullable<Language["stressPattern"]>;
   seedLexicalStress?: Record<Meaning, number>;
   seedCulturalTier?: 0 | 1 | 2 | 3;
-  seedSuppletion?: NonNullable<Language["suppletion"]>;
+  seedSuppletion?: Record<
+    Meaning,
+    Partial<Record<import("./morphology/types").MorphCategory, WordForm>>
+  >;
   /** Phase 26b: per-preset infinitive realisation strategy. See Language.infinitiveStrategy. */
   seedInfinitiveStrategy?: NonNullable<Language["infinitiveStrategy"]>;
   /** Phase 27a: per-preset phonotactic profile. See Language.phonotacticProfile. */
@@ -1742,7 +1754,7 @@ export interface SimulationState {
 }
 
 export interface SavedRun {
-  version: 10;
+  version: 11;
   id: string;
   label: string;
   createdAt: number;

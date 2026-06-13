@@ -5,7 +5,7 @@ import { isVowel, isSyllabic } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
 import { stressIndex } from "../phonology/stress";
 import { narrowTranscribe } from "../phonology/narrow";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * pie_lexical_stress.test.ts

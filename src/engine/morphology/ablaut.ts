@@ -1,10 +1,12 @@
-import type { Language, Meaning } from "../types";
+import type { Language, Meaning, WordForm } from "../types";
+import { satGet, satSet, satKeys, satDelete } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { isVowel } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
-import { posOf } from "../lexicon/pos";
 import { pushEvent } from "../steps/helpers";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById } from "../lexicon/access";
+import { evolvableLexemes, effectivePosOf, effectiveFormOf, effectiveGlossFor } from "../lexicon/evolvable";
+import type { LexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * Phase 64 T2: ablaut chain emergence + decay.
@@ -81,8 +83,10 @@ function pickAlternation(
   lang: Language,
   meaning: Meaning,
   rng: Rng,
+  suppliedForm?: WordForm,
 ): [string, string] | null {
-  const form = lexGet(lang, meaning);
+  const _id = idForGloss(lang, meaning);
+  const form = suppliedForm ?? (_id !== undefined ? lexFormById(lang, _id) : undefined);
   if (!form) return null;
   const inventory = new Set(lang.phonemeInventory.segmental);
 
@@ -136,17 +140,18 @@ export function proposeAblautEmergence(
   const past = lang.morphology.paradigms["verb.tense.past"];
   if (!past) return false;
   // Pick a high-frequency verb that's not already in an ablaut class.
-  const candidates: Meaning[] = [];
-  for (const m of lexKeys(lang)) {
-    if (posOf(m) !== "verb") continue;
-    if (lang.ablautClassAssignment?.[m]) continue;
-    const freq = lang.wordFrequencyHints[m] ?? 0.4;
+  const candidates: LexemeId[] = [];
+  for (const id of evolvableLexemes(lang)) {
+    if (effectivePosOf(lang, id) !== "verb") continue;
+    if (satGet(lang, "ablautClassAssignment", id)) continue;
+    const freq = satGet(lang, "wordFrequencyHints", id) ?? 0.4;
     if (freq < 0.7) continue; // strong verbs are typically high-freq
-    candidates.push(m);
+    candidates.push(id);
   }
   if (candidates.length === 0) return false;
-  const meaning = candidates[rng.int(candidates.length)]!;
-  const alt = pickAlternation(lang, meaning, rng);
+  const targetId = candidates[rng.int(candidates.length)]!;
+  const meaning = effectiveGlossFor(lang, targetId); // display + alternation key
+  const alt = pickAlternation(lang, meaning, rng, effectiveFormOf(lang, targetId));
   if (!alt) return false;
   const [src, dst] = alt;
 
@@ -162,8 +167,7 @@ export function proposeAblautEmergence(
     past.ablautMap[src] = dst;
     classId = Object.keys(past.ablautMap).length;
   }
-  if (!lang.ablautClassAssignment) lang.ablautClassAssignment = {};
-  lang.ablautClassAssignment[meaning] = classId;
+  satSet(lang, "ablautClassAssignment", targetId, classId);
 
   pushEvent(lang, {
     generation,
@@ -196,11 +200,11 @@ export function decayAblautClasses(
   // If any tagged verbs no longer have a matching ablaut entry,
   // un-tag them.
   if (lang.ablautClassAssignment) {
-    for (const m of Object.keys(lang.ablautClassAssignment)) {
-      const f = lexGet(lang, m);
+    for (const id of satKeys(lang, "ablautClassAssignment")) {
+      const f = lang.lexemes[id]?.form;
       if (!f) continue;
       const hasMatch = f.some((p) => past.ablautMap![stripTone(p)] !== undefined);
-      if (!hasMatch) delete lang.ablautClassAssignment[m];
+      if (!hasMatch) satDelete(lang, "ablautClassAssignment", id);
     }
   }
   pushEvent(lang, {

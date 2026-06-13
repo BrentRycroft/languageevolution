@@ -8,6 +8,7 @@
 
 import { lexPoint } from "./meaningPoint";
 import { glossOf, kNearestAnchors } from "./anchors";
+import { hasEmbedding } from "./embeddings";
 
 export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   hand: ["arm", "finger", "palm"],
@@ -747,7 +748,18 @@ export const SEMANTIC_NEIGHBORS: Record<string, string[]> = {
   music: ["song", "sound", "joy"],
 };
 
+/**
+ * Semantic neighbours of a meaning — VECTOR-NATIVE (flip Wave 2b, live switch). For a meaning with a
+ * real point (`hasEmbedding`: a GloVe anchor or anchor-coverage extra) the neighbours are read off
+ * the geometry (`geometricNeighbors` — the k nearest anchors), so drift/coinage relate words by their
+ * actual distributional position rather than a hand-curated association list. The curated
+ * `SEMANTIC_NEIGHBORS` table survives as a fallback ONLY for ungrounded meanings (hash-point words the
+ * geometry can't place reliably) and as the archived/reversible source. This is the user's "full
+ * switch, scorecard diagnostic-only" — the geometry disagrees with the curated table (~28% overlap),
+ * an accepted, reversible change.
+ */
 export function neighborsOf(meaning: string): string[] {
+  if (hasEmbedding(meaning)) return geometricNeighbors(meaning, 3);
   return SEMANTIC_NEIGHBORS[meaning] ?? [];
 }
 

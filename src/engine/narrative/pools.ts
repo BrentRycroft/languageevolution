@@ -1,6 +1,8 @@
 import type { Language, Meaning } from "../types";
+import { satGet } from "../lexicon/satellites";
 import { posOf } from "../lexicon/pos";
-import { lexKeys } from "../lexicon/access";
+import { lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import type { Rng } from "../rng";
 
 /**
@@ -41,12 +43,14 @@ export function isAnimate(meaning: Meaning): boolean {
  */
 export function poolByPOS(lang: Language, pos: ReturnType<typeof posOf>): Meaning[] {
   const out: Meaning[] = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     if (posOf(m) === pos) out.push(m);
   }
   out.sort((a, b) => {
-    const fa = lang.wordFrequencyHints[a] ?? 0.4;
-    const fb = lang.wordFrequencyHints[b] ?? 0.4;
+    const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
+    const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
     return fb - fa;
   });
   return out;
@@ -78,7 +82,9 @@ const NON_NOUN_POS = new Set([
 
 export function nounLikePool(lang: Language): Meaning[] {
   const out: Meaning[] = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     const pos = posOf(m);
     if (pos === "noun") {
       out.push(m);
@@ -89,8 +95,8 @@ export function nounLikePool(lang: Language): Meaning[] {
     }
   }
   return out.sort((a, b) => {
-    const fa = lang.wordFrequencyHints[a] ?? 0.4;
-    const fb = lang.wordFrequencyHints[b] ?? 0.4;
+    const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
+    const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
     return fb - fa;
   });
 }
@@ -135,24 +141,28 @@ const PLACE_HINTS = new Set([
  */
 function sortByFrequencyDesc(lang: Language, list: Meaning[]): Meaning[] {
   return list.slice().sort((a, b) => {
-    const fa = lang.wordFrequencyHints[a] ?? 0.4;
-    const fb = lang.wordFrequencyHints[b] ?? 0.4;
+    const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.4;
+    const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.4;
     return fb - fa;
   });
 }
 
 export function timePool(lang: Language): Meaning[] {
-  return sortByFrequencyDesc(
-    lang,
-    lexKeys(lang).filter((m) => TIME_HINTS.has(m)),
-  );
+  const filtered: Meaning[] = [];
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m !== undefined && TIME_HINTS.has(m)) filtered.push(m);
+  }
+  return sortByFrequencyDesc(lang, filtered);
 }
 
 export function placePool(lang: Language): Meaning[] {
-  return sortByFrequencyDesc(
-    lang,
-    lexKeys(lang).filter((m) => PLACE_HINTS.has(m)),
-  );
+  const filtered: Meaning[] = [];
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m !== undefined && PLACE_HINTS.has(m)) filtered.push(m);
+  }
+  return sortByFrequencyDesc(lang, filtered);
 }
 
 /**
@@ -164,12 +174,12 @@ export function pickWeighted(lang: Language, pool: Meaning[], rng: Rng): Meaning
   if (pool.length === 0) return null;
   let total = 0;
   for (const m of pool) {
-    total += lang.wordFrequencyHints[m] ?? 0.4;
+    total += satGet(lang, "wordFrequencyHints", m) ?? 0.4;
   }
   if (total <= 0) return pool[rng.int(pool.length)] ?? null;
   let r = rng.next() * total;
   for (const m of pool) {
-    r -= lang.wordFrequencyHints[m] ?? 0.4;
+    r -= satGet(lang, "wordFrequencyHints", m) ?? 0.4;
     if (r <= 0) return m;
   }
   return pool[pool.length - 1] ?? null;

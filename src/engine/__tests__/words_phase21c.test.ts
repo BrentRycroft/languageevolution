@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { satSet } from "../lexicon/satellites";
+import type { LexemeStore } from "../types";
 import {
   addWord,
   tryCommitCoinage,
@@ -20,7 +22,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -59,7 +61,7 @@ describe("Phase 21c — areMeaningsRelated", () => {
     // From SEMANTIC_NEIGHBORS, "river" and "water" are typically linked.
     // We can verify symmetry without depending on a specific entry by
     // also planting a localNeighbors edge below.
-    lang.localNeighbors["dog"] = ["wolf"];
+    satSet(lang, "localNeighbors", "dog", ["wolf"]);
     expect(areMeaningsRelated(lang, "dog", "wolf")).toBe(true);
     expect(areMeaningsRelated(lang, "wolf", "dog")).toBe(true);
   });
@@ -89,7 +91,7 @@ describe("Phase 21c — tryCommitCoinage", () => {
     const TRIALS = 50;
     for (let i = 0; i < TRIALS; i++) {
       const lang = makeLang({
-        localNeighbors: { wolf: ["dog"] },
+        localNeighbors: { wolf: ["dog"] } as Record<string, string[]>,
       });
       addWord(lang, ["b", "a", "n", "k"], "wolf", { bornGeneration: 0 });
       const rng = makeRng(`commit-related-${i}`);
@@ -146,7 +148,7 @@ describe("Phase 21c — tryCommitCoinage", () => {
   });
 
   it("attaches with viaPolysemy=true when polysemy fires", () => {
-    const lang = makeLang({ localNeighbors: { wolf: ["dog"] } });
+    const lang = makeLang({ localNeighbors: { wolf: ["dog"] } as Record<string, string[]> });
     addWord(lang, ["b", "a", "n", "k"], "wolf", { bornGeneration: 0 });
     // Force polysemy to fire by making probability 1.0.
     const rng = makeRng("force-polysemy");
@@ -165,7 +167,7 @@ describe("Phase 21c — tryCommitCoinage", () => {
   });
 
   it("respects an explicit origin override on the attached sense", () => {
-    const lang = makeLang({ localNeighbors: { wolf: ["dog"] } });
+    const lang = makeLang({ localNeighbors: { wolf: ["dog"] } as Record<string, string[]> });
     addWord(lang, ["b", "a", "n", "k"], "wolf", { bornGeneration: 0 });
     const rng = makeRng("origin-override");
     tryCommitCoinage(lang, "dog", ["b", "a", "n", "k"], rng, {
@@ -199,8 +201,8 @@ describe("Phase 21c — integration with stepGenesis", () => {
     // with polysemy probability forced to 1. The lang.words table
     // should end up with one word, two senses.
     const lang = makeLang({
-      lexicon: { wolf: ["b", "a", "n", "k"] },
-      localNeighbors: { wolf: ["dog"] },
+      lexemes: { wolf: ["b", "a", "n", "k"] } as unknown as LexemeStore,
+      localNeighbors: { wolf: ["dog"] } as Record<string, string[]>,
     });
     addWord(lang, ["b", "a", "n", "k"], "wolf", { bornGeneration: 0 });
     // Direct call of the underlying primitive — we're not testing the

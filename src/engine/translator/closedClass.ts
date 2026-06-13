@@ -1,7 +1,7 @@
 import type { Language, WordForm } from "../types";
 import { fnv1a } from "../rng";
 import { isFeatureActive } from "../modules/legacyGate";
-import { lexGet } from "../lexicon/access";
+import { lexFormById, idForGloss } from "../lexicon/access";
 
 /**
  * closedClass.ts
@@ -122,7 +122,8 @@ export function closedClassTable(lang: Language): Record<string, WordForm> {
   if (cached) return cached;
   const out: Record<string, WordForm> = {};
   for (const lemma of CLOSED_CLASS_LEMMAS) {
-    const seeded = lexGet(lang, lemma);
+    const _lid = idForGloss(lang, lemma);
+    const seeded = _lid !== undefined ? lexFormById(lang, _lid) : undefined;
     out[lemma] = seeded && seeded.length > 0 ? seeded.slice() : synthesise(lang, lemma);
   }
   cache.set(lang, out);

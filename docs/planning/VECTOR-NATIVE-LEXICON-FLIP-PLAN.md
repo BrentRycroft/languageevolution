@@ -5,8 +5,56 @@
 > **Directive 1**: the lexicon is no longer concept-keyed. Words become **points in vector space**;
 > English concepts become a **fixed anchor coordinate system** the translator reads against.
 
-Status: **IN EXECUTION (2026-06-05).** Decisions locked (below). Built to **delegate heavily to
-subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migration also delegate).
+Status: **CORE DELIVERED (2026-06-05).** All ACHIEVABLE wave intent shipped green; one architectural
+piece (keyless point-native STORAGE) deferred with reason — see **§10 Final status**.
+
+## 10. Final status (2026-06-05) — what shipped vs. what's deferred
+
+The vector-native flip's *behavioural* core is live and green (FAST 1987 passing; RUN_SLOW reproduces;
+GEN0 byte-identical; determinism re-baked deliberately at every behaviour change; all reversible —
+curated tables kept as fallbacks). Per-wave:
+
+- **Wave 0 — DONE.** Anchor coordinate space, 8 baked labeled dims (POS golden parity 100%),
+  `posOfPoint`/`clusterRegionOf`.
+- **Wave 1 — DONE (identity layer).** Emergent gloss (`glossOf`/`senseGloss`/`effectiveGloss`), point
+  is first-class identity, point-native anchor index. *Storage stayed ConceptId-keyed (opaque, not the
+  gloss) as the stable ordering/persistence handle — the order contract §5 is preserved; the gloss is
+  emergent for all semantic/display purposes.*
+- **Anchor-coverage extension — DONE.** 179 basic content words given real GloVe anchors
+  (`anchorExtrasData.ts`); house/body/door/person/time anchor to themselves.
+- **Wave 2 — DONE (relational subsystems geometric; categorical = baked dims).** 2b neighbours →
+  geometry (`geometricNeighbors`, drift+coinage); 2a clusters → geometry (`clusterRegionOf`, the
+  field signal). 2c POS / 2e taboo are **baked labeled dims** (the plan §8 deliberately keeps these
+  reliable, not noisy-distributional — they ARE the dimensional representation). 2d derivation is the
+  existing Track-C morpheme space (already vector). 2f colexification is **downstream of the now-
+  geometric drift/neighbours** (it emerges from polysemous drift — no separate seam).
+- **Wave 3 — DONE (achievable) / DEFERRED (keyless storage).** 3a drift **re-labels** (glide moves the
+  point; `effectiveGloss` reads the new nearest anchor — already live). 3b vector-composition coinage
+  ships (Track B `composeForGap`); coinage now relates parts via geometry (noisy abstracts allowed,
+  directive 2). 3c merge is downstream of geometric drift. **Deferred:** coining into *keyless* empty
+  points (a word at a point with NO concept key) needs the point-native STORAGE flip (below).
+- **Wave 4 — DONE (achievable) / DEFERRED (physical store migration).** 4a points persist
+  (`sense.point` JSON-round-trips; `roundtrip.test` green). 4b UI surfaces emergent glosses + a drift
+  marker (`DictionaryView`). 4c **archive DONE** — `archive/CONCEPT-KEYED-STORAGE-deferred-migration.md`
+  documents the kept concept-keyed system, the migration spec, AND the per-switch reversal procedure
+  (D-archive: nothing deleted, old behaviour retrievable + revertible). 4d final re-bake done
+  incrementally per switch.
+
+**THE ONE DEFERRAL — removing the ConceptId ADDRESSING CACHE (physical store ⇒ point-keyed).** Note
+the *meaning model is already point-native*: a word's meaning is its drifting `point` (on the
+`lang.words` lexeme entity) and its label is the *emergent* nearest anchor; `lang.lexicon`
+(ConceptId-keyed) is a **derived addressing/form cache** synced from the point-bearing entity, not the
+meaning authority. What remains is physically REMOVING that cache so words are stored point-natively
+(unlocking true keyless coinage + retiring `access.ts`/`conceptIdentity.ts`). The codebase flags this
+as a **1–2 week dedicated migration** (~381 access-seam calls + 33 direct indexings + the RNG order
+contract; spec in the archive doc) — it cannot land byte-green in a single session and would violate
+the project's "every commit green" invariant if forced, so it is the natural next project.
+**Everything the flip set out to do behaviourally — point identity, emergent gloss, anchors as the
+frame, geometric drift/coinage/clusters/neighbours, emergent-gloss UI — is delivered and green.**
+
+---
+
+Built to **delegate heavily to subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migration also delegate).
 
 **Progress log:**
 - **Wave 0 — DONE (2026-06-05).** 0a `anchors.ts` (anchor table + nearestAnchor/anchorsWithin/
@@ -14,6 +62,20 @@ subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migra
   `isTabooReferent` export, `613b39b`); 0c `anchorQueries.ts` (`posOfPoint` argmax over labeled POS
   dims — **POS golden parity 100%/2247**; `clusterRegionOf` lexical-geometry centroids — cluster
   parity 58.7%, `ae6ee3f`). Purely additive; determinism byte-identical (simulation.test green).
+- **Wave 2b — neighbours DONE (2026-06-05, `7d39920`).** `neighborsOf` switched to geometry
+  (`geometricNeighbors` = 3 nearest anchors) for grounded meanings; curated `SEMANTIC_NEIGHBORS` kept
+  as ungrounded fallback + reversible source. Semantic drift + genesis coinage pools now vector-native.
+  Re-baked all 6 GENN (GEN0 unchanged); 2 FAST tests updated (dog/cat now related → dog/stone;
+  river→rain-water for the neighbor rung). FAST 1987 green; RUN_SLOW reproduces. Subagent-driven
+  finalization (fix + re-bake), controller-verified.
+- **Wave 2a — clusters DONE (2026-06-05, `481a861`). USER CHOSE (A) full switch.** `clusterOf`
+  switched to geometry (`clusterRegionOf` for grounded meanings; curated `MEANING_TO_CLUSTER` kept as
+  fallback + reversible source). relatedMeanings + the cluster-driven drift/coinage/abstraction/
+  analogy/borrowing paths are now geometric. The user accepted the field-coherence cost: geometry
+  scatters some curated fields (~59% parity; body parts no longer all in `body`) — reversible. 4 FAST
+  tests relaxed (cluster_expansion ×2 → definedness; taboo_clusters body-field → definedness; genesis
+  compounding → geometrically-coherent water lexicon). All 6 GENN re-baked (GEN0 unchanged). FAST 1987
+  green; RUN_SLOW reproduces. Both central Wave-2 switches (neighbours + clusters) now live.
 - **Wave 1 — IN PROGRESS (2026-06-05).** 1a `glossOf`/`senseGloss` emergent-gloss primitives —
   seed parity `glossOf(lexPoint(c))===c` **99.6%/2247** (`0fa15a8`). 1b `anchorIndex.ts`
   (`anchorIndexOf`/`glossOfWord`/`findWordByEmergentGloss`) + hybrid `effectiveGloss` — point-native
@@ -38,6 +100,34 @@ subagents** (Wave 2 is one subagent per subsystem; bakes + UI + per-preset migra
 > authored key). The waves proceed on the hybrid either way; (A) only *raises coverage* and is a clean
 > drop-in later. Recommend **(A) for content words**, since the purity goal needs `house`/`body`/`door`
 > to have anchors — but it is the user's call and is logged here rather than silently chosen.
+>
+> **USER DECISION (2026-06-05):** **(A) Extend embeddings** + **FULL switch**. Register the orphan
+> *content* words (226 found across the 6 presets; ~150 genuine common words after excluding
+> pronouns/adverbs + preset-internal compound keys) and regenerate `embeddingData.ts` from GloVe-50 so
+> they get real anchors; closed-class function words stay unanchored (grammatical identity). The Wave 2+
+> live-switches are **FULL** — consumers switch to pure geometry; the **realism scorecard is diagnostic
+> only, NOT a gate** (noise accepted, old system archived/reversible). Sequencing: extend coverage FIRST
+> (so geometry runs on good coverage, not hash points), then the full switch, then Wave 3/4.
+>
+> **Implementation (2026-06-05, byte-identity explicitly waived by user):** chose the LOW-RISK
+> realization — `scripts/build-anchor-extras.ts` emits `anchorExtrasData.ts` (179 basic content words,
+> real GloVe-50 vectors) as **anchor extras**, NOT registry concepts. `embed`/`hasEmbedding` fall back
+> to them (the words get real points) and `ANCHORS` includes them (they become anchor targets), but the
+> sim's coinable `CONCEPTS` pool is untouched — so tiering/frequency/capacity tests don't break; only
+> the affected words' meaning POINTS change (a contained GENN re-baseline). `house`/`body`/`door`/
+> `person`/`time` now anchor to themselves. (Registering them as full sim concepts is a possible future
+> step if coinability is wanted.)
+>
+> **Re-baseline impact (2026-06-05):** FAST suite stayed green except 2 expectation updates —
+> `translator_polish` ("angry" now GROUNDS via colexification instead of coin/quote: an improvement)
+> and `syntactical_modules` (a seeded word-order module legitimately drifted over 30 gens → assert the
+> wordOrder CATEGORY, not the specific value). RUN_SLOW: all 6 GENN gen-30 hashes re-baked (GEN0
+> byte-identical); realism scorecard passes (diagnostic-only). **Accepted realism trade-off:**
+> `frequency_direction` (Zipfian "high-freq content words drift LESS") softened from ~5/8 seeds to ~3/8
+> — giving 179 mostly-high-frequency content words real semantic activity slightly raised their form
+> drift, neutralising the few-percent conservatism margin (pooled high≈low, noise-level). Test
+> downgraded from a strict directional vote to a pooled "no MATERIAL over-erosion (≤5%)" guard. Logged
+> as accepted per the user's "willing to take the risk / reversible" direction.
 
 ---
 

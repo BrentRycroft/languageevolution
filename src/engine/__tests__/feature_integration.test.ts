@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LexemeStore } from "../types";
 import { changesForLang } from "../steps/helpers";
 import { applyPhonologyToAffixes, maybeSplitParadigm, inflect } from "../morphology/evolve";
 import { CATALOG_BY_ID } from "../phonology/catalog";
@@ -6,7 +7,8 @@ import { GENESIS_BY_ID } from "../genesis/catalog";
 import { stepPhonology } from "../steps/phonology";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
+import { satGet, satSet } from "../lexicon/satellites";
 import type { Language, SimulationState } from "../types";
 import type { Paradigm } from "../morphology/types";
 
@@ -22,7 +24,7 @@ function testLang(overrides: Partial<Language> = {}): Language {
   const lang = {
     id: "L-int",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -45,7 +47,19 @@ function testLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   } as Language;
-  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToConceptIds(lang);
+  if (Object.keys(lang.lexemes).length > 0) rekeyLexiconToLexemeIds(lang);
+  // S2a: suppletion overrides are authored gloss-keyed; re-key to LexemeId to
+  // match the flipped storage now that ids are minted (mint-free).
+  if (lang.suppletion) {
+    const supp = lang.suppletion as Record<string, unknown>;
+    for (const g of Object.keys(supp)) {
+      const id = lang.lexemeIds?.[g];
+      if (id && id !== g) {
+        supp[id] = supp[g]!;
+        delete supp[g];
+      }
+    }
+  }
   return lang;
 }
 
@@ -112,9 +126,9 @@ describe("cross-feature integration", () => {
         affix: ["a", "n"], position: "suffix", category: "verb.tense.past",
       };
       const lang = testLang({
-        lexicon: {
+        lexemes: {
           go: ["g", "o"], walk: ["w", "a", "l", "k"], run: ["r", "u", "n"],
-        },
+        } as unknown as LexemeStore,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
       });
       const rng = makeRng("class-split");
@@ -133,14 +147,12 @@ describe("cross-feature integration", () => {
         affix: ["e", "d"], position: "suffix", category: "verb.tense.past",
       };
       const lang = testLang({
-        lexicon: { go: ["g", "o"], walk: ["w", "a", "l", "k"] },
-        wordFrequencyHints: { go: 0.9, walk: 0.4 },
+        lexemes: { go: ["g", "o"], walk: ["w", "a", "l", "k"] } as unknown as LexemeStore,
+        wordFrequencyHints: { go: 0.9, walk: 0.4 } as Record<string, number>,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
         enabledChangeIds: ["lenition.p_to_f"],
       });
-      lang.suppletion = {
-        go: { "verb.tense.past": ["w", "p", "n", "t"] },
-      };
+      satSet(lang, "suppletion", "go", { "verb.tense.past": ["w", "p", "n", "t"] });
       const config = defaultConfig();
       const state: SimulationState = {
         generation: 0, rootId: lang.id, rngState: 0,
@@ -154,7 +166,7 @@ describe("cross-feature integration", () => {
       // suppletive form — but it still does. The loop early-exits on mutation.
       for (let i = 0; i < 1500 && !mutated; i++) {
         stepPhonology(lang, config, rng, i + 1, state);
-        const supp = lang.suppletion?.["go"]?.["verb.tense.past"];
+        const supp = satGet(lang, "suppletion", "go")?.["verb.tense.past"];
         if (supp && !supp.includes("p")) mutated = true;
       }
       expect(mutated).toBe(true);
@@ -164,7 +176,7 @@ describe("cross-feature integration", () => {
   describe("derivational suffixes × phonology evolution", () => {
     it("language-specific suffixes drift along with the rest of the phonology", () => {
       const lang = testLang({
-        lexicon: { water: ["w", "a", "t", "e", "r"] },
+        lexemes: { water: ["w", "a", "t", "e", "r"] } as unknown as LexemeStore,
         derivationalSuffixes: [
           { affix: ["p", "i"], tag: "-er" },
         ],
@@ -197,10 +209,10 @@ describe("cross-feature integration", () => {
         variants: [{ when: "vowel-final", affix: ["t"] }],
       };
       const lang = testLang({
-        lexicon: { go: ["g", "o"] },
-        wordFrequencyHints: { go: 0.9 },
+        lexemes: { go: ["g", "o"] } as unknown as LexemeStore,
+        wordFrequencyHints: { go: 0.9 } as Record<string, number>,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
-        suppletion: { go: { "verb.tense.past": ["w", "e", "n", "t"] } },
+        suppletion: { go: { "verb.tense.past": ["w", "e", "n", "t"] } } as Language["suppletion"],
       });
       const result = inflect(["g", "o"], paradigm, lang, "go");
       expect(result).toEqual(["w", "e", "n", "t"]);
@@ -210,7 +222,7 @@ describe("cross-feature integration", () => {
   describe("genesis × derivational suffixes", () => {
     it("stays stable when a language has no suffixes (falls back to catalog)", () => {
       const lang = testLang({
-        lexicon: { water: ["w", "a", "t", "e", "r"] },
+        lexemes: { water: ["w", "a", "t", "e", "r"] } as unknown as LexemeStore,
         derivationalSuffixes: [],
       });
       const rule = GENESIS_BY_ID["genesis.derivation"]!;

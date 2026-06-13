@@ -1,7 +1,9 @@
 import type { Language, Meaning, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { applyParadigm } from "./apply";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById, lexHasById } from "../lexicon/access";
+import { evolvableLexemes, isKeyless, keylessMature, effectiveGlossFor } from "../lexicon/evolvable";
+import type { LexemeId } from "../lexicon/lexemeIdentity";
 import { recordedParts } from "../lexicon/word";
 
 /**
@@ -98,7 +100,8 @@ export function tryDerivedFormFromMeaning(
 ): WordForm | null {
   const best = derivedMeaningParts(lang, meaning);
   if (!best) return null;
-  const baseForm = lexGet(lang, best.base);
+  const _baseId = idForGloss(lang, best.base);
+  const baseForm = _baseId !== undefined ? lexFormById(lang, _baseId) : undefined;
   if (!baseForm) return null;
   const pdm = {
     affix: best.suffix.affix,
@@ -126,6 +129,18 @@ const ADJECTIVE_HINTS = new Set([
  * synthesises a transient meaning + form. Returns null if no
  * productive suffix or compatible base exists.
  */
+/**
+ * S2b: is `id` an eligible derivation BASE? Suffix-independent eligibility — not an already-structured
+ * compound/derivation and not a bound morpheme — plus the keyless maturity gate (derivation is
+ * concept-coupled). The suffix-dependent hint filters stay at the call site. For a SEEDED id this is
+ * the pre-S2b `recordedParts === null && !boundMorphemes.has` filter (effectiveGlossFor = stored gloss).
+ */
+export function derivationBaseEligible(lang: Language, id: LexemeId): boolean {
+  if (isKeyless(lang, id) && !keylessMature(lang, id)) return false;
+  const m = effectiveGlossFor(lang, id);
+  return recordedParts(lang, m) === null && !lang.boundMorphemes?.has(m);
+}
+
 export function pickRuntimeDerivedMeaning(
   lang: Language,
   rng: Rng,
@@ -138,23 +153,24 @@ export function pickRuntimeDerivedMeaning(
   const wantsVerb =
     suffix.category === "agentive" || suffix.category === "nominalisation";
   const wantsAdj = suffix.category === "abstractNoun";
-  const allMeanings = lexKeys(lang);
-  const candidates = allMeanings.filter((m) => {
-    // Concept-native (item 4): skip already-structured words via the recorded
-    // compound/derivation record (covers coinage post-genesis-recording), not a
-    // gloss hyphen; still exclude bound morphemes (no record), as the old
-    // `m.includes("-")` did via the dash.
-    if (recordedParts(lang, m) !== null || lang.boundMorphemes?.has(m)) return false;
-    if (lexHas(lang, `${m}-${suffix.tag}`)) return false;
-    if (wantsVerb && !VERB_HINTS.has(m)) return false;
-    if (wantsAdj && !ADJECTIVE_HINTS.has(m)) return false;
-    if (!wantsVerb && !wantsAdj && (VERB_HINTS.has(m) || ADJECTIVE_HINTS.has(m))) return false;
-    return true;
-  });
+  // S2b: iterate evolvable ids (seeded first, keyless appended); resolve each id's effective gloss as
+  // the base `m`. derivationBaseEligible carries the suffix-independent filters incl. the keyless
+  // maturity gate; the suffix-dependent hint filters stay inline. Seeded set/order is unchanged.
+  const candidates: string[] = [];
+  for (const id of evolvableLexemes(lang)) {
+    if (!derivationBaseEligible(lang, id)) continue;
+    const m = effectiveGlossFor(lang, id);
+    const _derivedId = idForGloss(lang, `${m}-${suffix.tag}`);
+    if (_derivedId !== undefined && lexHasById(lang, _derivedId)) continue;
+    if (wantsVerb && !VERB_HINTS.has(m)) continue;
+    if (wantsAdj && !ADJECTIVE_HINTS.has(m)) continue;
+    if (!wantsVerb && !wantsAdj && (VERB_HINTS.has(m) || ADJECTIVE_HINTS.has(m))) continue;
+    candidates.push(m);
+  }
   if (candidates.length === 0) return null;
   const base = candidates[rng.int(candidates.length)]!;
   const meaning = `${base}-${suffix.tag}`;
-  const form = tryDerivedFormFromMeaning({ ...lang, lexicon: lang.lexicon } as Language, meaning);
+  const form = tryDerivedFormFromMeaning({ ...lang } as Language, meaning);
   if (!form) return null;
   // Nudge the productive suffix's usage count so the runtime
   // emission feeds back into the next gen's coinage prioritisation.

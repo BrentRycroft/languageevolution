@@ -32,7 +32,7 @@ function mockLang(id: string, templates: string[], ot?: string[]): Language {
   return {
     id,
     name: id,
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

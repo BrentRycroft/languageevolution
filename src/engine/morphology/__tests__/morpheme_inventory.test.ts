@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createSimulation } from "../../simulation";
 import { presetEnglish } from "../../presets/english";
-import { lexGet } from "../../lexicon/access";
+import { tForm as lexGet } from "../../lexicon/__tests__/glossSeam";
 import { formToString } from "../../phonology/ipa";
 import { recordedParts } from "../../lexicon/word";
 import {

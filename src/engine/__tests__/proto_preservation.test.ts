@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
@@ -41,11 +42,11 @@ describe("proto preservation", () => {
     const rootId = sim.getState().rootId;
     const root = sim.getState().tree[rootId]!;
     expect(root.childrenIds.length).toBeGreaterThan(0); // it split
-    const frozen = JSON.stringify(root.language.lexicon);
+    const frozen = JSON.stringify(formViewOf(root.language.lexemes));
     // Step further: the root is now a non-leaf and must not change.
     for (let i = 0; i < 30; i++) sim.step();
     const after = sim.getState().tree[rootId]!.language;
-    expect(JSON.stringify(after.lexicon)).toBe(frozen);
+    expect(JSON.stringify(formViewOf(after.lexemes))).toBe(frozen);
   });
 
   it("single-language runs (tree mode off) skip the auto-split", () => {

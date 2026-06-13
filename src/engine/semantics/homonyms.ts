@@ -8,7 +8,8 @@
  * meaning points (lexPoint); never runs in the simulation step.
  */
 import type { Language, Meaning } from "../types";
-import { lexKeys, lexGet } from "../lexicon/access";
+import { idForGloss, lexIds, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { formToString } from "../phonology/ipa";
 import { lexPoint } from "./meaningPoint";
 import { cosineFixed } from "./vec";
@@ -22,14 +23,16 @@ export const HOMONYMY_COSINE = 0.3;
  * true homonyms (not polysemy). Sorted; empty if the form is unique or every sharer is near.
  */
 export function homonymsOf(lang: Language, meaning: Meaning): Meaning[] {
-  const form = lexGet(lang, meaning);
+  const srcId = idForGloss(lang, meaning);
+  const form = srcId !== undefined ? lexFormById(lang, srcId) : undefined;
   if (!form || form.length === 0) return [];
   const key = formToString(form);
   const here = lexPoint(meaning);
   const out: Meaning[] = [];
-  for (const other of lexKeys(lang)) {
-    if (other === meaning) continue;
-    const otherForm = lexGet(lang, other);
+  for (const otherId of lexIds(lang)) {
+    const other = meaningForLexemeId(lang, otherId);
+    if (other === undefined || other === meaning) continue;
+    const otherForm = lexFormById(lang, otherId);
     if (!otherForm || otherForm.length === 0) continue;
     if (formToString(otherForm) !== key) continue;
     if (cosineFixed(here, lexPoint(other)) < HOMONYMY_COSINE) out.push(other);

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satSet } from "../lexicon/satellites";
 import { driftOneMeaning } from "../semantics/drift";
 import { maybeTabooReplace } from "../lexicon/taboo";
 import { maybeAnalogicalLevel } from "../morphology/analogy";
@@ -8,7 +9,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import { isClosedClass, posOf } from "../lexicon/pos";
-import { lexKeys, lexSet } from "../lexicon/access";
+import { tGlosses as lexKeys, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * closed_class_protection.test.ts
@@ -47,7 +48,7 @@ describe("Phase 26c — closed-class protection", () => {
     // Boost frequency of every closed-class word to make it a candidate.
     for (const m of lexKeys(lang)) {
       if (isClosedClass(posOf(m))) {
-        lang.wordFrequencyHints[m] = 0.95;
+        satSet(lang, "wordFrequencyHints", m, 0.95);
       }
     }
     const rng = makeRng("taboo-closed");
@@ -83,7 +84,7 @@ describe("Phase 26c — closed-class protection", () => {
     // Boost a few closed-class words' frequencies.
     for (const m of lexKeys(lang)) {
       if (isClosedClass(posOf(m))) {
-        lang.wordFrequencyHints[m] = 0.95;
+        satSet(lang, "wordFrequencyHints", m, 0.95);
       }
     }
     const rng = makeRng("gramm-closed");
@@ -104,7 +105,7 @@ describe("Phase 26c — closed-class protection", () => {
     // Build seedLengths and force one closed-class word to be eroded.
     const seedLengths: Record<string, number> = {};
     for (const m of lexKeys(lang)) {
-      seedLengths[m] = lang.lexicon[lang.conceptIds![m]!]!.length;
+      seedLengths[m] = lang.lexemes[lang.lexemeIds![m]!]!.form.length;
     }
     // Pick a closed-class meaning, manually erode it to length 1, set
     // its frequency high. Pre-Phase-26c, this would set a positive
@@ -112,7 +113,7 @@ describe("Phase 26c — closed-class protection", () => {
     const closedM = lexKeys(lang).find((m) => isClosedClass(posOf(m)));
     expect(closedM).toBeDefined();
     lexSet(lang, closedM!, ["x"]); // length 1, way under floor
-    lang.wordFrequencyHints[closedM!] = 0.95;
+    satSet(lang, "wordFrequencyHints", closedM!, 0.95);
     const need = lexicalNeed(lang, state.tree, { seedLengths });
     expect(need[closedM!] ?? 0).toBe(0);
   });

@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { LexiconView } from "../LexiconView";
 import { useSimStore } from "../../state/store";
-import { lexHas, lexKeys } from "../../engine/lexicon/access";
+import { tHas as lexHas, tGlosses as lexKeys } from "../../engine/lexicon/__tests__/glossSeam";
+import { satSet } from "../../engine/lexicon/satellites";
 
 /**
  * lexicon_badges.test.tsx
@@ -18,7 +19,7 @@ function pickKnownMeaning(): string {
   const root = state.tree[state.rootId];
   if (!root) return "water";
   // Pick a GLOSS seeded by the default preset's lexicon (via the seam, since
-  // the canonical store is ConceptId-keyed post R2 flip).
+  // the canonical store is LexemeId-keyed post R2 flip).
   for (const candidate of ["water", "father", "see", "fire", "tree"]) {
     if (lexHas(root.language, candidate)) return candidate;
   }
@@ -31,10 +32,10 @@ function setNounClass(meaning: string, cls: 1 | 2 | 3 | 4 | 5) {
   const state = store.state;
   const proto = state.tree[state.rootId]?.language;
   if (!proto) return;
-  proto.nounDeclensionClass = {
-    ...(proto.nounDeclensionClass ?? {}),
-    [meaning]: cls,
-  };
+  // S2a: write through the seam so the key resolves the same way LexiconView
+  // reads it (satGet → LexemeId). A raw `proto.nounDeclensionClass[gloss] = cls`
+  // lands on a gloss key the id-keyed read never finds.
+  satSet(proto, "nounDeclensionClass", meaning, cls);
   // Trigger re-render via shallow-clone setState.
   useSimStore.setState({ state: { ...state, tree: { ...state.tree } } });
 }

@@ -1,10 +1,11 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { addWord, findPrimaryWordForMeaning, findWordByForm, formKeyOf, removeSense, removeSynonymSense } from "./word";
 import { invalidateReverseLexCache } from "../translator/reverse";
+import { invalidateConceptIndexCache } from "./conceptIndex";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { purgeMeaningFromRegistry, purgePerWordDiffusionForMeaning } from "../perMeaningFields";
-import { mintConceptId } from "./conceptIdentity";
-import { lexGet, lexSet, lexDelete } from "./access";
+import { mintLexemeId } from "./lexemeIdentity";
+import { lexFormById, lexHasById, lexDeleteById, coinSeededLexeme, idForGloss } from "./access";
 
 /**
  * Phase 28a: single chokepoint for writing a form to the meaning-keyed
@@ -34,14 +35,17 @@ export function setLexiconForm(
     morphStructure?: import("../types").WordMorphStructure;
   },
 ): void {
-  lexSet(lang, meaning, form);
-  // Phase 72d (full-delivery defer-2): lazy-mint a stable ConceptId
+  coinSeededLexeme(lang, meaning, form);
+  // Phase 72d (full-delivery defer-2): lazy-mint a stable LexemeId
   // for the meaning if it doesn't have one yet. Setters that coin
   // genuinely new meanings (genesis, derivation, borrowing) get
   // their identity anchor here; existing meanings keep their UUID.
-  if (!lang.conceptIds) lang.conceptIds = {};
-  if (!lang.conceptIds[meaning]) {
-    lang.conceptIds[meaning] = mintConceptId(lang);
+  // coinSeededLexeme already mints via lexemeIdFor, so the lexemeIds
+  // entry is guaranteed after the call above; this guard is now a no-op
+  // but preserved for safety.
+  if (!lang.lexemeIds) lang.lexemeIds = {};
+  if (!lang.lexemeIds[meaning]) {
+    lang.lexemeIds[meaning] = mintLexemeId(lang);
   }
   if (!lang.words) return;
   const primary = findPrimaryWordForMeaning(lang, meaning);
@@ -71,6 +75,7 @@ export function setLexiconForm(
   // only addSynonym / removeSynonymSense invalidated; primary-form
   // additions slipped past the cache.
   invalidateReverseLexCache(lang);
+  invalidateConceptIndexCache(lang);
   // Phase 72a T2 (Invariant 1 fix): also invalidate the closed-class
   // cache. Mutating lexicon[lemma] for a closed-class lemma (the/of/and)
   // would otherwise leave stale forms in the WeakMap.
@@ -115,9 +120,11 @@ export function addSynonym(
     weight?: number;
   },
 ): boolean {
-  if (!lexGet(lang, meaning)) return false;
+  const synMid = idForGloss(lang, meaning);
+  const synForm = synMid !== undefined ? lexFormById(lang, synMid) : undefined;
+  if (!synForm) return false;
   if (form.length === 0) return false;
-  const primaryKey = formKeyOf(lexGet(lang, meaning)!);
+  const primaryKey = formKeyOf(synForm);
   const newKey = formKeyOf(form);
   if (primaryKey === newKey) return false;
   if (!lang.words) return false;
@@ -136,6 +143,7 @@ export function addSynonym(
   // Phase 37: invalidate the reverse-lookup cache so subsequent
   // translations pick up the new sense.
   invalidateReverseLexCache(lang);
+  invalidateConceptIndexCache(lang);
   return true;
 }
 
@@ -151,6 +159,7 @@ export function removeSynonym(
 ): void {
   removeSynonymSense(lang, meaning, form);
   invalidateReverseLexCache(lang);
+  invalidateConceptIndexCache(lang);
   // Phase 72a T2 (Invariant 1 fix): also invalidate the closed-class
   // cache. Mutating lexicon[lemma] for a closed-class lemma (the/of/and)
   // would otherwise leave stale forms in the WeakMap.
@@ -223,18 +232,18 @@ export function deleteMeaning(
 
   // Phase 72d T2 + 72d defer-2: record the pathway BEFORE deleting
   // per-meaning metadata. Captures both the string mergedInto AND
-  // (post-defer-2) the stable ConceptId pair (this meaning's UUID
+  // (post-defer-2) the stable LexemeId pair (this meaning's UUID
   // and the absorber's UUID) so reverse inference can follow merger
   // pathways across the tree without string-matching.
   if (opts && (opts.mergedInto || opts.reason)) {
     if (!lang.meaningHistory) lang.meaningHistory = {};
-    const conceptId = lang.conceptIds?.[meaning];
-    const mergedIntoConceptId = opts.mergedInto && lang.conceptIds
-      ? lang.conceptIds[opts.mergedInto]
+    const conceptId = lang.lexemeIds?.[meaning];
+    const mergedIntoLexemeId = opts.mergedInto && lang.lexemeIds
+      ? lang.lexemeIds[opts.mergedInto]
       : undefined;
     lang.meaningHistory[meaning] = {
       mergedInto: opts.mergedInto,
-      mergedIntoConceptId,
+      mergedIntoLexemeId,
       conceptId,
       generation: opts.generation ?? 0,
       reason: opts.reason,
@@ -242,7 +251,8 @@ export function deleteMeaning(
   }
 
   // Lexicon (primary form) is bespoke — deleted explicitly.
-  lexDelete(lang, meaning);
+  const delId = idForGloss(lang, meaning);
+  if (delId !== undefined && lexHasById(lang, delId)) lexDeleteById(lang, delId);
   // Phase 72d T1: every other per-meaning field is now purged via the
   // registry in `perMeaningFields.ts`. Pre-72d this was a manual list
   // (Phase 68a fix added 4 fields; Phase 71b T2 added suppletion;

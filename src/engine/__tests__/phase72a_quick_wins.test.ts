@@ -8,7 +8,7 @@ import {
 } from "../translator/closedClass";
 import { translateSentence } from "../translator/sentence";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
-import { lexGet, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * phase72a_quick_wins.test.ts — guards for the seven Phase 72a fixes.
@@ -47,7 +47,7 @@ describe("Phase 72a-2 — closedClassTable cache invalidation", () => {
     expect(theBefore).toBeDefined();
 
     // Mutate the lexicon directly (simulating phonology rewrite) via the seam,
-    // since lang.lexicon is ConceptId-keyed (a raw `lang.lexicon.the =` write
+    // since lang.lexicon is LexemeId-keyed (a raw `lang.lexicon.the =` write
     // would be invisible to closedClassTable, which reads through the seam).
     lexSet(lang, "the", ["x", "y"]);
     invalidateClosedClassCache(lang);

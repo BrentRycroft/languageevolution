@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { formViewOf } from "../../engine/lexicon/store";
 import { saveRun, loadRun, listRuns, deleteRun } from "../storage";
 import { defaultConfig } from "../../engine/config";
 import { createSimulation } from "../../engine/simulation";
@@ -17,7 +18,7 @@ function stringifyLexicons(state: ReturnType<ReturnType<typeof createSimulation>
     .filter((id) => state.tree[id]!.childrenIds.length === 0)
     .sort()
     .map((id) => {
-      const lex = state.tree[id]!.language.lexicon;
+      const lex = formViewOf(state.tree[id]!.language.lexemes);
       return Object.keys(lex)
         .sort()
         .map((m) => `${m}=${lex[m]!.join("")}`)

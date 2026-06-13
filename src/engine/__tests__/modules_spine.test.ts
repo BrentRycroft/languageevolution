@@ -18,7 +18,7 @@ function fakeLang(active: string[] | null): Language {
   return {
     id: "test",
     name: "test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

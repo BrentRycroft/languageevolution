@@ -9,7 +9,8 @@ import { PRODUCTIVITY_THRESHOLD } from "../engine/lexicon/derivation";
 import { ScriptPicker } from "./ScriptPicker";
 import { ExportButtons } from "./components/ExportButtons";
 import { EmptyState } from "./components/EmptyState";
-import { lexKeys, lexGet } from "../engine/lexicon/access";
+import { lexIds, idForGloss, lexFormById } from "../engine/lexicon/access";
+import { meaningForLexemeId } from "../engine/lexicon/lexemeIdentity";
 
 /**
  * GrammarView.tsx
@@ -125,9 +126,17 @@ function pickDemoStem(
   lang: import("../engine/types").Language,
   pos: "noun" | "verb",
 ): string | undefined {
-  const candidates = lexKeys(lang).filter((m) => !m.includes("-"));
+  const ids = lexIds(lang);
+  const candidates: string[] = [];
+  for (const id of ids) {
+    const m = meaningForLexemeId(lang, id);
+    if (m !== undefined && !m.includes("-")) candidates.push(m);
+  }
   for (const m of candidates) if (posOf(m) === pos) return m;
-  for (const m of lexKeys(lang)) if (posOf(m) === pos) return m;
+  for (const id of ids) {
+    const m = meaningForLexemeId(lang, id);
+    if (m !== undefined && posOf(m) === pos) return m;
+  }
   return undefined;
 }
 
@@ -385,7 +394,7 @@ function ParadigmGroup({
 }) {
   const script = useSimStore((s) => s.displayScript);
   const paradigms = lang.morphology.paradigms;
-  const stemForm = stem ? lexGet(lang, stem) : undefined;
+  const stemForm = stem ? (() => { const id = idForGloss(lang, stem); return id !== undefined ? lexFormById(lang, id) : undefined; })() : undefined;
   return (
     <div style={{ marginTop: 8 }}>
       <div className="label-line" style={{ marginBottom: 4 }}>

@@ -4,7 +4,8 @@ import type {
   SimulationConfig,
 } from "../engine/types";
 import { defaultConfig } from "../engine/config";
-import { syncWordsFromLexicon } from "../engine/lexicon/word";
+import { syncWordsFromLexicon, backfillSenseLexemeIds } from "../engine/lexicon/word";
+import { migrateLexemeStore, migrateSatelliteMaps } from "../engine/lexicon/store";
 import { addSynonym } from "../engine/lexicon/mutate";
 import { computeActiveModulesFromLegacy } from "../engine/modules/legacyMigration";
 
@@ -19,7 +20,7 @@ import { computeActiveModulesFromLegacy } from "../engine/modules/legacyMigratio
  * get default values without needing an explicit migration. Migrations
  * therefore only need to handle field renames, type changes, or removals.
  */
-export const LATEST_SAVE_VERSION = 10;
+export const LATEST_SAVE_VERSION = 11;
 
 type RawObj = Record<string, unknown>;
 
@@ -141,7 +142,7 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
   // explicitly initializes the ones that callers expect to find).
   // The fields:
   //   - lang.endangermentLevel: default "vigorous" if extinct=false.
-  //   - lang.conceptIds: lazy-mint via ensureConceptIdsForLexicon
+  //   - lang.lexemeIds: lazy-mint via ensureLexemeIdsForLexicon
   //     (populated on first read).
   //   - lang.meaningHistory: stays undefined (only populated on
   //     deleteMeaning calls).
@@ -162,12 +163,31 @@ const MIGRATIONS: Record<number, (raw: RawObj) => RawObj> = {
         if (lang.endangermentLevel === undefined && !lang.extinct) {
           lang.endangermentLevel = "vigorous";
         }
-        // conceptIds is lazy-minted by setLexiconForm/conceptIdFor;
+        // lexemeIds is lazy-minted by setLexiconForm/lexemeIdFor;
         // we don't pre-populate here so existing meanings get fresh
         // UUIDs on first reference (deterministic per session).
       }
     }
     return { ...raw, version: 10 };
+  },
+  // Storage step-5 (S6, FINAL): v11 formalizes the point-native lexeme store. Convert an OLD-shape
+  // v10 save (id-keyed form-only `lexicon` + separate `keylessLexemes`, gloss-keyed satellite maps,
+  // senses without `lexemeId`) into the canonical point-native shape (records, id-keyed satellites
+  // incl. meaningPoints, sense.lexemeId). Runs the SAME shims restoreState applies, so it is a no-op
+  // for an already-point-native v10 save. New saves write v11.
+  10: (raw) => {
+    const snapshot = raw.stateSnapshot as RawObj | undefined;
+    if (snapshot && snapshot.tree && typeof snapshot.tree === "object") {
+      const tree = snapshot.tree as Record<string, RawObj>;
+      for (const node of Object.values(tree)) {
+        const lang = node.language as Language | undefined;
+        if (!lang) continue;
+        migrateLexemeStore(lang);
+        migrateSatelliteMaps(lang);
+        backfillSenseLexemeIds(lang);
+      }
+    }
+    return { ...raw, version: 11 };
   },
 };
 

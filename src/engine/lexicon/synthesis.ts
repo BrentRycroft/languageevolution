@@ -36,7 +36,7 @@ import { frequencyFor } from "./frequency";
 import { parseEnglishAffix } from "../translator/englishAffixes";
 import { selectAffixForCategory, selectAffixesForCategory } from "./affixSelector";
 import { addSynonym, setLexiconForm } from "./mutate";
-import { lexGet, lexSize } from "./access";
+import { lexFormById, lexSize, idForGloss } from "./access";
 
 export interface SynthesisResult {
   form: WordForm;
@@ -167,7 +167,8 @@ export function attemptMorphologicalSynthesis(
     const isNeg = isNegationalCategory(parsed.category);
     if ((mode === "neg") === isNeg) {
       for (const candidateStem of parsed.candidateStems) {
-        const stemForm = lexGet(lang, candidateStem);
+        const stemId = idForGloss(lang, candidateStem);
+        const stemForm = stemId !== undefined ? lexFormById(lang, stemId) : undefined;
         if (!stemForm || stemForm.length === 0) continue;
         const picked = selectAffixForCategory(
           lang, parsed.category, stemForm, parsed.position,
@@ -266,7 +267,8 @@ export function attemptMorphologicalSynthesis(
       stem = lemma.slice(eng.length);
     }
 
-    const stemForm = lexGet(lang, stem);
+    const stemId2 = idForGloss(lang, stem);
+    const stemForm = stemId2 !== undefined ? lexFormById(lang, stemId2) : undefined;
     if (!stemForm || stemForm.length === 0) continue;
 
     const form = position === "suffix"
@@ -324,7 +326,8 @@ export function attemptConceptDecomposition(
 
   const partForms: Array<{ meaning: Meaning; form: WordForm }> = [];
   for (const partMeaning of decomposition) {
-    const f = lexGet(lang, partMeaning);
+    const partId = idForGloss(lang, partMeaning);
+    const f = partId !== undefined ? lexFormById(lang, partId) : undefined;
     if (!f || f.length === 0) return null;
     partForms.push({ meaning: partMeaning, form: f.slice() });
   }
@@ -375,7 +378,8 @@ export function attemptClusterComposition(
   const candidates: Array<{ meaning: Meaning; form: WordForm; freq: number }> = [];
   for (const peer of peers) {
     if (peer === lemma) continue;
-    const f = lexGet(lang, peer);
+    const peerId = idForGloss(lang, peer);
+    const f = peerId !== undefined ? lexFormById(lang, peerId) : undefined;
     if (!f || f.length === 0) continue;
     candidates.push({ meaning: peer, form: f.slice(), freq: frequencyFor(peer) });
   }

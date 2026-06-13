@@ -1,6 +1,7 @@
 import type { SimulationState } from "../types";
 import { leafIds } from "../tree/split";
-import { lexHas, lexSize } from "../lexicon/access";
+import { lexSize } from "../lexicon/access";
+import { satKeys } from "../lexicon/satellites";
 
 /**
  * catalog.ts
@@ -71,7 +72,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
       anyLanguage(s, (l) => {
         const lex = lexSize(l);
         if (lex < 10) return false;
-        const tagged = Object.keys(l.registerOf ?? {}).filter((m) => lexHas(l, m)).length;
+        const tagged = satKeys(l, "registerOf").filter((id) => l.lexemes[id] !== undefined).length;
         return tagged / lex >= 0.2;
       }),
   },

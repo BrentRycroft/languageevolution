@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { translateSentence } from "../translator/sentence";
 import { generateNarrative } from "../narrative/generate";
 import type { Language, Lexicon } from "../types";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * typological_routing.test.ts
@@ -12,12 +12,12 @@ import { lexSet } from "../lexicon/access";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
+function makeLang(overrides: Partial<Language> = {}, lexemes: Lexicon = {}): Language {
   const lang: Language = {
     id: "L-r",
     name: "TestLang",
-    lexicon: {},
-    conceptIds: {},
+    lexemes: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -44,7 +44,7 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     lastChangeGeneration: {},
     ...overrides,
   };
-  for (const [g, form] of Object.entries(lexicon)) {
+  for (const [g, form] of Object.entries(lexemes)) {
     lexSet(lang, g, form);
   }
   return lang;

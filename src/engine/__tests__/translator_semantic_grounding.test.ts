@@ -6,7 +6,7 @@ import {
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
-import { lexHas, lexGet } from "../lexicon/access";
+import { tHas as lexHas, tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * MEGA-overhaul (continuous meaning model) — translator nearest-anchor grounding.

@@ -8,7 +8,8 @@ import { ScriptPicker } from "./ScriptPicker";
 import { clusterOf } from "../engine/semantics/clusters";
 import { frequencyFor } from "../engine/lexicon/frequency";
 import { prettyGloss } from "../engine/lexicon/word";
-import { lexGet } from "../engine/lexicon/access";
+import { idForGloss, lexFormById } from "../engine/lexicon/access";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * LexiconView.tsx
@@ -66,7 +67,8 @@ export function LexiconView() {
       } else if (sort === "last-changed") {
         let maxGen = -1;
         for (const lid of visibleLeaves) {
-          const g = state.tree[lid]?.language.lastChangeGeneration?.[m];
+          const leafLang = state.tree[lid]?.language;
+          const g = leafLang ? satGet(leafLang, "lastChangeGeneration", m) : undefined;
           if (typeof g === "number" && g > maxGen) maxGen = g;
         }
         out[m] = -maxGen;
@@ -117,7 +119,8 @@ export function LexiconView() {
     for (const lid of visibleLeaves) {
       const lang = state.tree[lid]!.language;
       for (const meaning of meanings) {
-        const form = lexGet(lang, meaning);
+        const _mid = idForGloss(lang, meaning);
+        const form = _mid !== undefined ? lexFormById(lang, _mid) : undefined;
         if (!form) continue;
         m.set(`${lid}|${meaning}`, formatForm(form, lang, script, meaning));
       }
@@ -375,7 +378,7 @@ export function LexiconView() {
                       // (stable across the family). Class numbers
                       // 1/2/3/4 render as I/II/III/IV.
                       const proto = state.tree[state.rootId]?.language;
-                      const cls = proto?.inflectionClass?.[meaning];
+                      const cls = proto ? satGet(proto, "inflectionClass", meaning) : undefined;
                       if (!cls) return null;
                       const NUMERAL = { 1: "I", 2: "II", 3: "III", 4: "IV" } as const;
                       return (
@@ -401,8 +404,8 @@ export function LexiconView() {
                       // assignment per noun.
                       const proto = state.tree[state.rootId]?.language;
                       // nounDeclensionClass is a per-meaning satellite map —
-                      // GLOSS-keyed (unaffected by the R2 ConceptId store flip).
-                      const cls = proto?.nounDeclensionClass?.[meaning];
+                      // LexemeId-keyed (S2a); read via the seam by gloss.
+                      const cls = proto ? satGet(proto, "nounDeclensionClass", meaning) : undefined;
                       if (!cls) return null;
                       return (
                         <span
@@ -426,7 +429,7 @@ export function LexiconView() {
                       // Phase 68b T6: ablaut class glyph (Phase 64 T2).
                       // Marks strong verbs with vowel-mutation paradigm.
                       const proto = state.tree[state.rootId]?.language;
-                      const ab = proto?.ablautClassAssignment?.[meaning];
+                      const ab = proto ? satGet(proto, "ablautClassAssignment", meaning) : undefined;
                       if (!ab) return null;
                       return (
                         <span
@@ -451,7 +454,7 @@ export function LexiconView() {
                       // (Phase 66 T1). Tracks word→clitic→affix→fused→lost
                       // chain progression.
                       const proto = state.tree[state.rootId]?.language;
-                      const st = proto?.grammaticalizationStage?.[meaning];
+                      const st = proto ? satGet(proto, "grammaticalizationStage", meaning) : undefined;
                       if (!st) return null;
                       const STAGE_LABEL = ["", "clitic", "affix", "fused", "lost"];
                       return (
@@ -479,8 +482,8 @@ export function LexiconView() {
                     const isChanged = justChangedRef.current.has(key);
                     const isSelected = selectedLangId === lid && selectedMeaning === meaning;
                     const lang = state.tree[lid]!.language;
-                    const origin = lang.wordOrigin?.[meaning];
-                    const chain = lang.wordOriginChain?.[meaning];
+                    const origin = satGet(lang, "wordOrigin", meaning);
+                    const chain = satGet(lang, "wordOriginChain", meaning);
                     const glyph = originGlyph(origin);
                     // Build a chain hint like "← free + -dom" for derivation
                     // chains recorded by Phase 20f-2's targetedDerivation.
@@ -490,7 +493,8 @@ export function LexiconView() {
                         : "";
                     // Phase 21e: polysemy badge — when this meaning's form
                     // is shared with other meanings, show "×N" with a tooltip.
-                    const formStr = lexGet(lang, meaning);
+                    const _fid = idForGloss(lang, meaning);
+                    const formStr = _fid !== undefined ? lexFormById(lang, _fid) : undefined;
                     const polysemyMatches = formStr && lang.words
                       ? lang.words.find((w) => w.formKey === formStr.join(""))
                       : undefined;
@@ -504,8 +508,8 @@ export function LexiconView() {
                     // Languages that have evolved or seeded irregular forms
                     // for this meaning (Latin esse → fui; English go → went)
                     // get a visible badge so users can find them at a glance.
-                    const suppletiveSlots = lang.suppletion?.[meaning]
-                      ? Object.keys(lang.suppletion[meaning] ?? {})
+                    const suppletiveSlots = satGet(lang, "suppletion", meaning)
+                      ? Object.keys(satGet(lang, "suppletion", meaning) ?? {})
                       : [];
                     // Phase 29 Tranche 4c: social-contagion sparkline.
                     // Renders the per-meaning variant trace as a tiny
@@ -590,7 +594,7 @@ function renderVariantSparkline(
   lang: import("../engine/types").Language,
   meaning: string,
 ): import("react").ReactNode {
-  const variants = lang.variants?.[meaning];
+  const variants = satGet(lang, "variants", meaning);
   if (!variants || variants.length === 0) return null;
   // Bin the last 8 generation windows of activity. Use bornGeneration
   // as the sole timestamp; weights act as a stand-in for currentness.

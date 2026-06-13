@@ -1,11 +1,12 @@
 import type { Language, LanguageTree, Meaning } from "../types";
+import { satGet } from "../lexicon/satellites";
 import { SEMANTIC_CLUSTERS, clusterOf } from "../semantics/clusters";
 import { BASIC_240 } from "../lexicon/basic240";
 import { CONCEPT_IDS, CONCEPTS, conceptsAtOrBelow, tierOf, type Tier } from "../lexicon/concepts";
 import { EXPANSION_NEED_BASELINE, REGISTRY_FILL_CAP } from "../constants";
 import { leafIds } from "../tree/split";
 import { isClosedClass, posOf } from "../lexicon/pos";
-import { lexGet, lexHas } from "../lexicon/access";
+import { lexFormById, lexHasById, idForGloss } from "../lexicon/access";
 
 /**
  * need.ts
@@ -37,7 +38,7 @@ export function lexicalNeed(
   const clusterCounts: Record<string, { have: number; total: number }> = {};
   for (const [name, members] of Object.entries(SEMANTIC_CLUSTERS)) {
     let have = 0;
-    for (const m of members) if (lexHas(lang, m)) have++;
+    for (const m of members) { const id = idForGloss(lang, m); if (id !== undefined && lexHasById(lang, id)) have++; }
     clusterCounts[name] = { have, total: members.length };
   }
 
@@ -68,10 +69,11 @@ export function lexicalNeed(
   const accessible = conceptsAtOrBelow(tier).length;
   const fillCap = Math.round(REGISTRY_FILL_CAP[tier] * accessible);
   let lexCount = 0;
-  for (const m of CONCEPT_IDS) if (lexHas(lang, m)) lexCount++;
+  for (const m of CONCEPT_IDS) { const id = idForGloss(lang, m); if (id !== undefined && lexHasById(lang, id)) lexCount++; }
   const belowFillCap = lexCount < fillCap;
   for (const m of CONCEPT_IDS) {
-    if (lexHas(lang, m)) {
+    const mId = idForGloss(lang, m);
+    if (mId !== undefined && lexHasById(lang, mId)) {
       // Phase 24: existing meanings get a shrinkage-based replacement
       // need when the current form is below 70% of seed length AND the
       // word is still high-frequency. This closes the loop: erosion →
@@ -84,9 +86,9 @@ export function lexicalNeed(
       // "gonna" is a feature, not a bug). Skip the shrinkage signal.
       if (seedLengths && !isClosedClass(posOf(m))) {
         const seedLen = seedLengths[m];
-        const cur = lexGet(lang, m);
+        const cur = lexFormById(lang, mId);
         if (seedLen && cur && cur.length < Math.ceil(seedLen * 0.7)) {
-          const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+          const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
           if (freq > 0.4) {
             shrinkage = 0.5 * (1 - cur.length / seedLen);
           }
@@ -124,7 +126,8 @@ export function lexicalNeed(
     // sister actually using a word is real pressure regardless of registry fill.
     let sistersWithIt = 0;
     for (const s of sisters) {
-      if (lexHas(s, m)) sistersWithIt++;
+      const sId = idForGloss(s, m);
+      if (sId !== undefined && lexHasById(s, sId)) sistersWithIt++;
     }
     if (sisters.length > 0) {
       score += (sistersWithIt / sisters.length) * 0.4;

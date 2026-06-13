@@ -12,7 +12,8 @@ import { sliceOrder } from "./wordOrder";
 import { runRealiseStage } from "./pipeline";
 import { classifierMeaningFor, classifierFormFor } from "./classifiers";
 import { isFeatureActive } from "../modules/legacyGate";
-import { lexGet, lexHas } from "../lexicon/access";
+import { idForGloss, lexFormById, lexHasById } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
 
 /**
  * realise.ts
@@ -419,7 +420,8 @@ function realiseNP(
     const oblique = PRONOUN_OBLIQUE[np.head.lemma.toLowerCase()];
     if (oblique) {
       captionLemma = oblique;
-      const obForm = lexGet(lang, oblique) ?? closedClassForm(lang, oblique);
+      const _obId = idForGloss(lang, oblique);
+      const obForm = (_obId !== undefined ? lexFormById(lang, _obId) : undefined) ?? closedClassForm(lang, oblique);
       if (obForm && obForm.length > 0) headForm = obForm;
     }
   }
@@ -546,7 +548,8 @@ function realiseNP(
   });
   const numTokens: RealisedToken[] = np.numeral
     ? (() => {
-        const lex = lexGet(lang, np.numeral!.lemma);
+        const _numId = idForConcept(lang, np.numeral!.lemma);
+        const lex = _numId !== undefined ? lexFormById(lang, _numId) : undefined;
         const nf = lex ?? closedClassForm(lang, np.numeral!.lemma) ?? [];
         const out: RealisedToken[] = [];
         if (nf.length > 0) {
@@ -565,9 +568,10 @@ function realiseNP(
             // resolves.
             const clfMeaning = classifierMeaningFor(np.head.lemma, lang.grammar.classifierTable);
             const directForm = classifierFormFor(np.head.lemma, lang.grammar.classifierTable);
+            const _clfId = idForConcept(lang, clfMeaning);
             const clfForm =
               (directForm && directForm.length > 0 ? directForm : null) ??
-              lexGet(lang, clfMeaning) ??
+              (_clfId !== undefined ? lexFormById(lang, _clfId) : undefined) ??
               closedClassForm(lang, "CLF") ??
               [];
             if (clfForm.length > 0) {
@@ -576,7 +580,7 @@ function realiseNP(
                 form: clfForm,
                 english: `CLF:${clfMeaning}`,
                 role: "NUM" as const,
-                resolution: lexHas(lang, clfMeaning) || directForm ? "direct" : "concept",
+                resolution: (_clfId !== undefined ? lexHasById(lang, _clfId) : false) || directForm ? "direct" : "concept",
               });
             }
           }
@@ -618,8 +622,9 @@ function realiseNP(
   // to a placeholder gloss like the coordinator below — no morphology invented.
   if (np.emphatic) {
     let ef = closedClassForm(lang, np.emphatic.lemma) ?? [];
-    if (ef.length === 0 && lexHas(lang, np.emphatic.lemma)) {
-      ef = lexGet(lang, np.emphatic.lemma)!.slice();
+    const _empId = idForGloss(lang, np.emphatic.lemma);
+    if (ef.length === 0 && _empId !== undefined && lexHasById(lang, _empId)) {
+      ef = lexFormById(lang, _empId)!.slice();
     }
     out.push({
       surface: ef.length > 0 ? ef.join("") : `“${np.emphatic.lemma}”`,
@@ -640,8 +645,9 @@ function realiseNP(
     // itself as a single-segment placeholder so every coordination
     // shows a separator.
     let cf = closedClassForm(lang, np.coord.lemma) ?? [];
-    if (cf.length === 0 && lexHas(lang, np.coord.lemma)) {
-      cf = lexGet(lang, np.coord.lemma)!.slice();
+    const _coordId = idForGloss(lang, np.coord.lemma);
+    if (cf.length === 0 && _coordId !== undefined && lexHasById(lang, _coordId)) {
+      cf = lexFormById(lang, _coordId)!.slice();
     }
     if (cf.length === 0) {
       cf = [np.coord.lemma];
@@ -740,7 +746,8 @@ function attachRelativeClause(
     }
     case "resumptive": {
       const resumptiveLemma = pickResumptivePronoun(np, role);
-      const resumptive = lexGet(lang, resumptiveLemma) ?? closedClassForm(lang, resumptiveLemma) ?? [];
+      const _resId = idForGloss(lang, resumptiveLemma);
+      const resumptive = (_resId !== undefined ? lexFormById(lang, _resId) : undefined) ?? closedClassForm(lang, resumptiveLemma) ?? [];
       const insertion: RealisedToken[] = resumptive.length > 0
         ? [{ surface: resumptive.join(""), form: resumptive, english: `RESUMP:${resumptiveLemma}`, role: "PP-NP", resolution: "concept" }]
         : [{ surface: `“${resumptiveLemma}”`, form: [], english: `RESUMP:${resumptiveLemma}`, role: "PP-NP", resolution: "fallback" }];
@@ -778,7 +785,8 @@ function realiseSentenceInner(
   void parentCtx;
   return realiseSentence(s, lang, {
     resolveOpen: (lemma) => {
-      const form = lexGet(lang, lemma);
+      const _sid = idForConcept(lang, lemma);
+      const form = _sid !== undefined ? lexFormById(lang, _sid) : undefined;
       return { form: form ?? null, resolution: form ? "direct" : "fallback" };
     },
   });
@@ -849,8 +857,9 @@ function realiseVerb(
       futureRealisation === "will-future" ? "will" :
       futureRealisation === "shall-future" ? "shall" : null;
     if (auxLemma) {
+      const _auxId1 = idForGloss(lang, auxLemma);
       const auxForm =
-        lexGet(lang, auxLemma) ?? closedClassForm(lang, auxLemma) ?? null;
+        (_auxId1 !== undefined ? lexFormById(lang, _auxId1) : undefined) ?? closedClassForm(lang, auxLemma) ?? null;
       if (auxForm && auxForm.length > 0) {
         auxiliaryTokens.push({
           surface: auxForm.join(""),
@@ -865,8 +874,9 @@ function realiseVerb(
   }
   if (vp.verb.aspect === "perfect" && perfectRealisation !== "synthetic") {
     const auxLemma = perfectRealisation === "have-perfect" ? "have" : "be";
+    const _auxId2 = idForGloss(lang, auxLemma);
     const auxForm =
-      lexGet(lang, auxLemma) ?? closedClassForm(lang, auxLemma) ?? null;
+      (_auxId2 !== undefined ? lexFormById(lang, _auxId2) : undefined) ?? closedClassForm(lang, auxLemma) ?? null;
     if (auxForm && auxForm.length > 0) {
       auxiliaryTokens.push({
         surface: auxForm.join(""),

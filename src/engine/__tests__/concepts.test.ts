@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LexemeStore } from "../types";
 import {
   CONCEPT_IDS,
   conceptFor,
@@ -11,8 +12,10 @@ import { lexicalCapacity, computeTierCandidate } from "../lexicon/tier";
 import { maybeRecarve } from "../semantics/recarve";
 import { makeRng } from "../rng";
 import type { Language, LanguageTree } from "../types";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
-import { lexGet, lexHas } from "../lexicon/access";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
+import { migrateSatelliteMaps } from "../lexicon/store";
+import { tForm as lexGet, tHas as lexHas } from "../lexicon/__tests__/glossSeam";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * concepts.test.ts
@@ -26,7 +29,7 @@ function testLang(overrides: Partial<Language> = {}): Language {
   const lang: Language = {
     id: "L-c",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -53,7 +56,11 @@ function testLang(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
+  // S2a: satellite maps supplied via overrides (e.g. wordFrequencyHints) are
+  // authored gloss-keyed; re-key them to LexemeId so seam reads (recarve's
+  // frequency-based winner pick) resolve, matching production storage.
+  migrateSatelliteMaps(lang);
   return lang;
 }
 
@@ -131,8 +138,8 @@ describe("lexical capacity + tier advancement", () => {
 describe("re-carving", () => {
   it("merges two colexified concepts when both have forms", () => {
     const lang = testLang({
-      lexicon: { arm: ["a", "r", "m"], hand: ["h", "a", "n", "d"] },
-      wordFrequencyHints: { arm: 0.6, hand: 0.85 },
+      lexemes: { arm: ["a", "r", "m"], hand: ["h", "a", "n", "d"] } as unknown as LexemeStore,
+      wordFrequencyHints: { arm: 0.6, hand: 0.85 } as Record<string, number>,
     });
     const rng = makeRng("merge-seed");
     const ev = maybeRecarve(lang, rng, 1);
@@ -143,7 +150,7 @@ describe("re-carving", () => {
       expect(ev.loser).toBe("arm");
       expect(lexGet(lang, "hand")).toBeDefined();
       expect(lexHas(lang, "arm")).toBe(false);
-      expect(lang.colexifiedAs?.["hand"]).toContain("arm");
+      expect(satGet(lang, "colexifiedAs", "hand")).toContain("arm");
     } else {
       expect(["arm", "hand"]).toContain(ev.source);
     }
@@ -151,8 +158,8 @@ describe("re-carving", () => {
 
   it("splits a slot into a colex target the language lacks", () => {
     const lang = testLang({
-      lexicon: { tongue: ["t", "o", "n"] },
-      wordFrequencyHints: { tongue: 0.8 },
+      lexemes: { tongue: ["t", "o", "n"] } as unknown as LexemeStore,
+      wordFrequencyHints: { tongue: 0.8 } as Record<string, number>,
     });
     const rng = makeRng("split-seed");
     const ev = maybeRecarve(lang, rng, 1);
@@ -166,7 +173,7 @@ describe("re-carving", () => {
   });
 
   it("returns null when no colex candidates exist", () => {
-    const lang = testLang({ lexicon: {} });
+    const lang = testLang({ lexemes: {} });
     const rng = makeRng("empty-seed");
     const ev = maybeRecarve(lang, rng, 1);
     expect(ev).toBeNull();
@@ -179,8 +186,8 @@ describe("re-carving", () => {
     // survives instead of being merged away. This locks the anti-oscillation
     // guard (cold→cool→cold flip-flop) at the unit level.
     const lang = testLang({
-      lexicon: { arm: ["a", "r", "m"], hand: ["h", "a", "n", "d"] },
-      wordFrequencyHints: { arm: 0.6, hand: 0.85 },
+      lexemes: { arm: ["a", "r", "m"], hand: ["h", "a", "n", "d"] } as unknown as LexemeStore,
+      wordFrequencyHints: { arm: 0.6, hand: 0.85 } as Record<string, number>,
       recarveHistory: { "arm|hand": 0 }, // key is sorted: arm < hand
     });
     const rng = makeRng("merge-seed");

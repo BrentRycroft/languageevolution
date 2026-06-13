@@ -94,7 +94,7 @@ export type MorphologyState = Pick<Language,
 export type LexiconState = Pick<Language,
   | "id"
   | "conceptIdSeq"
-  | "lexicon"
+  | "lexemes"
   | "words"
   | "wordsByFormKey"
   | "wordFrequencyHints"
@@ -115,7 +115,7 @@ export type LexiconState = Pick<Language,
   | "lexicalCapacity"
   | "orthography"
   | "lexicalSpelling"
-  | "conceptIds"
+  | "lexemeIds"
 >;
 
 // ─── GrammarState ───────────────────────────────────────────────────

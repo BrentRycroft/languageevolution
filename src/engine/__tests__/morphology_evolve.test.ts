@@ -3,7 +3,8 @@ import { applyPhonologyToAffixes, maybeGrammaticalize, maybeMergeParadigms, mayb
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import { lexSet, lexGet, lexKeys } from "../lexicon/access";
+import { tSet as lexSet, tForm as lexGet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
+import { satGet, satEntries } from "../lexicon/satellites";
 import type { Language } from "../types";
 
 /**
@@ -18,14 +19,14 @@ function makeLang(): Language {
   const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
-    conceptIds: {},
+    lexemes: {},
+    lexemeIds: {},
     enabledChangeIds: ["lenition.p_to_f"],
     changeWeights: { "lenition.p_to_f": 1 },
     birthGeneration: 0,
     grammar: { ...DEFAULT_GRAMMAR },
     events: [],
-    wordFrequencyHints: { go: 0.9, come: 0.9 },
+    wordFrequencyHints: { go: 0.9, come: 0.9 } as Record<string, number>,
     phonemeInventory: { segmental: [], tones: [], usesTones: false },
     morphology: {
       paradigms: {
@@ -44,6 +45,11 @@ function makeLang(): Language {
   };
   lexSet(lang, "go", ["g", "a", "n"]);
   lexSet(lang, "come", ["k", "o", "m"]);
+  const _fh = lang.wordFrequencyHints as Record<string, number>;
+  for (const _g of Object.keys(_fh)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
+  }
   return lang;
 }
 
@@ -70,10 +76,10 @@ describe("morphology evolution", () => {
     const m = shift!.source!.meaning;
     // 4b: a fresh word becomes a CLITIC first (stage 1) — it does NOT teleport
     // to a bound affix, so no new paradigm appears on this transition.
-    expect(lang.grammaticalizationStage?.[m]?.stage).toBe(1);
+    expect(satGet(lang, "grammaticalizationStage", m)?.stage).toBe(1);
     expect(Object.keys(lang.morphology.paradigms).length).toBe(paradigmsBefore);
-    expect(lang.wordOrigin[m]).toMatch(/^clitic:/);
-    expect(lang.grammaticalizationStage?.[m]?.affixForm).toBeDefined();
+    expect(satGet(lang, "wordOrigin", m)).toMatch(/^clitic:/);
+    expect(satGet(lang, "grammaticalizationStage", m)?.affixForm).toBeDefined();
     // 4c: the free dictionary lemma is INTACT (not slice(0,-1)'d).
     expect(lexGet(lang, m)!.join("")).toBe(before.get(m));
   });
@@ -84,16 +90,16 @@ describe("morphology evolution", () => {
     let bound: string | null = null;
     for (let i = 0; i < 50 && !bound; i++) {
       maybeGrammaticalize(lang, rng, 1);
-      for (const [m, st] of Object.entries(lang.grammaticalizationStage ?? {})) {
+      for (const [m, st] of satEntries(lang, "grammaticalizationStage")) {
         if (st?.stage === 2) { bound = m; break; }
       }
     }
     expect(bound).not.toBeNull();
-    const st = lang.grammaticalizationStage![bound!]!;
+    const st = satGet(lang, "grammaticalizationStage", bound!)!;
     const pdm = lang.morphology.paradigms[st.targetCategory!];
     expect(pdm).toBeDefined();
     // The bound affix is the REDUCED allomorph — no longer than the free lemma.
-    expect(pdm!.affix.length).toBeLessThanOrEqual(lexGet(lang, bound!)!.length);
+    expect(pdm!.affix.length).toBeLessThanOrEqual(lang.lexemes[bound!]!.form.length);
   });
 
   it("paradigm merge collapses identical affixes in same position", () => {

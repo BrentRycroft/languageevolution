@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { PRESETS } from "../presets";
 import { createSimulation } from "../simulation";
-import { lexKeys, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import { formToString } from "../phonology/ipa";
 import { fnv1a } from "../rng";
 import { YEARS_PER_GENERATION } from "../constants";

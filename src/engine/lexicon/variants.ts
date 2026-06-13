@@ -1,6 +1,8 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { satGet, satSet, satKeys, satDelete } from "./satellites";
+import { meaningForLexemeId } from "./lexemeIdentity";
 import { setLexiconForm } from "./mutate";
-import { lexGet } from "./access";
+import { lexFormById, idForGloss } from "./access";
 
 /**
  * variants.ts
@@ -31,7 +33,7 @@ export function recordVariant(
   weight = NEW_VARIANT_WEIGHT,
 ): void {
   if (!lang.variants) lang.variants = {};
-  const existing = lang.variants[meaning] ?? [];
+  const existing = satGet(lang, "variants", meaning) ?? [];
   for (let i = 0; i < existing.length; i++) {
     if (formsEqual(existing[i]!.form, form)) {
       existing[i]!.weight = Math.min(1, existing[i]!.weight + weight);
@@ -43,7 +45,7 @@ export function recordVariant(
     existing.sort((a, b) => b.weight - a.weight);
     existing.length = MAX_VARIANTS;
   }
-  lang.variants[meaning] = existing;
+  satSet(lang, "variants", meaning, existing);
 }
 
 export function reinforceCanonical(
@@ -52,7 +54,7 @@ export function reinforceCanonical(
   form: WordForm,
 ): void {
   if (!lang.variants) return;
-  const list = lang.variants[meaning];
+  const list = satGet(lang, "variants", meaning);
   if (!list) return;
   for (let i = 0; i < list.length; i++) {
     if (formsEqual(list[i]!.form, form)) {
@@ -74,10 +76,12 @@ export function decayAndActuate(
 ): ActuationResult[] {
   if (!lang.variants) return [];
   const actuations: ActuationResult[] = [];
-  const meanings = Object.keys(lang.variants);
-  for (const m of meanings) {
-    const list = lang.variants[m]!;
-    const canonical = lexGet(lang, m);
+  const ids = satKeys(lang, "variants");
+  for (const id of ids) {
+    const m = meaningForLexemeId(lang, id) ?? id;
+    const list = satGet(lang, "variants", id)!;
+    const _cid = idForGloss(lang, m);
+    const canonical = _cid !== undefined ? lexFormById(lang, _cid) : undefined;
     for (let i = 0; i < list.length; i++) {
       const v = list[i]!;
       if (canonical && formsEqual(v.form, canonical)) {
@@ -95,7 +99,7 @@ export function decayAndActuate(
       survivors = list.filter((v) => v.weight >= PRUNE_THRESHOLD);
     }
     if (survivors.length === 0) {
-      delete lang.variants[m];
+      satDelete(lang, "variants", id);
       continue;
     }
     survivors.sort((a, b) => b.weight - a.weight);
@@ -104,7 +108,7 @@ export function decayAndActuate(
     // (freq=0.5) actuates at 0.5; Swadesh-core (freq=1.0) needs 0.7.
     // Real diachrony: variants compete for frequency over 5-10 gens
     // before one dominates; high-freq core resists displacement.
-    const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     const threshold = 0.5 + 0.4 * Math.max(0, freq - 0.5);
     // Phase 40b: lengthening-bias dampening. When the variant is
     // *longer* than the canonical, dampen its actuation by adding
@@ -117,8 +121,8 @@ export function decayAndActuate(
       // Phase 29 Tranche 1 round 2: route through chokepoint.
       setLexiconForm(lang, m, top.form.slice(), { bornGeneration: generation, origin: "variant-actuation" });
     }
-    lang.variants[m] = survivors;
+    satSet(lang, "variants", id, survivors);
   }
-  if (Object.keys(lang.variants).length === 0) delete lang.variants;
+  if (satKeys(lang, "variants").length === 0) delete lang.variants;
   return actuations;
 }

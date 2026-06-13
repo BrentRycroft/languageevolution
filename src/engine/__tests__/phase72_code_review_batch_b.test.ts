@@ -9,7 +9,7 @@ import { inheritMeaningFields } from "../perMeaningFields";
 import { migrateSavedRun, LATEST_SAVE_VERSION } from "../../persistence/migrate";
 import { defaultConfig } from "../config";
 import type { Language, SavedRun } from "../types";
-import { lexGet, lexHas, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tHas as lexHas, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * phase72_code_review_batch_b.test.ts — invariants that Phase 72
@@ -224,7 +224,7 @@ describe("B12 (code-review) — inheritMeaningFields fills empty-container child
     cfg.seed = "p72-b12";
     const sim = createSimulation(cfg);
     const parent = sim.getState().tree["L-0"]!.language;
-    parent.wordFrequencyHints = { water: 0.9, fire: 0.8 };
+    parent.wordFrequencyHints = { water: 0.9, fire: 0.8 } as Record<string, number>;
     // Synthesise a child with the SAME shape but an EMPTY wordFrequencyHints.
     const child = {
       ...parent,
@@ -232,8 +232,8 @@ describe("B12 (code-review) — inheritMeaningFields fills empty-container child
     } as Language;
     inheritMeaningFields(parent, child);
     // After inheritance, the empty container should be filled from parent.
-    expect(child.wordFrequencyHints.water).toBe(0.9);
-    expect(child.wordFrequencyHints.fire).toBe(0.8);
+    expect((child.wordFrequencyHints as Record<string, number>).water).toBe(0.9);
+    expect((child.wordFrequencyHints as Record<string, number>).fire).toBe(0.8);
   });
 
   it("a child with a NON-empty value for a registered field keeps its own value", () => {
@@ -241,13 +241,13 @@ describe("B12 (code-review) — inheritMeaningFields fills empty-container child
     cfg.seed = "p72-b12-no-override";
     const sim = createSimulation(cfg);
     const parent = sim.getState().tree["L-0"]!.language;
-    parent.wordOrigin = { water: "parent-origin" };
+    parent.wordOrigin = { water: "parent-origin" } as Record<string, string>;
     const child = {
       ...parent,
-      wordOrigin: { water: "child-already-set" },
+      wordOrigin: { water: "child-already-set" } as Record<string, string>,
     } as Language;
     inheritMeaningFields(parent, child);
-    expect(child.wordOrigin.water).toBe("child-already-set");
+    expect((child.wordOrigin as Record<string, string>).water).toBe("child-already-set");
   });
 
   it("Sets (e.g. boundMorphemes) are treated as populated even when empty", () => {

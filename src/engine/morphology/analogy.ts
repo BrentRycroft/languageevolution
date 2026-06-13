@@ -4,7 +4,9 @@ import { clusterOf, relatedMeanings } from "../semantics/clusters";
 import { isFormLegal } from "../phonology/wordShape";
 import { isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm } from "../lexicon/mutate";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById, lexHasById, lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * analogy.ts
@@ -26,14 +28,16 @@ export function maybeAnalogicalLevel(
   probability: number,
 ): AnalogyEvent | null {
   if (!rng.chance(probability)) return null;
-  const meanings = lexKeys(lang);
-  if (meanings.length < 3) return null;
+  const ids = lexIds(lang);
+  if (ids.length < 3) return null;
   const candidates: Array<{
     meaning: string;
     mean: number;
     form: WordForm;
   }> = [];
-  for (const m of meanings) {
+  for (const id of ids) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     // Phase 26c: closed-class words don't undergo analogical leveling.
     // Articles, prepositions, conjunctions don't reshape their forms
     // based on cluster mates (real cross-linguistic pattern: function
@@ -43,17 +47,24 @@ export function maybeAnalogicalLevel(
     // by being lexically irregular. Length-based leveling would erase
     // exactly the irregularity that makes them suppletive in the first
     // place, so skip any meaning carrying a suppletion record.
-    const supp = lang.suppletion?.[m];
+    const supp = satGet(lang, "suppletion", m);
     if (supp && Object.keys(supp).length > 0) continue;
     const cluster = clusterOf(m);
     if (!cluster) continue;
-    const mates = relatedMeanings(m).filter(
-      (x) => x !== m && lexHas(lang, x),
-    );
+    const mates = relatedMeanings(m).filter((x) => {
+      if (x === m) return false;
+      const xId = idForGloss(lang, x);
+      return xId !== undefined && lexHasById(lang, xId);
+    });
     if (mates.length < 2) continue;
-    const mateLens = mates.map((x) => lexGet(lang, x)!.length);
+    const mateLens = mates.map((x) => {
+      const xId = idForGloss(lang, x)!;
+      return lexFormById(lang, xId)!.length;
+    });
     const mean = mateLens.reduce((a, b) => a + b, 0) / mateLens.length;
-    const form = lexGet(lang, m)!;
+    const mId = idForGloss(lang, m);
+    const form = mId !== undefined ? lexFormById(lang, mId)! : undefined;
+    if (!form) continue;
     if (Math.abs(form.length - mean) >= 2) {
       candidates.push({ meaning: m, mean, form });
     }

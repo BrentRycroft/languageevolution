@@ -1,4 +1,5 @@
 import type { Language, LanguageTree, WordForm } from "../types";
+import { satGet, satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { leafIds } from "../tree/split";
 import { isVowel, isSyllabic } from "../phonology/ipa";
@@ -16,7 +17,8 @@ import { geoDistance } from "../geo";
 import type { WorldMap } from "../geo/map";
 import { arealShareAffinity } from "../geo/territory";
 import { clusterOf } from "../semantics/clusters";
-import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
+import { lexIds, idForGloss, lexFormById, lexHasById, coinSeededLexeme } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * borrow.ts
@@ -130,13 +132,19 @@ export function tryBorrow(
   const distance =
     recipCoords && donor.coords ? geoDistance(recipCoords, donor.coords) : 0;
 
-  const donorMeanings = lexKeys(donor);
-  const candidates = donorMeanings.filter((m) => !lexHas(recipient, m));
+  const donorMeanings: string[] = [];
+  for (const id of lexIds(donor)) {
+    const m = meaningForLexemeId(donor, id);
+    if (m !== undefined) donorMeanings.push(m);
+  }
+  const candidates = donorMeanings.filter((m) => idForGloss(recipient, m) === undefined);
   const pool = candidates.length > 0 ? candidates : donorMeanings;
   if (pool.length === 0) return null;
   const tierGap = (donor.culturalTier ?? 0) - (recipient.culturalTier ?? 0);
   const meaning = pickMeaningByDomain(pool, tierGap, rng);
-  const originalForm = lexGet(donor, meaning)!;
+  const donorWordId = idForGloss(donor, meaning);
+  if (!donorWordId) return null;
+  const originalForm = lexFormById(donor, donorWordId)!;
   const substituted = adaptPhonemes(originalForm, recipient, rng);
   const adapted = repairLoanShape(substituted, recipient);
   if (adapted.length === 0) return null;
@@ -151,7 +159,8 @@ export function tryBorrow(
   // promote it to primary over generations. Phase 39b routes through
   // addSynonym (Phase 37) so the loan is queryable via selectSynonyms
   // and visible in the reverse translator.
-  const alreadyHas = lexHas(recipient, meaning);
+  const recipientWordId = idForGloss(recipient, meaning);
+  const alreadyHas = recipientWordId !== undefined && lexHasById(recipient, recipientWordId);
   if (alreadyHas) {
     addAlt(recipient, meaning, adapted, prestige);
     // Phase 39b: also register as a first-class synonym in the words
@@ -183,7 +192,7 @@ export function tryBorrow(
       },
     );
     if (!commit.committed) return null;
-    lexSet(recipient, meaning, adapted);
+    coinSeededLexeme(recipient, meaning, adapted);
   }
   // Phase 68b T5: borrowed meanings need explicit Phase 64+ metadata
   // (noun-declension class, etc.) so the recipient's pickAffixVariant
@@ -194,23 +203,21 @@ export function tryBorrow(
   if (!alreadyHas) {
     const pos = posOf(meaning);
     if (pos === "verb") {
-      if (!recipient.inflectionClass) recipient.inflectionClass = {};
-      if (!recipient.inflectionClass[meaning]) {
-        recipient.inflectionClass[meaning] = assignInflectionClass(adapted, rng);
+      if (!satGet(recipient, "inflectionClass", meaning)) {
+        satSet(recipient, "inflectionClass", meaning, assignInflectionClass(adapted, rng));
       }
     } else if (pos === "noun" || pos === "other") {
-      if (!recipient.nounDeclensionClass) recipient.nounDeclensionClass = {};
-      if (!recipient.nounDeclensionClass[meaning]) {
-        recipient.nounDeclensionClass[meaning] = assignNounDeclensionClass(adapted, rng);
+      if (!satGet(recipient, "nounDeclensionClass", meaning)) {
+        satSet(recipient, "nounDeclensionClass", meaning, assignNounDeclensionClass(adapted, rng));
       }
     }
   }
   if (!recipient.registerOf) recipient.registerOf = {};
-  if (!alreadyHas) recipient.registerOf[meaning] = prestige;
-  recipient.wordFrequencyHints[meaning] = Math.max(
-    recipient.wordFrequencyHints[meaning] ?? 0,
+  if (!alreadyHas) satSet(recipient, "registerOf", meaning, prestige);
+  satSet(recipient, "wordFrequencyHints", meaning, Math.max(
+    satGet(recipient, "wordFrequencyHints", meaning) ?? 0,
     prestige === "high" ? 0.55 : 0.45,
-  );
+  ));
   return {
     donor: donor.name,
     donorId,

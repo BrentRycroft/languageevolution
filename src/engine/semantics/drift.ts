@@ -1,4 +1,5 @@
 import type { Language } from "../types";
+import { satGet, satSet, satDelete } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { neighborsOf } from "./neighbors";
 import { relatedMeanings, clusterOf } from "./clusters";
@@ -12,7 +13,8 @@ import { complexityFor } from "../lexicon/complexity";
 import { isFormLegal } from "../phonology/wordShape";
 import { samePOS, isClosedClass, posOf } from "../lexicon/pos";
 import { setLexiconForm, deleteMeaning, PROTECTED_MEANINGS } from "../lexicon/mutate";
-import { lexGet, lexHas, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 /**
  * drift.ts
  *
@@ -204,9 +206,10 @@ export function driftOneMeaning(
   override?: NeighborOverride,
   generation: number = 0,
 ): SemanticDrift | null {
-  const meanings = lexKeys(lang);
-  if (meanings.length === 0) return null;
-  const shuffled = meanings.slice();
+  const ids = lexIds(lang);
+  if (ids.length === 0) return null;
+  const allGlosses = ids.map((id) => meaningForLexemeId(lang, id)).filter((g): g is string => g !== undefined);
+  const shuffled = ids.slice();
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = rng.int(i + 1);
     const tmp = shuffled[i]!;
@@ -214,7 +217,9 @@ export function driftOneMeaning(
     shuffled[j] = tmp;
   }
   for (const strict of [true, false]) {
-    for (const m of shuffled) {
+    for (const id of shuffled) {
+      const m = meaningForLexemeId(lang, id);
+      if (m === undefined) continue;
       // Phase 26c: closed-class words (DET, AUX, PREP, CONJ, PRON, NEG,
       // COP) are NOT subject to semantic drift. Their meanings are
       // tightly tied to grammatical function and don't shift the way
@@ -222,7 +227,7 @@ export function driftOneMeaning(
       // noun; PIE *de-/to- demonstratives stayed demonstrative across
       // millennia in every IE branch). Drift mechanism gates here.
       if (isClosedClass(posOf(m))) continue;
-      const reg = lang.registerOf?.[m];
+      const reg = satGet(lang, "registerOf", id);
       if (reg === "high" && rng.chance(0.5)) continue;
       // LANE-C — Zipfian frequency-retention law (Pagel, Atkinson & Meade
       // 2007; Zipf): the rate of semantic (and lexical) change is inversely
@@ -234,7 +239,7 @@ export function driftOneMeaning(
       // its frequency (≈0.85 for the core, ≈0.1 for the periphery), falling
       // through to the next shuffled meaning. The RNG draw is APPENDED after
       // the high-register draw above to keep the per-step draw order local.
-      const freqHint = lang.wordFrequencyHints[m] ?? zipfFrequencyFor(m);
+      const freqHint = satGet(lang, "wordFrequencyHints", id) ?? zipfFrequencyFor(m);
       if (rng.chance(freqHint * RETENTION_STRENGTH)) continue;
       // Phase 26e: removed Swadesh-coreness drift-skip. The coreness-
       // based protection was redundant with Phase 24c's frequency-
@@ -248,8 +253,8 @@ export function driftOneMeaning(
       const expansionExtras = EXPANSION_IDS_BY_TIER.get(langTier) ?? [];
       const candidates =
         expansionExtras.length === 0
-          ? meanings
-          : Array.from(new Set([...meanings, ...expansionExtras]));
+          ? allGlosses
+          : Array.from(new Set([...allGlosses, ...expansionExtras]));
       // Phase 3a (evolution-realism): drive drift from the CURATED graph —
       // SEMANTIC_NEIGHBORS (CLICS-aligned) + recorded colexifications — as
       // the PRIMARY candidate source, demoting the degenerate 12-dim
@@ -281,16 +286,16 @@ export function driftOneMeaning(
       const pool = posCompatible.length > 0 ? posCompatible : neighbors;
       const target = pool[rng.int(pool.length)]!;
       if (target === m) continue;
-      const targetOccupied = lexHas(lang, target);
+      const targetOccupied = idForGloss(lang, target) !== undefined;
       if (strict && targetOccupied) continue;
       // `m` is a lexicon key, but the key set can include bound morphemes / affix
       // entries (lexicon-lifecycle + morphology lanes) that have no standalone form.
       // Those aren't driftable content words — skip rather than crash isFormLegal on
       // an undefined form. (Was an unsafe `!` assertion.)
-      const form = lexGet(lang, m);
+      const form = lexFormById(lang, id);
       if (!form) continue;
       if (!isFormLegal(target, form)) continue;
-      const kind = classifyShift(m, target, rng, lang.registerOf?.[m], lang, freqHint);
+      const kind = classifyShift(m, target, rng, satGet(lang, "registerOf", id), lang, freqHint);
       // Phase 73e: a PROTECTED source meaning (be/eat/go/…) cannot be dropped
       // by deleteMeaning's Phase-71b guard. Pre-fix, drift still copied its
       // form to `target` and reported polysemous:false while the guard silently
@@ -307,22 +312,23 @@ export function driftOneMeaning(
           rng.chance(0.3)) ||
         PROTECTED_MEANINGS.has(m);
       // Phase 29 Tranche 1a: route through chokepoint so words stays in sync.
-      setLexiconForm(lang, target, form, { bornGeneration: 0, origin: lang.wordOrigin[m] ?? "drift" });
-      const oldFreq = lang.wordFrequencyHints[m];
+      setLexiconForm(lang, target, form, { bornGeneration: 0, origin: satGet(lang, "wordOrigin", id) ?? "drift" });
+      const oldFreq = satGet(lang, "wordFrequencyHints", id);
       if (oldFreq !== undefined) {
-        lang.wordFrequencyHints[target] = oldFreq;
+        satSet(lang, "wordFrequencyHints", target, oldFreq);
       }
-      if (!polysemous) delete lang.wordFrequencyHints[m];
-      if (lang.registerOf?.[m] !== undefined) {
-        lang.registerOf[target] = lang.registerOf[m]!;
+      if (!polysemous) satDelete(lang, "wordFrequencyHints", id);
+      const oldReg = satGet(lang, "registerOf", id);
+      if (oldReg !== undefined) {
+        satSet(lang, "registerOf", target, oldReg);
       }
-      if (!polysemous && lang.registerOf?.[m] !== undefined) delete lang.registerOf[m];
-      if (lang.wordOrigin[m] !== undefined && !lang.wordOrigin[target]) {
-        lang.wordOrigin[target] = lang.wordOrigin[m]!;
+      if (!polysemous && oldReg !== undefined) satDelete(lang, "registerOf", id);
+      if (satGet(lang, "wordOrigin", id) !== undefined && !satGet(lang, "wordOrigin", target)) {
+        satSet(lang, "wordOrigin", target, satGet(lang, "wordOrigin", id)!);
       }
-      const lastChange = lang.lastChangeGeneration[m];
-      if (lastChange !== undefined && lang.lastChangeGeneration[target] === undefined) {
-        lang.lastChangeGeneration[target] = lastChange;
+      const lastChange = satGet(lang, "lastChangeGeneration", id);
+      if (lastChange !== undefined && satGet(lang, "lastChangeGeneration", target) === undefined) {
+        satSet(lang, "lastChangeGeneration", target, lastChange);
       }
       if (!polysemous) {
         // Phase 72d-2 (defer-1a): drift drops the source meaning when

@@ -5,9 +5,11 @@ import type {
   WordMorphStructure,
   WordMorphStructureOrigin,
 } from "../types";
+import { satGet, satSet, satHas } from "../lexicon/satellites";
 import type { CoinageOutcome } from "../genesis/apply";
 import { tryCoin } from "../genesis/apply";
 import { lexicalNeed } from "../genesis/need";
+import { findSemanticGap, coinKeylessForGap } from "../genesis/semanticGap";
 import { neighborsOf } from "../semantics/neighbors";
 import type { Rng } from "../rng";
 import { genesisRulesFor, pushEvent } from "./helpers";
@@ -31,7 +33,8 @@ import {
 } from "../genesis/mechanisms/targetedDerivation";
 import { tryCommitCoinage, rebuildFormKeyIndex } from "../lexicon/word";
 import { recordCoinageStructure } from "../lexicon/compound";
-import { lexGet, lexHas, lexKeys, lexSet } from "../lexicon/access";
+import { lexFormById, lexIds, idForGloss, coinSeededLexeme, lexHasById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import {
   findSuffixByTag,
   registerSuffixUsage,
@@ -91,6 +94,13 @@ function buildMorphStructure(
   return out;
 }
 
+/**
+ * Inc 4 step 3 — per-generation probability that a language coins a KEYLESS word into a
+ * salient empty region of its meaning space (point-native storage, no concept key). Low, so
+ * keyless coinage is a rare innovation alongside the gloss-keyed mechanisms.
+ */
+const KEYLESS_GAP_COINAGE_RATE = 0.1;
+
 export function stepGenesis(
   lang: Language,
   config: SimulationConfig,
@@ -102,7 +112,7 @@ export function stepGenesis(
   // Legacy fallback: always on (coinage was unconditional).
   if (!isFeatureActive(lang, "semantic:coinage", () => true)) return;
   const rules = genesisRulesFor(config);
-  const lexSize = lexKeys(lang).length;
+  const lexSize = lexIds(lang).length;
   const capacity = lang.lexicalCapacity ?? lexicalCapacity(lang, generation);
   const deficit = Math.max(0, capacity - lexSize);
   // Phase 60: aggressive coinage volume — user wanted "magnitudes
@@ -175,9 +185,9 @@ export function stepGenesis(
             },
           );
           if (!commit.committed) continue;
-          lexSet(lang, derived.meaning, derived.form);
-          lang.wordFrequencyHints[derived.meaning] = 0.4;
-          lang.wordOrigin[derived.meaning] = "derivation";
+          coinSeededLexeme(lang, derived.meaning, derived.form);
+          satSet(lang, "wordFrequencyHints", derived.meaning, 0.4);
+          satSet(lang, "wordOrigin", derived.meaning, "derivation");
           recordDerivationChain(lang, derived);
           // Record the derived word's structure so recordedParts() sees coined
           // derivations, not just seed ones (concept-native structure checks).
@@ -244,12 +254,13 @@ export function stepGenesis(
     // (the lexicalNeed shrinkage component flagged it). Strip the old
     // form's sense from lang.words BEFORE the new commit so the words
     // table doesn't accumulate stale entries.
+    const _existingId = idForGloss(lang, outcome.meaning);
     const isReplacement =
-      lexHas(lang, outcome.meaning) &&
-      lexGet(lang, outcome.meaning)!.join("") !== outcome.form.join("");
+      _existingId !== undefined &&
+      lexFormById(lang, _existingId)!.join("") !== outcome.form.join("");
     let oldFormStr = "";
     if (isReplacement) {
-      oldFormStr = lexGet(lang, outcome.meaning)!.join("");
+      oldFormStr = lexFormById(lang, _existingId!)!.join("");
     }
     // Phase 21c: collision-aware commit. The form may already exist as
     // a word for another meaning; in that case roll polysemy/reject.
@@ -318,11 +329,11 @@ export function stepGenesis(
       // filtered copy, so the form-key index is stale. Rebuild it.
       rebuildFormKeyIndex(lang);
     }
-    lexSet(lang, outcome.meaning, outcome.form);
-    lang.wordFrequencyHints[outcome.meaning] = 0.4;
-    lang.wordOrigin[outcome.meaning] = isReplacement
+    coinSeededLexeme(lang, outcome.meaning, outcome.form);
+    satSet(lang, "wordFrequencyHints", outcome.meaning, 0.4);
+    satSet(lang, "wordOrigin", outcome.meaning, isReplacement
       ? `lexical-replacement:${outcome.originTag}`
-      : outcome.originTag;
+      : outcome.originTag);
     // Record structure for coined compounds (mechanisms that report ≥2
     // constituents) so recordedParts() covers coinage, not just seed compounds.
     if (
@@ -332,8 +343,8 @@ export function stepGenesis(
     ) {
       recordCoinageStructure(lang, outcome.meaning, outcome.sources.partMeanings, generation);
     }
-    if (lang.registerOf && !lang.registerOf[outcome.meaning]) {
-      lang.registerOf[outcome.meaning] = outcome.register ?? "low";
+    if (!satHas(lang, "registerOf", outcome.meaning)) {
+      satSet(lang, "registerOf", outcome.meaning, outcome.register ?? "low");
     }
     // Phase 29 Tranche 5e + Phase 64 T1: assign inflection /
     // declension class for the new coinage. Verbs get
@@ -344,14 +355,12 @@ export function stepGenesis(
     if (!isReplacement) {
       const pos = posOf(outcome.meaning);
       if (pos === "verb") {
-        if (!lang.inflectionClass) lang.inflectionClass = {};
-        if (!lang.inflectionClass[outcome.meaning]) {
-          lang.inflectionClass[outcome.meaning] = assignInflectionClass(outcome.form, rng);
+        if (!satGet(lang, "inflectionClass", outcome.meaning)) {
+          satSet(lang, "inflectionClass", outcome.meaning, assignInflectionClass(outcome.form, rng));
         }
       } else if (pos === "noun" || pos === "other") {
-        if (!lang.nounDeclensionClass) lang.nounDeclensionClass = {};
-        if (!lang.nounDeclensionClass[outcome.meaning]) {
-          lang.nounDeclensionClass[outcome.meaning] = assignNounDeclensionClass(outcome.form, rng);
+        if (!satGet(lang, "nounDeclensionClass", outcome.meaning)) {
+          satSet(lang, "nounDeclensionClass", outcome.meaning, assignNounDeclensionClass(outcome.form, rng));
         }
       }
     }
@@ -362,20 +371,19 @@ export function stepGenesis(
     // field upstream via recordDerivationChain; the MECHANISMS
     // path was previously dropping all etymology.
     if (!isReplacement && outcome.sources) {
-      if (!lang.wordOriginChain) lang.wordOriginChain = {};
       const s = outcome.sources;
       if (s.partMeanings && s.partMeanings.length >= 2) {
-        lang.wordOriginChain[outcome.meaning] = {
+        satSet(lang, "wordOriginChain", outcome.meaning, {
           tag: outcome.originTag,
           from: s.partMeanings[0]!,
           via: s.partMeanings[1]!,
-        };
+        });
       } else if (s.donorLangId && s.donorMeaning) {
-        lang.wordOriginChain[outcome.meaning] = {
+        satSet(lang, "wordOriginChain", outcome.meaning, {
           tag: outcome.originTag,
           from: s.donorMeaning,
           via: `←${s.donorLangId}`,
-        };
+        });
       }
     }
     // Phase 47 T11: opaque coinage. When the meaning is marked
@@ -387,8 +395,7 @@ export function stepGenesis(
     if (!isReplacement) {
       const concept = CONCEPTS[outcome.meaning];
       if (concept?.canBeOpaqueCoined && rng.chance(0.15)) {
-        if (!lang.wordOriginChain) lang.wordOriginChain = {};
-        lang.wordOriginChain[outcome.meaning] = { tag: "opaque-coined" };
+        satSet(lang, "wordOriginChain", outcome.meaning, { tag: "opaque-coined" });
       }
     }
     pushEvent(lang, {
@@ -400,6 +407,17 @@ export function stepGenesis(
           ? `${outcome.originTag}+polysemy: ${outcome.meaning} (homophone of existing word)`
           : `${outcome.originTag}: ${outcome.meaning}`,
     });
+  }
+
+  // Inc 4 step 3 — keyless gap-coinage. At a low rate, coin a word into a salient EMPTY
+  // region of the meaning space: a point-native lexeme stored by point + form with NO
+  // concept/gloss key (a gloss-less record in lang.lexemes), its label emergent. This drives the
+  // point-native storage path from the live loop. Silent for now (surfaced in a later
+  // increment). The rng.chance gate is the LAST genesis draw, so it perturbs only this
+  // generation's downstream stream onward — gen-0 (no genesis) stays byte-identical.
+  if (rng.chance(KEYLESS_GAP_COINAGE_RATE)) {
+    const gap = findSemanticGap(lang);
+    if (gap) coinKeylessForGap(lang, gap, generation);
   }
 }
 
@@ -424,9 +442,9 @@ function tryTargetedDerivation(lang: Language, rng: Rng) {
   }
   const candidates: string[] = [];
   for (const meaning of Object.keys(DERIVATION_TARGETS)) {
-    if (lexHas(lang, meaning)) continue; // already have it
+    if (lexHasById(lang, idForGloss(lang, meaning))) continue; // already have it
     const target = DERIVATION_TARGETS[meaning]!;
-    if (!lexHas(lang, target.root)) continue;
+    if (!lexHasById(lang, idForGloss(lang, target.root))) continue;
     candidates.push(meaning);
   }
   if (candidates.length === 0) return null;
@@ -435,7 +453,9 @@ function tryTargetedDerivation(lang: Language, rng: Rng) {
 }
 
 export function bootstrapNeologismNeighbors(lang: Language): void {
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     // Stage B: bootstrap frequency + neighbours from the RECORDED content
     // constituents of a derived/compound meaning (concept-native), rather
     // than splitting the English gloss on hyphens. Bound morphemes are
@@ -443,25 +463,25 @@ export function bootstrapNeologismNeighbors(lang: Language): void {
     const parts = recordedParts(lang, m, { contentOnly: true });
     if (!parts) continue;
     for (const p of parts) {
-      const hint = lang.wordFrequencyHints[p];
-      if (hint && !lang.wordFrequencyHints[m]) {
-        lang.wordFrequencyHints[m] = Math.max(
-          lang.wordFrequencyHints[m] ?? 0,
+      const hint = satGet(lang, "wordFrequencyHints", p);
+      if (hint && !satGet(lang, "wordFrequencyHints", m)) {
+        satSet(lang, "wordFrequencyHints", m, Math.max(
+          satGet(lang, "wordFrequencyHints", m) ?? 0,
           hint * 0.7,
-        );
+        ));
       }
     }
-    if (neighborsOf(m).length > 0 || (lang.localNeighbors[m] ?? []).length > 0) continue;
+    if (neighborsOf(m).length > 0 || (satGet(lang, "localNeighbors", m) ?? []).length > 0) continue;
     const proposed = new Set<string>();
     for (const p of parts) {
       for (const n of neighborsOf(p)) proposed.add(n);
-      for (const n of lang.localNeighbors[p] ?? []) proposed.add(n);
+      for (const n of satGet(lang, "localNeighbors", p) ?? []) proposed.add(n);
     }
     const usable = Array.from(proposed).filter(
-      (n) => n !== m && lexHas(lang, n),
+      (n) => n !== m && lexHasById(lang, idForGloss(lang, n)),
     );
     if (usable.length > 0) {
-      lang.localNeighbors[m] = usable.slice(0, 5);
+      satSet(lang, "localNeighbors", m, usable.slice(0, 5));
     }
   }
 }

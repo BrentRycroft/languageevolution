@@ -4,7 +4,7 @@ import { CATALOG_BY_ID } from "../phonology/catalog";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
-import { lexSet, lexKeys, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 
 /**
  * regular.test.ts
@@ -18,7 +18,7 @@ function makeLang(): Language {
   const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: ["lenition.p_to_f"],
     changeWeights: { "lenition.p_to_f": 1 },
     birthGeneration: 0,
@@ -54,7 +54,7 @@ describe("regular (Neogrammarian) sound change", () => {
 
   it("returns null when no rule has any matching site", () => {
     const lang = makeLang();
-    lang.lexicon = {}; lang.conceptIds = {};
+    lang.lexemes = {}; lang.lexemeIds = {};
     lexSet(lang, "foo", ["f", "o", "o"]);
     const rng = makeRng("empty");
     const rule = CATALOG_BY_ID["lenition.p_to_f"]!;

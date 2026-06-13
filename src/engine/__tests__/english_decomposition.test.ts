@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildInitialState } from "../steps/init";
 import { presetEnglish } from "../presets/english";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * MEGA overhaul: modern-English decomposability. "behind" is authored as the locative

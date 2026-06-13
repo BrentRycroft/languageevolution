@@ -6,7 +6,8 @@ import { findSchedule, milestoneKey } from "../historical";
 import { romanceSchedule } from "../historical/romance";
 import { validateSchedule } from "../historical/validate";
 import { narrativeHistoricalVoice } from "../historical/voice";
-import { lexGet, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
+import { satGet, satSet } from "../lexicon/satellites";
 
 /**
  * historical.test.ts — Phase 70 T1: Historical Mode runner unit tests.
@@ -441,7 +442,7 @@ describe("Phase 71b — translator + suppletion fixes", () => {
     cfg.seed = "p71b-protect";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    // Route gloss → form through the access seam (lang.lexicon is ConceptId-keyed).
+    // Route gloss → form through the access seam (lang.lexicon is LexemeId-keyed).
     expect(lexGet(lang, "be")).toBeDefined();
     expect(lexGet(lang, "go")).toBeDefined();
     expect(PROTECTED_MEANINGS.has("be")).toBe(true);
@@ -459,13 +460,13 @@ describe("Phase 71b — translator + suppletion fixes", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     if (!lang.suppletion) lang.suppletion = {};
-    lang.suppletion["nonprotected-verb"] = {
+    satSet(lang, "suppletion", "nonprotected-verb", {
       "verb.tense.past": ["x", "y"] as never,
-    };
+    });
     lexSet(lang, "nonprotected-verb", ["x"] as never);
     deleteMeaning(lang, "nonprotected-verb");
     expect(lexGet(lang, "nonprotected-verb")).toBeUndefined();
-    expect(lang.suppletion?.["nonprotected-verb"]).toBeUndefined();
+    expect(satGet(lang, "suppletion", "nonprotected-verb")).toBeUndefined();
   });
 
   it("Tuscan (hasCase=false) translator does not emit -um accusative suffix on noun objects", () => {

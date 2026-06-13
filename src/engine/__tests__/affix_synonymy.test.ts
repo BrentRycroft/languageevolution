@@ -6,7 +6,7 @@ import {
   selectAffixesForCategory,
 } from "../lexicon/affixSelector";
 import { lookupFormWithResolution } from "../lexicon/lookup";
-import { lexGet, lexHas } from "../lexicon/access";
+import { tForm as lexGet, tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 
 /**
  * affix_synonymy.test.ts

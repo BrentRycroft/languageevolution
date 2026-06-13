@@ -2,9 +2,11 @@ import type {
   Language,
   LanguageNode,
   LanguageTree,
+  LexemeStore,
   SimulationConfig,
   SimulationState,
 } from "../types";
+import { satGet, satSet, satHas } from "../lexicon/satellites";
 import { CATALOG_BY_ID } from "../phonology/catalog";
 import { DEFAULT_OT_RANKING } from "../phonology/ot";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
@@ -13,8 +15,9 @@ import { makeRng } from "../rng";
 import { cloneLexicon, cloneMorphology } from "../utils/clone";
 import { inventoryFromLexicon, seedNativeProvenance } from "./helpers";
 import { seedDerivationalSuffixes } from "../lexicon/derivation";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
-import { lexGet, lexSet, lexHas, lexKeys } from "../lexicon/access";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
+import { lexFormById, lexSetFormById, coinSeededLexeme, lexIds, idForGloss, lexHasById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { zipfFrequencyFor } from "../lexicon/concepts";
 import { lookupAffixMetaByTag } from "../translator/englishAffixes";
 import { DEFAULT_CLASSIFIER_TABLE } from "../translator/classifiers";
@@ -63,18 +66,19 @@ function tonaliseLexicon(lang: Language): void {
   // Phase 39f: pitch-accent regime marks ONE tone per word (the
   // accented syllable). Tonal regime marks every tone-bearing syllable.
   const isPitchAccent = lang.toneRegime === "pitch-accent";
-  for (const m of lexKeys(lang)) {
-    const f = lexGet(lang, m)!;
+  for (const id of lexIds(lang)) {
+    const f = lexFormById(lang, id)!;
     let needsRewrite = false;
     for (const p of f) {
       if (isToneBearing(p) && !toneOf(p)) { needsRewrite = true; break; }
     }
     if (!needsRewrite) continue;
+    const _id = id;
     if (isPitchAccent) {
       // Mark only the FIRST tone-bearing position with HIGH (accent),
       // leave the rest untoned. Models Japanese/Norwegian.
       let marked = false;
-      lexSet(lang, m, f.map((p) => {
+      lexSetFormById(lang, _id, f.map((p) => {
         if (!isToneBearing(p)) return p;
         if (toneOf(p)) { marked = true; return p; }
         if (!marked) {
@@ -84,7 +88,7 @@ function tonaliseLexicon(lang: Language): void {
         return p;
       }));
     } else {
-      lexSet(lang, m, f.map((p) => {
+      lexSetFormById(lang, _id, f.map((p) => {
         if (!isToneBearing(p)) return p;
         if (toneOf(p)) return p;
         return p + MID;
@@ -108,25 +112,27 @@ function initialLexicalCapacity(lang: Language): number {
 function seedClosedClassLexicon(lang: Language): void {
   for (const lemma of CLOSED_CLASS_LEMMAS) {
     if (lemma === "Q" || lemma === "CLF") continue;
-    if (lexHas(lang, lemma)) continue;
+    if (lexHasById(lang, idForGloss(lang, lemma))) continue;
     const form = closedClassForm(lang, lemma);
     if (!form || form.length === 0) continue;
-    lexSet(lang, lemma, form);
-    if (!lang.wordOrigin[lemma]) lang.wordOrigin[lemma] = "closed-class";
-    if (lang.wordFrequencyHints[lemma] === undefined) {
-      lang.wordFrequencyHints[lemma] = 0.95;
+    coinSeededLexeme(lang, lemma, form);
+    if (!satGet(lang, "wordOrigin", lemma)) satSet(lang, "wordOrigin", lemma, "closed-class");
+    if (!satHas(lang, "wordFrequencyHints", lemma)) {
+      satSet(lang, "wordFrequencyHints", lemma, 0.95);
     }
   }
 }
 
+type SuppletionSlots = NonNullable<SimulationConfig["seedSuppletion"]>[string];
+
 function cloneSuppletion(
-  s: NonNullable<Language["suppletion"]>,
-): NonNullable<Language["suppletion"]> {
-  const out: NonNullable<Language["suppletion"]> = {};
+  s: Record<string, SuppletionSlots>,
+): Record<string, SuppletionSlots> {
+  const out: Record<string, SuppletionSlots> = {};
   for (const m of Object.keys(s)) {
     const slots = s[m];
     if (!slots) continue;
-    const cloned: NonNullable<Language["suppletion"]>[string] = {};
+    const cloned: SuppletionSlots = {};
     for (const cat of Object.keys(slots) as Array<keyof typeof slots>) {
       const f = slots[cat];
       if (f && f.length > 0) cloned[cat] = f.slice();
@@ -142,7 +148,7 @@ function seedRegister(
 ): Record<string, "high" | "low"> {
   const out: Record<string, "high" | "low"> = {};
   // `lex` is the gloss-keyed seed lexicon (pre-flip); sort its glosses for the
-  // canonical RNG-draw order. (The store flips to ConceptId keys immediately
+  // canonical RNG-draw order. (The store flips to LexemeId keys immediately
   // after this proto is built; here it is still gloss-keyed.)
   for (const m of Object.keys(lex).sort()) {
     if (rng.chance(0.15)) {
@@ -180,13 +186,15 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   const rootLang: Language = {
     id: rootId,
     name: "Proto",
-    lexicon: seedLex,
+    // Transitional gloss-keyed shape: `rekeyLexiconToLexemeIds(rootLang)` (below) converts this
+    // `Record<gloss, WordForm>` into the canonical record store (materializing points + glosses).
+    lexemes: seedLex as unknown as LexemeStore,
     enabledChangeIds: enabled,
     changeWeights: weights,
     birthGeneration: 0,
     grammar: { ...DEFAULT_GRAMMAR, ...(config.seedGrammar ?? {}) },
     events: [],
-    wordFrequencyHints: { ...(config.seedFrequencyHints ?? {}) },
+    wordFrequencyHints: {},
     phonemeInventory: inventoryFromLexicon(seedLex),
     morphology: cloneMorphology(config.seedMorphology),
     localNeighbors: {},
@@ -234,20 +242,65 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   };
   // Concept re-key (R2 — the flip): the preset authors gloss -> form, so the
   // literal above leaves rootLang.lexicon gloss-keyed. Flip it to the canonical
-  // ConceptId-keyed store NOW, before any accessor-driven setup runs
+  // LexemeId-keyed store NOW, before any accessor-driven setup runs
   // (seedDerivationalSuffixes, seedClosedClassLexicon, tonaliseLexicon, …),
-  // which all assume conceptIds is populated. Mints in preset insertion order,
+  // which all assume lexemeIds is populated. Mints in preset insertion order,
   // so the downstream lexKeys gloss sequence is byte-identical.
-  rekeyLexiconToConceptIds(rootLang);
+  rekeyLexiconToLexemeIds(rootLang);
+  // S2a (registerOf fix): seedRegister built `registerOf` GLOSS-keyed (above);
+  // re-key it to LexemeId now that ids exist, MINT-NEUTRAL — otherwise production
+  // (which reads register by id via the seam / glossKeyedView) sees no seeded
+  // register and the register-gated drift + sound-change rates diverge at GENN.
+  if (rootLang.registerOf) {
+    const rg = rootLang.registerOf as Record<string, "high" | "low">;
+    for (const gloss of Object.keys(rg)) {
+      const id = rootLang.lexemeIds?.[gloss];
+      if (id && id !== gloss) {
+        rg[id] = rg[gloss]!;
+        delete rg[gloss];
+      }
+    }
+  }
+  // S2a: seed frequency hints by LexemeId now that ids exist. MINT-NEUTRAL —
+  // only seed glosses that already have an id (lexicon members). The pre-flip
+  // gloss-keyed spread minted nothing; minting here (via the seam) for a
+  // seedFrequencyHints gloss NOT in the lexicon would advance conceptIdSeq and
+  // shift every downstream LexemeId / per-word sub-rng seed (GENN divergence).
+  // Non-lexicon freq seeds are dead data the engine never reads (it iterates
+  // the lexicon), exactly as the post-flip gloss view already drops them.
+  {
+    const fh = rootLang.wordFrequencyHints as Record<string, number>;
+    for (const [gloss, hint] of Object.entries(config.seedFrequencyHints ?? {})) {
+      const id = rootLang.lexemeIds?.[gloss];
+      if (id) fh[id] = hint;
+    }
+  }
+  // S2a: the suppletion table is cloned gloss-keyed (cloneSuppletion runs above,
+  // before the lexicon re-key), so re-key it to LexemeId now that ids exist —
+  // matching its keyedBy:"lexemeId" storage. MINT-NEUTRAL: only re-key glosses
+  // that already have an id (seed suppletion only targets lexicon verbs/nouns);
+  // a gloss with no id passes through gloss-keyed, exactly as the seam resolves.
+  if (rootLang.suppletion) {
+    const supp = rootLang.suppletion as Record<string, SuppletionSlots>;
+    for (const gloss of Object.keys(supp)) {
+      const id = rootLang.lexemeIds?.[gloss];
+      if (id && id !== gloss) {
+        supp[id] = supp[gloss]!;
+        delete supp[gloss];
+      }
+    }
+  }
   // Phase 6a: give EVERY content concept a Zipfian-by-rank seed frequency (by
   // concept tier), not just the ~89 in seedFrequencyHints. Without this most
   // words fell back to a flat 0.5 default, so the content/function + Swadesh
   // brakes had no real frequency signal for non-core vocabulary and the
   // distribution couldn't be Zipfian. Explicit seedFrequencyHints (and the
   // closed-class anchors poured in below) keep precedence — this only fills gaps.
-  for (const m of lexKeys(rootLang)) {
-    if (rootLang.wordFrequencyHints[m] === undefined) {
-      rootLang.wordFrequencyHints[m] = zipfFrequencyFor(m);
+  for (const id of lexIds(rootLang)) {
+    const m = meaningForLexemeId(rootLang, id);
+    if (m === undefined) continue;
+    if (!satHas(rootLang, "wordFrequencyHints", m)) {
+      satSet(rootLang, "wordFrequencyHints", m, zipfFrequencyFor(m));
     }
   }
   rootLang.derivationalSuffixes = seedDerivationalSuffixes(rootLang, rng);
@@ -261,7 +314,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   if (config.seedColexification) {
     rootLang.colexifiedAs = {};
     for (const [winner, absorbed] of Object.entries(config.seedColexification)) {
-      rootLang.colexifiedAs[winner] = absorbed.slice();
+      satSet(rootLang, "colexifiedAs", winner, absorbed.slice());
     }
   }
   // MEGA overhaul: seed SYNONYMS / lexical doublets (the inverse of colexification —
@@ -270,7 +323,7 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   if (config.seedAltForms) {
     rootLang.altForms = rootLang.altForms ?? {};
     for (const [meaning, forms] of Object.entries(config.seedAltForms)) {
-      if (!lexHas(rootLang, meaning)) continue;
+      if (!lexHasById(rootLang, idForGloss(rootLang, meaning))) continue;
       const valid = forms.filter((f) => f.length > 0).map((f) => f.slice());
       if (valid.length > 0) rootLang.altForms[meaning] = valid;
     }
@@ -327,10 +380,9 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
   if (config.seedEtymologies) {
     for (const [meaning, def] of Object.entries(config.seedEtymologies)) {
       if (rootLang.compounds?.[meaning]) continue; // a real compound/derivation takes precedence
-      if (!lexHas(rootLang, meaning)) continue; // need an existing word to attribute ancestry to
-      if (!def.parts.every((p) => lexHas(rootLang, p))) continue; // parts must be lexicalised
-      if (!rootLang.etymology) rootLang.etymology = {};
-      rootLang.etymology[meaning] = def.parts.slice();
+      if (!lexHasById(rootLang, idForGloss(rootLang, meaning))) continue; // need an existing word to attribute ancestry to
+      if (!def.parts.every((p) => lexHasById(rootLang, idForGloss(rootLang, p)))) continue; // parts must be lexicalised
+      satSet(rootLang, "etymology", meaning, def.parts.slice());
     }
   }
   // Phase 36 Tranche 36f: register bound morphemes so they're
@@ -359,7 +411,8 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
       // silently skipped, leaving "-dom" with random phonemes and
       // productive=false — the user-reported "waterdom doesn't work"
       // bug stemmed from exactly this collision.
-      const affix = lexGet(rootLang, m);
+      const _affixId = idForGloss(rootLang, m);
+      const affix = _affixId !== undefined ? lexFormById(rootLang, _affixId) : undefined;
       if (affix && affix.length > 0) {
         // Phase 47 T2: detect position from tag shape. Tags ending
         // with "-" (e.g. "re-", "un-") are prefixes; otherwise default
@@ -478,9 +531,9 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     rootLang.territory = { cells: [originId] };
     rootLang.coords = territoryCentroid(worldMap, [originId]);
   }
-  // Phase 72d / R2: stable ConceptIds were assigned at the gloss->cid flip
-  // above (rekeyLexiconToConceptIds), which also keys the canonical store by
-  // them. Daughters inherit conceptIds at split; identity persists across
+  // Phase 72d / R2: stable LexemeIds were assigned at the gloss->cid flip
+  // above (rekeyLexiconToLexemeIds), which also keys the canonical store by
+  // them. Daughters inherit lexemeIds at split; identity persists across
   // phonological / semantic drift.
   const rootNode: LanguageNode = {
     language: rootLang,

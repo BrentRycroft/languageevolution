@@ -4,9 +4,9 @@ import { translateSentence } from "../translator/sentence";
 import { closedClassTable } from "../translator/closedClass";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
-import { lexHas, lexSet, lexKeys, lexGet } from "../lexicon/access";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
-import type { Language } from "../types";
+import { tHas as lexHas, tSet as lexSet, tGlosses as lexKeys, tForm as lexGet } from "../lexicon/__tests__/glossSeam";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
+import type { Language, LexemeStore, WordForm } from "../types";
 
 /**
  * grammar_typology.test.ts
@@ -164,7 +164,7 @@ describe("§1.6 — closed-class lookup determinism", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "cc-divergence" });
     sim.step();
     const proto = sim.getState().tree["L-0"]!.language;
-    const stripped: Language["lexicon"] = {};
+    const stripped: Record<string, WordForm> = {};
     for (const m of lexKeys(proto)) {
       if (!isClosedClass(posOf(m))) stripped[m] = lexGet(proto, m)!;
     }
@@ -172,16 +172,16 @@ describe("§1.6 — closed-class lookup determinism", () => {
       ...proto,
       id: "L-0-X",
       name: "Sister",
-      lexicon: stripped,
-      conceptIds: undefined,
+      lexemes: stripped as unknown as LexemeStore,
+      lexemeIds: undefined,
       phonemeInventory: {
         ...proto.phonemeInventory,
         segmental: [...proto.phonemeInventory.segmental, "θ", "ð"],
       },
     };
-    rekeyLexiconToConceptIds(sister);
-    const protoStripped: Language = { ...proto, lexicon: stripped, conceptIds: undefined };
-    rekeyLexiconToConceptIds(protoStripped);
+    rekeyLexiconToLexemeIds(sister);
+    const protoStripped: Language = { ...proto, lexemes: stripped as unknown as LexemeStore, lexemeIds: undefined };
+    rekeyLexiconToLexemeIds(protoStripped);
     const tA = closedClassTable(protoStripped);
     const tB = closedClassTable(sister);
     let differs = 0;

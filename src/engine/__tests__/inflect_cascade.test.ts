@@ -15,7 +15,7 @@ function makeLang(opts: Partial<Language> = {}): Language {
   return {
     id: "L-c",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -100,7 +100,7 @@ describe("inflectCascade", () => {
       grammar: { ...makeLang().grammar, synthesisIndex: 2.0 },
       suppletion: {
         see: { "verb.tense.past": ["s", "ɔ"] },
-      },
+      } as Language["suppletion"],
     });
     const order: MorphCategory[] = ["verb.tense.past", "verb.person.3sg"];
     const result = inflectCascade(["s", "i"], order, lang, "see");

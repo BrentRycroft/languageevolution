@@ -6,7 +6,7 @@ import { formatElapsed } from "../engine/time";
 import { YEARS_PER_GENERATION } from "../engine/constants";
 import { EmptyState } from "./components/EmptyState";
 import { ExportButtons } from "./components/ExportButtons";
-import { lexGet, lexSize } from "../engine/lexicon/access";
+import { idForGloss, lexFormById, lexSize } from "../engine/lexicon/access";
 
 /**
  * StatsPanel.tsx
@@ -48,7 +48,8 @@ export function StatsPanel() {
     let total = 0;
     let count = 0;
     for (const m of meanings) {
-      const form = lexGet(lang, m);
+      const _mid = idForGloss(lang, m);
+      const form = _mid !== undefined ? lexFormById(lang, _mid) : undefined;
       const original = seed[m];
       if (form && original) {
         total += levenshtein(form, original);

@@ -1,5 +1,6 @@
 import type { CoinageMechanism } from "./types";
-import { lexEntries, lexGet } from "../../lexicon/access";
+import { lexIds, lexFormById, idForGloss } from "../../lexicon/access";
+import { meaningForLexemeId } from "../../lexicon/lexemeIdentity";
 import { relatedMeanings } from "../../semantics/clusters";
 import { neighborsOf } from "../../semantics/neighbors";
 
@@ -24,12 +25,17 @@ export const MECHANISM_CLIPPING: CoinageMechanism = {
     // target. Constrain the base to the target's semantic neighbourhood; if
     // no long related word exists, refuse.
     const related = new Set([...relatedMeanings(target), ...neighborsOf(target)]);
-    const candidates = lexEntries(lang)
-      .filter(([m, f]) => m !== target && f.length >= 5 && related.has(m))
-      .map(([m]) => m);
+    const candidates: string[] = [];
+    for (const id of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, id)!;
+      const f = lexFormById(lang, id)!;
+      if (m !== target && f.length >= 5 && related.has(m)) candidates.push(m);
+    }
     if (candidates.length === 0) return null;
     const base = candidates[rng.int(candidates.length)]!;
-    const form = lexGet(lang, base)!;
+    const baseId = idForGloss(lang, base);
+    if (!baseId) return null;
+    const form = lexFormById(lang, baseId)!;
     let clipLen = 4;
     if (clipLen > form.length) clipLen = form.length - 1;
     if (clipLen < 2) return null;

@@ -1,5 +1,5 @@
 import type { SavedRun, SimulationConfig, SimulationState } from "../engine/types";
-import { migrateSavedRun } from "./migrate";
+import { migrateSavedRun, LATEST_SAVE_VERSION } from "./migrate";
 import { fnv1a } from "../engine/rng";
 import { idbGet, idbKeys, idbRemove, idbSet } from "./idb";
 
@@ -83,7 +83,7 @@ export async function saveRun(
   const hash = fnv1a(`${label}|${config.seed}|${generationsRun}|${now}`);
   const id = `run-${now.toString(36)}-${hash.toString(36).padStart(7, "0").slice(0, 7)}`;
   const run: SavedRun = {
-    version: 10,
+    version: LATEST_SAVE_VERSION,
     id,
     label,
     createdAt: Date.now(),

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import {
   formKeyOf,
   findWordByForm,
@@ -15,7 +16,8 @@ import { createSimulation } from "../simulation";
 import { migrateSavedRun, LATEST_SAVE_VERSION } from "../../persistence/migrate";
 import { defaultConfig } from "../config";
 import type { Language, SavedRun, SimulationState } from "../types";
-import { lexGet, lexKeys, lexSet } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * words_phase21a.test.ts
@@ -26,12 +28,12 @@ import { lexGet, lexKeys, lexSet } from "../lexicon/access";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  const { lexicon: seedLexicon, conceptIds: _cids, ...rest } = overrides;
+  const { lexemes: seedLexicon, lexemeIds: _cids, ...rest } = overrides;
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
-    conceptIds: {},
+    lexemes: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -58,8 +60,20 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     ...rest,
   };
   if (seedLexicon) {
-    for (const [g, form] of Object.entries(seedLexicon)) {
+    for (const [g, form] of Object.entries(seedLexicon as unknown as Record<string, string[]>)) {
       lexSet(lang, g, form);
+    }
+  }
+  const _fh = lang.wordFrequencyHints as Record<string, number>;
+  for (const _g of Object.keys(_fh)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
+  }
+  if (lang.colexifiedAs) {
+    const _cx = lang.colexifiedAs as Record<string, string[]>;
+    for (const _g of Object.keys(_cx)) {
+      const _id = lang.lexemeIds?.[_g];
+      if (_id && _id !== _g) { _cx[_id] = _cx[_g]!; delete _cx[_g]; }
     }
   }
   return lang;
@@ -110,7 +124,7 @@ describe("Phase 21a — Word/WordSense data model", () => {
     const w = addWord(lang, ["l", "a", "j", "t"], "light.illumination", {
       bornGeneration: 0,
     });
-    addSenseToWord(w, {
+    addSenseToWord(lang, w, {
       meaning: "light.weight",
       bornGeneration: 10,
       origin: "polysemy",
@@ -189,17 +203,17 @@ describe("Phase 21a — sync between lexicon and words", () => {
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });
     syncLexiconFromWords(lang);
-    expect(lang.colexifiedAs?.["bank.financial"]).toEqual(["bank.river"]);
-    expect(lang.colexifiedAs?.["bank.river"]).toEqual(["bank.financial"]);
+    expect(satGet(lang, "colexifiedAs", "bank.financial")).toEqual(["bank.river"]);
+    expect(satGet(lang, "colexifiedAs", "bank.river")).toEqual(["bank.financial"]);
   });
 
   it("syncWordsFromLexicon builds words from a meaning-keyed lexicon", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         cat: ["k", "æ", "t"],
         dog: ["d", "ɔ", "g"],
-      },
-      wordFrequencyHints: { cat: 0.8, dog: 0.7 },
+      } as unknown as LexemeStore,
+      wordFrequencyHints: { cat: 0.8, dog: 0.7 } as Record<string, number>,
     });
     syncWordsFromLexicon(lang, 0);
     expect(lang.words).toHaveLength(2);
@@ -209,10 +223,10 @@ describe("Phase 21a — sync between lexicon and words", () => {
 
   it("syncWordsFromLexicon merges meanings that share a form into one word", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
+      } as unknown as LexemeStore,
     });
     syncWordsFromLexicon(lang, 0);
     expect(lang.words).toHaveLength(1);
@@ -221,14 +235,14 @@ describe("Phase 21a — sync between lexicon and words", () => {
 
   it("syncWordsFromLexicon preserves colexification edges from old saves", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         // pre-21a colexification could record meanings as colexified even
         // when their forms briefly differ; the migrator should fold them
         // into one word.
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
-      colexifiedAs: { "bank.financial": ["bank.river"] },
+      } as unknown as LexemeStore,
+      colexifiedAs: { "bank.financial": ["bank.river"] } as Record<string, string[]>,
     });
     syncWordsFromLexicon(lang, 0);
     expect(lang.words).toHaveLength(1);
@@ -239,7 +253,7 @@ describe("Phase 21a — sync between lexicon and words", () => {
   });
 
   it("syncWordsFromLexicon is idempotent if words already populated", () => {
-    const lang = makeLang({ lexicon: { cat: ["k", "æ", "t"] } });
+    const lang = makeLang({ lexemes: { cat: ["k", "æ", "t"] } as unknown as LexemeStore });
     syncWordsFromLexicon(lang, 0);
     const ref = lang.words!;
     syncWordsFromLexicon(lang, 5);
@@ -285,7 +299,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
 
   it("a v5 save with a stateSnapshot gets words populated post-migration", () => {
     const lang: Language = makeLang({
-      lexicon: { cat: ["k", "æ", "t"], dog: ["d", "ɔ", "g"] },
+      lexemes: { cat: ["k", "æ", "t"], dog: ["d", "ɔ", "g"] } as unknown as LexemeStore,
     });
     const snapshot: SimulationState = {
       generation: 0,
@@ -315,10 +329,10 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
 
   it("a v5 save with two meanings sharing a form becomes one polysemous word", () => {
     const lang: Language = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
+      } as unknown as LexemeStore,
     });
     const snapshot: SimulationState = {
       generation: 0,
@@ -329,7 +343,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
       },
     };
     const v5: SavedRun = {
-      version: 5 as unknown as 10,
+      version: 5 as unknown as 11,
       id: "x",
       label: "x",
       createdAt: 0,
@@ -347,7 +361,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
 
   it("a v6 save passes through unchanged (no double-migration)", () => {
     const lang: Language = makeLang({
-      lexicon: { cat: ["k", "æ", "t"] },
+      lexemes: { cat: ["k", "æ", "t"] } as unknown as LexemeStore,
     });
     const snapshot: SimulationState = {
       generation: 0,
@@ -360,7 +374,7 @@ describe("Phase 21a — persistence migration v5 → v6", () => {
     syncWordsFromLexicon(lang, 0);
     const refWords = lang.words!;
     const v6: SavedRun = {
-      version: 6 as unknown as 10,
+      version: 6 as unknown as 11,
       id: "y",
       label: "y",
       createdAt: 0,

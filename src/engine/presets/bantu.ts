@@ -312,7 +312,9 @@ const MORPHOLOGY: Morphology = {
  * frequency verbs do show stem alternation across tenses. These are
  * conservative reconstructions; descendants will diverge.
  */
-const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+const SUPPLETION: NonNullable<
+  import("../types").SimulationConfig["seedSuppletion"]
+> = {
   // *-li* perfect-stem of "be" — the copula has distinct stems for the
   // present-progressive vs. anterior tenses across most Bantu daughters.
   be: { "verb.tense.past": ["a˥", "l", "i"] },

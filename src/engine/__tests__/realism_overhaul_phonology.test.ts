@@ -10,7 +10,7 @@ import {
 } from "../phonology/phonotactics";
 import { maybeTonogenesis } from "../phonology/tonogenesis";
 import { toneOf, HIGH, LOW } from "../phonology/tone";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 
 /**
@@ -72,7 +72,7 @@ function makeContrastLang(): Language {
   const lang = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -121,8 +121,8 @@ describe("Lane A #7 — tonogenesis (opt-in language-level regime shift)", () =>
   it("does not actuate without the conditioning contrast, or on an already-tonal language", () => {
     // No obstruent codas ⇒ no contrast ⇒ never actuates (rng-independent).
     const open = makeContrastLang();
-    open.lexicon = {};
-    (open as { conceptIds?: Record<string, unknown> }).conceptIds = {};
+    open.lexemes = {};
+    (open as { lexemeIds?: Record<string, unknown> }).lexemeIds = {};
     lexSet(open, "a", ["t", "a"]);
     lexSet(open, "b", ["p", "a"]);
     lexSet(open, "c", ["k", "o"]);

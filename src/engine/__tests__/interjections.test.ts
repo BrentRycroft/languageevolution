@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { translateSentence, tokeniseEnglish } from "../translator/sentence";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
 import type { Language, Lexicon } from "../types";
 
 /**
@@ -11,11 +11,11 @@ import type { Language, Lexicon } from "../types";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
+function makeLang(overrides: Partial<Language> = {}, lexemes: Lexicon = {}): Language {
   const lang = {
     id: "L-i",
     name: "TestLang",
-    lexicon,
+    lexemes,
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -41,8 +41,8 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     otRanking: [],
     lastChangeGeneration: {},
     ...overrides,
-  } as Language;
-  if (Object.keys(lang.lexicon).length > 0) rekeyLexiconToConceptIds(lang);
+  } as unknown as Language;
+  if (Object.keys(lang.lexemes).length > 0) rekeyLexiconToLexemeIds(lang);
   return lang;
 }
 

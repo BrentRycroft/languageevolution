@@ -1,7 +1,9 @@
 import type { Language, Phoneme, WordForm } from "../types";
+import { satGet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { stripTone } from "./tone";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { featuresOf } from "./features";
 
 /**
@@ -489,15 +491,16 @@ export function freezeLexicalSpelling(
 
   // Candidates: high-frequency meanings (>=0.6) without a frozen spelling.
   const candidates: string[] = [];
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id)!;
     if (lang.lexicalSpelling?.[m]) continue;
-    const f = lang.wordFrequencyHints[m] ?? 0.4;
-    if (f >= 0.6 && lexGet(lang, m)!.length > 0) candidates.push(m);
+    const f = satGet(lang, "wordFrequencyHints", m) ?? 0.4;
+    if (f >= 0.6 && lexFormById(lang, id)!.length > 0) candidates.push(m);
   }
   if (candidates.length === 0) return null;
 
   const meaning = candidates[rng.int(candidates.length)]!;
-  const form = lexGet(lang, meaning)!;
+  const form = lexFormById(lang, idForGloss(lang, meaning)!)!;
   // Capture the current romanization at this moment.
   const spelling = romanize(form, { ...lang, lexicalSpelling: undefined }, undefined);
   if (!lang.lexicalSpelling) lang.lexicalSpelling = {};

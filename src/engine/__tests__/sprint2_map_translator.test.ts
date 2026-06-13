@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import {
   generateRandomContinent,
   getWorldMap,
@@ -30,7 +31,7 @@ function bareLang(id: string, overrides: Partial<Language> = {}): Language {
   return {
     id,
     name: id,
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -262,7 +263,7 @@ describe("§B — translator", () => {
     );
     // No synth-fallback coinage for these nonsense lemmas.
     expect(synth.length).toBe(0);
-    expect(lang.lexicon["xyzqwerty"]).toBeUndefined();
-    expect(lang.lexicon["zooflark"]).toBeUndefined();
+    expect(lexGet(lang, "xyzqwerty")).toBeUndefined();
+    expect(lexGet(lang, "zooflark")).toBeUndefined();
   });
 });

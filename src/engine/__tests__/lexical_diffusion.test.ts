@@ -5,7 +5,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { levenshtein } from "../phonology/ipa";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import { makeRng } from "../rng";
 
 /**
@@ -94,7 +94,7 @@ describe("Phase 28d — lexical diffusion", () => {
     // signature (Phase 24 + Phase 28d combined).
     const entries = Object.keys(freqHints)
       // Route gloss → form through the access seam: post concept-rekey,
-      // `lang.lexicon[gloss]` is undefined (the store is ConceptId-keyed),
+      // `lang.lexicon[gloss]` is undefined (the store is LexemeId-keyed),
       // which previously collapsed `entries` to empty and made this test
       // return early without asserting anything.
       .filter((m) => lexGet(lang, m) && seedLex[m])

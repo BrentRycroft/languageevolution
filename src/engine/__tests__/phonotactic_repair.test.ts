@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { stepPhonotacticRepair } from "../steps/inventoryManagement";
 import { phonotacticScore } from "../phonology/phonotactics";
 import { presetTokipona } from "../presets/tokipona";
@@ -6,7 +7,7 @@ import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
-import { lexGet, lexSet, lexKeys } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet, tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 
 /**
  * phonotactic_repair.test.ts
@@ -132,7 +133,7 @@ describe("Phase 27c — long-run integration", () => {
     const root = state.tree[state.rootId]!.language;
     if (root.extinct) return;
     const profile = root.phonotacticProfile!;
-    const scores = Object.values(root.lexicon).map((f) =>
+    const scores = Object.values(formViewOf(root.lexemes)).map((f) =>
       phonotacticScore(f, profile),
     );
     const mean = scores.reduce((a, b) => a + b, 0) / Math.max(1, scores.length);

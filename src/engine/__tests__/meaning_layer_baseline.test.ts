@@ -8,7 +8,8 @@ import { presetTokipona } from "../presets/tokipona";
 import { presetEnglish } from "../presets/english";
 import { formToString } from "../phonology/ipa";
 import { fnv1a } from "../rng";
-import { lexKeys, lexGet } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import type { SimulationConfig } from "../types";
 
 /**
@@ -51,18 +52,14 @@ function signature(sim: ReturnType<typeof createSimulation>): string {
   const parts: string[] = [];
   for (const id of Object.keys(tree).sort()) {
     const lang = tree[id]!.language;
-    // Route through the accessor seam (lexKeys/lexGet) so the signature locks
-    // GLOSS → form, not the physical store key. Pre-flip the seam yields the
-    // glosses directly; post-flip (concept re-key R2) it resolves the
-    // ConceptId store key back to its gloss. Either way the linguistic
-    // content — what this test guards — is identical, so the locked hashes
-    // survive a pure storage refactor and still catch any real form change.
-    // NB: sort the GLOSSES (as the original Object.keys(...).sort() did), not
-    // the combined "gloss=form" strings — a prefix gloss with a low-ASCII
-    // continuation (e.g. "a" vs "a-thing") would otherwise reorder.
-    const lex = lexKeys(lang)
-      .sort()
-      .map((m) => `${m}=${formToString(lexGet(lang, m)!)}`)
+    // Lock GLOSS → form (not the physical store key). Iterate the id-native seam (lexIds), resolve each
+    // id to its SEED gloss (meaningForLexemeId), then sort by GLOSS — as the original lexKeys(...).sort()
+    // did. NB: sort the GLOSSES, not the combined "gloss=form" strings (a prefix gloss like "a" vs
+    // "a-thing" would otherwise reorder). Byte-identical to the pre-S3 gloss-keyed signature.
+    const lex = lexIds(lang)
+      .map((idk) => ({ g: meaningForLexemeId(lang, idk)!, f: formToString(lexFormById(lang, idk)!) }))
+      .sort((a, b) => (a.g < b.g ? -1 : a.g > b.g ? 1 : 0))
+      .map((e) => `${e.g}=${e.f}`)
       .join("|");
     const words = (lang.words ?? [])
       .map((w) => w.formKey)
@@ -293,13 +290,78 @@ const GEN0: Record<string, string> = {
 // scorecard, divergence_regression, narrative snapshots, and simulation-determinism (reproducibility)
 // all pass — approved milestone re-baseline (gate = realism, not byte-identity). Reproducibility
 // preserved (same config → identical output; re-run confirmed).
+// RE-BAKED 2026-06-05 (vector-native lexicon flip — anchor-coverage extension). 179 basic content
+// words the curated registry never covered (house/body/door/person/time/ocean/…) gained real GloVe
+// anchors (anchorExtrasData.ts), so their meaning POINTS moved from the hash fallback to real
+// distributional positions. This shifts the drift/coinage trajectory for every preset that evolves
+// those words → all six gen-30 signatures move. GEN0 unchanged (the gen-0 table above still passes —
+// seed forms are byte-identical; only the evolution trajectory diverges). Deliberate re-baseline:
+// byte-identity-vs-old-baseline was explicitly waived by the user; reproducibility (same config →
+// identical output) is preserved (captured twice, identical). Realism scorecard is diagnostic-only
+// per the user's direction, not a gate.
+// RE-BAKED 2026-06-05 (vector-native neighbour switch — neighborsOf → geometry). neighborsOf() now
+// returns geometricNeighbors(meaning, 3) for all meanings with a real GloVe point (hasEmbedding),
+// replacing the hand-curated SEMANTIC_NEIGHBORS table as the live source for drift, colexification,
+// and coinage. The geometry disagrees with the curated table (~28% overlap), so the drift/coinage
+// trajectory shifts for every preset → all six gen-30 signatures move. GEN0 unchanged (seed forms
+// are byte-identical; only the evolution trajectory diverges). Byte-identity-vs-old-baseline
+// explicitly waived by the user; reproducibility (same config → identical output) preserved — hashes
+// captured twice on consecutive runs and confirmed identical.
+// RE-BAKED 2026-06-05 (vector-native CLUSTER switch — clusterOf → geometry). clusterOf() now reads
+// the nearest cluster centroid by GloVe geometry (clusterRegionOf) for grounded meanings, so
+// relatedMeanings + the cluster-driven drift/coinage/abstraction paths shift for every preset → all
+// six gen-30 signatures move again. The geometry scatters some curated fields (~59% parity; e.g. body
+// parts), an accepted/reversible trade-off (user chose the full switch). GEN0 unchanged. Byte-identity
+// waived; reproducibility preserved.
+// RE-BAKED 2026-06-06 (storage migration inc 4 step 3 — keyless gap-coinage wired into the genesis
+// loop). stepGenesis now ends with a low-rate (KEYLESS_GAP_COINAGE_RATE=0.1) rng.chance gate that, on
+// firing, coins a KEYLESS lexeme into a salient empty region of the meaning space (findSemanticGap →
+// coinKeylessForGap): a point-native word stored by point + form as a gloss-less record in
+// lang.lexemes with NO concept/gloss key, its label emergent. Two deliberate perturbations shift every preset's gen-30
+// trajectory: (1) the per-generation rng.chance gate advances the shared stream; (2) when keyless
+// coinage fires it advances lang.conceptIdSeq, so the LexemeId minted for the NEXT gloss-keyed coinage
+// differs → that word's content-addressed (B1-Y) sound-change sub-rng reseeds differently. Seed words
+// keep their birth-time LexemeIds, so existing vocabulary is insulated; only post-keyless coinages
+// move. GEN0 unchanged (no genesis at gen 0). The signature() hashes gloss→form + word formKeys, NOT
+// keyless (gloss-less) records, so the shift is purely the trajectory perturbation above, not the keyless words
+// themselves. Byte-identity-vs-old-baseline waived by the user; reproducibility (same config →
+// identical output) preserved — hashes captured twice on consecutive runs, identical.
+// RE-BAKED 2026-06-06 (storage step 5 S1 task 4 — keyless words are FIRST-CLASS in the sound-change
+// sweep). The phonology step now projects ALL records (formViewOf, not seededFormViewOf), and the
+// regular exceptionless sweep (applyOneRegularChange) applies the picked rule to keyless gloss-less
+// records too (emergent gloss for legality). Keyless words therefore EVOLVE phonologically like any
+// word. Only ONE preset's gen-30 signature moves — tokipona (581f39fd → a8166cb8): it is the only
+// preset whose 30-gen run both coins keyless words AND has them match a regular-sweep rule, so the
+// keyless application consumes extra SHARED-rng draws (appended AFTER all seeded draws), shifting the
+// downstream stream. The other five presets are byte-identical: their keyless words (if any) never
+// matched a swept rule within 30 gens, so no extra draw fired. Seeded words' SOUND trajectories stay
+// insulated (content-addressed sub-rng; keyless sort last) and the signature excludes keyless records,
+// so the move is purely the downstream shared-rng perturbation. GEN0 unchanged (no keyless at gen 0).
+// Byte-identity-vs-old waived by the user; reproducibility preserved — a8166cb8 captured twice on
+// consecutive runs, identical.
+// GENN re-baselined 2026-06-07 (storage step-5 S2b — process-widening). Keyless words now participate
+// in the 7 lazily-owned evolution processes; variants is IMMEDIATE, so once a preset coins a keyless
+// word that the regular sweep changes, that keyless word records variants and feeds stepSocialContagion
+// — appending draws to the shared stream (after all seeded draws) and shifting the downstream
+// trajectory. Only tokipona (a8166cb8 → c8a2f719) and english (db425ca5 → 843f52f2) shifted: they are
+// the presets whose 30-gen run coins + sweeps a keyless word; pie/bantu/romance/germanic are
+// BYTE-IDENTICAL (no qualifying keyless word in their 30-gen window). GEN0 unchanged (no keyless at
+// gen 0). Byte-identity-vs-old waived by the user; reproducibility preserved — both new hashes captured
+// twice on consecutive runs, identical, and the s2b reproducibility canary (english sig===sig) is green.
+// GENN re-baselined 2026-06-12 (storage step-5 S5 — intrinsic LexemeId RNG order). The canonical
+// per-word RNG draw order flipped from gloss-sorted to lexicographic-by-LexemeId
+// (orderedLexemeIds = Object.keys(lexicon).sort()), making the trajectory gloss-INDEPENDENT. ALL
+// SIX presets shift (the order reaches every sweep + every downstream lexIds draw). GEN0 unchanged
+// (no sweep at seed — the gen-0 byte-identity guard stayed green). Reproducibility confirmed (full
+// baseline run twice, identical new hashes). This is the deliberate iteration-order flip S3/S4
+// deferred — see docs/superpowers/specs/2026-06-12-storage-step5-s5-intrinsic-lexemeid-order-design.md.
 const GENN: Record<string, string> = {
-  pie: "90514acc",
-  bantu: "082184a5",
-  romance: "73b99e67",
-  germanic: "c5d49c8a",
-  tokipona: "371ae44c",
-  english: "33b815a1",
+  pie: "7fe02f8d",
+  bantu: "485e1bce",
+  romance: "b0cbab45",
+  germanic: "9749a675",
+  tokipona: "fcd537d0",
+  english: "aef8285e",
 };
 
 describe("meaning-layer baseline — gen-0 forms byte-identical (fast)", () => {

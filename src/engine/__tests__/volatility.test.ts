@@ -19,7 +19,7 @@ function makeLang(): Language {
   return {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

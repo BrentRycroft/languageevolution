@@ -3,7 +3,9 @@ import type { InflectionClass, NounDeclensionClass } from "./types";
 import { isVowel } from "../phonology/ipa";
 import { stripTone } from "../phonology/tone";
 import { posOf } from "../lexicon/pos";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexFormById, lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
+import { satGet, satSet } from "../lexicon/satellites";
 
 /**
  * Phase 29 Tranche 5e: inflection-class assignment.
@@ -79,10 +81,10 @@ export function assignInflectionClass(
 }
 
 export function getInflectionClass(
-  lang: Pick<Language, "inflectionClass">,
+  lang: Language,
   meaning: Meaning,
 ): InflectionClass {
-  return lang.inflectionClass?.[meaning] ?? 1;
+  return satGet(lang, "inflectionClass", meaning) ?? 1;
 }
 
 export function setInflectionClass(
@@ -90,8 +92,7 @@ export function setInflectionClass(
   meaning: Meaning,
   cls: InflectionClass,
 ): void {
-  if (!lang.inflectionClass) lang.inflectionClass = {};
-  lang.inflectionClass[meaning] = cls;
+  satSet(lang, "inflectionClass", meaning, cls);
 }
 
 /**
@@ -109,22 +110,22 @@ export function classifyLexicon(
   lang: Language,
   rng: MinimalRng,
 ): void {
-  if (!lang.inflectionClass) lang.inflectionClass = {};
-  if (!lang.nounDeclensionClass) lang.nounDeclensionClass = {};
-  for (const meaning of lexKeys(lang)) {
-    const form = lexGet(lang, meaning);
+  for (const id of lexIds(lang)) {
+    const meaning = meaningForLexemeId(lang, id);
+    if (meaning === undefined) continue;
+    const form = lexFormById(lang, id);
     if (!form || form.length === 0) continue;
     const pos = posOf(meaning);
     if (pos === "verb") {
-      if (!lang.inflectionClass[meaning]) {
-        lang.inflectionClass[meaning] = assignInflectionClass(form, rng);
+      if (!satGet(lang, "inflectionClass", id)) {
+        satSet(lang, "inflectionClass", id, assignInflectionClass(form, rng));
       }
     } else if (pos === "noun" || pos === "other") {
       // Treat unclassified content meanings as candidate nouns for
       // declension assignment — many concrete nouns return "other"
       // from the sparse POS table (see lexicon/pos.ts).
-      if (!lang.nounDeclensionClass[meaning]) {
-        lang.nounDeclensionClass[meaning] = assignNounDeclensionClass(form, rng);
+      if (!satGet(lang, "nounDeclensionClass", id)) {
+        satSet(lang, "nounDeclensionClass", id, assignNounDeclensionClass(form, rng));
       }
     }
   }
@@ -190,10 +191,10 @@ export function assignNounDeclensionClass(
 }
 
 export function getNounDeclensionClass(
-  lang: Pick<Language, "nounDeclensionClass">,
+  lang: Language,
   meaning: Meaning,
 ): NounDeclensionClass {
-  return lang.nounDeclensionClass?.[meaning] ?? 1;
+  return satGet(lang, "nounDeclensionClass", meaning) ?? 1;
 }
 
 export function setNounDeclensionClass(
@@ -201,6 +202,5 @@ export function setNounDeclensionClass(
   meaning: Meaning,
   cls: NounDeclensionClass,
 ): void {
-  if (!lang.nounDeclensionClass) lang.nounDeclensionClass = {};
-  lang.nounDeclensionClass[meaning] = cls;
+  satSet(lang, "nounDeclensionClass", meaning, cls);
 }

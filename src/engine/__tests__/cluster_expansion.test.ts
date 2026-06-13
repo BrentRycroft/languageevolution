@@ -10,7 +10,7 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { driftOneMeaning } from "../semantics/drift";
-import { lexSet, lexDelete } from "../lexicon/access";
+import { tSet as lexSet, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
 
 /**
  * cluster_expansion.test.ts
@@ -21,10 +21,14 @@ import { lexSet, lexDelete } from "../lexicon/access";
  */
 
 describe("§H.1 — cluster lookups span the expanded registry", () => {
-  it("clusterOf resolves BASIC_240 meanings via the curated table", () => {
+  it("clusterOf resolves BASIC_240 meanings to a defined field (now geometric)", () => {
+    // Vector-native flip (full cluster switch): clusterOf reads the nearest cluster centroid by
+    // geometry for grounded meanings, so the specific field NAME is no longer the curated value
+    // (e.g. "love" need not land in "abstract"). The surviving invariant: every grounded core
+    // meaning resolves to SOME valid cluster.
     expect(clusterOf("water")).toBeDefined();
     expect(clusterOf("hand")).toBeDefined();
-    expect(clusterOf("love")).toBe("abstract");
+    expect(clusterOf("love")).toBeDefined();
   });
 
   it("clusterOf resolves expansion meanings via the registry", () => {
@@ -42,12 +46,14 @@ describe("§H.1 — cluster lookups span the expanded registry", () => {
     }
   });
 
-  it("relatedMeanings returns cluster-mates for an expansion concept", () => {
+  it("relatedMeanings returns a non-empty related set for an expansion concept", () => {
+    // Post-flip, relatedMeanings unions the geometric cluster-mates with the geometric NEIGHBOURS,
+    // so members no longer all share one curated field name (the old all-"abstract" assertion is
+    // void under geometry). The surviving invariant: a grounded expansion concept has a substantive
+    // related set and does not include itself.
     const related = relatedMeanings("democracy");
     expect(related.length).toBeGreaterThan(5);
-    for (const m of related) {
-      expect(clusterOf(m)).toBe("abstract");
-    }
+    expect(related).not.toContain("democracy");
   });
 
   it("relatedMeanings is non-empty for every tier-2/3 expansion concept", () => {
@@ -85,8 +91,8 @@ describe("§H.1 — cluster lookups span the expanded registry", () => {
     sim.step();
     const lang = sim.getState().tree["L-0"]!.language;
     lang.culturalTier = 3;
-    lang.lexicon = {} as never;
-    lang.conceptIds = {};
+    lang.lexemes = {} as never;
+    lang.lexemeIds = {};
     lexSet(lang, "people", ["p", "e", "o", "p", "l"]);
     lexSet(lang, "law", ["l", "a", "w", "a"]);
     lexSet(lang, "king", ["k", "i", "n", "g"]);

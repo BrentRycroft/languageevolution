@@ -7,6 +7,7 @@ import { realiseClause, realiseSingleClause, realiseSentence } from "../translat
 import { sentenceToRoleClause, roleClauseToSentence } from "../translator/ast";
 import type { RoleClause } from "../translator/syntax";
 import type { Language } from "../types";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * Phase 73c Tier C Phase 4 — realiser consumes RoleClause.
@@ -35,7 +36,7 @@ function freshLang(seed: string): Language {
 function realiseTokens(rc: RoleClause, lang: Language): string[] {
   return realiseSingleClause(rc, lang, {
     resolveOpen: (lemma) => {
-      const f = lang.lexicon[lemma];
+      const f = lexGet(lang, lemma);
       return { form: f ?? null, resolution: f ? "direct" : "fallback" };
     },
   }).map((t) => t.role);
@@ -49,13 +50,13 @@ describe("Phase 73c Phase 4 — realiseClause byte-identity with legacy", () => 
     const sentence = roleClauseToSentence(clause)!;
     const direct = realiseSentence(sentence, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     });
     const viaClause = realiseSingleClause(clause, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     });
@@ -73,13 +74,13 @@ describe("Phase 73c Phase 4 — realiseClause byte-identity with legacy", () => 
     const sentence = roleClauseToSentence(clause)!;
     const direct = realiseSentence(sentence, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     }).map((t) => t.surface).join(" ");
     const viaClause = realiseSingleClause(clause, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     }).map((t) => t.surface).join(" ");
@@ -93,13 +94,13 @@ describe("Phase 73c Phase 4 — realiseClause byte-identity with legacy", () => 
     const sentence = roleClauseToSentence(clause)!;
     const direct = realiseSentence(sentence, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     }).map((t) => t.surface).join(" ");
     const viaClause = realiseSingleClause(clause, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     }).map((t) => t.surface).join(" ");
@@ -137,7 +138,7 @@ describe("Phase 73c Phase 4 — typological projection", () => {
     void tokens;
     const out = realiseClause(clause1, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     });
@@ -153,7 +154,7 @@ describe("Phase 73c Phase 4 — typological projection", () => {
     clause1.coordinatedWith = clause2;
     const out = realiseSingleClause(clause1, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     });
@@ -170,13 +171,13 @@ describe("Phase 73c Phase 4 — typological projection", () => {
     const cloneClause = sentenceToRoleClause(sentence);
     const directOut = realiseSentence(sentence, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     }).map((t) => t.surface).join(" ");
     const clauseOut = realiseSingleClause(cloneClause, lang, {
       resolveOpen: (lemma) => {
-        const f = lang.lexicon[lemma];
+        const f = lexGet(lang, lemma);
         return { form: f ?? null, resolution: f ? "direct" : "fallback" };
       },
     }).map((t) => t.surface).join(" ");

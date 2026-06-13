@@ -3,6 +3,7 @@ import { translateSentence } from "../translator/sentence";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import type { Language } from "../types";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * translator_tree.test.ts
@@ -16,11 +17,11 @@ function freshLang(seed: string): Language {
   const sim = createSimulation({ ...defaultConfig(), seed });
   sim.step();
   const lang = sim.getState().tree["L-0"]!.language;
-  if (!lang.lexicon["water"]) lang.lexicon["water"] = ["w", "a", "t"];
-  if (!lang.lexicon["see"]) lang.lexicon["see"] = ["s", "i"];
-  if (!lang.lexicon["mother"]) lang.lexicon["mother"] = ["m", "a"];
-  if (!lang.lexicon["dog"]) lang.lexicon["dog"] = ["k", "u"];
-  if (!lang.lexicon["big"]) lang.lexicon["big"] = ["b", "u", "k"];
+  if (!lexGet(lang, "water")) lexSet(lang, "water", ["w", "a", "t"]);
+  if (!lexGet(lang, "see")) lexSet(lang, "see", ["s", "i"]);
+  if (!lexGet(lang, "mother")) lexSet(lang, "mother", ["m", "a"]);
+  if (!lexGet(lang, "dog")) lexSet(lang, "dog", ["k", "u"]);
+  if (!lexGet(lang, "big")) lexSet(lang, "big", ["b", "u", "k"]);
   return lang;
 }
 

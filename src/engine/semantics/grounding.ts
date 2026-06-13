@@ -7,7 +7,8 @@
  * measured at its present position in the space, rather than coining a novel form.
  */
 import type { Language, Meaning } from "../types";
-import { lexKeys, lexGet } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { cosineFixed } from "./vec";
 import { meaningPointFor } from "./meaningPoint";
 
@@ -34,9 +35,10 @@ export function nearestLexicalisedMeaning(
 ): GroundedMeaning | null {
   const target = meaningPointFor(lang, meaning);
   let best: GroundedMeaning | null = null;
-  for (const k of lexKeys(lang)) {
-    if (k === meaning) continue;
-    const f = lexGet(lang, k);
+  for (const id of lexIds(lang)) {
+    const k = meaningForLexemeId(lang, id);
+    if (k === undefined || k === meaning) continue;
+    const f = lexFormById(lang, id);
     if (!f || f.length === 0) continue;
     const s = cosineFixed(target, meaningPointFor(lang, k));
     if (s >= threshold && (!best || s > best.similarity)) {

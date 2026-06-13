@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import {
   attemptTargetedDerivation,
   attemptProductiveDerivation,
@@ -13,7 +14,8 @@ import {
 import { derivationFor, DERIVATION_TARGETS } from "../lexicon/derivation_targets";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * targeted_derivation.test.ts
@@ -24,12 +26,12 @@ import { lexSet } from "../lexicon/access";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  const { lexicon: seedLexicon, conceptIds: _cids, ...rest } = overrides;
+  const { lexemes: seedLexicon, lexemeIds: _cids, ...rest } = overrides;
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
-    conceptIds: {},
+    lexemes: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -60,7 +62,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     ...rest,
   };
   if (seedLexicon) {
-    for (const [g, form] of Object.entries(seedLexicon)) {
+    for (const [g, form] of Object.entries(seedLexicon as unknown as Record<string, string[]>)) {
       lexSet(lang, g, form);
     }
   }
@@ -150,7 +152,7 @@ describe("attemptTargetedDerivation", () => {
   it("composes freedom from free + dominionAbstract suffix", () => {
     const lang = makeLang({
       culturalTier: 2,
-      lexicon: { free: ["f", "r", "iː"] },
+      lexemes: { free: ["f", "r", "iː"] } as unknown as LexemeStore,
     });
     lang.derivationalSuffixes = [
       { affix: ["d", "o", "m"], tag: "-dom", category: "dominionAbstract" },
@@ -175,7 +177,7 @@ describe("attemptTargetedDerivation", () => {
   it("returns null when the language has no suffix in the required category", () => {
     const lang = makeLang({
       culturalTier: 1, // no abstractNoun bucket
-      lexicon: { free: ["f", "r", "iː"] },
+      lexemes: { free: ["f", "r", "iː"] } as unknown as LexemeStore,
     });
     lang.derivationalSuffixes = []; // no suffixes at all
     const result = attemptTargetedDerivation(lang, "freedom", makeRng("td-3"));
@@ -185,7 +187,7 @@ describe("attemptTargetedDerivation", () => {
   it("returns null for meanings not in DERIVATION_TARGETS", () => {
     const lang = makeLang({
       culturalTier: 3,
-      lexicon: { water: ["w", "ɔ", "t", "ə", "r"] },
+      lexemes: { water: ["w", "ɔ", "t", "ə", "r"] } as unknown as LexemeStore,
     });
     lang.derivationalSuffixes = [
       { affix: ["n", "ə", "s"], tag: "-ness", category: "abstractNoun" },
@@ -196,7 +198,7 @@ describe("attemptTargetedDerivation", () => {
   it("Phase 5a: productive derivation picks roots by posOf, not an English wordlist", () => {
     const lang = makeLang({
       culturalTier: 2,
-      lexicon: { eat: ["a", "t"], water: ["w", "a"], stone: ["t", "o"] },
+      lexemes: { eat: ["a", "t"], water: ["w", "a"], stone: ["t", "o"] } as unknown as LexemeStore,
     });
     // One productive AGENTIVE suffix (wants a VERB root). Of the three roots
     // only `eat` is a verb by posOf — water/stone are nouns. The derivation
@@ -212,7 +214,7 @@ describe("attemptTargetedDerivation", () => {
   it("Phase 5a: a categoryless suffix (Bantu noun-class prefix bug) is excluded", () => {
     const lang = makeLang({
       culturalTier: 2,
-      lexicon: { eat: ["a", "t"], because: ["b", "o"] },
+      lexemes: { eat: ["a", "t"], because: ["b", "o"] } as unknown as LexemeStore,
     });
     // A productive affix with NO category — the shape ku-/mu-/ka- get stored as.
     // It must never be reached by the productive path (no smearing onto roots).
@@ -231,7 +233,7 @@ describe("attemptTargetedDerivation", () => {
       rootMeaning: "free",
       suffixTag: "-dom",
     });
-    expect(lang.wordOriginChain?.freedom).toEqual({
+    expect(satGet(lang, "wordOriginChain", "freedom")).toEqual({
       tag: "derivation",
       from: "free",
       via: "-dom",

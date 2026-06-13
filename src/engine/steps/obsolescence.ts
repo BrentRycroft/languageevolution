@@ -1,11 +1,13 @@
 import type { Language, SimulationConfig } from "../types";
+import { satGet } from "../lexicon/satellites";
 import { levenshtein } from "../phonology/ipa";
 import { complexityFor } from "../lexicon/complexity";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { findWordsByMeaning, recordedParts } from "../lexicon/word";
 import { deleteMeaning } from "../lexicon/mutate";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById, lexIds } from "../lexicon/access";
+import { buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
 import { tierOf } from "../lexicon/concepts";
 import { isClosedClass, posOf } from "../lexicon/pos";
 
@@ -69,7 +71,7 @@ function attemptDisuseDeath(
   if (config.modes.swadeshProtection !== false && tierOf(m) === 0) return false;
   if (isClosedClass(posOf(m))) return false;
   if (recordedParts(lang, m) !== null) return false;
-  const freq = lang.wordFrequencyHints[m] ?? 0.5;
+  const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
   if (freq >= LOW_FREQ_THRESHOLD) return false;
   // Probability rises as frequency drops below the threshold. The multiplier
   // sharpens the gradient so words near the discard floor die quickly while
@@ -94,26 +96,43 @@ export function stepObsolescence(
 ): void {
   // Run the disuse-death channel proportionally to lexicon size so the death
   // rate tracks the (size-scaled) birth rate → emergent stationarity.
-  const lexemes = lexKeys(lang);
+  const lexemes = lexIds(lang);
   const disuseAttempts = Math.max(1, Math.round(lexemes.length / DISUSE_ATTEMPT_PER_LEXEMES));
+  // Rebuild the gloss list FRESH on each use: attemptDisuseDeath deletes words, so each disuse attempt
+  // (and the rivalry pass below) must observe the current, shrinking lexicon — exactly as the prior
+  // per-iteration `lexKeys(lang)` calls did. A single upfront snapshot would keep sampling deleted
+  // meanings and diverge (pie/english, where disuse death fires within 30 gens).
+  const glossList = (): string[] => {
+    // buildLexemeIdToGloss = a FRESH gloss⇆id inversion (exactly what lexKeys does). NOT
+    // meaningForLexemeId, whose size-cached reverse index can read STALE here: disuse deaths delete
+    // words mid-loop and the cache's size check can cycle back to a prior size with different entries,
+    // resolving an id to the wrong gloss. The fresh inverter is byte-identical to the prior lexKeys.
+    const g = buildLexemeIdToGloss(lang);
+    const out: string[] = [];
+    for (const cid of Object.keys(lang.lexemes)) {
+      const m = g.get(cid);
+      if (m !== undefined) out.push(m);
+    }
+    return out;
+  };
   for (let i = 0; i < disuseAttempts; i++) {
-    attemptDisuseDeath(lang, config, rng, generation, lexKeys(lang));
+    attemptDisuseDeath(lang, config, rng, generation, glossList());
   }
-  const meanings = lexKeys(lang);
+  const meanings = glossList();
   if (meanings.length < 2) return;
   for (let attempt = 0; attempt < 6; attempt++) {
     const a = meanings[rng.int(meanings.length)]!;
     const b = meanings[rng.int(meanings.length)]!;
     if (a === b) continue;
-    const fa = lexGet(lang, a)!;
-    const fb = lexGet(lang, b)!;
+    const fa = lexFormById(lang, idForGloss(lang, a)!)!;
+    const fb = lexFormById(lang, idForGloss(lang, b)!)!;
     if (Math.abs(fa.length - fb.length) > 1) continue;
     if (levenshtein(fa, fb) > config.obsolescence.maxDistanceForRivalry) continue;
     // Phase 21d: skip rivalry when both meanings already share a Word
     // (i.e., they're polysemous senses, not competing rivals).
     if (shareWord(lang, a, b)) continue;
-    const scoreA = (lang.wordFrequencyHints[a] ?? 0.5) + 0.1 * complexityFor(a);
-    const scoreB = (lang.wordFrequencyHints[b] ?? 0.5) + 0.1 * complexityFor(b);
+    const scoreA = (satGet(lang, "wordFrequencyHints", a) ?? 0.5) + 0.1 * complexityFor(a);
+    const scoreB = (satGet(lang, "wordFrequencyHints", b) ?? 0.5) + 0.1 * complexityFor(b);
     const loser = scoreA < scoreB ? a : scoreB < scoreA ? b : rng.chance(0.5) ? a : b;
     const winner = loser === a ? b : a;
     const p = config.obsolescence.probabilityPerPairPerGeneration * lang.conservatism;

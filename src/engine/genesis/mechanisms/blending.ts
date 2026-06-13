@@ -1,6 +1,6 @@
 import type { CoinageMechanism } from "./types";
 import { relatedMeanings } from "../../semantics/clusters";
-import { lexGet, lexHas, lexKeys } from "../../lexicon/access";
+import { lexIds, lexFormById, idForGloss, lexHasById } from "../../lexicon/access";
 
 /**
  * blending.ts
@@ -17,16 +17,18 @@ export const MECHANISM_BLENDING: CoinageMechanism = {
   register: "low",
   baseWeight: 0.5,
   tryCoin: (lang, target, _tree, rng) => {
-    const meanings = lexKeys(lang);
-    if (meanings.length < 2) return null;
-    const related = relatedMeanings(target).filter((m) => lexHas(lang, m));
+    if (lexIds(lang).length < 2) return null;
+    const related = relatedMeanings(target).filter((m) => lexHasById(lang, idForGloss(lang, m)));
     if (related.length < 2) return null;
     const a = related[rng.int(related.length)]!;
     const remaining = related.filter((m) => m !== a);
     if (remaining.length === 0) return null;
     const b = remaining[rng.int(remaining.length)]!;
-    const fa = lexGet(lang, a)!;
-    const fb = lexGet(lang, b)!;
+    const aId = idForGloss(lang, a);
+    const bId = idForGloss(lang, b);
+    if (!aId || !bId) return null;
+    const fa = lexFormById(lang, aId)!;
+    const fb = lexFormById(lang, bId)!;
     let overlap = 0;
     const maxOverlap = Math.min(fa.length, fb.length);
     for (let k = maxOverlap; k >= 1; k--) {

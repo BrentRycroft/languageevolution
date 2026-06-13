@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { translateSentence } from "../translator/sentence";
 import { presetPIE } from "../presets/pie";
 import { createSimulation } from "../simulation";
-import { lexGet, lexHas, lexDelete } from "../lexicon/access";
+import { tForm as lexGet, tHas as lexHas, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * copula.test.ts
@@ -94,7 +95,7 @@ describe("copula evolution — erosion + genesis", () => {
     stepCopulaGenesis(lang, cfg, makeRng("genesis"), 1);
     expect(lexGet(lang, "be")).toBeDefined();
     expect(lexGet(lang, "be")!.length).toBeGreaterThan(0);
-    expect(lang.wordOrigin["be"]).toMatch(/^grammaticalization:/);
+    expect(satGet(lang, "wordOrigin", "be")).toMatch(/^grammaticalization:/);
   });
 
   it("genesis preserves the donor word's original meaning (polysemy)", async () => {

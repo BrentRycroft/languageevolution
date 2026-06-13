@@ -2,8 +2,10 @@ import type { Language, Meaning } from "../types";
 import type { MorphCategory } from "../morphology/types";
 import { closedClassTable } from "./closedClass";
 import { disambiguateSense, glossLemma } from "../lexicon/word";
-import { lexGet } from "../lexicon/access";
-import { orderedLexiconKeys } from "../lexicon/conceptIdentity";
+import { lexFormById } from "../lexicon/access";
+import { meaningForLexemeId, orderedLexemeIds } from "../lexicon/lexemeIdentity";
+import { satKeys, satGet } from "../lexicon/satellites";
+import { effectiveGloss } from "../semantics/meaningPoint";
 
 /**
  * reverse.ts
@@ -91,17 +93,23 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
     for (const w of lang.words) {
       if (!w.formKey) continue;
       for (const s of w.senses) {
-        append(w.formKey, s.meaning, "open");
+        // S6: caption to the sense's EFFECTIVE gloss (the S4 hybrid: emergent nearest-anchor where the
+        // point is real/drifted, else the authored key for compounds/orphans) so a drifted word reads
+        // as its current meaning. Byte-identical for un-drifted anchor words (effectiveGloss === meaning).
+        append(w.formKey, effectiveGloss(lang, s), "open");
       }
     }
   } else {
-    const openLemmas = orderedLexiconKeys(lang);
-    for (const lemma of openLemmas) {
+    // orderedLexemeIds = ALL store keys sorted by intrinsic LexemeId (S5, gloss-independent);
+    // keyless ids (no gloss) are skipped below by the undefined-gloss guard.
+    for (const id of orderedLexemeIds(lang.lexemes)) {
+      const lemma = meaningForLexemeId(lang, id);
+      if (lemma === undefined) continue;
       // Phase 29-2i: null-guard. The `!` was wrong — `Object.keys`
       // can race with concurrent mutations and a meaning may be
       // mid-deletion when this runs (the engine never deletes during
       // a render but defensive code should not assume).
-      const form = lexGet(lang, lemma);
+      const form = lexFormById(lang, id);
       if (!form) continue;
       const surface = form.join("");
       if (!surface) continue;
@@ -115,9 +123,12 @@ function buildReverseLex(lang: Language): Map<string, ReverseLexEntry> {
   // pasts. This is the root cause of the 3 known-failing
   // translator_roundtrip past-tense tests.
   if (lang.suppletion) {
-    for (const meaning of Object.keys(lang.suppletion)) {
-      const perCategory = lang.suppletion[meaning];
+    for (const id of satKeys(lang, "suppletion")) {
+      const perCategory = satGet(lang, "suppletion", id);
       if (!perCategory) continue;
+      // The store is id-keyed; the reverse lex renders a human gloss lemma.
+      const meaning = meaningForLexemeId(lang, id);
+      if (meaning === undefined) continue;
       for (const cat of Object.keys(perCategory) as MorphCategory[]) {
         const form = perCategory[cat];
         if (!form || form.length === 0) continue;

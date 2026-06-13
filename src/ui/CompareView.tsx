@@ -8,7 +8,8 @@ import { diffActiveRules, diffOtRankings } from "../engine/analysis/ruleDiff";
 import { ScriptPicker } from "./ScriptPicker";
 import { CopyButton } from "./CopyButton";
 import { downloadAs, slugForFile } from "./exportUtils";
-import { lexKeys, lexGet, lexHas, lexSize } from "../engine/lexicon/access";
+import { lexIds, idForGloss, lexFormById, lexSize } from "../engine/lexicon/access";
+import { meaningForLexemeId } from "../engine/lexicon/lexemeIdentity";
 import {
   generateNarrative,
   randomNarrativeSeed,
@@ -33,12 +34,18 @@ function lexicalSimilarity(
   a: Language,
   b: Language,
 ): { pct: number; shared: number; cognate: number } {
-  const shared = lexKeys(a).filter((m) => lexHas(b, m));
+  const shared: string[] = [];
+  for (const idA of lexIds(a)) {
+    const m = meaningForLexemeId(a, idA);
+    if (m !== undefined && idForGloss(b, m) !== undefined) shared.push(m);
+  }
   if (shared.length === 0) return { pct: 0, shared: 0, cognate: 0 };
   let cognate = 0;
   for (const m of shared) {
-    const fa = lexGet(a, m)!;
-    const fb = lexGet(b, m)!;
+    const idA = idForGloss(a, m)!;
+    const idB = idForGloss(b, m)!;
+    const fa = lexFormById(a, idA)!;
+    const fb = lexFormById(b, idB)!;
     const d = levenshtein(fa, fb);
     const longer = Math.max(fa.length, fb.length);
     if (longer === 0) continue;
@@ -267,10 +274,18 @@ function RuleDiffBanner({ a, b }: { a: Language; b: Language }) {
 
 function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Language }) {
   const script = useSimStore((s) => s.displayScript);
-  const meanings = useMemo(
-    () => Array.from(new Set([...lexKeys(lang), ...lexKeys(otherLang)])).sort(),
-    [lang, otherLang],
-  );
+  const meanings = useMemo(() => {
+    const set = new Set<string>();
+    for (const id of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, id);
+      if (m !== undefined) set.add(m);
+    }
+    for (const id of lexIds(otherLang)) {
+      const m = meaningForLexemeId(otherLang, id);
+      if (m !== undefined) set.add(m);
+    }
+    return Array.from(set).sort();
+  }, [lang, otherLang]);
 
   return (
     <div className="compare-col">
@@ -303,8 +318,10 @@ function CompareColumn({ lang, otherLang }: { lang: Language; otherLang: Languag
       <Section title="Lexicon">
         <div className="compare-lex">
           {meanings.slice(0, 80).map((m) => {
-            const f = lexGet(lang, m);
-            const fOther = lexGet(otherLang, m);
+            const idL = idForGloss(lang, m);
+            const idO = idForGloss(otherLang, m);
+            const f = idL !== undefined ? lexFormById(lang, idL) : undefined;
+            const fOther = idO !== undefined ? lexFormById(otherLang, idO) : undefined;
             const divergent =
               f && fOther ? levenshtein(f, fOther) > 0 : f !== fOther;
             return (

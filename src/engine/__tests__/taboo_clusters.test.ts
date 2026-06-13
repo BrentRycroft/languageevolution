@@ -7,7 +7,9 @@ import { isExpressive } from "../lexicon/expressive";
 import { makeRng } from "../rng";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
 import type { Language } from "../types";
-import { lexGet, lexSize, lexSet } from "../lexicon/access";
+import { lexSize } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * taboo_clusters.test.ts
@@ -21,11 +23,15 @@ const RUN_SLOW = !!(globalThis as { process?: { env?: Record<string, string | un
   .process?.env?.RUN_SLOW;
 
 describe("semantic clusters", () => {
-  it("core body meanings cluster together", () => {
-    expect(clusterOf("hand")).toBe("body");
-    expect(clusterOf("foot")).toBe("body");
-    expect(clusterOf("water")).toBe("environment");
-    expect(clusterOf("go")).toBe("motion");
+  it("core meanings resolve to a defined semantic field (geometric, fields may scatter)", () => {
+    // Vector-native flip (full cluster switch, user-authorized): clusterOf now reads the nearest
+    // cluster centroid by GloVe geometry, which DISAGREES with the curated field names (~59% parity)
+    // and scatters some coherent fields — e.g. body parts no longer all land in "body". This is an
+    // accepted, reversible trade-off (the curated `MEANING_TO_CLUSTER` table remains the canonical
+    // source). The surviving invariant: every grounded core meaning resolves to SOME valid field.
+    for (const m of ["hand", "foot", "water", "go"] as const) {
+      expect(clusterOf(m), m).toBeDefined();
+    }
   });
 
   it("relatedMeanings returns cluster-mates for seed meanings", () => {
@@ -55,8 +61,8 @@ describe("taboo replacement", () => {
     const lang: Language = {
       id: "L-0",
       name: "Proto",
-      lexicon: {},
-      conceptIds: {},
+      lexemes: {},
+      lexemeIds: {},
       enabledChangeIds: [],
       changeWeights: {},
       birthGeneration: 0,
@@ -66,7 +72,7 @@ describe("taboo replacement", () => {
       // high-freq words. `snake` (a predator) is the eligible target here;
       // mother/father/hand/foot are present as the surrounding lexicon /
       // potential euphemism donors.
-      wordFrequencyHints: { mother: 0.95, father: 0.95, hand: 0.9, foot: 0.9, snake: 0.6 },
+      wordFrequencyHints: { mother: 0.95, father: 0.95, hand: 0.9, foot: 0.9, snake: 0.6 } as Record<string, number>,
       phonemeInventory: { segmental: [], tones: [], usesTones: false },
       morphology: { paradigms: {} },
       localNeighbors: {},
@@ -103,7 +109,7 @@ describe("taboo replacement", () => {
     expect(ev.meaning).toBe("snake");
     expect(lexSize(lang)).toBe(before);
     expect(lexGet(lang, ev.meaning)!.join("")).not.toBe(ev.oldForm);
-    expect(lang.wordOrigin[ev.meaning]).toMatch(/^taboo:/);
+    expect(satGet(lang, "wordOrigin", ev.meaning)).toMatch(/^taboo:/);
   });
 
   it("tagged meanings keep a new form shorter than 10 phonemes", () => {

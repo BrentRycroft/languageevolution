@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satGet } from "../lexicon/satellites";
 import {
   assignInflectionClass,
   classifyLexicon,
@@ -9,7 +10,7 @@ import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { makeRng } from "../rng";
-import { lexKeys } from "../lexicon/access";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 
 /**
  * inflectionClass.test.ts
@@ -66,8 +67,8 @@ describe("Phase 29 Tranche 5e — inflection classes", () => {
     let unclassifiedNouns = 0;
     for (const m of lexKeys(lang)) {
       const p = posOf(m);
-      if (p === "verb" && !lang.inflectionClass![m]) unclassifiedVerbs++;
-      if ((p === "noun" || p === "other") && !lang.nounDeclensionClass![m]) unclassifiedNouns++;
+      if (p === "verb" && !satGet(lang, "inflectionClass", m)) unclassifiedVerbs++;
+      if ((p === "noun" || p === "other") && !satGet(lang, "nounDeclensionClass", m)) unclassifiedNouns++;
     }
     expect(unclassifiedVerbs).toBe(0);
     expect(unclassifiedNouns).toBe(0);

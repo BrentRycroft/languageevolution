@@ -1,4 +1,5 @@
 import type { Language, SimulationConfig, WordForm } from "../types";
+import { satGet, satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
 import { recordInnovation } from "../lexicon/socialContagion";
@@ -6,7 +7,8 @@ import { isFormLegal } from "../phonology/wordShape";
 import { setLexiconForm } from "../lexicon/mutate";
 import { isVowel, isConsonant } from "../phonology/ipa";
 import { featuresOf } from "../phonology/features";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexFormById, lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * learner.ts
@@ -88,15 +90,16 @@ export function stepLearner(
   const reduction = attemptMarkednessReduction(lang, rng);
   if (reduction) {
     let mutated = 0;
-    for (const m of lexKeys(lang)) {
-      const form = lexGet(lang, m)!;
+    for (const id of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, id)!;
+      const form = lexFormById(lang, id)!;
       if (!form.includes(reduction.phoneme)) continue;
       const next: WordForm = form.map((p) => (p === reduction.phoneme ? reduction.replacement : p));
       if (!isFormLegal(m, next)) continue;
       recordInnovation(lang, m, form, next, generation, "learner");
       // Phase 29 Tranche 1 round 2: route through chokepoint.
       setLexiconForm(lang, m, next, { bornGeneration: generation, origin: "learner-markedness" });
-      lang.lastChangeGeneration[m] = generation;
+      satSet(lang, "lastChangeGeneration", m, generation);
       mutated++;
     }
     lang.phonemeInventory.segmental = lang.phonemeInventory.segmental.filter(
@@ -113,9 +116,10 @@ export function stepLearner(
 
   if (rng.chance(0.04 * lang.conservatism)) {
     let codaSimplifications = 0;
-    for (const m of lexKeys(lang)) {
-      const form = lexGet(lang, m)!;
-      const freq = lang.wordFrequencyHints[m] ?? 0.5;
+    for (const id of lexIds(lang)) {
+      const m = meaningForLexemeId(lang, id)!;
+      const form = lexFormById(lang, id)!;
+      const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
       if (freq > 0.4) continue;
       const simplified = simplifyCoda(form);
       if (!simplified) continue;
@@ -124,7 +128,7 @@ export function stepLearner(
         recordInnovation(lang, m, form, simplified, generation, "learner");
         // Phase 29 Tranche 1 round 2: route through chokepoint.
         setLexiconForm(lang, m, simplified, { bornGeneration: generation, origin: "learner-coda-simplification" });
-        lang.lastChangeGeneration[m] = generation;
+        satSet(lang, "lastChangeGeneration", m, generation);
         codaSimplifications++;
         if (codaSimplifications >= 3) break;
       }

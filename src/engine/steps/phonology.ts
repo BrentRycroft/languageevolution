@@ -1,6 +1,7 @@
 import type { Language, PendingArealRule, SimulationConfig, SimulationState, WordForm } from "../types";
+import { glossKeyedView, satDelete, satGet, satKeys, satSet } from "../lexicon/satellites";
 import { applyChangesToLexicon, stratalApplyChangesToLexicon, sortByPriority, voicedObstruentShareOf } from "../phonology/apply";
-import { buildConceptIdToGloss, type ConceptId } from "../lexicon/conceptIdentity";
+import { buildLexemeIdToGloss } from "../lexicon/lexemeIdentity";
 import { invalidateClosedClassCache } from "../translator/closedClass";
 import { driftOrthography, freezeLexicalSpelling } from "../phonology/orthography";
 import { maybeLearnOt } from "../phonology/ot";
@@ -29,7 +30,8 @@ import type { Rng } from "../rng";
 import { changesForLang, pushEvent, refreshInventory } from "./helpers";
 import { leafIds } from "../tree/split";
 import { geoDistance } from "../geo";
-import { lexGet, lexSet, lexKeys } from "../lexicon/access";
+import { lexFormById, lexSetFormById, lexIds } from "../lexicon/access";
+import { formViewOf, mergeFormsIntoStore } from "../lexicon/store";
 
 /**
  * phonology.ts
@@ -108,7 +110,25 @@ export function stepPhonology(
   const literary = literaryStabilityFor(lang);
   lang.literaryStability = literary;
   const literaryBrake = 1 - 0.6 * literary;
-  const before = lang.lexicon;
+  // Store unification (S1): the sound-change ENGINE stays form-only. Project a form-view out of the
+  // record store, run sound change on it, then `mergeFormsIntoStore` the result back into the records
+  // (preserving each record's point + gloss). `formViewOf` is the single sweep gate — task 4 widened it
+  // from `seededFormViewOf` to ALL records, so KEYLESS (gloss-less) words are now first-class: they
+  // evolve phonologically like any word. apply.ts resolves a keyless key's gloss emergently
+  // (`glossResolverForSweep`) for sensitivity/legality; `orderedLexemeIds` sorts keyless after the
+  // seeded set (by id), so seeded words' draw positions — and their content-addressed sub-rng — are
+  // unchanged. Seeded SOUND trajectories stay byte-identical; the gen-N divergence is the deliberate
+  // re-bake (keyless now participate in the shared cross-word stream).
+  const before = formViewOf(lang.lexemes);
+  // S2b: snapshot keyless forms before the sweep. Keyless words change via the regular-sweep path
+  // (applyOneRegularChange) below, which the seeded before/after recording loop never observes, so we
+  // record their variants/innovations by comparing afterward. Seeded-only runs have no keyless records
+  // here → this map is empty → a no-op, so seeded trajectories stay byte-identical.
+  const keylessFormsBefore = new Map<string, WordForm>();
+  for (const id of Object.keys(lang.lexemes)) {
+    const rec = lang.lexemes[id]!;
+    if (rec.gloss === undefined) keylessFormsBefore.set(id, rec.form.slice());
+  }
   const changes = changesForLang(lang);
   // Phase 69a T1: hoist the sortByPriority computation. Pre-fix
   // applyChangesToLexicon ran sortByPriority(changes) once per call
@@ -166,21 +186,21 @@ export function stepPhonology(
   // Phase 69a T1: single combined pass over `before` builds both the
   // per-meaning age and neighbour-momentum maps. Pre-fix this was
   // two separate Object.keys(before) walks (line 79 + line 105).
-  // `before` is the ConceptId-keyed store; resolve each key's gloss (fresh map,
+  // `before` is the LexemeId-keyed store; resolve each key's gloss (fresh map,
   // O(1) lookups) so the satellite per-meaning maps (lastChangeGeneration,
   // localNeighbors) and the gloss-keyed ages/momentum outputs stay
   // byte-identical to the pre-flip sorted-gloss build. apply.ts looks these up
   // by the same gloss.
-  const glossByCid = buildConceptIdToGloss(lang);
+  const glossByCid = buildLexemeIdToGloss(lang);
   for (const cid of Object.keys(before)) {
     const m = glossByCid.get(cid) ?? cid;
-    const last = lang.lastChangeGeneration[m];
+    const last = satGet(lang, "lastChangeGeneration", m);
     ages[m] = last === undefined ? 99 : generation - last;
-    const nbrs = lang.localNeighbors[m];
+    const nbrs = satGet(lang, "localNeighbors", m);
     if (!nbrs || nbrs.length === 0) continue;
     let recentlyChanged = 0;
     for (const n of nbrs) {
-      const lastN = lang.lastChangeGeneration[n];
+      const lastN = satGet(lang, "lastChangeGeneration", n);
       if (lastN !== undefined && generation - lastN <= NEIGHBOUR_WINDOW) {
         recentlyChanged++;
       }
@@ -261,9 +281,9 @@ export function stepPhonology(
       PER_WORD_ACTUATION_SCALE,
     weights: lang.changeWeights,
     rateMultiplier: mult * strataMult,
-    frequencyHints: lang.wordFrequencyHints,
+    frequencyHints: glossKeyedView(lang, "wordFrequencyHints"),
     agesSinceChange: ages,
-    registerOf: lang.registerOf,
+    registerOf: glossKeyedView(lang, "registerOf"),
     stressPattern: lang.stressPattern,
     lexicalStress: lang.lexicalStress,
     seedLengths,
@@ -310,20 +330,22 @@ export function stepPhonology(
   // config.seed keeps the global seed in control; lang.id makes sibling
   // daughters diverge; generation gives independent draws each gen.
   const conceptSeedBase = `${config.seed}|${lang.id}|${generation}`;
+  // `after` is the post-sound-change form-view (LexemeId -> form), merged back into the records below.
+  let after: Record<string, WordForm>;
   if (lang.lexiconUR !== undefined) {
-    lang.lexicon = stratalApplyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
+    after = stratalApplyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
     const policy = lang.lexiconURRefreshPolicy ?? "each-gen";
     if (policy === "each-gen") {
-      // UR mirrors the surface store, so it is ConceptId-keyed too.
+      // UR mirrors the surface form-view, so it is LexemeId-keyed too.
       lang.lexiconUR = {};
-      for (const cid of Object.keys(lang.lexicon)) {
-        lang.lexiconUR[cid] = lang.lexicon[cid as ConceptId]!.slice();
+      for (const cid of Object.keys(after)) {
+        lang.lexiconUR[cid] = after[cid]!.slice();
       }
     }
     // policy === "manual": leave UR untouched. Caller checkpoints when
     // a morphological reanalysis or other event justifies updating UR.
   } else {
-    lang.lexicon = applyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
+    after = applyChangesToLexicon(before, changes, rng, opts, lang, conceptSeedBase);
   }
   // Phase 72a T2 (Invariant 1 fix): closed-class forms are cached
   // per-language; the cache silently goes stale when phonology rewrites
@@ -343,22 +365,20 @@ export function stepPhonology(
   // Phase 29 Tranche 5d: record proto→daughter substitutions for
   // every position-aligned change to surface systematic correspondences
   // (Grimm's-Law-grade shifts) in the UI / audit reports.
-  recordCorrespondences(lang, before, lang.lexicon, generation);
+  recordCorrespondences(lang, before, after, generation);
   // Phase 27.1: when the language is already over its tier-target
   // inventory, reject post-rule forms that introduce phonemes which
   // weren't in the inventory before this generation. This prevents
   // sound-change additions from outpacing homeostatic pruning.
   // Mergers (rules that REDUCE the inventory) are still allowed —
   // their outputs are by definition in the old inventory.
-  // `before` and `lang.lexicon` are both ConceptId-keyed; iterate by store key
-  // and resolve the gloss only for the gloss-keyed satellite maps. (Pre-flip
-  // these loops keyed `before` by gloss; that mismatch silently no-op'd the
-  // change-recording below — see CONCEPT-REKEY-PLAN.md.)
-  const glossOfCid = buildConceptIdToGloss(lang);
+  // `before` and `after` are both LexemeId-keyed form-views; iterate by store
+  // key and resolve the gloss only for the gloss-keyed satellite maps.
+  const glossOfCid = buildLexemeIdToGloss(lang);
   if (inventorySizePressure(lang) > 0) {
     const oldInv = new Set(lang.phonemeInventory.segmental);
-    for (const cid of Object.keys(lang.lexicon)) {
-      const newForm = lang.lexicon[cid as ConceptId]!;
+    for (const cid of Object.keys(after)) {
+      const newForm = after[cid]!;
       const oldForm = before[cid];
       if (!oldForm || newForm === oldForm) continue;
       let introducesNovel = false;
@@ -370,20 +390,20 @@ export function stepPhonology(
         }
       }
       if (introducesNovel) {
-        lang.lexicon[cid as ConceptId] = oldForm;
+        after[cid] = oldForm;
       }
     }
   }
   for (const cid of Object.keys(before)) {
-    if (lang.lexicon[cid as ConceptId] !== undefined) continue;
+    if (after[cid] !== undefined) continue;
     const m = glossOfCid.get(cid);
     if (m === undefined) continue;
-    delete lang.wordFrequencyHints[m];
-    delete lang.lastChangeGeneration[m];
-    delete lang.wordOrigin[m];
-    delete lang.localNeighbors[m];
-    if (lang.registerOf) delete lang.registerOf[m];
-    if (lang.variants) delete lang.variants[m];
+    satDelete(lang, "wordFrequencyHints", m);
+    satDelete(lang, "lastChangeGeneration", m);
+    satDelete(lang, "wordOrigin", m);
+    satDelete(lang, "localNeighbors", m);
+    if (lang.registerOf) satDelete(lang, "registerOf", m);
+    if (lang.variants) satDelete(lang, "variants", m);
   }
   const evolveForm = (form: WordForm): WordForm => {
     return changes.reduce((acc, change) => {
@@ -398,8 +418,8 @@ export function stepPhonology(
   };
   applyPhonologyToAffixes(lang.morphology, evolveForm);
   if (lang.suppletion) {
-    for (const meaning of Object.keys(lang.suppletion)) {
-      const slots = lang.suppletion[meaning]!;
+    for (const id of satKeys(lang, "suppletion")) {
+      const slots = satGet(lang, "suppletion", id)!;
       for (const cat of Object.keys(slots) as Array<keyof typeof slots>) {
         const form = slots[cat];
         if (!form || form.length === 0) continue;
@@ -415,7 +435,7 @@ export function stepPhonology(
   }
   let mutated = 0;
   for (const cid of Object.keys(before)) {
-    const cur = lang.lexicon[cid as ConceptId];
+    const cur = after[cid];
     if (cur === undefined) continue;
     const m = glossOfCid.get(cid);
     if (m === undefined) continue;
@@ -423,7 +443,7 @@ export function stepPhonology(
     const b = cur.join("");
     if (a !== b) {
       mutated++;
-      lang.lastChangeGeneration[m] = generation;
+      satSet(lang, "lastChangeGeneration", m, generation);
       // Phase 6a: NO frequency bump on sound change. A word changing its form
       // is not evidence it is used more often; the old +0.04 (with +0.06 per
       // actuation below) swamped the ×0.998 decay and saturated every word at
@@ -436,6 +456,10 @@ export function stepPhonology(
       reinforceCanonical(lang, m, cur);
     }
   }
+  // Store unification (S1): reconcile the swept form-view back into the record store. Updates each
+  // seeded record's form (or drops it if it merged away); keyless records, absent from `before`, are
+  // left untouched. Done now — before anything downstream reads forms via the seam / lang.lexemes.
+  mergeFormsIntoStore(lang.lexemes, before, after);
   decayFrequencies(lang);
   // Phase 33 Tranche 33a: actuation events used to fire 1 per
   // adopted variant, drowning the log (74-78/gen). Now we collapse
@@ -457,7 +481,7 @@ export function stepPhonology(
     ...socialActuations.map((a) => ({ ...a, source: "social" as const })),
   ];
   for (const a of allActuations) {
-    lang.lastChangeGeneration[a.meaning] = generation;
+    satSet(lang, "lastChangeGeneration", a.meaning, generation);
     // Phase 6a: actuation is a sound-change diffusion event, not a usage event —
     // no frequency bump (see the mutation loop above).
   }
@@ -540,14 +564,14 @@ export function stepPhonology(
     const preInv = new Set(lang.phonemeInventory.segmental);
     const preLex: Record<string, WordForm> = {};
     if (inventorySizePressure(lang) > 0) {
-      for (const m of lexKeys(lang)) preLex[m] = lexGet(lang, m)!;
+      for (const id of lexIds(lang)) preLex[id] = lexFormById(lang, id)!;
     }
     const ruleId = applyOneRegularChange(lang, changes, rng);
     if (ruleId) {
       if (Object.keys(preLex).length > 0) {
         let introducesNovel = false;
-        outer: for (const m of lexKeys(lang)) {
-          for (const raw of lexGet(lang, m)!) {
+        outer: for (const id of lexIds(lang)) {
+          for (const raw of lexFormById(lang, id)!) {
             const base = stripTone(raw);
             if (!preInv.has(base) && !preInv.has(raw)) {
               introducesNovel = true;
@@ -556,7 +580,7 @@ export function stepPhonology(
           }
         }
         if (introducesNovel) {
-          for (const m of Object.keys(preLex)) lexSet(lang, m, preLex[m]!);
+          for (const id of lexIds(lang)) { if (preLex[id]) lexSetFormById(lang, id, preLex[id]!); }
         }
       }
       refreshInventory(lang);
@@ -572,6 +596,19 @@ export function stepPhonology(
         description: `sound law: ${ruleId} applied exceptionlessly`,
       });
     }
+  }
+
+  // S2b: record variants/innovations for KEYLESS words whose form changed during the sweep above,
+  // keyed by their LexemeId — so keyless words feed the variant / social-contagion machinery like
+  // seeded words. recordInnovation/recordVariant draw no RNG, and this only touches keyless records,
+  // so seeded trajectories are unaffected (a run with no keyless word stays byte-identical).
+  for (const [id, oldForm] of keylessFormsBefore) {
+    const rec = lang.lexemes[id];
+    if (!rec || rec.form.join("") === oldForm.join("")) continue;
+    recordVariant(lang, id, oldForm, generation, 0.55);
+    recordVariant(lang, id, rec.form, generation, 0.7);
+    recordInnovation(lang, id, oldForm, rec.form, generation, "phonology");
+    satSet(lang, "lastChangeGeneration", id, generation);
   }
 
   // Phase 27.1: the historical 4% per-gen prunePhonemes call here was
@@ -651,8 +688,8 @@ export function stepPhonology(
 
   if (lang.activeRules && lang.activeRules.length > 0) {
     lang.activeRules = lang.activeRules.map((rule) => {
-      for (const m of lexKeys(lang)) {
-        if (matchSites(rule, lexGet(lang, m)!).length > 0) {
+      for (const id of lexIds(lang)) {
+        if (matchSites(rule, lexFormById(lang, id)!).length > 0) {
           return reinforce(rule, generation);
         }
       }

@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { tHas as lexHas } from "../lexicon/__tests__/glossSeam";
+import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { presetPIE } from "../presets/pie";
@@ -72,7 +74,7 @@ function runAndCollect(
     activeRulesTotal += (lang.activeRules ?? []).length;
     retiredRulesTotal += (lang.retiredRules ?? []).length;
 
-    for (const [m, form] of Object.entries(lang.lexicon)) {
+    for (const [m, form] of Object.entries(formViewOf(lang.lexemes))) {
       totalForms++;
       totalLen += form.length;
       if (form.length > maxFormLength) maxFormLength = form.length;
@@ -81,12 +83,14 @@ function runAndCollect(
     }
 
     if (lang.registerOf) {
+      // registerOf is now LexemeId-keyed (S2a): a key is dangling iff its
+      // lexeme record is gone (lexHas resolves glosses, not ids).
       for (const key of Object.keys(lang.registerOf)) {
-        if (!lang.lexicon[key]) danglingRegisters++;
+        if (lang.lexemes[key] === undefined) danglingRegisters++;
       }
     }
     for (const key of Object.keys(lang.wordOrigin)) {
-      if (!lang.lexicon[key]) danglingOrigins++;
+      if (!lexHas(lang, key)) danglingOrigins++;
     }
 
     for (const e of lang.events) {

@@ -483,7 +483,9 @@ const MORPHOLOGY: Morphology = {
  * pattern — distinct e-grade present vs. zero/o-grade aorist — is
  * captured here as suppletion entries the engine can apply.
  */
-const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+const SUPPLETION: NonNullable<
+  import("../types").SimulationConfig["seedSuppletion"]
+> = {
   // *h₁es- (be) athematic; aorist *h₁ē-
   be: { "verb.tense.past": ["ē", "s"] },
   // *h₁ei- (go) athematic; aorist *h₁it-

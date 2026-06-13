@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { isVowel, isSyllabic, textToIpa, sanitizeForNewick } from "../phonology/ipa";
 import { featuresOf } from "../phonology/features";
 import { romanize } from "../phonology/orthography";
@@ -66,7 +67,7 @@ describe("PIE character + syllabicity handling", () => {
     for (let i = 0; i < 60; i++) sim.step();
     const tree = sim.getState().tree;
     for (const id of Object.keys(tree)) {
-      const lex = tree[id]!.language.lexicon;
+      const lex = formViewOf(tree[id]!.language.lexemes);
       for (const [meaning, form] of Object.entries(lex)) {
         expect(form.length, `${id}/${meaning} non-empty`).toBeGreaterThan(0);
         const hasNucleus = form.some((p) => isSyllabic(p));
@@ -102,7 +103,7 @@ describe("PIE character + syllabicity handling", () => {
     const sim = createSimulation(presetPIE());
     for (let i = 0; i < 20; i++) sim.step();
     const lang = sim.getState().tree[sim.getState().rootId]!.language;
-    for (const form of Object.values(lang.lexicon).slice(0, 30)) {
+    for (const form of Object.values(formViewOf(lang.lexemes)).slice(0, 30)) {
       const rom = romanize(form, lang);
       for (const ch of rom) {
         const code = ch.codePointAt(0) ?? 0;

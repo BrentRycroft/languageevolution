@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import { applyPhonologyToAffixes } from "../morphology/evolve";
 import {
   proposeAblautEmergence,
@@ -10,7 +11,8 @@ import type { Paradigm, Morphology } from "../morphology/types";
 import { createSimulation } from "../simulation";
 import { presetEnglish } from "../presets/english";
 import { makeRng } from "../rng";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
+import { satGet } from "../lexicon/satellites";
 
 /**
  * ablaut_chain.test.ts
@@ -96,18 +98,30 @@ describe("Phase 64 T2 — ablaut chain emergence + sound-change tracking", () =>
         },
       },
       phonemeInventory: { segmental: ["a", "u", "k", "s", "ŋ"] as Phoneme[] },
-      lexicon: { sing: ["s", "i", "ŋ"] as WordForm },
+      lexemes: { sing: ["s", "i", "ŋ"] as WordForm } as unknown as LexemeStore,
       events: [],
     } as unknown as Language;
-    // Rekey the hand-built gloss-keyed lexicon to ConceptIds + conceptIds map,
+    // Rekey the hand-built gloss-keyed lexicon to LexemeIds + lexemeIds map,
     // so decayAblautClasses (which reads forms via the access seam) finds "sing".
-    rekeyLexiconToConceptIds(fakeLang);
+    rekeyLexiconToLexemeIds(fakeLang);
+    // S2a: ablautClassAssignment is now LexemeId-keyed; decayAblautClasses reads
+    // the record form by id, so the assignment must follow the minted id too.
+    {
+      const f = fakeLang.ablautClassAssignment as Record<string, number>;
+      for (const g of Object.keys(f)) {
+        const id = fakeLang.lexemeIds?.[g];
+        if (id && id !== g) {
+          f[id] = f[g]!;
+          delete f[g];
+        }
+      }
+    }
     decayAblautClasses(fakeLang, 100);
     const map = fakeLang.morphology.paradigms["verb.tense.past"]!.ablautMap!;
     // /i/ and /o/ both gone from inventory; both entries dropped.
     expect(Object.keys(map).length).toBe(0);
     // sing's class assignment was un-tagged because no map matches.
-    expect(fakeLang.ablautClassAssignment?.sing).toBeUndefined();
+    expect(satGet(fakeLang, "ablautClassAssignment", "sing")).toBeUndefined();
   });
 
   it("proposeAblautEmergence has near-zero rate per gen but non-zero", () => {

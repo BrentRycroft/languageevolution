@@ -14,7 +14,7 @@ function makeLang(): Language {
   return {
     id: "L",
     name: "Old Englisc",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,

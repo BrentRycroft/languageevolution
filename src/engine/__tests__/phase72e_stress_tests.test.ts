@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createSimulation } from "../simulation";
 import { presetRomance } from "../presets/romance";
 import { deleteMeaning, PROTECTED_MEANINGS } from "../lexicon/mutate";
-import { lexKeys } from "../lexicon/access";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import { translateSentence } from "../translator/sentence";
 import { generateDiscourseNarrative } from "../narrative/discourse_generate";
 
@@ -19,10 +19,10 @@ describe("Phase 72e-1 — empty lexicon stress test", () => {
     cfg.seed = "p72e-empty";
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
-    const initialSize = Object.keys(lang.lexicon).length;
+    const initialSize = Object.keys(lang.lexemes).length;
 
     // Delete every non-protected meaning. Iterate GLOSSES via the seam:
-    // Object.keys(lang.lexicon) now yields ConceptIds, which neither
+    // Object.keys(lang.lexemes) now yields LexemeIds, which neither
     // PROTECTED_MEANINGS (gloss-keyed) nor deleteMeaning (gloss-keyed) accept.
     const all = lexKeys(lang);
     for (const m of all) {
@@ -30,7 +30,7 @@ describe("Phase 72e-1 — empty lexicon stress test", () => {
         deleteMeaning(lang, m);
       }
     }
-    const remaining = Object.keys(lang.lexicon).length;
+    const remaining = Object.keys(lang.lexemes).length;
     // PROTECTED_MEANINGS shields ~18 verbs; remaining should equal that
     // count or fewer (some protected meanings may not have been seeded).
     expect(remaining).toBeLessThan(initialSize);
@@ -183,7 +183,7 @@ describe("Phase 72e-5 — translator robustness on edge inputs", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
     // Delete a chunk of the lexicon (simulate post-shrink state).
-    const meanings = Object.keys(lang.lexicon).slice(50);
+    const meanings = Object.keys(lang.lexemes).slice(50);
     for (const m of meanings) {
       if (!PROTECTED_MEANINGS.has(m)) deleteMeaning(lang, m);
     }

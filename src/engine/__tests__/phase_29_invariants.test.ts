@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satGet } from "../lexicon/satellites";
 import fc from "fast-check";
 import { presetEnglish } from "../presets/english";
 import { presetTokipona } from "../presets/tokipona";
@@ -8,7 +9,7 @@ import { leafIds } from "../tree/split";
 import { setLexiconForm, deleteMeaning } from "../lexicon/mutate";
 import { formKeyOf } from "../lexicon/word";
 import type { Language } from "../types";
-import { lexGet, lexKeys, lexHas } from "../lexicon/access";
+import { tForm as lexGet, tGlosses as lexKeys, tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 
 /**
  * Phase 29 Tranche 7b: cross-system invariants enforced via property
@@ -120,9 +121,9 @@ describe("Phase 29 Tranche 7b — cross-system invariants", () => {
             deleteMeaning(lang, m);
             // After delete, the meaning is gone everywhere.
             if (lexHas(lang, m)) return false;
-            if (lang.wordFrequencyHints[m] !== undefined) return false;
-            if (lang.wordOrigin[m] !== undefined) return false;
-            if (lang.lastChangeGeneration[m] !== undefined) return false;
+            if (satGet(lang, "wordFrequencyHints", m) !== undefined) return false;
+            if (satGet(lang, "wordOrigin", m) !== undefined) return false;
+            if (satGet(lang, "lastChangeGeneration", m) !== undefined) return false;
             if (lang.words) {
               for (const w of lang.words) {
                 if (w.senses.some((s) => s.meaning === m)) return false;

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 import {
   endTurn,
   makeDiscourse,
@@ -48,7 +49,7 @@ function freshLang(seed: string) {
     forest: ["g", "a", "i"], mountain: ["m", "o", "n"], village: ["s", "e", "l"],
   };
   for (const [m, form] of Object.entries(fills)) {
-    if (!lang.lexicon[m]) lang.lexicon[m] = form;
+    if (!lexGet(lang, m)) lexSet(lang, m, form);
   }
   return lang;
 }
@@ -182,7 +183,7 @@ describe("§2.2 — generateDiscourseNarrative produces coherent multi-line outp
       position: "suffix",
       category: "verb.tense.past",
     };
-    lang.lexicon["see"] = ["w", "i"];
+    lexSet(lang, "see", ["w", "i"]);
     const presentOut = generateDiscourseNarrative(lang, "tx-pres", { lines: 1, genre: "daily" });
     const pastOut = generateDiscourseNarrative(lang, "tx-past", { lines: 1, genre: "myth" });
     expect(presentOut[0]!.text).not.toBe(pastOut[0]!.text);

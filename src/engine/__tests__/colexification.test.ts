@@ -3,6 +3,7 @@ import {
   recordColexification,
   recordOneSidedColexification,
 } from "../semantics/colexification";
+import { satGet } from "../lexicon/satellites";
 import type { Language } from "../types";
 
 /**
@@ -17,7 +18,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L-co",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -49,8 +50,8 @@ describe("colexification helpers", () => {
   it("recordColexification adds bidirectional edges", () => {
     const lang = makeLang();
     recordColexification(lang, "tree", "wood");
-    expect(lang.colexifiedAs?.tree).toEqual(["wood"]);
-    expect(lang.colexifiedAs?.wood).toEqual(["tree"]);
+    expect(satGet(lang, "colexifiedAs", "tree")).toEqual(["wood"]);
+    expect(satGet(lang, "colexifiedAs", "wood")).toEqual(["tree"]);
   });
 
   it("recordColexification is idempotent (no duplicate edges)", () => {
@@ -58,8 +59,8 @@ describe("colexification helpers", () => {
     recordColexification(lang, "tree", "wood");
     recordColexification(lang, "tree", "wood");
     recordColexification(lang, "wood", "tree");
-    expect(lang.colexifiedAs?.tree).toEqual(["wood"]);
-    expect(lang.colexifiedAs?.wood).toEqual(["tree"]);
+    expect(satGet(lang, "colexifiedAs", "tree")).toEqual(["wood"]);
+    expect(satGet(lang, "colexifiedAs", "wood")).toEqual(["tree"]);
   });
 
   it("recordColexification ignores self-edges", () => {
@@ -71,15 +72,15 @@ describe("colexification helpers", () => {
   it("recordOneSidedColexification only credits the winner", () => {
     const lang = makeLang();
     recordOneSidedColexification(lang, "tree", "wood");
-    expect(lang.colexifiedAs?.tree).toEqual(["wood"]);
-    expect(lang.colexifiedAs?.wood).toBeUndefined();
+    expect(satGet(lang, "colexifiedAs", "tree")).toEqual(["wood"]);
+    expect(satGet(lang, "colexifiedAs", "wood")).toBeUndefined();
   });
 
   it("recordOneSidedColexification accumulates losers under one winner", () => {
     const lang = makeLang();
     recordOneSidedColexification(lang, "tree", "wood");
     recordOneSidedColexification(lang, "tree", "branch");
-    expect(lang.colexifiedAs?.tree).toEqual(["wood", "branch"]);
+    expect(satGet(lang, "colexifiedAs", "tree")).toEqual(["wood", "branch"]);
   });
 
   it("recordOneSidedColexification ignores self-edges", () => {

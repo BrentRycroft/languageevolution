@@ -5,7 +5,9 @@ import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { recordedParts } from "../lexicon/word";
-import { lexGet, lexKeys, lexSize } from "../lexicon/access";
+import { lexSize, lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import type { LemmaResolution } from "./syntax";
 
 /**
@@ -41,7 +43,8 @@ export function translate(
     };
   }
 
-  const exact = lexGet(lang, key);
+  const exactId = idForConcept(lang, key);
+  const exact = exactId !== undefined ? lexFormById(lang, exactId) : undefined;
   if (exact) {
     const inflected =
       options.inflect && lang.morphology.paradigms[options.inflect]
@@ -56,7 +59,8 @@ export function translate(
   }
 
   for (const n of neighborsOf(key)) {
-    const f = lexGet(lang, n);
+    const nId = idForGloss(lang, n);
+    const f = nId !== undefined ? lexFormById(lang, nId) : undefined;
     if (f) {
       return {
         form: formToString(f),
@@ -66,25 +70,31 @@ export function translate(
       };
     }
   }
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     if (neighborsOf(m).includes(key)) {
+      const mf = lexFormById(lang, id)!;
       return {
-        form: formToString(lexGet(lang, m)!),
-        phonemes: lexGet(lang, m)!,
+        form: formToString(mf),
+        phonemes: mf,
         source: "neighbor",
         notes: `"${englishWord}" is semantically close to "${m}" in this language.`,
       };
     }
   }
 
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     // Stage B: match against the RECORDED decomposition (compound /
     // derivation records), not the hyphenation of the English gloss.
     const parts = recordedParts(lang, m);
     if (parts && parts.includes(key)) {
+      const mf = lexFormById(lang, id)!;
       return {
-        form: formToString(lexGet(lang, m)!),
-        phonemes: lexGet(lang, m)!,
+        form: formToString(mf),
+        phonemes: mf,
         source: "compound",
         notes: `Coined compound "${m}" contains "${key}".`,
       };
@@ -139,9 +149,10 @@ export function translateBetween(
   sourceForm: string,
 ): TranslationResult {
   let matchedMeaning: string | null = null;
-  for (const m of lexKeys(source)) {
-    if (formToString(lexGet(source, m)!) === sourceForm) {
-      matchedMeaning = m;
+  for (const id of lexIds(source)) {
+    const form = lexFormById(source, id);
+    if (form && formToString(form) === sourceForm) {
+      matchedMeaning = meaningForLexemeId(source, id) ?? null;
       break;
     }
   }

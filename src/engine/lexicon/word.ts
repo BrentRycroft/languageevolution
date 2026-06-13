@@ -1,10 +1,12 @@
-import type { Language, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
+import type { Language, LexemeStore, Meaning, Word, WordSense, WordForm, WordMorphStructure } from "../types";
+import { satGet, satEntries } from "./satellites";
 import type { Rng } from "../rng";
 import type { LexiconState } from "../domains";
 import { formToString } from "../phonology/ipa";
 import { neighborsOf } from "../semantics/neighbors";
-import { lexGet, lexHas, lexEntries } from "./access";
-import { conceptIdFor } from "./conceptIdentity";
+import { lexFormById, lexHasById, lexIds, idForGloss } from "./access";
+import { lexemeIdFor, meaningForLexemeId } from "./lexemeIdentity";
+import { lexPoint } from "../semantics/meaningPoint";
 import { CONCEPT_IDS } from "./concepts";
 
 /**
@@ -282,7 +284,7 @@ function ambiguousBases(): Set<string> {
   if (_ambiguousBases) return _ambiguousBases;
   const seen = new Map<string, number>();
   for (const id of CONCEPT_IDS) {
-    const parsed = parseConceptId(id);
+    const parsed = parseLexemeId(id);
     if (parsed.suffix === null) continue; // no disambiguator → not a collision source
     seen.set(parsed.base, (seen.get(parsed.base) ?? 0) + 1);
   }
@@ -299,7 +301,7 @@ function ambiguousBases(): Set<string> {
  * final segment is a real word (`mother-in-law`, `ice-cream`,
  * `prime-minister`) — those must pass through with their hyphens intact.
  */
-function parseConceptId(id: string): { base: string; suffix: string | null } {
+function parseLexemeId(id: string): { base: string; suffix: string | null } {
   const dash = id.lastIndexOf("-");
   if (dash <= 0 || dash === id.length - 1) return { base: id, suffix: null };
   // Multi-word lexemes joined by a function word — `mother-in-law`,
@@ -333,7 +335,7 @@ function parseConceptId(id: string): { base: string; suffix: string | null } {
  * shared domain base keeps its suffix as a parenthetical.
  */
 export function prettyGloss(conceptId: string): string {
-  const { base, suffix } = parseConceptId(conceptId);
+  const { base, suffix } = parseLexemeId(conceptId);
   if (suffix === null) return conceptId;
   const pos = POS_SUFFIX[suffix];
   if (pos) return `${base} (${pos})`;
@@ -348,12 +350,14 @@ export function prettyGloss(conceptId: string): string {
  * meaning is already a sense of this word, the call is a no-op.
  */
 export function addSenseToWord(
+  lang: Language,
   word: Word,
-  sense: Omit<WordSense, "weight"> & { weight?: number },
+  sense: Omit<WordSense, "weight" | "lexemeId"> & { weight?: number },
 ): void {
   if (word.senses.some((s) => s.meaning === sense.meaning)) return;
   word.senses.push({
     meaning: sense.meaning,
+    lexemeId: idForGloss(lang, sense.meaning),
     weight: sense.weight ?? 0.4,
     register: sense.register,
     bornGeneration: sense.bornGeneration,
@@ -400,7 +404,7 @@ export function addWord(
     ? lang.wordsByFormKey.get(key)
     : lang.words.find((w) => w.formKey === key);
   if (existing) {
-    addSenseToWord(existing, {
+    addSenseToWord(lang, existing, {
       meaning,
       weight: opts.weight,
       register: opts.register,
@@ -416,6 +420,7 @@ export function addWord(
     senses: [
       {
         meaning,
+        lexemeId: idForGloss(lang, meaning),
         weight: opts.weight ?? 0.4,
         register: opts.register,
         bornGeneration: opts.bornGeneration,
@@ -486,7 +491,10 @@ export function pickSynonym(
   },
 ): WordForm | undefined {
   const candidates = selectSynonyms(lang, meaning);
-  if (candidates.length === 0) return lexGet(lang, meaning);
+  if (candidates.length === 0) {
+    const fid = idForGloss(lang, meaning);
+    return fid !== undefined ? lexFormById(lang, fid) : undefined;
+  }
   const primary = candidates[0]!;
   if (candidates.length === 1) return primary.form;
   // Register-biased pick.
@@ -568,8 +576,10 @@ export function removeSense(lang: Language, meaning: Meaning): void {
  */
 export function syncLexiconFromWords(lang: Language): void {
   if (!lang.words) return;
-  const nextLexicon: Record<Meaning, WordForm> = {};
-  const colex: Record<Meaning, Meaning[]> = {};
+  const nextStore: LexemeStore = {};
+  // colexifiedAs is LexemeId-keyed storage (S2a); the partner VALUE arrays stay
+  // gloss lists. Outer key is the meaning's id; value entries are gloss partners.
+  const colex: Record<string, Meaning[]> = {};
   // For each meaning, track the (word, sense) pair with the highest weight.
   const bestBySense: Record<Meaning, { word: Word; weight: number }> = {};
   for (const w of lang.words) {
@@ -583,22 +593,36 @@ export function syncLexiconFromWords(lang: Language): void {
     // pair of meanings on the word.
     if (w.senses.length >= 2) {
       for (const a of w.senses) {
+        const aId = lexemeIdFor(lang, a.meaning);
         for (const b of w.senses) {
           if (a.meaning === b.meaning) continue;
-          (colex[a.meaning] ??= []);
-          if (!colex[a.meaning].includes(b.meaning)) {
-            colex[a.meaning].push(b.meaning);
+          (colex[aId] ??= []);
+          if (!colex[aId].includes(b.meaning)) {
+            colex[aId].push(b.meaning);
           }
         }
       }
     }
   }
   for (const [meaning, { word }] of Object.entries(bestBySense)) {
-    // Canonical store is ConceptId-keyed; resolve each gloss to its concept.
-    // Insertion order follows bestBySense (gloss first-seen order), unchanged.
-    nextLexicon[conceptIdFor(lang, meaning)] = word.form.slice();
+    // Store unification (S1): rebuild the seeded records from words. Reuse the
+    // existing record's materialized point when present, else materialize
+    // lexPoint(meaning). Insertion order follows bestBySense (gloss first-seen
+    // order), unchanged.
+    const id = lexemeIdFor(lang, meaning);
+    const existing = lang.lexemes[id];
+    nextStore[id] = {
+      form: word.form.slice(),
+      point: existing ? existing.point : Array.from(lexPoint(meaning)),
+      gloss: meaning,
+    };
   }
-  lang.lexicon = nextLexicon;
+  // Keyless records (no gloss) are not derived from words — carry them over untouched.
+  for (const id of Object.keys(lang.lexemes)) {
+    const r = lang.lexemes[id]!;
+    if (r.gloss === undefined) nextStore[id] = r;
+  }
+  lang.lexemes = nextStore;
   // Only overwrite colexifiedAs when we have data; pre-existing entries
   // from older code paths are preserved if the words table is empty.
   if (Object.keys(colex).length > 0 || lang.colexifiedAs) {
@@ -657,7 +681,10 @@ export function syncWordsFromLexicon(
   lang.words = [];
   // Group meanings that share a form.
   const byKey = new Map<string, { form: WordForm; meanings: Meaning[] }>();
-  for (const [meaning, form] of lexEntries(lang)) {
+  for (const id of lexIds(lang)) {
+    const meaning = meaningForLexemeId(lang, id);
+    if (meaning === undefined) continue;
+    const form = lexFormById(lang, id)!;
     if (!form || form.length === 0) continue;
     const key = formKeyOf(form);
     const existing = byKey.get(key);
@@ -671,14 +698,15 @@ export function syncWordsFromLexicon(
   // recorded as colexified should land on the same word even if their
   // forms briefly differ during migration.
   if (lang.colexifiedAs) {
-    for (const [m, partners] of Object.entries(lang.colexifiedAs)) {
-      const formA = lexGet(lang, m);
+    for (const [id, partners] of satEntries(lang, "colexifiedAs")) {
+      const formA = lexFormById(lang, id);
       if (!formA) continue;
       const keyA = formKeyOf(formA);
       const entry = byKey.get(keyA);
       if (!entry) continue;
       for (const p of partners) {
-        if (!entry.meanings.includes(p) && lexHas(lang, p)) {
+        const pid = idForGloss(lang, p);
+        if (!entry.meanings.includes(p) && pid !== undefined && lexHasById(lang, pid)) {
           entry.meanings.push(p);
         }
       }
@@ -687,12 +715,13 @@ export function syncWordsFromLexicon(
   for (const { form, meanings } of byKey.values()) {
     const senses: WordSense[] = meanings.map((meaning) => ({
       meaning,
-      weight: lang.wordFrequencyHints?.[meaning] ?? 0.4,
-      register: lang.registerOf?.[meaning],
+      lexemeId: idForGloss(lang, meaning),
+      weight: satGet(lang, "wordFrequencyHints", meaning) ?? 0.4,
+      register: satGet(lang, "registerOf", meaning),
       bornGeneration,
       origin:
-        typeof lang.wordOrigin?.[meaning] === "string"
-          ? (lang.wordOrigin![meaning] as string)
+        typeof satGet(lang, "wordOrigin", meaning) === "string"
+          ? satGet(lang, "wordOrigin", meaning)
           : undefined,
     }));
     // Lane D (morphology encoding): close the seed-time morphStructure gap
@@ -715,6 +744,20 @@ export function syncWordsFromLexicon(
   // Phase 29 Tranche 1e: build the form-key index alongside the
   // initial words[] so future findWordByForm calls are O(1).
   rebuildFormKeyIndex(lang);
+}
+
+/**
+ * S4 back-compat: stamp `lexemeId` onto any persisted sense that predates the
+ * field. Idempotent (only fills `undefined`); a gloss with no minted id is left
+ * undefined and readers fall back to `idForGloss` lazily.
+ */
+export function backfillSenseLexemeIds(lang: Language): void {
+  if (!lang.words) return;
+  for (const w of lang.words) {
+    for (const s of w.senses) {
+      if (s.lexemeId === undefined) s.lexemeId = idForGloss(lang, s.meaning);
+    }
+  }
 }
 
 /**
@@ -763,7 +806,8 @@ export function syncWordsAfterPhonology(
     // with senses sharing a form becomes one Word.
     const buckets = new Map<string, { form: WordForm; senses: WordSense[] }>();
     for (const sense of word.senses) {
-      const lexForm = lexGet(lang, sense.meaning);
+      const senseId = idForGloss(lang, sense.meaning);
+      const lexForm = senseId !== undefined ? lexFormById(lang, senseId) : undefined;
       if (!lexForm || lexForm.length === 0) continue; // meaning was deleted
       const key = formKeyOf(lexForm);
       const bucket = buckets.get(key);
@@ -852,9 +896,9 @@ export function areMeaningsRelated(
   if (semA.includes(b)) return true;
   const semB = neighborsOf(b);
   if (semB.includes(a)) return true;
-  const localA = lang.localNeighbors?.[a] ?? [];
+  const localA = satGet(lang, "localNeighbors", a) ?? [];
   if (localA.includes(b)) return true;
-  const localB = lang.localNeighbors?.[b] ?? [];
+  const localB = satGet(lang, "localNeighbors", b) ?? [];
   if (localB.includes(a)) return true;
   // Phase 48 T1: extend with derivational chain + compound-part
   // membership. This lets the homonym-avoidance check (T2/T3) treat
@@ -878,14 +922,13 @@ function originChainConnects(
   b: Meaning,
   maxHops: number,
 ): boolean {
-  const chain = lang.wordOriginChain;
-  if (!chain) return false;
+  if (!lang.wordOriginChain) return false;
   const visited = new Set<Meaning>([a]);
   let frontier: Meaning[] = [a];
   for (let depth = 0; depth < maxHops && frontier.length > 0; depth++) {
     const next: Meaning[] = [];
     for (const m of frontier) {
-      const entry = chain[m];
+      const entry = satGet(lang, "wordOriginChain", m);
       if (entry) {
         if (entry.from && !visited.has(entry.from)) {
           if (entry.from === b) return true;
@@ -899,7 +942,8 @@ function originChainConnects(
         }
       }
       // Reverse: any other meaning that lists `m` as parent counts too.
-      for (const [child, e] of Object.entries(chain)) {
+      for (const [childId, e] of satEntries(lang, "wordOriginChain")) {
+        const child = meaningForLexemeId(lang, childId) ?? childId;
         if (visited.has(child)) continue;
         if (e?.from === m || e?.via === m) {
           if (child === b) return true;
@@ -993,7 +1037,7 @@ export function tryCommitCoinage(
   if (!rng.chance(prob)) {
     return { committed: false, viaPolysemy: false };
   }
-  addSenseToWord(existing, {
+  addSenseToWord(lang, existing, {
     meaning,
     weight: opts.weight,
     register: opts.register,
@@ -1043,7 +1087,7 @@ export function disambiguateSense(
     for (const c of candidates) {
       const neighbors = new Set<Meaning>([
         ...neighborsOf(c),
-        ...(lang.localNeighbors?.[c] ?? []),
+        ...(satGet(lang, "localNeighbors", c) ?? []),
       ]);
       let score = 0;
       for (const ctxLemma of ctx) {
@@ -1052,13 +1096,13 @@ export function disambiguateSense(
         else {
           const ctxNeighbors = new Set<Meaning>([
             ...neighborsOf(ctxLemma),
-            ...(lang.localNeighbors?.[ctxLemma] ?? []),
+            ...(satGet(lang, "localNeighbors", ctxLemma) ?? []),
           ]);
           if (ctxNeighbors.has(c)) score += 1;
         }
       }
       // Tiny frequency bonus to break true ties.
-      score += (lang.wordFrequencyHints?.[c] ?? 0.4) * 0.1;
+      score += (satGet(lang, "wordFrequencyHints", c) ?? 0.4) * 0.1;
       if (score > bestScore) {
         bestScore = score;
         best = c;
@@ -1073,11 +1117,11 @@ export function disambiguateSense(
   //    order decide.
   let bestFreq = -1;
   for (const c of candidates) {
-    const f = lang.wordFrequencyHints?.[c] ?? 0.4;
+    const f = satGet(lang, "wordFrequencyHints", c) ?? 0.4;
     if (f > bestFreq) bestFreq = f;
   }
   const tied = candidates.filter(
-    (c) => (lang.wordFrequencyHints?.[c] ?? 0.4) === bestFreq,
+    (c) => (satGet(lang, "wordFrequencyHints", c) ?? 0.4) === bestFreq,
   );
   return tied.slice().sort()[0]!;
 }

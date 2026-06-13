@@ -1,6 +1,8 @@
 import type { Language, Meaning } from "../types";
+import { satGet, satSet } from "./satellites";
 import { zipfFrequencyFor } from "./concepts";
-import { lexKeys } from "./access";
+import { lexIds } from "./access";
+import { meaningForLexemeId } from "./lexemeIdentity";
 
 /**
  * frequencyDynamics.ts
@@ -47,9 +49,9 @@ const DISUSE_DRIFT = 0.012;
 const DISUSE_FLOOR = 0.05;
 
 export function bumpFrequency(lang: Language, meaning: Meaning, delta: number): void {
-  const cur = lang.wordFrequencyHints[meaning] ?? DEFAULT;
+  const cur = satGet(lang, "wordFrequencyHints", meaning) ?? DEFAULT;
   const next = Math.max(MIN, Math.min(MAX, cur + delta));
-  lang.wordFrequencyHints[meaning] = next;
+  satSet(lang, "wordFrequencyHints", meaning, next);
 }
 
 export function decayFrequencies(lang: Language): void {
@@ -61,9 +63,11 @@ export function decayFrequencies(lang: Language): void {
   // no hint is treated as sitting at its rank seed and then subjected to the same
   // mean-reversion + disuse drift, so the disuse-death channel can actually reach
   // long-tail registry vocabulary.
-  for (const m of lexKeys(lang)) {
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id);
+    if (m === undefined) continue;
     const seed = zipfFrequencyFor(m);
-    const cur = lang.wordFrequencyHints[m] ?? seed;
+    const cur = satGet(lang, "wordFrequencyHints", m) ?? seed;
     // Mild mean-reversion toward the rank seed (the USED-word attractor)…
     let next = cur + (seed - cur) * REVERSION_RATE;
     // …plus a steady disuse drift toward the discard floor. The net standing
@@ -71,6 +75,6 @@ export function decayFrequencies(lang: Language): void {
     // encodes relevancy (recent usage), not merely tier/age. A real usage event
     // (bumpFrequency) lifts the word back above this drift each time it fires.
     next += (DISUSE_FLOOR - next) * DISUSE_DRIFT;
-    lang.wordFrequencyHints[m] = Math.max(MIN, Math.min(MAX, next));
+    satSet(lang, "wordFrequencyHints", m, Math.max(MIN, Math.min(MAX, next)));
   }
 }

@@ -1,4 +1,5 @@
 import type { Language, Phoneme, WordForm } from "../types";
+import { satGet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { featuresOf } from "./features";
 import { stripTone, capToneStacking } from "./tone";
@@ -6,7 +7,8 @@ import { isFormLegal } from "./wordShape";
 import { functionalLoadMap, phonemeFunctionalLoad } from "./functionalLoad";
 import { SWADESH_LIST } from "../semantics/lexicostat";
 import { areMeaningsRelated } from "../lexicon/word";
-import { lexGet, lexSet, lexKeys, lexSize } from "../lexicon/access";
+import { lexIds, lexFormById, lexSetFormById, lexSize } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 const MAX_RARE_OCCURRENCES = 2;
 const MIN_INVENTORY_TO_PRUNE = 12;
@@ -55,8 +57,8 @@ const SWADESH_CORE_SET: ReadonlySet<string> = new Set(SWADESH_LIST);
 
 function countOccurrences(lang: Language): Map<Phoneme, number> {
   const counts = new Map<Phoneme, number>();
-  for (const m of lexKeys(lang)) {
-    const f = lexGet(lang, m)!;
+  for (const id of lexIds(lang)) {
+    const f = lexFormById(lang, id)!;
     for (const raw of f) {
       const p = stripTone(raw);
       counts.set(p, (counts.get(p) ?? 0) + 1);
@@ -272,8 +274,9 @@ export function prunePhonemes(
     let formKeyToMeanings = ctx.formKeyToMeanings;
     if (!formKeyToMeanings) {
       formKeyToMeanings = new Map();
-      for (const m of lexKeys(lang)) {
-        const f = lexGet(lang, m)!;
+      for (const id of lexIds(lang)) {
+        const f = lexFormById(lang, id)!;
+        const m = meaningForLexemeId(lang, id)!;
         const key = f.join("|");
         if (!formKeyToMeanings.has(key)) formKeyToMeanings.set(key, []);
         formKeyToMeanings.get(key)!.push(m);
@@ -284,12 +287,13 @@ export function prunePhonemes(
       HOMONYM_COLLISION_ABS_CAP,
       Math.ceil(lexSize(lang) * HOMONYM_COLLISION_REL_CAP),
     );
-    for (const m of lexKeys(lang)) {
-      const form = lexGet(lang, m)!;
+    for (const id of lexIds(lang)) {
+      const form = lexFormById(lang, id)!;
+      const m = meaningForLexemeId(lang, id)!;
       let hasCand = false;
       for (const raw of form) if (stripTone(raw) === candidate) { hasCand = true; break; }
       if (!hasCand) continue;
-      const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+      const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
       if (protect && freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) continue;
       const projected: WordForm = form.map((raw) => {
         const tone = raw.length > stripTone(raw).length ? raw.slice(stripTone(raw).length) : "";
@@ -319,8 +323,9 @@ export function prunePhonemes(
 
   let affected = 0;
   let swadeshSkipped = 0;
-  for (const m of lexKeys(lang)) {
-    const form = lexGet(lang, m)!;
+  for (const id of lexIds(lang)) {
+    const form = lexFormById(lang, id)!;
+    const m = meaningForLexemeId(lang, id)!;
     // Phase 40a: skip Swadesh-core high-freq words. They keep the
     // candidate phoneme; the gated phonology pipeline handles their
     // drift over many gens via the Wang sigmoid + freq tilt.
@@ -329,7 +334,7 @@ export function prunePhonemes(
       if (stripTone(raw) === candidate) { containsCandidate = true; break; }
     }
     if (!containsCandidate) continue;
-    const freq = lang.wordFrequencyHints?.[m] ?? 0.5;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     if (protect && freq >= PRUNE_FREQ_PROTECT_THRESHOLD && SWADESH_CORE_SET.has(m)) {
       swadeshSkipped++;
       continue;
@@ -359,7 +364,7 @@ export function prunePhonemes(
       // end-of-step in stepInventoryManagement to amortise the cost
       // across all per-gen pruning attempts. See Phase 29 Tranche 7b
       // notes in pruning + inventoryManagement.
-      lexSet(lang, m, next);
+      lexSetFormById(lang, id, next);
       affected++;
     }
   }
@@ -413,8 +418,8 @@ export function prunePhonemes(
   //   that would match the next verb).
   if (lang.grammar.verbThemes && lang.grammar.verbThemes.length > 1) {
     const verbForms: WordForm[] = [];
-    for (const m of lexKeys(lang)) {
-      const f = lexGet(lang, m);
+    for (const id of lexIds(lang)) {
+      const f = lexFormById(lang, id);
       if (f && f.length > 0) verbForms.push(f);
     }
     const matchedAtLeastOne = (theme: WordForm) => {

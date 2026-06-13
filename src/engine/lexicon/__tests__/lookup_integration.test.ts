@@ -5,7 +5,7 @@ import { createSimulation } from "../../simulation";
 import type { Paradigm } from "../../morphology/types";
 import { applyParadigm } from "../../morphology/apply";
 import { inflect } from "../../morphology/evolve";
-import { lexGet } from "../access";
+import { tForm as lexGet } from "./glossSeam";
 
 /**
  * Phase 52 T3 — end-to-end demonstration that the abstraction works

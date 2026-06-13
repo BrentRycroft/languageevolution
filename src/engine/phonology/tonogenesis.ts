@@ -3,7 +3,8 @@ import type { Rng } from "../rng";
 import { isVowel } from "./ipa";
 import { HIGH, LOW, toneOf, stripTone, capToneStacking } from "./tone";
 import { VOICED_OBSTRUENTS, VOICELESS_OBSTRUENTS } from "./inventory";
-import { lexKeys, lexGet, lexSet } from "../lexicon/access";
+import { lexIds, lexFormById, lexSetFormById } from "../lexicon/access";
+import { orderedLexemeIds } from "../lexicon/lexemeIdentity";
 
 /**
  * tonogenesis.ts — ask #7 (realism overhaul §4).
@@ -92,14 +93,14 @@ export function maybeTonogenesis(
 ): TonogenesisResult | null {
   if ((lang.toneRegime ?? "non-tonal") !== "non-tonal") return null;
 
-  // Measure the conditioning environment across the lexicon. `lexKeys`
+  // Measure the conditioning environment across the lexicon. `lexIds`
   // is insertion-ordered, not sorted; we only COUNT here (order-
   // insensitive), so no sort is needed for this pass.
   let voiced = 0;
   let voiceless = 0;
   let eligible = 0;
-  for (const m of lexKeys(lang)) {
-    const form = lexGet(lang, m)!;
+  for (const id of lexIds(lang)) {
+    const form = lexFormById(lang, id)!;
     if (form.length >= 2 && isVowel(stripTone(form[form.length - 2]!))) {
       eligible++;
     }
@@ -118,20 +119,21 @@ export function maybeTonogenesis(
   if (!rng.chance(TONOGENESIS_ACTUATION_PROB)) return null;
 
   // Cascade: transphonologise the coda voicing contrast into a pitch
-  // contrast on the preceding vowel. Iterate in SORTED meaning order so
-  // the regime flip is deterministic regardless of lexicon insertion
-  // order (this rewrites forms, an order-sensitive mutation).
+  // contrast on the preceding vowel. Iterate in the canonical sorted
+  // LexemeId order (S5) so the regime flip is deterministic regardless
+  // of lexicon insertion order (this rewrites forms, an order-sensitive
+  // mutation).
   let lowered = 0;
   let raised = 0;
-  for (const m of lexKeys(lang).sort()) {
-    const form = lexGet(lang, m)!;
+  for (const id of orderedLexemeIds(lang.lexemes)) {
+    const form = lexFormById(lang, id)!;
     const c = conditioningCoda(form);
     if (!c) continue;
     const tone = c === "voiced" ? LOW : HIGH;
     const next = form.slice();
     const idx = next.length - 2;
     next[idx] = capToneStacking(next[idx]! + tone);
-    lexSet(lang, m, next);
+    lexSetFormById(lang, id, next);
     if (c === "voiced") lowered++;
     else raised++;
   }

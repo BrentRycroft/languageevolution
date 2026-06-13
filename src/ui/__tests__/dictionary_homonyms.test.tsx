@@ -3,7 +3,7 @@ import { render, cleanup, fireEvent, screen } from "@testing-library/react";
 import { DictionaryView } from "../DictionaryView";
 import { useSimStore } from "../../state/store";
 import { presetEnglish } from "../../engine/presets/english";
-import { lexSet } from "../../engine/lexicon/access";
+import { tSet as lexSet } from "../../engine/lexicon/__tests__/glossSeam";
 
 describe("DictionaryView — homonyms", () => {
   beforeEach(() => {

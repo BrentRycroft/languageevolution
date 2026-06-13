@@ -2,7 +2,8 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { isToneBearing, stripTone, toneOf, capToneStacking } from "./tone";
 import { setLexiconForm } from "../lexicon/mutate";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * tone_spread.ts
@@ -19,12 +20,13 @@ export function maybeSpreadTone(
 ): number {
   if (!lang.phonemeInventory.usesTones) return 0;
   let changed = 0;
-  for (const m of lexKeys(lang)) {
-    const form = lexGet(lang, m)!;
+  for (const id of lexIds(lang)) {
+    const form = lexFormById(lang, id)!;
     if (!rng.chance(probability)) continue;
     const next = spreadOnce(form, rng);
     if (next !== form) {
       // Phase 29 Tranche 1 round 2: route through chokepoint.
+      const m = meaningForLexemeId(lang, id)!;
       setLexiconForm(lang, m, next, { bornGeneration: 0, origin: "tone-spread" });
       changed++;
     }

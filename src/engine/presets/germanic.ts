@@ -347,7 +347,9 @@ const MORPHOLOGY: Morphology = {
  * forms here use Proto-Germanic-style reconstructed shapes (Ringe et al.).
  * Some are simplified for the simulator's inventory.
  */
-const SUPPLETION: NonNullable<import("../types").Language["suppletion"]> = {
+const SUPPLETION: NonNullable<
+  import("../types").SimulationConfig["seedSuppletion"]
+> = {
   // Class III: drink/drank/drunk — *drinkaną
   drink: { "verb.tense.past": ["d", "ɾ", "a", "n", "k"] },
   swim: { "verb.tense.past": ["s", "w", "a", "m"] },

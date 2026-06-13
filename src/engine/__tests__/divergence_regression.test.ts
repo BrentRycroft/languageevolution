@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { leafIds } from "../tree/split";
 import { levenshtein } from "../phonology/ipa";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import type { Language } from "../types";
 
 /**
@@ -25,7 +26,7 @@ function meanDelta(
   let n = 0;
   for (const m of Object.keys(seedLex)) {
     // Route gloss → form through the access seam: post concept-rekey the
-    // physical store is ConceptId-keyed, so `lang.lexicon[gloss]` is undefined.
+    // physical store is LexemeId-keyed, so `lang.lexicon[gloss]` is undefined.
     const cur = lexGet(lang, m);
     const seed = seedLex[m];
     if (!cur || !seed) continue;
@@ -109,7 +110,7 @@ describe("Phase 23/23b — divergence regression (shared sim, multi-assertion)",
 
   it("mean word length stays within 25% of the seed (no over-erosion)", () => {
     for (const lang of langs) {
-      const lens = Object.values(lang.lexicon).map((f) => f.length);
+      const lens = Object.values(formViewOf(lang.lexemes)).map((f) => f.length);
       const mean = lens.reduce((a, b) => a + b, 0) / Math.max(1, lens.length);
       // Pre-Phase-23b: drops to 3.25 (~19% loss) on a 4.03 seed.
       // Post-fix: ~5–12% loss, with content words preserving 4–5 phonemes.
@@ -119,7 +120,7 @@ describe("Phase 23/23b — divergence regression (shared sim, multi-assertion)",
 
   it("fewer than 12% of words are 1-phoneme long", () => {
     for (const lang of langs) {
-      const lens = Object.values(lang.lexicon).map((f) => f.length);
+      const lens = Object.values(formViewOf(lang.lexemes)).map((f) => f.length);
       const oneCount = lens.filter((n) => n <= 1).length;
       expect(oneCount / lens.length).toBeLessThan(0.12);
     }

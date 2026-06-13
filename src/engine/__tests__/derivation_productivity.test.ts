@@ -215,7 +215,7 @@ describe("Phase 22 — stepGenesis path: event suppression once productive", () 
     const lang: Language = {
       id: "L",
       name: "T",
-      lexicon: {},
+      lexemes: {},
       enabledChangeIds: [],
       changeWeights: {},
       birthGeneration: 0,

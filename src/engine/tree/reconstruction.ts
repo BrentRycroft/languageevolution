@@ -1,5 +1,6 @@
 import type { LanguageTree, Meaning, WordForm } from "../types";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { idForGloss, lexFormById, lexIds } from "../lexicon/access";
+import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * reconstruction.ts
@@ -183,7 +184,9 @@ export function reconstructProtoForm(
   if (descendants.length === 0) return null;
   const forms: WordForm[] = [];
   for (const id of descendants) {
-    const f = lexGet(tree[id]!.language, meaning);
+    const lang = tree[id]!.language;
+    const wordId = idForGloss(lang, meaning);
+    const f = wordId !== undefined ? lexFormById(lang, wordId) : undefined;
     if (f && f.length > 0) forms.push(f);
   }
   if (forms.length === 0) return null;
@@ -221,7 +224,10 @@ export function reconstructProtoLexicon(
   } else {
     for (const id of descendants) {
       const lang = tree[id]!.language;
-      for (const m of lexKeys(lang)) meaningSet.add(m);
+      for (const lexId of lexIds(lang)) {
+        const m = meaningForLexemeId(lang, lexId);
+        if (m !== undefined) meaningSet.add(m);
+      }
     }
   }
   const out: ReconstructedForm[] = [];

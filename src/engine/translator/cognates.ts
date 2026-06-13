@@ -1,7 +1,7 @@
 import type { LanguageTree, Meaning } from "../types";
 import { leafIds } from "../tree/split";
 import { formatForm, type DisplayScript } from "../phonology/display";
-import { lexGet } from "../lexicon/access";
+import { lexFormById, idForGloss } from "../lexicon/access";
 
 /**
  * cognates.ts
@@ -26,7 +26,8 @@ export function findCognates(
   const result: CognateEntry[] = [];
   for (const id of Object.keys(tree).sort()) {
     const node = tree[id]!;
-    const form = lexGet(node.language, meaning);
+    const _mid = idForGloss(node.language, meaning);
+    const form = _mid !== undefined ? lexFormById(node.language, _mid) : undefined;
     result.push({
       languageId: id,
       languageName: node.language.name,
@@ -59,7 +60,8 @@ export function traceEtymology(
   const steps: EtymologyStep[] = [];
   for (const id of chain) {
     const node = tree[id]!;
-    const form = lexGet(node.language, meaning);
+    const _mid2 = idForGloss(node.language, meaning);
+    const form = _mid2 !== undefined ? lexFormById(node.language, _mid2) : undefined;
     steps.push({
       generation: node.splitGeneration ?? node.language.birthGeneration,
       form: form ? formatForm(form, node.language, script) : "—",

@@ -19,7 +19,7 @@ function makeLang(overrides: Partial<Language> = {}): Language {
   return {
     id: "L",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -52,7 +52,7 @@ describe("Phase 48 T1 — areMeaningsRelated extended with origin-chain + compou
     const lang = makeLang({
       wordOriginChain: {
         runner: { tag: "derivation", from: "run", via: "-er.agt" },
-      },
+      } as Record<string, { tag: string; from?: string; via?: string; donor?: string }>,
     });
     expect(areMeaningsRelated(lang, "runner", "run")).toBe(true);
     expect(areMeaningsRelated(lang, "run", "runner")).toBe(true);
@@ -64,7 +64,7 @@ describe("Phase 48 T1 — areMeaningsRelated extended with origin-chain + compou
         teach: { tag: "primary" },
         teacher: { tag: "derivation", from: "teach", via: "-er.agt" },
         teaching: { tag: "derivation", from: "teacher", via: "-ing" },
-      },
+      } as Record<string, { tag: string; from?: string; via?: string; donor?: string }>,
     });
     expect(areMeaningsRelated(lang, "teaching", "teach")).toBe(true);
   });
@@ -88,7 +88,7 @@ describe("Phase 48 T1 — areMeaningsRelated extended with origin-chain + compou
     const lang = makeLang({
       wordOriginChain: {
         runner: { tag: "derivation", from: "run", via: "-er.agt" },
-      },
+      } as Record<string, { tag: string; from?: string; via?: string; donor?: string }>,
       compounds: {
         daylight: {
           parts: ["day", "light"],
@@ -114,8 +114,10 @@ describe("Phase 48 T2 — wouldCreateUnrelatedHomonym", () => {
 
   it("returns true when candidate collides with an unrelated word", () => {
     const lang = makeLang();
-    addWord(lang, ["k", "æ", "t"], "cat", { bornGeneration: 0 });
-    // "dog" sound-change candidate collides with cat
+    // "stone" is geometrically unrelated to "dog" (GloVe neighbours of dog:
+    // cat/kid-goat/horse/puppy/rabbit; stone's neighbours: hearth-stone/road-stone/wood/brick/weight-stone).
+    addWord(lang, ["k", "æ", "t"], "stone", { bornGeneration: 0 });
+    // "dog" sound-change candidate collides with stone's form — unrelated homonym.
     expect(
       wouldCreateUnrelatedHomonym(lang, "dog", ["k", "æ", "t"]),
     ).toBe(true);
@@ -143,7 +145,7 @@ describe("Phase 48 T2 — wouldCreateUnrelatedHomonym", () => {
     const lang = makeLang({
       wordOriginChain: {
         runner: { tag: "derivation", from: "run", via: "-er.agt" },
-      },
+      } as Record<string, { tag: string; from?: string; via?: string; donor?: string }>,
     });
     addWord(lang, ["r", "ʌ", "n"], "run", { bornGeneration: 0 });
     // runner sound-change candidate collides with run — related via chain.

@@ -1,4 +1,5 @@
-import type { Language, Lexicon, Meaning, SoundChange, WordForm } from "../types";
+import type { Language, SoundChange, WordForm } from "../types";
+import { satDelete } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { isFormLegal } from "./wordShape";
 import {
@@ -8,8 +9,9 @@ import {
   pickEpentheticVowel,
   PERMISSIVE_PROFILE,
 } from "./phonotactics";
-import { lexGet, lexKeys } from "../lexicon/access";
-import { conceptIdFor } from "../lexicon/conceptIdentity";
+import { lexIds, lexFormById, lexDeleteById } from "../lexicon/access";
+import { keylessGloss, meaningForLexemeId, type LexemeId } from "../lexicon/lexemeIdentity";
+import { setRecordForm } from "../lexicon/store";
 
 /**
  * regular.ts
@@ -25,16 +27,16 @@ export function applyOneRegularChange(
   rng: Rng,
 ): string | null {
   const applicable = changes.filter((c) => {
-    for (const m of lexKeys(lang)) {
-      if (c.probabilityFor(lexGet(lang, m)!) > 0) return true;
+    for (const id of lexIds(lang)) {
+      if (c.probabilityFor(lexFormById(lang, id)!) > 0) return true;
     }
     return false;
   });
   if (applicable.length === 0) return null;
   const picked = applicable[rng.int(applicable.length)]!;
 
-  const next: Lexicon = {};
-  const dropped: string[] = [];
+  const next: Record<LexemeId, WordForm> = {};
+  const dropped: LexemeId[] = [];
   // Phase 29 Tranche 7b: hard cap on per-meaning iteration. The
   // previous bound of `form.length` could become an infinite loop if
   // `picked.apply(form)` returns a longer form (e.g., an insertion
@@ -50,8 +52,9 @@ export function applyOneRegularChange(
   // profile read here is the SAME structure Lane B reads when building words.
   const profile = lang.phonotacticProfile ?? PERMISSIVE_PROFILE;
   const epentheticVowel = pickEpentheticVowel(lang);
-  for (const m of lexKeys(lang)) {
-    const original = lexGet(lang, m)!;
+  for (const id of lexIds(lang)) {
+    const original = lexFormById(lang, id)!;
+    const m = meaningForLexemeId(lang, id)!;
     let form = original;
     for (let safety = 0; safety < MAX_PER_MEANING_PASSES; safety++) {
       if (picked.probabilityFor(form) <= 0) break;
@@ -70,26 +73,55 @@ export function applyOneRegularChange(
       form = accepted;
     }
     if (form.length === 0) {
-      dropped.push(m);
+      dropped.push(id);
       continue;
     }
-    next[m] = form;
+    next[id] = form;
   }
-  // `next` was built gloss-keyed (preserving the per-meaning RNG draw order
-  // above); re-key it to the canonical ConceptId store. Every surviving
-  // meaning already has a ConceptId, so conceptIdFor is a lookup, and the
-  // insertion order carries over (positional parity with the old store).
-  const nextCid: Lexicon = {};
-  for (const m of Object.keys(next)) {
-    nextCid[conceptIdFor(lang, m as Meaning)] = next[m as Meaning]!;
+  // S1 task 4: keyless words are first-class in the regular (exceptionless) sweep too. Apply the SAME
+  // picked rule to every gloss-less record, using its EMERGENT gloss (`keylessGloss`) for legality.
+  // These draws come AFTER all seeded draws above, so seeded outcomes stay byte-identical; the extra
+  // shared-rng advance is the deliberate re-bake. Forms are written in place; a keyless word that
+  // erodes to empty is dropped.
+  for (const id of Object.keys(lang.lexemes)) {
+    const rec = lang.lexemes[id]!;
+    if (rec.gloss !== undefined) continue; // seeded handled above
+    const km = keylessGloss(rec);
+    let form = rec.form;
+    for (let safety = 0; safety < MAX_PER_MEANING_PASSES; safety++) {
+      if (picked.probabilityFor(form) <= 0) break;
+      const after = picked.apply(form, rng);
+      if (after === form || after.join("") === form.join("")) break;
+      if (!isFormLegal(km, after as WordForm)) break;
+      let accepted = after as WordForm;
+      if (introducesViolation(form, accepted, profile)) {
+        const repaired = repairToProfile(accepted, profile, epentheticVowel);
+        if (!violatesProfile(repaired, profile) && isFormLegal(km, repaired)) {
+          accepted = repaired;
+        } else {
+          break;
+        }
+      }
+      form = accepted;
+    }
+    if (form.length === 0) delete lang.lexemes[id];
+    else rec.form = form;
   }
-  lang.lexicon = nextCid;
-  for (const m of dropped) {
-    delete lang.wordFrequencyHints[m];
-    delete lang.lastChangeGeneration[m];
-    delete lang.wordOrigin[m];
-    delete lang.localNeighbors[m];
-    if (lang.registerOf) delete lang.registerOf[m];
+  // `next` is id-keyed (preserving the per-meaning RNG draw order above).
+  // Store unification (S1): write each survivor's new form into its existing
+  // record in place, and DROP the records that merged away. Updating in place
+  // keeps the store's key order (minus dropped) byte-identical to the old
+  // wholesale-replace, and leaves keyless records untouched.
+  for (const id of Object.keys(next) as LexemeId[]) {
+    setRecordForm(lang.lexemes, id, next[id]!);
+  }
+  for (const id of dropped) {
+    lexDeleteById(lang, id);
+    satDelete(lang, "wordFrequencyHints", id);
+    satDelete(lang, "lastChangeGeneration", id);
+    satDelete(lang, "wordOrigin", id);
+    satDelete(lang, "localNeighbors", id);
+    if (lang.registerOf) satDelete(lang, "registerOf", id);
   }
   return picked.id;
 }

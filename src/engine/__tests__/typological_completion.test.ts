@@ -25,11 +25,11 @@ function defaultGrammar(): GrammarFeatures {
   };
 }
 
-function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
+function makeLang(overrides: Partial<Language> = {}, lexemes: Lexicon = {}): Language {
   return {
     id: "L-c",
     name: "TestLang",
-    lexicon,
+    lexemes,
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -48,7 +48,7 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     otRanking: [],
     lastChangeGeneration: {},
     ...overrides,
-  };
+  } as unknown as Language;
 }
 
 describe("Phase 14 — completing Phase 12/13", () => {

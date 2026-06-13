@@ -58,7 +58,7 @@ function reportLeaf(state: ReturnType<ReturnType<typeof createSimulation>["getSt
     speakers: lang.speakers ?? 0,
     tier: lang.culturalTier ?? 0,
     capacity: lang.lexicalCapacity ?? -1,
-    lexSize: Object.keys(lang.lexicon).length,
+    lexSize: Object.keys(lang.lexemes).length,
     coinages,
     recarveMerges,
     recarveSplits,

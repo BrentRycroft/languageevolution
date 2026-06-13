@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 import { presetEnglish } from "../presets/english";
 import { createSimulation } from "../simulation";
 import { translateSentence } from "../translator/sentence";
@@ -82,7 +83,7 @@ describe("Phase 53 T4 — Word.morphStructure populated by genesis + translator"
     // requires lexicon-grounded coinage; if grounding succeeds the
     // form should carry morphStructure.
     translateSentence(lang, "the king saw the lightness");
-    if (lang.lexicon["lightness"]) {
+    if (lexGet(lang, "lightness")) {
       const word = lang.words!.find((w) =>
         w.senses.some((s) => s.meaning === "lightness"),
       );

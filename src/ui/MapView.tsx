@@ -6,7 +6,7 @@ import { fnv1a } from "../engine/rng";
 import { formatForm } from "../engine/phonology/display";
 import { TIER_LABELS } from "../engine/lexicon/concepts";
 import type { Language, LanguageNode, LanguageTree } from "../engine/types";
-import { lexGet, lexHas, lexSize } from "../engine/lexicon/access";
+import { idForGloss, lexFormById, lexSize } from "../engine/lexicon/access";
 import {
   paintProvinces, provinceAtRaster, rgba, hslRgba,
   PROVINCE_RASTER_W, PROVINCE_RASTER_H,
@@ -388,9 +388,10 @@ export function MapView() {
         {}
         {smoothedLabels.map(({ langId, lang, point }) => {
           const { px, py } = project(point.x, point.y);
+          const _smid = selectedMeaning ? idForGloss(lang, selectedMeaning) : undefined;
           const sample =
-            selectedMeaning && lexHas(lang, selectedMeaning)
-              ? formatForm(lexGet(lang, selectedMeaning)!, lang, script)
+            _smid !== undefined
+              ? formatForm(lexFormById(lang, _smid)!, lang, script)
               : "";
           return (
             <g
@@ -619,13 +620,17 @@ function renderCellTooltip(
   const lang = tree[ownerId]!.language;
   const tier = lang.culturalTier ?? 0;
   const samples: string[] = [];
-  if (selectedMeaning && lexHas(lang, selectedMeaning)) {
-    samples.push(`${selectedMeaning}: ${formatForm(lexGet(lang, selectedMeaning)!, lang, script)}`);
+  if (selectedMeaning) {
+    const _selId = idForGloss(lang, selectedMeaning);
+    if (_selId !== undefined) {
+      samples.push(`${selectedMeaning}: ${formatForm(lexFormById(lang, _selId)!, lang, script)}`);
+    }
   }
   for (const m of ["water", "fire", "mother"]) {
     if (samples.length >= 3) break;
     if (m === selectedMeaning) continue;
-    if (lexHas(lang, m)) samples.push(`${m}: ${formatForm(lexGet(lang, m)!, lang, script)}`);
+    const _mid = idForGloss(lang, m);
+    if (_mid !== undefined) samples.push(`${m}: ${formatForm(lexFormById(lang, _mid)!, lang, script)}`);
   }
   return (
     <div>

@@ -2,6 +2,9 @@ import type { Meaning } from "../types";
 import { neighborsOf } from "./neighbors";
 import { CLUSTERS as BASIC_CLUSTERS } from "../lexicon/basic240";
 import { CONCEPTS, CONCEPT_IDS } from "../lexicon/concepts";
+import { clusterRegionOf } from "./anchorQueries";
+import { hasEmbedding } from "./embeddings";
+import { lexPoint } from "./meaningPoint";
 
 /**
  * clusters.ts
@@ -48,7 +51,17 @@ const MEANING_TO_CLUSTER: Record<Meaning, string> = (() => {
   return out;
 })();
 
+/**
+ * The semantic cluster (field) of a meaning — VECTOR-NATIVE (flip Wave 2a, full switch). For a
+ * grounded meaning (`hasEmbedding`: a GloVe anchor or anchor-coverage extra) the field is read off the
+ * geometry — the nearest cluster centroid (`clusterRegionOf`) — so the typological field is the
+ * region the word actually occupies rather than a hand-curated assignment. Ungrounded meanings fall
+ * back to the curated `MEANING_TO_CLUSTER` table (which also remains the reversible canonical source
+ * for `SEMANTIC_CLUSTERS`). User-authorized full switch: the geometry disagrees with the curated table
+ * (~59% parity) and scatters some coherent fields (e.g. body parts) — accepted, reversible noise.
+ */
 export function clusterOf(meaning: Meaning): string | undefined {
+  if (hasEmbedding(meaning)) return clusterRegionOf(lexPoint(meaning));
   return MEANING_TO_CLUSTER[meaning];
 }
 

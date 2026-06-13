@@ -1,5 +1,6 @@
 import type { Language, SimulationConfig } from "../types";
 import { driftOneMeaning } from "../semantics/drift";
+import { glossKeyedView } from "../lexicon/satellites";
 import { maybeRecarve } from "../semantics/recarve";
 import type { Rng } from "../rng";
 import { pushEvent } from "./helpers";
@@ -24,7 +25,10 @@ export function stepSemantics(
 ): void {
   const p = Math.min(1, config.semantics.driftProbabilityPerGeneration * lang.conservatism * realismMultiplier(config));
   if (rng.chance(p)) {
-    const drift = driftOneMeaning(lang, rng, lang.localNeighbors, generation);
+    // S2a: driftOneMeaning indexes its override neighbor map by GLOSS; localNeighbors
+    // is now LexemeId-keyed, so pass the gloss-keyed view (else drift falls back to a
+    // different neighbor pool and GENN diverges).
+    const drift = driftOneMeaning(lang, rng, glossKeyedView(lang, "localNeighbors"), generation);
     if (drift) {
       let tag = drift.kind as string;
       if (drift.takeover) tag = `${drift.kind} (takeover)`;

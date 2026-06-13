@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { satGet, satKeys } from "../lexicon/satellites";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
@@ -22,20 +23,20 @@ describe("lexicogenesis e2e", () => {
     const state = sim.getState();
     for (const id of leafIds(state.tree)) {
       const lang = state.tree[id]!.language;
-      for (const m of Object.keys(lang.lexicon)) {
-        expect(lang.lexicon[m]!.length, `empty form for ${m}`).toBeGreaterThan(0);
+      for (const m of Object.keys(lang.lexemes)) {
+        expect(lang.lexemes[m]!.form.length, `empty form for ${m}`).toBeGreaterThan(0);
       }
-      const coined = Object.keys(lang.wordOrigin);
+      const coined = satKeys(lang, "wordOrigin");
       for (const m of coined) {
-        if (!lang.lexicon[m]) continue;
+        if (!lang.lexemes[m]) continue;
         // Coined words must be TRACKABLE (non-empty provenance) and have
         // a legal form (asserted above). A frequency hint is OPTIONAL by
         // contract: `frequencyFor` falls back to DEFAULT_FREQUENCY when a
         // meaning has no explicit hint, and some coinage paths (e.g. a
         // primary loan dropped then restored via sense churn) legitimately
         // leave it unset. If a hint IS present it must be a valid [0,1].
-        expect(lang.wordOrigin[m]!.length).toBeGreaterThan(0);
-        const f = lang.wordFrequencyHints[m];
+        expect(satGet(lang, "wordOrigin", m)!.length).toBeGreaterThan(0);
+        const f = satGet(lang, "wordFrequencyHints", m);
         if (f !== undefined) {
           expect(f, `freq range for coined ${m}`).toBeGreaterThanOrEqual(0);
           expect(f, `freq range for coined ${m}`).toBeLessThanOrEqual(1);

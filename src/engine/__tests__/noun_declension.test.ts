@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
+import { satGet } from "../lexicon/satellites";
 import {
   assignNounDeclensionClass,
   getNounDeclensionClass,
 } from "../morphology/inflectionClass";
 import { applyParadigm } from "../morphology/apply";
-import { lexKeys } from "../lexicon/access";
+import { tGlosses as lexKeys } from "../lexicon/__tests__/glossSeam";
 import type { Language, Phoneme, WordForm } from "../types";
 import { presetRomance } from "../presets/romance";
 import { createSimulation } from "../simulation";
@@ -60,7 +61,7 @@ describe("Phase 64 T1 — noun declension classes", () => {
     // Every seeded noun-like meaning should have a class.
     let unclassified = 0;
     for (const m of lexKeys(lang)) {
-      const cls = lang.nounDeclensionClass![m];
+      const cls = satGet(lang, "nounDeclensionClass", m);
       if (cls && cls < 1) unclassified++;
     }
     expect(unclassified).toBe(0);
@@ -81,7 +82,7 @@ describe("Phase 64 T1 — noun declension classes", () => {
     for (let cls = 1 as 1 | 2 | 3 | 4 | 5; cls <= 5; cls = (cls + 1) as 1 | 2 | 3 | 4 | 5) {
       const fakeLang: Language = {
         ...lang,
-        nounDeclensionClass: { __test: cls },
+        nounDeclensionClass: { __test: cls } as Record<string, typeof cls>,
       };
       const base: WordForm = ["x", "x"] as Phoneme[];
       const out = applyParadigm(base, acc, fakeLang, "__test");

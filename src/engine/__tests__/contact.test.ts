@@ -4,7 +4,7 @@ import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
 import { tryBorrow } from "../contact/borrow";
 import { makeRng } from "../rng";
-import { lexSet, lexDelete } from "../lexicon/access";
+import { tSet as lexSet, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
 
 /**
  * contact.test.ts
@@ -73,8 +73,8 @@ describe("contact / loanwords", () => {
       id: farId,
       name: "Far",
       coords: { x: 500, y: 0 },
-      lexicon: { ...nearLang.lexicon },
-      conceptIds: { ...nearLang.conceptIds },
+      lexemes: { ...nearLang.lexemes },
+      lexemeIds: { ...nearLang.lexemeIds },
     };
     lexSet(farLang, "distant_thing", ["d", "i", "s"]);
     state.tree[farId] = {
@@ -89,8 +89,8 @@ describe("contact / loanwords", () => {
     for (let i = 0; i < 300; i++) {
       const r = {
         ...recipient,
-        lexicon: { ...recipient.lexicon },
-        conceptIds: { ...recipient.conceptIds },
+        lexemes: { ...recipient.lexemes },
+        lexemeIds: { ...recipient.lexemeIds },
         wordFrequencyHints: { ...recipient.wordFrequencyHints },
       };
       lexDelete(r, "nearby_thing");

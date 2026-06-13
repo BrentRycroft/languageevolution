@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { PRESETS } from "../presets";
@@ -33,7 +34,7 @@ describe("end-to-end integration", () => {
       expect(typeof lang.name).toBe("string");
       expect(typeof lang.birthGeneration).toBe("number");
       expect(typeof lang.conservatism).toBe("number");
-      expect(lang.lexicon).toBeDefined();
+      expect(lang.lexemes).toBeDefined();
       expect(lang.grammar).toBeDefined();
       expect(Array.isArray(lang.events)).toBe(true);
       expect(lang.phonemeInventory).toBeDefined();
@@ -63,7 +64,7 @@ describe("end-to-end integration", () => {
           expect(Array.isArray(s.affix)).toBe(true);
         }
       }
-      for (const [m, form] of Object.entries(lang.lexicon)) {
+      for (const [m, form] of Object.entries(formViewOf(lang.lexemes))) {
         expect(typeof m).toBe("string");
         expect(Array.isArray(form)).toBe(true);
         expect(form.length).toBeGreaterThan(0);
@@ -126,8 +127,8 @@ describe("end-to-end integration", () => {
       // Lexicons identical
       const formA: Record<string, string> = {};
       const formB: Record<string, string> = {};
-      for (const [m, f] of Object.entries(langA.lexicon)) formA[m] = f.join("|");
-      for (const [m, f] of Object.entries(langB.lexicon)) formB[m] = f.join("|");
+      for (const [m, f] of Object.entries(formViewOf(langA.lexemes))) formA[m] = f.join("|");
+      for (const [m, f] of Object.entries(formViewOf(langB.lexemes))) formB[m] = f.join("|");
       expect(formA).toEqual(formB);
       // Grammar identical (typological state)
       expect(langA.grammar).toEqual(langB.grammar);

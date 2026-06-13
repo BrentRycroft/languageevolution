@@ -5,7 +5,8 @@ import { formatForm } from "../engine/phonology/display";
 import { leafIds } from "../engine/tree/split";
 import { useDebounced } from "./hooks/useDebounced";
 import { SearchIcon } from "./icons";
-import { lexEntries } from "../engine/lexicon/access";
+import { lexIds, lexFormById } from "../engine/lexicon/access";
+import { meaningForLexemeId } from "../engine/lexicon/lexemeIdentity";
 import { prettyGloss } from "../engine/lexicon/word";
 
 /**
@@ -59,7 +60,11 @@ export function GlobalSearch({
     for (const lid of leaves) {
       const node = state.tree[lid]!;
       if (node.language.extinct) continue;
-      for (const [m, form] of lexEntries(node.language)) {
+      for (const id of lexIds(node.language)) {
+        const m = meaningForLexemeId(node.language, id);
+        if (m === undefined) continue;
+        const form = lexFormById(node.language, id);
+        if (form === undefined) continue;
         // Always check IPA for matching (so a user typing IPA finds it),
         // but display the form via the active script (so romanized users
         // see romanized hits).

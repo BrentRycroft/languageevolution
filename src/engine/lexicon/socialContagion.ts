@@ -1,6 +1,8 @@
 import type { Language, Meaning, WordForm } from "../types";
+import { satGet, satSet, satKeys, satDelete } from "./satellites";
+import { meaningForLexemeId } from "./lexemeIdentity";
 import { setLexiconForm } from "./mutate";
-import { lexGet } from "./access";
+import { lexFormById, idForGloss } from "./access";
 
 const NEW_VARIANT_FRACTION = 0.05;
 const CONTAGION_RATE = 0.18;
@@ -34,7 +36,7 @@ export function recordInnovation(
   innovator: NonNullable<import("../types").FormVariant["innovator"]>,
 ): void {
   if (!lang.variants) lang.variants = {};
-  const existing = lang.variants[meaning] ?? [];
+  const existing = satGet(lang, "variants", meaning) ?? [];
   const oldKey = oldForm ? oldForm.slice() : null;
 
   // Phase 23: the canonical was just swapped to newForm; reflect that
@@ -71,7 +73,7 @@ export function recordInnovation(
     });
   }
   normaliseFractions(existing);
-  lang.variants[meaning] = existing;
+  satSet(lang, "variants", meaning, existing);
 }
 
 function normaliseFractions(list: import("../types").FormVariant[]): void {
@@ -103,8 +105,9 @@ export function stepSocialContagion(
   const speakerN = Math.max(50, lang.speakers ?? 1000);
   const noiseScale = SOCIAL_NOISE_RANGE / Math.sqrt(speakerN / 1000);
 
-  for (const m of Object.keys(lang.variants)) {
-    const list = lang.variants[m]!;
+  for (const id of satKeys(lang, "variants")) {
+    const m = meaningForLexemeId(lang, id) ?? id;
+    const list = satGet(lang, "variants", id)!;
     if (list.length === 0) continue;
 
     let fractionsSet = false;
@@ -123,7 +126,8 @@ export function stepSocialContagion(
       for (const v of list) v.adoptionFraction = (v.adoptionFraction ?? 0) / totalFrac;
     }
 
-    const canonical = lexGet(lang, m);
+    const _cid = idForGloss(lang, m);
+    const canonical = _cid !== undefined ? lexFormById(lang, _cid) : undefined;
     let leader = list[0]!;
     let leaderFrac = leader.adoptionFraction ?? 0;
     for (const v of list) {
@@ -170,11 +174,11 @@ export function stepSocialContagion(
 
     const survivors = list.filter((v) => (v.adoptionFraction ?? 0) >= 0.02);
     if (survivors.length === 0) {
-      delete lang.variants[m];
+      satDelete(lang, "variants", id);
     } else {
-      lang.variants[m] = survivors;
+      satSet(lang, "variants", id, survivors);
     }
   }
-  if (Object.keys(lang.variants).length === 0) delete lang.variants;
+  if (satKeys(lang, "variants").length === 0) delete lang.variants;
   return actuations;
 }

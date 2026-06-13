@@ -38,7 +38,8 @@ import { timeStep } from "./modules/profile";
 // (the barrel in modules/index.ts auto-runs registerXModules()).
 import "./modules";
 import { stepGrammar, stepMorphology } from "./steps/grammar";
-import { rebuildFormKeyIndex } from "./lexicon/word";
+import { rebuildFormKeyIndex, backfillSenseLexemeIds } from "./lexicon/word";
+import { migrateLexemeStore, migrateSatelliteMaps } from "./lexicon/store";
 import { seedTierTwoOrthography } from "./phonology/orthography";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
@@ -497,7 +498,17 @@ export function createSimulation(
       for (const id of Object.keys(cloneTree)) {
         const lang = cloneTree[id]?.language;
         if (!lang) continue;
+        // S1 task 5: convert an old-shape save (form-only `lexicon` + separate `keylessLexemes`) into
+        // the canonical `lang.lexemes` record store before anything reads it via the seam. No-op for
+        // new saves. Must run before rebuildFormKeyIndex (which reads forms through lexGet).
+        migrateLexemeStore(lang);
+        // S2a task 16: re-key old gloss-keyed satellite maps to LexemeId. Runs after
+        // migrateLexemeStore (canonical store + lexemeIds in place) and before any seam read.
+        // Mint-free + idempotent → no-op for new (already id-keyed) saves.
+        migrateSatelliteMaps(lang);
         if (lang.words) rebuildFormKeyIndex(lang);
+        // S4: stamp lexemeId onto pre-S4 persisted senses (idempotent for new saves).
+        backfillSenseLexemeIds(lang);
         if (lang.activeModules && !(lang.activeModules instanceof Set)) {
           const arr = Array.isArray(lang.activeModules)
             ? lang.activeModules

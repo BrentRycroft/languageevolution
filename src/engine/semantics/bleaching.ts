@@ -1,7 +1,8 @@
 import type { Language } from "../types";
+import { satGet, satSet } from "../lexicon/satellites";
 import type { Rng } from "../rng";
 import { deleteMeaning } from "../lexicon/mutate";
-import { lexHas } from "../lexicon/access";
+import { idForGloss } from "../lexicon/access";
 
 /**
  * bleaching.ts
@@ -35,14 +36,14 @@ export function stepSemanticBleaching(
     const p = morph[cat];
     if (!p?.source) continue;
     const m = p.source.meaning;
-    if (lexHas(lang, m)) grammaticalizedSources.push(m);
+    if (idForGloss(lang, m) !== undefined) grammaticalizedSources.push(m);
   }
   if (grammaticalizedSources.length === 0) return null;
 
   const meaning = grammaticalizedSources[rng.int(grammaticalizedSources.length)]!;
-  const cur = lang.wordFrequencyHints[meaning] ?? 0.5;
+  const cur = satGet(lang, "wordFrequencyHints", meaning) ?? 0.5;
   const next = Math.max(0.05, cur * 0.78);
-  lang.wordFrequencyHints[meaning] = next;
+  satSet(lang, "wordFrequencyHints", meaning, next);
 
   if (next < DROP_THRESHOLD && rng.chance(0.35)) {
     // Phase 72d-2 (defer-1a): record bleaching pathway. No mergedInto

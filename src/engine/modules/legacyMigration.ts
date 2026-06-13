@@ -108,7 +108,7 @@ export function computeActiveModulesFromLegacy(lang: Language): Set<string> {
   }
   // Inflection classes are populated by classifyLexicon at birth; treat
   // their presence in any seed lexicon entry as activation.
-  const someWord = Object.values(lang.lexicon ?? {})[0];
+  const someWord = Object.values(lang.lexemes ?? {})[0];
   if (someWord && hasParadigms) m.add("morphological:inflection-class");
   if ((lang.nounClassAssignments && Object.keys(lang.nounClassAssignments).length > 0) ||
       (g.genderCount && g.genderCount > 0)) {

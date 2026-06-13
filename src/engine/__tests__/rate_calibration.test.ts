@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formViewOf } from "../lexicon/store";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { leafIds } from "../tree/split";
@@ -73,7 +74,7 @@ describe("rate calibration — 25 years per generation", () => {
 
   it("200 gens (5000 yrs) — basic vocabulary substantially diverged", () => {
     const sim = createSimulation({ ...defaultConfig(), seed: "cal-divergence" });
-    const initial = { ...sim.getState().tree[sim.getState().rootId]!.language.lexicon };
+    const initial = formViewOf(sim.getState().tree[sim.getState().rootId]!.language.lexemes);
     for (let i = 0; i < 200; i++) sim.step();
     const tree = sim.getState().tree;
     const leaves = leafIds(tree).filter((id) => !tree[id]!.language.extinct);
@@ -83,7 +84,7 @@ describe("rate calibration — 25 years per generation", () => {
     const leaf = tree[leaves[0]!]!.language;
     for (const m of Object.keys(initial)) {
       const orig = initial[m]!.join("");
-      const cur = leaf.lexicon[m]?.join("") ?? "";
+      const cur = leaf.lexemes[m]?.form?.join("") ?? "";
       totalWords++;
       if (cur !== orig) changedWords++;
     }

@@ -4,7 +4,7 @@ import type { Language, LanguageNode, LanguageTree } from "../types";
 import { makeRng } from "../rng";
 import { DEFAULT_LEXICON } from "../lexicon/defaults";
 import { DEFAULT_GRAMMAR } from "../grammar/defaults";
-import { lexSet, lexGet } from "../lexicon/access";
+import { tForm as lexGet, tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * split.test.ts
@@ -18,7 +18,7 @@ function makeTree(): LanguageTree {
   const lang: Language = {
     id: "L-0",
     name: "Proto",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: ["lenition.p_to_f", "lenition.t_to_theta"],
     changeWeights: { "lenition.p_to_f": 1, "lenition.t_to_theta": 1 },
     birthGeneration: 0,

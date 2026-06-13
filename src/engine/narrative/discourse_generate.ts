@@ -38,7 +38,7 @@ import {
   pickWeighted,
 } from "./pools";
 import { pickStanza } from "./poetry";
-import { lexGet } from "../lexicon/access";
+import { idForGloss, lexFormById } from "../lexicon/access";
 
 /**
  * discourse_generate.ts
@@ -361,8 +361,10 @@ export function generateDiscourseNarrative(
     genre === "myth" || genre === "legend" ? 0.18 :
     genre === "dialogue" ? 0.08 :
     0.05;
-  const andForm = lexGet(lang, "and");
-  const haveForm = lexGet(lang, "have");
+  const andId = idForGloss(lang, "and");
+  const andForm = andId !== undefined ? lexFormById(lang, andId) : undefined;
+  const haveId = idForGloss(lang, "have");
+  const haveForm = haveId !== undefined ? lexFormById(lang, haveId) : undefined;
 
   for (let i = 0; i < lines; i++) {
     const baseTemplate = pickTemplate(genre, lang, ctx, rng);

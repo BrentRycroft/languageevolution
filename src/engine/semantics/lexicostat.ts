@@ -1,6 +1,6 @@
 import type { Language, LanguageTree } from "../types";
 import { levenshtein } from "../phonology/ipa";
-import { lexGet } from "../lexicon/access";
+import { idForGloss, lexFormById } from "../lexicon/access";
 
 /**
  * Phase 35 Tranche 35a: lexicostatistic + glottochronological
@@ -61,8 +61,10 @@ export function pairwiseRetention(a: Language, b: Language): {
   let attested = 0;
   let cognate = 0;
   for (const m of SWADESH_100) {
-    const fa = lexGet(a, m);
-    const fb = lexGet(b, m);
+    const idA = idForGloss(a, m);
+    const fa = idA !== undefined ? lexFormById(a, idA) : undefined;
+    const idB = idForGloss(b, m);
+    const fb = idB !== undefined ? lexFormById(b, idB) : undefined;
     if (!fa || !fb || fa.length === 0 || fb.length === 0) continue;
     attested++;
     const d = levenshtein(fa, fb);
@@ -119,7 +121,8 @@ export function swadeshRetentionVsSeed(
   let retained = 0;
   for (const m of SWADESH_100) {
     const seed = seedLexicon[m];
-    const cur = lexGet(lang, m);
+    const curId = idForGloss(lang, m);
+    const cur = curId !== undefined ? lexFormById(lang, curId) : undefined;
     if (!seed || seed.length === 0 || !cur || cur.length === 0) continue;
     attested++;
     const d = levenshtein(seed, cur);

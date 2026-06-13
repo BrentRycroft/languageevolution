@@ -2,7 +2,8 @@ import type { Language, WordForm } from "../types";
 import type { Rng } from "../rng";
 import { HIGH, LOW, MID, RISING, FALLING, isToneBearing, toneOf, stripTone, capToneStacking } from "./tone";
 import { setLexiconForm } from "../lexicon/mutate";
-import { lexGet, lexKeys } from "../lexicon/access";
+import { lexIds, lexFormById } from "../lexicon/access";
+import { meaningForLexemeId, type LexemeId } from "../lexicon/lexemeIdentity";
 
 /**
  * Phase 29 Tranche 5g: tone sandhi.
@@ -120,7 +121,7 @@ export function decaySandhiRule(
 }
 
 interface SandhiSite {
-  meaning: string;
+  id: LexemeId;
   posA: number; // index of the first tone-bearing segment
   posB: number; // index of the second
   rule: SandhiRule;
@@ -136,8 +137,8 @@ export function stepToneSandhi(
   void generation;
   if (!lang.phonemeInventory.usesTones) return 0;
   const sites: SandhiSite[] = [];
-  for (const meaning of lexKeys(lang)) {
-    const form = lexGet(lang, meaning);
+  for (const id of lexIds(lang)) {
+    const form = lexFormById(lang, id);
     if (!form || form.length < 2) continue;
     // Walk adjacent tone-bearing pairs (allowing intervening consonants).
     const toneIdxs: number[] = [];
@@ -160,7 +161,7 @@ export function stepToneSandhi(
         if (!repl) continue;
         if (!rng.chance(rule.perSiteProb)) continue;
         sites.push({
-          meaning,
+          id,
           posA: i,
           posB: j,
           rule,
@@ -172,15 +173,15 @@ export function stepToneSandhi(
     }
   }
   if (sites.length === 0) return 0;
-  // Apply collected sites. Group by meaning to mutate each form once.
-  const byMeaning = new Map<string, SandhiSite[]>();
+  // Apply collected sites. Group by id to mutate each form once.
+  const byId = new Map<LexemeId, SandhiSite[]>();
   for (const s of sites) {
-    const list = byMeaning.get(s.meaning);
+    const list = byId.get(s.id);
     if (list) list.push(s);
-    else byMeaning.set(s.meaning, [s]);
+    else byId.set(s.id, [s]);
   }
-  for (const [meaning, list] of byMeaning) {
-    const form = lexGet(lang, meaning)!;
+  for (const [id, list] of byId) {
+    const form = lexFormById(lang, id)!;
     const next: WordForm = form.slice();
     for (const s of list) {
       // Phase 30 Tranche 30a: stripTone now strips recursively, so a
@@ -193,6 +194,7 @@ export function stepToneSandhi(
     }
     // Phase 29 Tranche 5g + Tranche 1: route through chokepoint so
     // lang.words tracks the post-sandhi form.
+    const meaning = meaningForLexemeId(lang, id)!;
     setLexiconForm(lang, meaning, next, { bornGeneration: generation, origin: "tone-sandhi" });
   }
   return sites.length;

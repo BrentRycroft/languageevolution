@@ -1,7 +1,7 @@
 import type { CoinageMechanism } from "./types";
 import type { WordForm } from "../../types";
 import { isVowel, isConsonant } from "../../phonology/ipa";
-import { lexGet, lexHas } from "../../lexicon/access";
+import { lexFormById, lexHasById, idForGloss } from "../../lexicon/access";
 import { relatedMeanings } from "../../semantics/clusters";
 import { neighborsOf } from "../../semantics/neighbors";
 
@@ -27,12 +27,16 @@ export const MECHANISM_REDUPLICATION: CoinageMechanism = {
     // semantically linked to the target (target ≈ intensified base). Pick a
     // SHORT related lexeme; if none, refuse rather than file an orphan
     // etymology under the target.
-    const pool = [...relatedMeanings(target), ...neighborsOf(target)].filter(
-      (m) => m !== target && lexHas(lang, m) && (lexGet(lang, m)?.length ?? 99) <= 4,
-    );
+    const pool = [...relatedMeanings(target), ...neighborsOf(target)].filter((m) => {
+      if (m === target) return false;
+      const id = idForGloss(lang, m);
+      return id !== undefined && lexHasById(lang, id) && (lexFormById(lang, id)?.length ?? 99) <= 4;
+    });
     if (pool.length === 0) return null;
     const base = pool[rng.int(pool.length)]!;
-    const form = lexGet(lang, base)!;
+    const baseId = idForGloss(lang, base);
+    if (!baseId) return null;
+    const form = lexFormById(lang, baseId)!;
     if (form.length === 0 || form.length > 4) return null;
     const first = form[0]!;
     const second = form[1];

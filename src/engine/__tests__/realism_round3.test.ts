@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { LexemeStore } from "../types";
 import { isolationFactor } from "../phonology/rate";
 import { stressIndex } from "../phonology/stress";
 import { narrowTranscribe } from "../phonology/narrow";
@@ -7,8 +8,8 @@ import { seedDerivationalSuffixes } from "../lexicon/derivation";
 import { makeRng } from "../rng";
 import type { Language } from "../types";
 import type { Paradigm } from "../morphology/types";
-import { rekeyLexiconToConceptIds } from "../lexicon/conceptIdentity";
-import { lexGet } from "../lexicon/access";
+import { rekeyLexiconToLexemeIds } from "../lexicon/lexemeIdentity";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * realism_round3.test.ts
@@ -22,7 +23,7 @@ function minimalLanguage(overrides: Partial<Language> = {}): Language {
   const lang: Language = {
     id: "L-test",
     name: "Test",
-    lexicon: {},
+    lexemes: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -49,7 +50,12 @@ function minimalLanguage(overrides: Partial<Language> = {}): Language {
     lastChangeGeneration: {},
     ...overrides,
   };
-  rekeyLexiconToConceptIds(lang);
+  rekeyLexiconToLexemeIds(lang);
+  const _fh = lang.wordFrequencyHints as Record<string, number>;
+  for (const _g of Object.keys(_fh)) {
+    const _id = lang.lexemeIds?.[_g];
+    if (_id && _id !== _g) { _fh[_id] = _fh[_g]!; delete _fh[_g]; }
+  }
   return lang;
 }
 
@@ -102,8 +108,8 @@ describe("realism round 3", () => {
         category: "verb.tense.past",
       };
       const lang = minimalLanguage({
-        lexicon: { go: ["g", "o"], walk: ["w", "a", "l", "k"] },
-        wordFrequencyHints: { go: 0.9, walk: 0.4 },
+        lexemes: { go: ["g", "o"], walk: ["w", "a", "l", "k"] } as unknown as LexemeStore,
+        wordFrequencyHints: { go: 0.9, walk: 0.4 } as Record<string, number>,
         morphology: { paradigms: { "verb.tense.past": paradigm } },
       });
       const rng = makeRng("seed-sup");

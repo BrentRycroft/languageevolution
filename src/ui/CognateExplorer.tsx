@@ -6,7 +6,9 @@ import { formatForm } from "../engine/phonology/display";
 import { ListSearch } from "./ListSearch";
 import { CopyButton } from "./CopyButton";
 import { downloadAs, toCsv, slugForFile } from "./exportUtils";
-import { lexKeys } from "../engine/lexicon/access";
+import { lexIds } from "../engine/lexicon/access";
+import { meaningForLexemeId } from "../engine/lexicon/lexemeIdentity";
+import { satGet } from "../engine/lexicon/satellites";
 
 /**
  * Cognate-set explorer.
@@ -30,7 +32,10 @@ export function CognateExplorer() {
   const allMeanings = useMemo(() => {
     const set = new Set<string>();
     for (const id of Object.keys(tree)) {
-      for (const m of lexKeys(tree[id]!.language)) set.add(m);
+      for (const id2 of lexIds(tree[id]!.language)) {
+        const m = meaningForLexemeId(tree[id]!.language, id2);
+        if (m !== undefined) set.add(m);
+      }
     }
     return Array.from(set).sort();
   }, [tree]);
@@ -148,7 +153,7 @@ export function CognateExplorer() {
         <tbody>
           {cognates.map((c) => {
             const lang = tree[c.languageId]?.language;
-            const chain = lang?.wordOriginChain?.[meaning.trim().toLowerCase()];
+            const chain = lang ? satGet(lang, "wordOriginChain", meaning.trim().toLowerCase()) : undefined;
             const alts = lang?.altForms?.[meaning.trim().toLowerCase()] ?? [];
             return (
               <tr key={c.languageId} style={{ opacity: c.extinct ? 0.5 : 1 }}>

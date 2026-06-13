@@ -7,7 +7,8 @@ import {
   BESPOKE_PER_MEANING_FIELDS,
   purgeMeaningFromRegistry,
 } from "../perMeaningFields";
-import { lexGet } from "../lexicon/access";
+import { tForm as lexGet } from "../lexicon/__tests__/glossSeam";
+import { satGet, satSet } from "../lexicon/satellites";
 
 /**
  * phase72d_field_registry.test.ts — Phase 72d T1.
@@ -32,26 +33,20 @@ describe("Phase 72d-1 — per-meaning field registry", () => {
     const sim = createSimulation(cfg);
     const lang = sim.getState().tree["L-0"]!.language;
 
-    // Seed the meaning into multiple registered fields.
     const meaning = "test-meaning";
-    if (!lang.wordFrequencyHints) lang.wordFrequencyHints = {};
-    lang.wordFrequencyHints[meaning] = 0.5;
-    if (!lang.wordOrigin) lang.wordOrigin = {};
-    lang.wordOrigin[meaning] = "test";
-    if (!lang.lastChangeGeneration) lang.lastChangeGeneration = {};
-    lang.lastChangeGeneration[meaning] = 0;
-    if (!lang.inflectionClass) lang.inflectionClass = {};
-    lang.inflectionClass[meaning] = 1;
-    if (!lang.nounDeclensionClass) lang.nounDeclensionClass = {};
-    lang.nounDeclensionClass[meaning] = 1;
+    satSet(lang, "wordFrequencyHints", meaning, 0.5);
+    satSet(lang, "wordOrigin", meaning, "test");
+    satSet(lang, "lastChangeGeneration", meaning, 0);
+    satSet(lang, "inflectionClass", meaning, 1);
+    satSet(lang, "nounDeclensionClass", meaning, 1);
 
     const purged = purgeMeaningFromRegistry(lang, meaning);
     expect(purged).toBeGreaterThanOrEqual(5);
-    expect(lang.wordFrequencyHints[meaning]).toBeUndefined();
-    expect(lang.wordOrigin[meaning]).toBeUndefined();
-    expect(lang.lastChangeGeneration[meaning]).toBeUndefined();
-    expect(lang.inflectionClass[meaning]).toBeUndefined();
-    expect(lang.nounDeclensionClass[meaning]).toBeUndefined();
+    expect(satGet(lang, "wordFrequencyHints", meaning)).toBeUndefined();
+    expect(satGet(lang, "wordOrigin", meaning)).toBeUndefined();
+    expect(satGet(lang, "lastChangeGeneration", meaning)).toBeUndefined();
+    expect(satGet(lang, "inflectionClass", meaning)).toBeUndefined();
+    expect(satGet(lang, "nounDeclensionClass", meaning)).toBeUndefined();
   });
 
   it("deleteMeaning routes through the registry; bespoke fields (lexicon) handled separately", () => {
@@ -64,8 +59,8 @@ describe("Phase 72d-1 — per-meaning field registry", () => {
     expect(lexGet(lang, meaning)).toBeDefined();
     deleteMeaning(lang, meaning);
     expect(lexGet(lang, meaning)).toBeUndefined();
-    expect(lang.wordOrigin[meaning]).toBeUndefined();
-    expect(lang.wordFrequencyHints[meaning]).toBeUndefined();
+    expect(satGet(lang, "wordOrigin", meaning)).toBeUndefined();
+    expect(satGet(lang, "wordFrequencyHints", meaning)).toBeUndefined();
   });
 
   it("BESPOKE_PER_MEANING_FIELDS lists fields not in the registry", () => {

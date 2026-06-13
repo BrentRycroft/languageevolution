@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LexemeStore } from "../types";
 import {
   addWord,
   disambiguateSense,
@@ -9,7 +10,8 @@ import {
 } from "../translator/sentence";
 import { reverseLookupForm, reverseTranslate } from "../translator/reverse";
 import type { Language } from "../types";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
+import { migrateSatelliteMaps } from "../lexicon/store";
 
 /**
  * words_phase21b.test.ts
@@ -20,12 +22,12 @@ import { lexSet } from "../lexicon/access";
  */
 
 function makeLang(overrides: Partial<Language> = {}): Language {
-  const { lexicon: seedLexicon, conceptIds: _cids, ...rest } = overrides;
+  const { lexemes: seedLexicon, lexemeIds: _cids, ...rest } = overrides;
   const lang: Language = {
     id: "L",
     name: "Test",
-    lexicon: {},
-    conceptIds: {},
+    lexemes: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -52,10 +54,11 @@ function makeLang(overrides: Partial<Language> = {}): Language {
     ...rest,
   };
   if (seedLexicon) {
-    for (const [g, form] of Object.entries(seedLexicon)) {
+    for (const [g, form] of Object.entries(seedLexicon as unknown as Record<string, string[]>)) {
       lexSet(lang, g, form);
     }
   }
+  migrateSatelliteMaps(lang);
   return lang;
 }
 
@@ -67,7 +70,7 @@ describe("Phase 21b — disambiguateSense", () => {
 
   it("prefers the discourse topic when it's among the candidates", () => {
     const lang = makeLang({
-      wordFrequencyHints: { "bank.financial": 0.9, "bank.river": 0.1 },
+      wordFrequencyHints: { "bank.financial": 0.9, "bank.river": 0.1 } as Record<string, number>,
     });
     // Even though .financial has higher frequency, the discourse topic
     // should win.
@@ -82,7 +85,7 @@ describe("Phase 21b — disambiguateSense", () => {
       localNeighbors: {
         "bank.financial": ["money", "loan"],
         "bank.river": ["water", "stream"],
-      },
+      } as Record<string, string[]>,
     });
     // Context is finance-y → financial sense wins.
     const pickedFin = disambiguateSense(
@@ -102,7 +105,7 @@ describe("Phase 21b — disambiguateSense", () => {
 
   it("falls back to highest-frequency sense when context is uninformative", () => {
     const lang = makeLang({
-      wordFrequencyHints: { "bank.financial": 0.9, "bank.river": 0.2 },
+      wordFrequencyHints: { "bank.financial": 0.9, "bank.river": 0.2 } as Record<string, number>,
     });
     const picked = disambiguateSense(lang, ["bank.financial", "bank.river"]);
     expect(picked).toBe("bank.financial");
@@ -124,10 +127,10 @@ describe("Phase 21b — disambiguateSense", () => {
 describe("Phase 21b — buildReverseIndex returns Meaning[]", () => {
   it("a homonym surface returns all senses", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
+      } as unknown as LexemeStore,
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });
@@ -139,7 +142,7 @@ describe("Phase 21b — buildReverseIndex returns Meaning[]", () => {
 
   it("a single-sense surface returns a one-element array", () => {
     const lang = makeLang({
-      lexicon: { dog: ["d", "ɔ", "g"] },
+      lexemes: { dog: ["d", "ɔ", "g"] } as unknown as LexemeStore,
     });
     addWord(lang, ["d", "ɔ", "g"], "dog", { bornGeneration: 0 });
     const index = buildReverseIndex(lang);
@@ -148,7 +151,7 @@ describe("Phase 21b — buildReverseIndex returns Meaning[]", () => {
 
   it("works on pre-Phase-21 saves with no words field (falls back to lexicon)", () => {
     const lang = makeLang({
-      lexicon: { dog: ["d", "ɔ", "g"], cat: ["k", "æ", "t"] },
+      lexemes: { dog: ["d", "ɔ", "g"], cat: ["k", "æ", "t"] } as unknown as LexemeStore,
     });
     // No words field; reverseIndex still functions via the lexicon.
     expect(lang.words).toBeUndefined();
@@ -159,7 +162,7 @@ describe("Phase 21b — buildReverseIndex returns Meaning[]", () => {
 
   it("includes altForms as additional surface entries", () => {
     const lang = makeLang({
-      lexicon: { horse: ["h", "ɔ", "r", "s"] },
+      lexemes: { horse: ["h", "ɔ", "r", "s"] } as unknown as LexemeStore,
       altForms: { horse: [["s", "t", "iː", "d"]] },
     });
     addWord(lang, ["h", "ɔ", "r", "s"], "horse", { bornGeneration: 0 });
@@ -172,16 +175,16 @@ describe("Phase 21b — buildReverseIndex returns Meaning[]", () => {
 describe("Phase 21b — reverseParseToTokens disambiguates polysemous forms", () => {
   it("a polysemous surface is disambiguated by the sentence context", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
         money: ["m", "ʌ", "n", "i"],
         water: ["w", "ɔ", "t", "ə"],
-      },
+      } as unknown as LexemeStore,
       localNeighbors: {
         "bank.financial": ["money"],
         "bank.river": ["water"],
-      },
+      } as Record<string, string[]>,
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });
@@ -200,7 +203,7 @@ describe("Phase 21b — reverseParseToTokens disambiguates polysemous forms", ()
   });
 
   it("an unknown surface is tagged fallback", () => {
-    const lang = makeLang({ lexicon: { dog: ["d", "ɔ", "g"] } });
+    const lang = makeLang({ lexemes: { dog: ["d", "ɔ", "g"] } as unknown as LexemeStore });
     addWord(lang, ["d", "ɔ", "g"], "dog", { bornGeneration: 0 });
     const out = reverseParseToTokens(lang, "xyzzy");
     expect(out[0]!.englishLemma).toBe("?");
@@ -211,11 +214,11 @@ describe("Phase 21b — reverseParseToTokens disambiguates polysemous forms", ()
 describe("Phase 21b — reverseLookupForm exposes alternateLemmas", () => {
   it("a multi-meaning form reports the picked lemma + alternates", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
-      },
-      wordFrequencyHints: { "bank.financial": 0.8, "bank.river": 0.2 },
+      } as unknown as LexemeStore,
+      wordFrequencyHints: { "bank.financial": 0.8, "bank.river": 0.2 } as Record<string, number>,
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });
@@ -225,7 +228,7 @@ describe("Phase 21b — reverseLookupForm exposes alternateLemmas", () => {
   });
 
   it("a single-sense form has no alternateLemmas field", () => {
-    const lang = makeLang({ lexicon: { dog: ["d", "ɔ", "g"] } });
+    const lang = makeLang({ lexemes: { dog: ["d", "ɔ", "g"] } as unknown as LexemeStore });
     addWord(lang, ["d", "ɔ", "g"], "dog", { bornGeneration: 0 });
     const tok = reverseLookupForm(lang, "dɔg");
     expect(tok.lemma).toBe("dog");
@@ -236,12 +239,12 @@ describe("Phase 21b — reverseLookupForm exposes alternateLemmas", () => {
 describe("Phase 21b — reverseTranslate gathers two-pass context", () => {
   it("an unambiguous neighbor in the same sentence drives disambiguation of a polysemous form", () => {
     const lang = makeLang({
-      lexicon: {
+      lexemes: {
         "bank.financial": ["b", "æ", "ŋ", "k"],
         "bank.river": ["b", "æ", "ŋ", "k"],
         money: ["m", "ʌ", "n", "i"],
-      },
-      localNeighbors: { "bank.financial": ["money"] },
+      } as unknown as LexemeStore,
+      localNeighbors: { "bank.financial": ["money"] } as Record<string, string[]>,
     });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.financial", { bornGeneration: 0 });
     addWord(lang, ["b", "æ", "ŋ", "k"], "bank.river", { bornGeneration: 0 });

@@ -1,4 +1,5 @@
 import type { Language, WordForm } from "../types";
+import { satGet } from "./satellites";
 import type { Rng } from "../rng";
 import { setLexiconForm } from "./mutate";
 import { posOf } from "./pos";
@@ -6,7 +7,8 @@ import { stripTone } from "../phonology/tone";
 import { isVowel } from "../phonology/ipa";
 import { isFormLegal } from "../phonology/wordShape";
 import { featuresOf } from "../phonology/features";
-import { lexGet, lexKeys } from "./access";
+import { lexFormById, lexIds, idForGloss } from "./access";
+import { meaningForLexemeId } from "./lexemeIdentity";
 
 const CORE_FREQ_THRESHOLD = 0.85;
 
@@ -166,8 +168,9 @@ function disambiguateCoreCollisionsOnce(
   generation: number,
 ): number {
   const coreMeanings: string[] = [];
-  for (const m of lexKeys(lang)) {
-    const freq = lang.wordFrequencyHints[m] ?? 0.5;
+  for (const id of lexIds(lang)) {
+    const m = meaningForLexemeId(lang, id)!;
+    const freq = satGet(lang, "wordFrequencyHints", m) ?? 0.5;
     if (freq >= CORE_FREQ_THRESHOLD && isCoreMeaning(m)) {
       coreMeanings.push(m);
     } else if (ALWAYS_CORE.has(m)) {
@@ -181,7 +184,8 @@ function disambiguateCoreCollisionsOnce(
 
   const byForm = new Map<string, string[]>();
   for (const m of coreMeanings) {
-    const f = lexGet(lang, m);
+    const cid = idForGloss(lang, m);
+    const f = cid !== undefined ? lexFormById(lang, cid) : undefined;
     if (!f || f.length === 0) continue;
     const k = f.join(" ");
     const list = byForm.get(k);
@@ -193,22 +197,23 @@ function disambiguateCoreCollisionsOnce(
   // (not just core) so the perturbed form doesn't accidentally hit
   // another existing word.
   const allForms = new Set<string>();
-  for (const m of lexKeys(lang)) {
-    allForms.add(lexGet(lang, m)!.join(" "));
+  for (const id of lexIds(lang)) {
+    allForms.add(lexFormById(lang, id)!.join(" "));
   }
 
   let resolved = 0;
   for (const [, meanings] of byForm) {
     if (meanings.length < 2) continue;
     meanings.sort((a, b) => {
-      const fa = lang.wordFrequencyHints[a] ?? 0.5;
-      const fb = lang.wordFrequencyHints[b] ?? 0.5;
+      const fa = satGet(lang, "wordFrequencyHints", a) ?? 0.5;
+      const fb = satGet(lang, "wordFrequencyHints", b) ?? 0.5;
       if (fb !== fa) return fb - fa;
       return a < b ? -1 : 1; // deterministic tie-break
     });
     for (let i = 1; i < meanings.length; i++) {
       const loser = meanings[i]!;
-      const original = lexGet(lang, loser)!;
+      const loserId = idForGloss(lang, loser);
+      const original = (loserId !== undefined ? lexFormById(lang, loserId) : undefined)!;
       let perturbed: WordForm | null = perturbForm(loser, original, lang, allForms, rng);
       // Fallback: append a vowel.
       if (!perturbed) {

@@ -5,7 +5,7 @@ import { classifierMeaningFor } from "../translator/classifiers";
 import { inflect } from "../morphology/evolve";
 import type { Language, Lexicon } from "../types";
 import type { Paradigm } from "../morphology/types";
-import { lexSet } from "../lexicon/access";
+import { tSet as lexSet } from "../lexicon/__tests__/glossSeam";
 
 /**
  * typological_depth.test.ts
@@ -15,12 +15,12 @@ import { lexSet } from "../lexicon/access";
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Language {
+function makeLang(overrides: Partial<Language> = {}, lexemes: Lexicon = {}): Language {
   const lang: Language = {
     id: "L-t",
     name: "TestLang",
-    lexicon: {},
-    conceptIds: {},
+    lexemes: {},
+    lexemeIds: {},
     enabledChangeIds: [],
     changeWeights: {},
     birthGeneration: 0,
@@ -47,7 +47,7 @@ function makeLang(overrides: Partial<Language> = {}, lexicon: Lexicon = {}): Lan
     lastChangeGeneration: {},
     ...overrides,
   };
-  for (const [g, form] of Object.entries(lexicon)) {
+  for (const [g, form] of Object.entries(lexemes)) {
     lexSet(lang, g, form);
   }
   return lang;
