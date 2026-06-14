@@ -790,6 +790,15 @@ export function presetEnglish(): SimulationConfig {
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 3,
     seedStressPattern: "initial",
+    // G6: English orthography — Germanic digraph tradition (sh/ch/th/ng), <k>
+    // for /k/, <y> for the glide /j/, long-vowel digraphs (ee/oo). Pinned from
+    // gen 0 so the recognisably-English scribal convention is stable (and distinct
+    // from the Latinate <c> spelling of Romance).
+    seedOrthography: {
+      "ʃ": "sh", "tʃ": "ch", "θ": "th", "ð": "th", "ŋ": "ng",
+      "dʒ": "j", "j": "y", "k": "k", "w": "w",
+      "iː": "ee", "uː": "oo",
+    },
     // Phase 26b: English infinitive = "to V" particle prefix.
     seedInfinitiveStrategy: { kind: "particle-prefix", particle: "to" },
     // Phase 27a: English allows CCCVCCC (strengths, sphincters); strictness

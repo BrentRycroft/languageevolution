@@ -509,6 +509,12 @@ export function presetRomance(): SimulationConfig {
     seedSuppletion: SUPPLETION,
     seedCulturalTier: 2,
     seedStressPattern: "penult",
+    // G6: Latin/Romance orthography — near-phonemic classical conventions: <c>
+    // for /k/ (lacu, campu), <i> for the glide /j/, <u>/<v> for /w β/, and no
+    // Germanic digraphs. The Latinate scribal tradition, distinct from English <k>.
+    seedOrthography: {
+      "k": "c", "j": "i", "w": "u", "β": "v",
+    },
     // Phase 26b: Romance infinitive = -re affix suffix (Latin amāre, Spanish amar/comer/vivir).
     seedInfinitiveStrategy: { kind: "affix-suffix", affix: ["ɾ", "e"] },
     // Phase 27a: Romance prefers (C)CVC (Latin amare, Spanish hablar);
