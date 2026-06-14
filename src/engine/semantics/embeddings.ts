@@ -1,5 +1,5 @@
 import type { Meaning, Language } from "../types";
-import { isRegisteredConcept } from "../lexicon/concepts";
+import { isRegisteredConcept } from "../lexicon/conceptRegistry";
 import { fnv1a } from "../rng";
 import { EMBED_DIM, EMBED_TABLE } from "./embeddingData";
 import { ANCHOR_EXTRA_TABLE } from "./anchorExtrasData";

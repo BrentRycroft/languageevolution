@@ -26,8 +26,7 @@
 import type { Meaning } from "../types";
 import { GRAMMATICAL_DIMS, LEXICAL_DIMS, VEC_SCALE, type Vec, fromFloats } from "./vec";
 import { embed } from "./embeddings";
-import { CONCEPTS } from "../lexicon/concepts";
-import { BASIC_240 } from "../lexicon/basic240";
+import { posOf, tierOf, isRegisteredConcept } from "../lexicon/conceptRegistry";
 import { isTabooReferent } from "../lexicon/taboo";
 import { projectOnAxis } from "./readoutAxes";
 
@@ -49,18 +48,11 @@ export const L_TIER = 4;
 export const L_VALENCE = 5;
 /** Taboo-referent flag dim — `VEC_SCALE` if dangerous referent, else `0`. */
 export const L_TABOO = 6;
-/** Basic/core flag dim — `VEC_SCALE` if in BASIC_240 or frequencyClass==="basic", else `0`. */
+/** Basic/core flag dim — `VEC_SCALE` if tier-0 (forager core), else `0`. */
 export const L_BASIC = 7;
 
 /** The labeled block fills the entire grammatical/reserved region (= GRAMMATICAL_DIMS = 8). */
 export const LABELED_DIMS = GRAMMATICAL_DIMS;
-
-// ---------------------------------------------------------------------------
-// Module-level helpers (computed once)
-// ---------------------------------------------------------------------------
-
-/** O(1) BASIC_240 membership check. */
-const BASIC_SET: ReadonlySet<Meaning> = new Set(BASIC_240);
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -76,11 +68,10 @@ const BASIC_SET: ReadonlySet<Meaning> = new Set(BASIC_240);
  */
 export function labeledDimsFor(concept: Meaning): Int32Array {
   const out = new Int32Array(GRAMMATICAL_DIMS);
-  const c = CONCEPTS[concept];
-  if (!c) return out; // unknown concept → all zeros
+  if (!isRegisteredConcept(concept)) return out; // unknown concept → all zeros
 
   // POS one-hot (dims 0..3)
-  const pos = c.pos;
+  const pos = posOf(concept);
   if (pos === "noun") {
     out[L_POS_NOUN] = VEC_SCALE;
   } else if (pos === "verb") {
@@ -92,7 +83,7 @@ export function labeledDimsFor(concept: Meaning): Int32Array {
   }
 
   // Tier (dim 4)
-  out[L_TIER] = c.tier * VEC_SCALE;
+  out[L_TIER] = tierOf(concept) * VEC_SCALE;
 
   // Valence (dim 5)
   out[L_VALENCE] = Math.round(projectOnAxis(concept, "valence") * VEC_SCALE);
@@ -100,8 +91,8 @@ export function labeledDimsFor(concept: Meaning): Int32Array {
   // Taboo flag (dim 6)
   out[L_TABOO] = isTabooReferent(concept) ? VEC_SCALE : 0;
 
-  // Basic flag (dim 7)
-  out[L_BASIC] = BASIC_SET.has(concept) || c.frequencyClass === "basic" ? VEC_SCALE : 0;
+  // Basic flag (dim 7): tier-0 (forager core) is the geometry-native "basic".
+  out[L_BASIC] = tierOf(concept) === 0 ? VEC_SCALE : 0;
 
   return out;
 }

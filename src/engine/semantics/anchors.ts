@@ -17,8 +17,7 @@
 import type { Meaning } from "../types";
 import { type Vec, distanceSq, fromFloats } from "./vec";
 import { embed } from "./embeddings";
-import { CONCEPT_IDS } from "../lexicon/concepts";
-import { ANCHOR_EXTRA_TABLE } from "./anchorExtrasData";
+import { CONCEPT_IDS } from "../lexicon/conceptRegistry";
 
 export interface Anchor {
   /** The English concept this anchor labels — the emergent gloss a lexeme adopts when nearest it. */
@@ -34,10 +33,9 @@ export interface Anchor {
  * (CONCEPT_IDS already sorted; extras sorted), and every query ranks by integer-exact distance with
  * an id tie-break, so anchor-set order never affects results.
  */
-const ANCHOR_CONCEPTS: readonly Meaning[] = [
-  ...CONCEPT_IDS,
-  ...Object.keys(ANCHOR_EXTRA_TABLE).sort(),
-];
+// CONCEPT_IDS (geometry-native, G1) already unions the anchor-coverage EXTRAS, so the
+// anchor frame is exactly the derived concept vocabulary (sorted, deduplicated).
+const ANCHOR_CONCEPTS: readonly Meaning[] = CONCEPT_IDS;
 export const ANCHORS: readonly Anchor[] = ANCHOR_CONCEPTS.map((concept) => ({
   concept,
   point: fromFloats(embed(concept)),

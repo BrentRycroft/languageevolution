@@ -8,7 +8,7 @@
  *                   [0..49] only, so labeled dims never perturb cluster geometry.
  *
  * Determinism invariants:
- *   - No Math.random(). Pure functions of CONCEPTS + baked tables.
+ *   - No Math.random(). Pure functions of the cluster taxonomy + baked tables.
  *   - All ranking by integer-exact arithmetic; tie-breaks by name ascending.
  *   - Centroids: sum Int32, then Math.round(sum / count). Built once at module load.
  */
@@ -16,7 +16,7 @@
 import type { POS } from "../lexicon/pos";
 import { LEXICAL_DIMS, type Vec } from "./vec";
 import { L_POS_NOUN, L_POS_VERB, L_POS_ADJ, L_POS_CLOSED } from "./anchorLabeled";
-import { CONCEPTS, CONCEPT_IDS } from "../lexicon/concepts";
+import { CLUSTERS } from "../lexicon/basic240";
 import { fromFloats } from "./vec";
 import { embed } from "./embeddings";
 
@@ -96,29 +96,25 @@ interface ClusterCentroid {
 }
 
 function buildCentroids(): readonly ClusterCentroid[] {
-  // Group concept lexical points by cluster name.
-  const sums = new Map<string, { acc: number[]; count: number }>();
-
-  for (const id of CONCEPT_IDS) {
-    const c = CONCEPTS[id]!;
-    const lexical = fromFloats(embed(id)); // full Vec; we only use [0..49]
-    let entry = sums.get(c.cluster);
-    if (!entry) {
-      entry = { acc: new Array<number>(LEXICAL_DIMS).fill(0), count: 0 };
-      sums.set(c.cluster, entry);
-    }
-    for (let i = 0; i < LEXICAL_DIMS; i++) {
-      entry.acc[i]! += lexical[i]!;
-    }
-    entry.count++;
-  }
-
+  // Seed one centroid per cluster from the hand cluster TAXONOMY (basic240 CLUSTERS):
+  // a small typological vocabulary of cluster names + seed members (body / kinship /
+  // plants / …). Each centroid is the rounded mean of its seed members' lexical points.
+  // Every concept is then assigned to its NEAREST centroid (clusterRegionOf) — geometric
+  // MEMBERSHIP over a hand-defined taxonomy (true label-free clustering would need k-means).
+  // Independent of CONCEPTS, so the concept façade can derive its cluster field from this
+  // without a cycle.
   const centroids: ClusterCentroid[] = [];
-  for (const [name, { acc, count }] of sums) {
-    const point = new Int32Array(LEXICAL_DIMS);
-    for (let i = 0; i < LEXICAL_DIMS; i++) {
-      point[i] = Math.round(acc[i]! / count);
+  for (const [name, members] of Object.entries(CLUSTERS)) {
+    const acc = new Array<number>(LEXICAL_DIMS).fill(0);
+    let count = 0;
+    for (const m of members) {
+      const lexical = fromFloats(embed(m)); // full Vec; we only use [0..49]
+      for (let i = 0; i < LEXICAL_DIMS; i++) acc[i]! += lexical[i]!;
+      count++;
     }
+    if (count === 0) continue;
+    const point = new Int32Array(LEXICAL_DIMS);
+    for (let i = 0; i < LEXICAL_DIMS; i++) point[i] = Math.round(acc[i]! / count);
     centroids.push({ name, point });
   }
 
@@ -150,7 +146,5 @@ export function clusterRegionOf(point: Vec): string {
   return bestName;
 }
 
-/** The set of cluster names present in CONCEPTS (for validation). */
-export const CLUSTER_NAMES: ReadonlySet<string> = new Set(
-  CONCEPT_IDS.map((id) => CONCEPTS[id]!.cluster),
-);
+/** The set of cluster names in the taxonomy (for validation). */
+export const CLUSTER_NAMES: ReadonlySet<string> = new Set(Object.keys(CLUSTERS));

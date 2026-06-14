@@ -1,6 +1,6 @@
 import type { Language, LanguageTree, Meaning } from "../types";
 import { satGet } from "../lexicon/satellites";
-import { SEMANTIC_CLUSTERS, clusterOf } from "../semantics/clusters";
+import { semanticClusters, clusterOf } from "../semantics/clusters";
 import { BASIC_240 } from "../lexicon/basic240";
 import { CONCEPT_IDS, CONCEPTS, conceptsAtOrBelow, tierOf, type Tier } from "../lexicon/concepts";
 import { EXPANSION_NEED_BASELINE, REGISTRY_FILL_CAP } from "../constants";
@@ -36,7 +36,7 @@ export function lexicalNeed(
   const out: Record<Meaning, number> = {};
 
   const clusterCounts: Record<string, { have: number; total: number }> = {};
-  for (const [name, members] of Object.entries(SEMANTIC_CLUSTERS)) {
+  for (const [name, members] of Object.entries(semanticClusters())) {
     let have = 0;
     for (const m of members) { const id = idForGloss(lang, m); if (id !== undefined && lexHasById(lang, id)) have++; }
     clusterCounts[name] = { have, total: members.length };

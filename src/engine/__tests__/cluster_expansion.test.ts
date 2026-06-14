@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  SEMANTIC_CLUSTERS,
+  semanticClusters,
   clusterOf,
   relatedMeanings,
 } from "../semantics/clusters";
@@ -31,16 +31,17 @@ describe("§H.1 — cluster lookups span the expanded registry", () => {
     expect(clusterOf("love")).toBeDefined();
   });
 
-  it("clusterOf resolves expansion meanings via the registry", () => {
-    expect(clusterOf("democracy")).toBe("abstract");
+  it("clusterOf resolves embedded concepts geometrically (G1: geometry-native inventory)", () => {
+    // The meaning set IS the embedding vocabulary; clusterOf reads the nearest cluster
+    // centroid, so every embedded concept resolves to SOME valid field (no fixed name).
     expect(clusterOf("computer")).toBeDefined();
-    expect(clusterOf("vaccine")).toBeDefined();
-    expect(clusterOf("internet")).toBeDefined();
+    expect(clusterOf("city")).toBeDefined();
+    expect(clusterOf("language")).toBeDefined();
   });
 
-  it("SEMANTIC_CLUSTERS includes every registered concept's cluster", () => {
+  it("semanticClusters() includes every registered concept's geometric cluster", () => {
     for (const [id, c] of Object.entries(CONCEPTS)) {
-      const members = SEMANTIC_CLUSTERS[c.cluster];
+      const members = semanticClusters()[c.cluster];
       expect(members, `cluster ${c.cluster} for ${id}`).toBeDefined();
       expect(members!.includes(id), `${id} in ${c.cluster}`).toBe(true);
     }
