@@ -3,7 +3,8 @@ import { inflect, inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { reduplicate } from "../morphology/reduplication";
 import { pluralClassOf } from "../lexicon/nounClass";
-import { pickSynonym, formKeyOf } from "../lexicon/word";
+import { formKeyOf } from "../lexicon/word";
+import { pickRegisterWeightedSynonym } from "../lexicon/synonymSelect";
 import { closedClassForm } from "./closedClass";
 import { fnv1a } from "../rng";
 import type { NP, PP, RoleClause, Sentence, VP } from "./syntax";
@@ -402,7 +403,10 @@ function realiseNP(
   // language has no synonyms for this meaning.
   let headForm = np.head.baseForm;
   if (lang.words && meaning) {
-    const picked = pickSynonym(lang, meaning, {
+    // G4: register- AND commonness-weighted pick over the broadened candidate set
+    // (Phase-37 synonyms + tight geometric near-synonyms + colexification partners).
+    // Neutral register → the unmarked common form; marked ("high") → allow the rare one.
+    const picked = pickRegisterWeightedSynonym(lang, meaning, {
       register: ctx.register,
       recentlyUsed: ctx.recentSynonymKeys,
     });

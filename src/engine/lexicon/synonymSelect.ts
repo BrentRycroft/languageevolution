@@ -112,3 +112,47 @@ export function synonymCandidates(lang: Language, meaning: Meaning): WordForm[] 
 
   return out;
 }
+
+export interface RegisterPickCtx {
+  /** "high" / literary / marked → allow a marked synonym; "neutral"/"low"/undefined → unmarked default. */
+  register?: "high" | "low" | "neutral";
+  /** Form-keys already surfaced in the current sentence (rotation tracker). */
+  recentlyUsed?: ReadonlySet<string>;
+}
+
+/**
+ * G4 selection rule. Picks which form to surface for `meaning`, register- AND
+ * commonness-aware:
+ *   - neutral / low / unset register → the lowest-markedness (most common, unmarked) form;
+ *   - marked register ("high" / literary) → allow the highest-markedness (rare / literary) form.
+ * The rotation tracker (`recentlyUsed`) skips a form already used this sentence so an
+ * utterance varies. Deterministic — markedness is deterministic and ties break by form-key.
+ * Returns undefined only when the meaning has no form at all.
+ */
+export function pickRegisterWeightedSynonym(
+  lang: Language,
+  meaning: Meaning,
+  ctx: RegisterPickCtx,
+): WordForm | undefined {
+  const candidates = synonymCandidates(lang, meaning);
+  if (candidates.length === 0) return formOf(lang, meaning);
+  if (candidates.length === 1) return candidates[0];
+
+  // Rank by markedness; stable, deterministic tie-break by form-key.
+  const ranked = candidates
+    .map((form) => ({ form, key: formKeyOf(form), mark: markednessOf(lang, meaning, form) }))
+    .sort((a, b) => a.mark - b.mark || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+
+  // Marked register prefers the most marked candidate; neutral prefers the least marked.
+  const marked = ctx.register === "high";
+  const order = marked ? [...ranked].reverse() : ranked;
+
+  // Honour the rotation tracker: take the first candidate in preference order not already
+  // used this sentence; fall back to the top preference when all have been used.
+  const recent = ctx.recentlyUsed;
+  if (recent) {
+    const fresh = order.find((c) => !recent.has(c.key));
+    if (fresh) return fresh.form;
+  }
+  return order[0]!.form;
+}
