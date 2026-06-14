@@ -8,6 +8,7 @@ import { disambiguateSense, pickSynonym, glossLemma } from "../lexicon/word";
 import { formatNumeral } from "./numerals";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import { inflectCascade } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
@@ -781,7 +782,7 @@ export function reverseParseToTokens(
         ? choices[0]!
         : disambiguateSense(lang, choices, { contextLemmas });
     const otherSenses = choices.filter((c) => c !== meaning);
-    const meaningId = idForGloss(lang, meaning);
+    const meaningId = idForConcept(lang, meaning);
     tokens.push({
       // Stage B: render a clean derivation gloss ("build-AGT") instead of
       // leaking the raw key ("build-tér.agt"); form lookup keeps the real key.

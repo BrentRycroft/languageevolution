@@ -5,7 +5,7 @@ import { inflect } from "../morphology/evolve";
 import type { MorphCategory } from "../morphology/types";
 import { lookupFormWithResolution } from "../lexicon/lookup";
 import { recordedParts } from "../lexicon/word";
-import { lexSize, lexIds, lexFormById, idForGloss } from "../lexicon/access";
+import { lexSize, lexIds, lexFormById } from "../lexicon/access";
 import { idForConcept } from "../lexicon/conceptIndex";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import type { LemmaResolution } from "./syntax";
@@ -59,7 +59,7 @@ export function translate(
   }
 
   for (const n of neighborsOf(key)) {
-    const nId = idForGloss(lang, n);
+    const nId = idForConcept(lang, n);
     const f = nId !== undefined ? lexFormById(lang, nId) : undefined;
     if (f) {
       return {

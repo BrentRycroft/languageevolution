@@ -13,7 +13,7 @@ import { otFit } from "../phonology/ot";
 import { isFormLegal } from "../phonology/wordShape";
 import { setLexiconForm } from "../lexicon/mutate";
 import { findWordByForm } from "../lexicon/word";
-import { idForGloss } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
 import { satSet } from "../lexicon/satellites";
 
 /**
@@ -62,7 +62,7 @@ function isGrounded(
   const parts = candidate.sources?.partMeanings;
   if (!parts || parts.length === 0) return false;
   // At least one cited source must be a real lexicon entry.
-  return parts.some((m) => idForGloss(lang, m) !== undefined);
+  return parts.some((m) => idForConcept(lang, m) !== undefined);
 }
 
 export function attemptGracefulFallback(
@@ -70,7 +70,7 @@ export function attemptGracefulFallback(
   lemma: Meaning,
   generation: number,
 ): GracefulFallbackResult | null {
-  if (idForGloss(lang, lemma) !== undefined) return null;
+  if (idForConcept(lang, lemma) !== undefined) return null;
 
   const seed = fnv1a(`fallback|${lang.id}|${lemma}`);
   const rng = makeRng(seed);

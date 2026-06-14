@@ -1,6 +1,7 @@
 import type { Language, Meaning, WordForm } from "../types";
 import { CONCEPTS } from "../lexicon/concepts";
-import { lexFormById, lexHasById, lexIds, idForGloss } from "../lexicon/access";
+import { lexFormById, lexHasById, lexIds } from "../lexicon/access";
+import { idForConcept } from "../lexicon/conceptIndex";
 import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 
 /**
@@ -49,7 +50,7 @@ export function attemptAbstractPivot(
 
   // Direct hit — already handled at Rung 1 of resolveLemma, but guard
   // defensively in case this is called on an unsanitised path.
-  const lemmaId = idForGloss(lang, lemma);
+  const lemmaId = idForConcept(lang, lemma);
   if (lemmaId !== undefined && lexHasById(lang, lemmaId)) {
     return {
       form: lexFormById(lang, lemmaId)!.slice(),
@@ -62,7 +63,7 @@ export function attemptAbstractPivot(
   // marked semantic neighbours.
   if (concept.colexWith) {
     for (const partner of concept.colexWith) {
-      const partnerId = idForGloss(lang, partner);
+      const partnerId = idForConcept(lang, partner);
       if (partnerId !== undefined && lexHasById(lang, partnerId)) {
         return {
           form: lexFormById(lang, partnerId)!.slice(),

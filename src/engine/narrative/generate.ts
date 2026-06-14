@@ -426,11 +426,11 @@ function realizeSkeleton(
   rng: Rng,
 ): NarrativeLine | null {
   const { shape, subjectNoun, verb, objectNoun, adjective } = skeleton;
-  const subjectId = idForGloss(lang, subjectNoun);
-  const verbId = idForGloss(lang, verb);
+  const subjectId = idForConcept(lang, subjectNoun);
+  const verbId = idForConcept(lang, verb);
   if (subjectId === undefined || !lexHasById(lang, subjectId) || verbId === undefined || !lexHasById(lang, verbId)) return null;
-  if (shape.needsObject && (!objectNoun || idForGloss(lang, objectNoun) === undefined)) return null;
-  if (shape.needsAdj && (!adjective || idForGloss(lang, adjective) === undefined)) return null;
+  if (shape.needsObject && (!objectNoun || idForConcept(lang, objectNoun) === undefined)) return null;
+  if (shape.needsAdj && (!adjective || idForConcept(lang, adjective) === undefined)) return null;
 
   if (usesDeepRouting(lang)) {
     const englishStr = buildEnglishSentence(
