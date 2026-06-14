@@ -19,7 +19,22 @@
  */
 import type { Language, Meaning, WordForm } from "../types";
 import { rankOf, MAX_RANK } from "../semantics/corpusRank";
-import { findWordsByMeaning, formKeyOf } from "./word";
+import { findWordsByMeaning, formKeyOf, selectSynonyms } from "./word";
+import { satGet } from "./satellites";
+import { lexFormById, idForGloss } from "./access";
+import { geometricNeighbors } from "../semantics/neighbors";
+import { lexPoint } from "../semantics/meaningPoint";
+import { hasEmbedding } from "../semantics/embeddings";
+import { cosineFixed } from "../semantics/vec";
+
+/**
+ * Minimum cosine between a meaning's point and a geometric neighbour's point for the
+ * neighbour to count as a TIGHT near-synonym (not merely a loose associate). High so
+ * neutral text stays unmarked — only genuinely close concepts contribute extra forms.
+ */
+const NEAR_SYNONYM_COSINE = 0.7;
+/** How many geometric neighbours to probe (then cosine-filtered). */
+const NEIGHBOR_K = 4;
 
 /** Weight of form usage vs. the corpus-rank concept prior in the markedness blend. */
 const USAGE_WEIGHT = 0.7;
@@ -48,4 +63,52 @@ export function markednessOf(lang: Language, meaning: Meaning, form: WordForm): 
   // Concept-level prior: rarer concepts (high corpus rank) sit at a higher baseline.
   const rankPrior = rankOf(meaning) / Math.max(1, MAX_RANK);
   return clamp01(USAGE_WEIGHT * usageMark + RANK_WEIGHT * rankPrior);
+}
+
+/** The language's primary form for a meaning, or undefined when it has none. */
+function formOf(lang: Language, meaning: Meaning): WordForm | undefined {
+  const id = idForGloss(lang, meaning);
+  return id !== undefined ? lexFormById(lang, id) : undefined;
+}
+
+/**
+ * The broadened synonym candidate set for `meaning` (G4 Task 2): every distinct form the
+ * language could surface for this meaning. Beyond the Phase-37 spawned synonyms it adds
+ *   - TIGHT geometric near-synonyms: forms the language already uses for geometrically
+ *     close concepts (cosine ≥ NEAR_SYNONYM_COSINE), and
+ *   - recorded colexification partners (`colexifiedAs`).
+ * Deduped by form-key, primary first (the Phase-37 order is preserved at the front).
+ * Pure + deterministic — geometric neighbours come from the static integer-exact geometry.
+ */
+export function synonymCandidates(lang: Language, meaning: Meaning): WordForm[] {
+  const out: WordForm[] = [];
+  const seen = new Set<string>();
+  const push = (form: WordForm | undefined) => {
+    if (!form || form.length === 0) return;
+    const key = formKeyOf(form);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(form);
+  };
+
+  // 1. Phase-37 synonyms (primary first), unchanged.
+  for (const w of selectSynonyms(lang, meaning)) push(w.form);
+
+  // 2. Tight geometric near-synonyms: only when the meaning has a real point, so the
+  //    "nearest" concepts are distributionally meaningful (not hash-fallback noise).
+  if (hasEmbedding(meaning)) {
+    const here = lexPoint(meaning);
+    for (const nbr of geometricNeighbors(meaning, NEIGHBOR_K)) {
+      if (!hasEmbedding(nbr)) continue;
+      if (cosineFixed(here, lexPoint(nbr)) < NEAR_SYNONYM_COSINE) continue;
+      push(formOf(lang, nbr));
+    }
+  }
+
+  // 3. Recorded colexification partners — meanings whose form this meaning's word absorbs.
+  for (const partner of satGet(lang, "colexifiedAs", meaning) ?? []) {
+    push(formOf(lang, partner));
+  }
+
+  return out;
 }
