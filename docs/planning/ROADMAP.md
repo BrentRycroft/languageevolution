@@ -83,6 +83,29 @@ enrichment (A2 / A3 / item 3) that depended on it — see those entries.
   **FAST translator+narrative green (188).** RUN_SLOW T5 gate (reproducibility +
   narrative snapshots + bands) folds into the same G7-deferred bucket as G1.
 
+- **G4 — synonymy + register/frequency (CODE COMPLETE 2026-06-14; parallel-worktree
+  agent).** Commonness/markedness-aware synonym selection: `markednessOf` (lang's own
+  `wordFrequencyHints` weight + G1 corpus-rank prior), geometric near-synonym candidates
+  (`geometricNeighbors` ≥0.7 cosine + colex partners), register-weighted pick (neutral →
+  unmarked common; marked/literary → allow rare) wired into `realise.ts`. New module
+  `lexicon/synonymSelect.ts` + LOCK/unit tests (11). Merged @ `e83d2af`. FAST green (232 on
+  merged tree). DEFERRED: scorecard bands may shift (re-bake in the G7 RUN_SLOW pass).
+
+- **G3 — surface display-only typology (CODE COMPLETE 2026-06-14; inline).** Audit
+  (`docs/planning/notes/g3-typology-audit.md`) found 9/10 axes already realise (passive,
+  aspect, incorporation, evidentials, SVC, honorifics, classifiers, alignment; harmony is
+  phonology-pipeline). The one display-only axis — holistic polysynthesis — is now wired:
+  at `synthesisIndex >= 3.0` the verb stacks pronominal OBJECT agreement (+ subject agreement
+  + incorporation + TAM) and the object pronoun is absorbed → holistic verbal word, driven by
+  the language's own `synthesisIndex` + the `verb.obj.*` paradigm it carries (capped). LOCK
+  test `polysynthesis.test.ts`. Commits `197caf1` (audit) + `903110d` (wiring). FAST green (195).
+
+  **Note:** Phase-C parallel-worktree agents proved unreliable in this environment (async agents
+  truncate ~45 tool-uses; no SendMessage/resume). The reliable pattern: dispatch off a PUSHED
+  origin base with a self-correcting base-guard (`reset --hard origin/<branch>`), keep per-agent
+  scope small, and have the controller take over inline if an agent truncates (as G3 was). G4
+  completed as an agent; G3 was finished inline.
+
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
 | Area | State | Gap note |
