@@ -106,6 +106,21 @@ enrichment (A2 / A3 / item 3) that depended on it — see those entries.
   scope small, and have the controller take over inline if an agent truncates (as G3 was). G4
   completed as an agent; G3 was finished inline.
 
+- **G6 — evolving orthography (CODE COMPLETE 2026-06-14; inline).** Per-preset spelling
+  conventions seeded at gen 0. T1: `SimulationConfig.seedOrthography` threaded into
+  `Language.orthography` at birth (`romanize` already prefers it over DEFAULT_ORTHOGRAPHY).
+  T2/T3: English ships the Germanic digraph tradition (sh/ch/th/ng, `<k>` for /k/, `<y>`
+  for /j/, ee/oo) and Romance ships near-phonemic Latinate conventions (`<c>` for /k/, `<i>`
+  for /j/, `<u>/<v>` for /w β/) — the same phonemic form spells `<k…>` (English) vs `<c…>`
+  (Latin). T4: the spelling-lag asymmetry is ALREADY driven by the existing tier mechanism
+  (`tierOrthographyMultiplier` dampens tier-3 drift to 0.2×; `freezeLexicalSpelling` freezes
+  tier-3 high-freq spellings → opacity; both wired in `steps/phonology.ts`) — English (tier 3)
+  accrues opacity + dampened drift, Romance (tier 2) shifts. No new params needed; the
+  `seedOrthography` adds the distinct starting points. Commits `<g6 T1>`..`<g6 T2/T3>`.
+  LOCK tests `g6_orthography.test.ts`. FAST green (orthography/preset/display 255 +
+  translator/narrative 188). **DEFERRED:** the long-run opacity-accrues-vs-Latin-shifts LOCK
+  is inherently RUN_SLOW → folds into the G7-deferred bucket.
+
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
 | Area | State | Gap note |
