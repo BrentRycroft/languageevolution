@@ -21,7 +21,7 @@ import { tSet as lexSet, tDelete as lexDelete } from "../lexicon/__tests__/gloss
  */
 
 describe("§H.1 — cluster lookups span the expanded registry", () => {
-  it("clusterOf resolves BASIC_240 meanings to a defined field (now geometric)", () => {
+  it("clusterOf resolves core meanings to a defined field (geometric)", () => {
     // Vector-native flip (full cluster switch): clusterOf reads the nearest cluster centroid by
     // geometry for grounded meanings, so the specific field NAME is no longer the curated value
     // (e.g. "love" need not land in "abstract"). The surviving invariant: every grounded core

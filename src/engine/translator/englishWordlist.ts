@@ -14,8 +14,7 @@ import { parseEnglishAffix } from "./englishAffixes";
  * `isValidEnglishLemma` is the gate. Returns true when the lemma is
  * recognisable as English by composing the data we already have:
  *
- *   1. CONCEPTS dictionary (~1000 entries from BASIC_240 +
- *      EXPANDED_CONCEPTS).
+ *   1. CONCEPTS dictionary (the geometry-derived meaning registry).
  *   2. Closed-class function words (articles, copulas, auxiliaries,
  *      prepositions, conjunctions, pronouns) — same sets used by
  *      `tokeniseEnglish`.

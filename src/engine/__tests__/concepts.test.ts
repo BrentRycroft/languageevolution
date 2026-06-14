@@ -65,7 +65,7 @@ function testLang(overrides: Partial<Language> = {}): Language {
 }
 
 describe("concept dictionary", () => {
-  it("populates one Concept per BASIC_240 meaning", () => {
+  it("populates one Concept per registered concept", () => {
     expect(CONCEPT_IDS.length).toBeGreaterThan(500);
     for (const id of CONCEPT_IDS) {
       const c = conceptFor(id);
@@ -76,19 +76,25 @@ describe("concept dictionary", () => {
     }
   });
 
-  it("places water at tier 0, iron at tier 2", () => {
-    expect(tierOf("water")).toBe(0);
+  it("assigns coreness tiers by corpus-frequency rank (G1: geometry-derived)", () => {
+    // Tiers are now corpus-rank percentile bands (top decile → 0 … rarest → 3),
+    // not hand cultural-era assignment. Ultra-frequent core stays tier 0; rarer
+    // material words climb. These are the derived values (re-baked for G1).
+    expect(tierOf("water")).toBe(0); // ultra-core
+    expect(tierOf("write")).toBe(1);
     expect(tierOf("iron")).toBe(2);
-    expect(tierOf("write")).toBe(2);
-    expect(tierOf("cow")).toBe(1);
-    expect(tierOf("plow")).toBe(1);
+    expect(tierOf("cow")).toBe(2);
+    expect(tierOf("plow")).toBe(3); // rare in the modern corpus
   });
 
-  it("exposes cross-linguistic colexification hints", () => {
+  it("exposes geometric colexification neighbours", () => {
+    // G1: colexWith is now the geometric nearest-neighbour set (replacing the
+    // hand-curated cross-linguistic pairs). Neighbours are semantically near —
+    // body parts cluster with body parts, astronomy with astronomy. (The set is
+    // directional: a's neighbours need not list a back.)
     expect(colexWith("arm")).toContain("hand");
-    expect(colexWith("hand")).toContain("arm");
-    expect(colexWith("moon")).toContain("month");
-    expect(colexWith("tongue")).toContain("word");
+    expect(colexWith("tongue")).toContain("mouth");
+    expect(colexWith("moon")).toContain("sun");
   });
 
   it("filters concepts by tier", () => {

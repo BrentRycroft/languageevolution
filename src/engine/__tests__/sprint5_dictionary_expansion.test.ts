@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  CONCEPTS,
   CONCEPT_IDS,
   conceptsAtOrBelow,
   tierOf,
-  isRegisteredConcept,
 } from "../lexicon/concepts";
-import { EXPANDED_CONCEPTS } from "../lexicon/expanded_concepts";
 import { lexicalNeed } from "../genesis/need";
 import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
@@ -14,41 +11,23 @@ import { defaultConfig } from "../config";
 /**
  * sprint5_dictionary_expansion.test.ts
  *
- * Test suite for: "§H.1 — concept dictionary expansion".
+ * Test suite for: "§H.1 — concept dictionary breadth + tier gating".
+ *
+ * G1: the inventory is now geometry-derived (the embedding vocabulary), so the
+ * tier of each concept comes from its corpus-frequency rank rather than a hand
+ * cultural-era table. The breadth + tier-gating behaviour these tests lock is
+ * unchanged; the specific concept→tier assignments are re-baked to the derived
+ * values.
  *
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
 
-describe("§H.1 — concept dictionary expansion", () => {
-  it("registers all expanded concepts in CONCEPTS", () => {
-    for (const exp of EXPANDED_CONCEPTS) {
-      expect(isRegisteredConcept(exp.id)).toBe(true);
-      const c = CONCEPTS[exp.id]!;
-      expect(c.tier).toBe(exp.tier);
-      expect(c.cluster).toBe(exp.cluster);
-      expect(c.pos).toBe(exp.pos);
-    }
-  });
-
-  it("BASIC_240 still wins on duplicate ids", async () => {
-    const { BASIC_240 } = await import("../lexicon/basic240");
-    const expandedIds = new Set(EXPANDED_CONCEPTS.map((e) => e.id));
-    for (const m of BASIC_240) {
-      if (expandedIds.has(m)) {
-        const expansionTier = EXPANDED_CONCEPTS.find((e) => e.id === m)?.tier;
-        const actualTier = CONCEPTS[m]?.tier;
-        if (expansionTier !== undefined && actualTier !== expansionTier) {
-          expect(actualTier).not.toBe(expansionTier);
-        }
-      }
-    }
-  });
-
-  it("CONCEPT_IDS contains substantially more entries after expansion", () => {
+describe("§H.1 — concept dictionary breadth + tier gating", () => {
+  it("CONCEPT_IDS spans a broad inventory", () => {
     expect(CONCEPT_IDS.length).toBeGreaterThan(1000);
   });
 
-  it("tier-3 concepts exist and are gated by conceptsAtOrBelow", () => {
+  it("coreness tiers nest and high tiers carry rare concepts", () => {
     const tier0 = conceptsAtOrBelow(0);
     const tier1 = conceptsAtOrBelow(1);
     const tier2 = conceptsAtOrBelow(2);
@@ -56,16 +35,16 @@ describe("§H.1 — concept dictionary expansion", () => {
     expect(tier0.length).toBeLessThan(tier1.length);
     expect(tier1.length).toBeLessThan(tier2.length);
     expect(tier2.length).toBeLessThan(tier3.length);
-    expect(tierOf("computer")).toBe(3);
-    expect(tierOf("internet")).toBe(3);
-    expect(tierOf("democracy")).toBe(3);
-    expect(tierOf("vaccine")).toBe(3);
+    // Rare/technical material words land in the top (rarest) tier.
+    expect(tierOf("plow")).toBe(3);
+    expect(tierOf("smelter")).toBe(3);
+    expect(tierOf("scribe")).toBe(3);
   });
 
-  it("tier-2 concepts are tagged correctly", () => {
-    expect(tierOf("smelter")).toBe(2);
-    expect(tierOf("scribe")).toBe(2);
+  it("mid-frequency material concepts are tier 2", () => {
+    expect(tierOf("iron")).toBe(2);
     expect(tierOf("merchant")).toBe(2);
+    expect(tierOf("vaccine")).toBe(2);
   });
 
   it("lexicalNeed gates expansion concepts by the language's tier", () => {

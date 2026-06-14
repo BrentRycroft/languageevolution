@@ -57,7 +57,7 @@ describe("anchorLabeled — POS one-hot", () => {
   });
 
   it("closed-class: 'i' (pronoun) has L_POS_CLOSED hot", () => {
-    // 'i' is in BASIC_240 pronoun cluster and has pos === 'pronoun'
+    // 'i' is a closed-class pronoun (pos === 'pronoun')
     expect(CONCEPTS["i"]?.pos).toBe("pronoun");
     checkPosOneHot("i", L_POS_CLOSED);
   });
@@ -94,18 +94,19 @@ describe("anchorLabeled — L_TABOO", () => {
 // ---------------------------------------------------------------------------
 
 describe("anchorLabeled — L_BASIC", () => {
-  it("'water' (in BASIC_240) is flagged basic", () => {
+  it("'water' (tier 0) is flagged basic", () => {
     const d = labeledDimsFor("water" as any);
     expect(d[L_BASIC]).toBe(VEC_SCALE);
   });
 
-  it("'eat' (in BASIC_240) is flagged basic", () => {
-    const d = labeledDimsFor("eat" as any);
+  it("'go' (tier 0) is flagged basic", () => {
+    const d = labeledDimsFor("go" as any);
     expect(d[L_BASIC]).toBe(VEC_SCALE);
   });
 
-  it("'factory' (not in BASIC_240, tier 3) is NOT flagged basic", () => {
-    // 'factory' is in EXPANDED_CONCEPTS at tier 3, not in BASIC_240
+  it("'factory' (tier 2, not core) is NOT flagged basic", () => {
+    // L_BASIC fires only for tier-0 core concepts; 'factory' is a higher-tier
+    // (derived) concept, so it is registered but not flagged basic.
     expect(CONCEPTS["factory"]).toBeDefined();
     const d = labeledDimsFor("factory" as any);
     expect(d[L_BASIC]).toBe(0);
@@ -126,9 +127,9 @@ describe("anchorLabeled — L_TIER", () => {
     }
   });
 
-  it("'factory' (tier 3) stores 3 * VEC_SCALE", () => {
+  it("'factory' (tier 2) stores 2 * VEC_SCALE", () => {
     const d = labeledDimsFor("factory" as any);
-    expect(d[L_TIER]).toBe(3 * VEC_SCALE);
+    expect(d[L_TIER]).toBe(2 * VEC_SCALE);
     expect(d[L_TIER] / VEC_SCALE).toBe(CONCEPTS["factory"]!.tier);
   });
 });

@@ -219,7 +219,7 @@ export function glossLemma(lang: Language, meaning: string): string {
 
 // --- prettyGloss (Lane C1, display-only) ----------------------------------
 //
-// Concept IDs in basic240 / expanded_concepts carry a trailing disambiguation
+// Concept IDs in the meaning registry carry a trailing disambiguation
 // segment so two senses that share an English spelling stay distinct keys
 // (`answer-action` the verb vs `answer-noun` the noun; `calf-animal` the young
 // cow vs `calf-leg` the body part). These segments are engine plumbing, never

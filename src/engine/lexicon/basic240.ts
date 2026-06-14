@@ -1,10 +1,14 @@
 import type { Lexicon, Meaning, Phoneme, WordForm } from "../types";
 import { fnv1a } from "../rng";
+import { conceptsAtOrBelow } from "./conceptRegistry";
 
 /**
  * basic240.ts
  *
- * Concept registry, tier ladder, frequency dynamics, derivational suffixes, taboo handling, lexicon shape. Key exports: CLUSTERS, BASIC_240, clusterOfBasic240.
+ * Cluster taxonomy + default-lexicon form generation. Key exports: CLUSTERS (the
+ * ~18-name semantic-field taxonomy retained as the cluster-centroid seed),
+ * generateForm, fillMissing. The hand-curated BASIC_240 list is retired (G1): the
+ * "core" meaning set is now the geometry-derived tier-0 (`conceptsAtOrBelow(0)`).
  *
  * See CLAUDE.md and ARCHITECTURE.md for the broader design context.
  */
@@ -148,31 +152,6 @@ export const CLUSTERS = {
   ],
 } as const;
 
-export const BASIC_240: readonly Meaning[] = (() => {
-  const seen = new Set<Meaning>();
-  const out: Meaning[] = [];
-  for (const members of Object.values(CLUSTERS)) {
-    for (const m of members) {
-      if (seen.has(m)) continue;
-      seen.add(m);
-      out.push(m);
-    }
-  }
-  return out;
-})();
-
-const MEANING_TO_CLUSTER: Record<Meaning, string> = (() => {
-  const out: Record<Meaning, string> = {};
-  for (const [name, members] of Object.entries(CLUSTERS)) {
-    for (const m of members) out[m] = name;
-  }
-  return out;
-})();
-
-export function clusterOfBasic240(meaning: Meaning): string | undefined {
-  return MEANING_TO_CLUSTER[meaning];
-}
-
 export interface FormPhonology {
   onsets: Phoneme[];
   vowels: Phoneme[];
@@ -215,7 +194,8 @@ export function generateForm(
 
 export function fillMissing(core: Lexicon, phonology: FormPhonology): Lexicon {
   const out: Lexicon = { ...core };
-  for (const m of BASIC_240) {
+  // G1: pad up to the geometry-derived tier-0 core (was the hand BASIC_240 list).
+  for (const m of conceptsAtOrBelow(0)) {
     if (!out[m]) out[m] = generateForm(m, phonology);
   }
   return out;

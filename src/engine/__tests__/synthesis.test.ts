@@ -529,8 +529,8 @@ describe("Phase 47 T11 — opaque coinage path", () => {
     // Run a long enough simulation to coin many words; check that
     // at least some `tag: "opaque-coined"` entries land in the
     // wordOriginChain. The 15% probability + many opaque-eligible
-    // concepts in BASIC_240 should yield at least one opaque marker
-    // in 200 generations.
+    // concepts in the core inventory should yield at least one opaque
+    // marker in 200 generations.
     const sim = createSimulation(presetTokipona());
     for (let i = 0; i < 200; i++) sim.step();
     const root = sim.getState().tree[sim.getState().rootId]!.language;
