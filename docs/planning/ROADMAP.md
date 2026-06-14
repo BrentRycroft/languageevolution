@@ -49,6 +49,12 @@ must still be byte-identical net wins.
 This unblocks the content-addressed per-concept RNG (B1-Y) and the additive
 enrichment (A2 / A3 / item 3) that depended on it — see those entries.
 
+- **G0 — determinism model migrated (2026-06-13).** Cross-machine byte-identity
+  (meaning_layer_baseline frozen hashes) retired in favour of per-machine
+  reproducibility (reproducibility.test.ts) + metric-stability snapshot bands
+  (metric_bands.snapshot.ts, in the scorecard). Unblocks geometric reworks (G1)
+  and GPU offload (G7). Behavior-neutral.
+
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
 | Area | State | Gap note |
