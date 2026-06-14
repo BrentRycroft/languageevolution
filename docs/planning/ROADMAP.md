@@ -72,6 +72,17 @@ enrichment (A2 / A3 / item 3) that depended on it — see those entries.
   statistical floors hold post-inventory (a broken floor = real regression to fix,
   NOT auto-rebake). Run it once RUN_SLOW is fast, fix from there.
 
+- **G2 — geometric translator + narrative (CODE COMPLETE 2026-06-14; heavy re-verify
+  DEFERRED).** Finished S6's geometric conversion: open-class CONTENT lemmas in
+  translator + narrative resolve via `idForConcept` (geometric, byte-identical until a
+  word drifts); closed-class function words stay on exact `idForGloss`. 12 content sites
+  converted (abstraction, translate, gracefulFallback, generate, cognates, sentence);
+  closed-class/mixed sites kept exact (composer, realise, discourse, interjections,
+  numerals, ast lookupForm). Plan's T2 (vestigial removal) had NO targets — every
+  `_`-prefixed id is read next line (local naming style, not unused). Commit `4763fec`.
+  **FAST translator+narrative green (188).** RUN_SLOW T5 gate (reproducibility +
+  narrative snapshots + bands) folds into the same G7-deferred bucket as G1.
+
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
 | Area | State | Gap note |
