@@ -67,6 +67,14 @@ export type MorphCategory =
   | "verb.person.1pl"
   | "verb.person.2pl"
   | "verb.person.3pl"
+  // Pronominal OBJECT agreement (G3 polysynthesis): a polysynthetic verb stacks
+  // object agreement alongside the subject agreement above.
+  | "verb.obj.1sg"
+  | "verb.obj.2sg"
+  | "verb.obj.3sg"
+  | "verb.obj.1pl"
+  | "verb.obj.2pl"
+  | "verb.obj.3pl"
   | "verb.honor.formal"
   | "verb.form.infinitive"
   | "adj.num.pl"

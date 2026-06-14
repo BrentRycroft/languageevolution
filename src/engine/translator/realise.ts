@@ -146,7 +146,18 @@ export function realiseSentence(
     obj.pps.length === 0 &&
     !obj.head.isPronoun;
   const incorporatedRoot = canIncorporate && obj ? obj.head.baseForm : null;
-  const objectTokens = canIncorporate || !obj
+  // G3 polysynthesis: when the verb stacks pronominal object agreement (high
+  // synthesisIndex + a pronoun object + the language carries the verb.obj.*
+  // paradigm), the object is absorbed into the verbal word, so no overt object
+  // pronoun is emitted. Same gate as the object-agreement push in realiseVerb.
+  const objectAgreementStacked =
+    (lang.grammar.synthesisIndex ?? 2.0) >= 3.0 &&
+    !!obj &&
+    obj.head.isPronoun === true &&
+    !!lang.morphology.paradigms[
+      `verb.obj.${obj.head.person ?? "3"}${obj.head.number}` as MorphCategory
+    ];
+  const objectTokens = canIncorporate || !obj || objectAgreementStacked
     ? []
     : realiseNP(obj, lang, {
         articlePresence, caseStrategy, adjPos, possPos, numPos,
@@ -995,6 +1006,19 @@ function realiseVerb(
     } else if (ps === "3" && ns === "sg" && lang.morphology.paradigms["verb.person.3sg"]) {
       stack.push("verb.person.3sg");
     }
+  }
+
+  // G3 — holistic polysynthesis. At a high synthesis index a polysynthetic verb
+  // ALSO stacks pronominal OBJECT agreement (on top of subject agreement,
+  // incorporation, and the TAM stack), so a transitive clause packs into one
+  // verbal word. Gated by the language's OWN synthesisIndex (≥ 3.0, the threshold
+  // recomputeMorphologicalType uses to label a language polysynthetic) and capped
+  // by the object-agreement paradigm it actually carries — no invented morphology.
+  if ((lang.grammar.synthesisIndex ?? 2.0) >= 3.0 && vp.object?.head.isPronoun) {
+    const po = vp.object.head.person ?? "3";
+    const no = vp.object.head.number ?? "sg";
+    const objCat = `verb.obj.${po}${no}` as MorphCategory;
+    if (lang.morphology.paradigms[objCat]) stack.push(objCat);
   }
 
   form = inflectCascade(form, stack, lang, meaning).form;
