@@ -12,9 +12,16 @@ import {
   swadeshRetention,
   renderRows,
   summarize,
+  onsetStats,
+  actuationShare,
+  antonymCosine,
+  colexificationRate,
+  homophonyRate,
   type DiagnosticRow,
 } from "../diagnostics/scorecard";
 import { buildScorecard } from "../diagnostics/buildScorecard";
+import { lexIds } from "../lexicon/access";
+import { bandFor, withinBand, type MetricId } from "./metric_bands.snapshot";
 
 /**
  * realism_scorecard.test.ts — the holistic SIMULATION SCORECARD (RUN_SLOW).
@@ -111,6 +118,25 @@ describe("Simulation Scorecard (RUN_SLOW)", () => {
         swadesh1000: curve[0]!.swadesh,
         horizonGens: HORIZON,
       });
+
+      // ── G0 metric-stability bands (RUN_SLOW) ──
+      const metrics: Record<MetricId, number> = {
+        swadesh1000: curve[0]!.swadesh,
+        swadesh2500: curve[1]!.swadesh,
+        swadesh5000: curve[2]!.swadesh,
+        invSize: lang.phonemeInventory.segmental.length,
+        sizeRatio: lexIds(lang).length / Math.max(1, seed.size),
+        colexRate: colexificationRate(lang).rate,
+        antonymCosine: antonymCosine(lang).mean,
+        voicelessStopShare: onsetStats(lang).voicelessStopShare,
+        regularShare: actuationShare(lang).regularShare,
+        homophonyRate: homophonyRate(lang),
+      };
+      for (const [k, v] of Object.entries(metrics) as [MetricId, number][]) {
+        const b = bandFor(preset.id, k);
+        if (!b) continue; // no snapshot yet → skip (filled in Step 3)
+        expect(withinBand(v, b), `${preset.id}.${k}=${v} outside band [${b.value}±${b.absolute ? b.band : b.value * b.band}]`).toBe(true);
+      }
 
       // perf rows (non-gating)
       rows.push({
