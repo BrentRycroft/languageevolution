@@ -1483,6 +1483,13 @@ export interface SimulationConfig {
   seedMorphology?: import("./morphology/types").Morphology;
   seedGrammar?: Partial<GrammarFeatures>;
   seedStressPattern?: NonNullable<Language["stressPattern"]>;
+  /**
+   * G6: per-preset seed orthography (phoneme → grapheme). Threaded into
+   * `Language.orthography` at birth so a preset ships its own spelling
+   * conventions (English digraphs vs near-phonemic Latin) from gen 0 instead of
+   * relying on the universal DEFAULT_ORTHOGRAPHY + tier-2 scribal seeding.
+   */
+  seedOrthography?: Record<Phoneme, string>;
   seedLexicalStress?: Record<Meaning, number>;
   seedCulturalTier?: 0 | 1 | 2 | 3;
   seedSuppletion?: Record<

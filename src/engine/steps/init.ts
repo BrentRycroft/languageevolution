@@ -210,7 +210,9 @@ export function buildInitialState(config: SimulationConfig): SimulationState {
     // to the universal default in apply.ts.
     closedClassInventory: config.seedClosedClassInventory,
     coords: { x: 0, y: 0 },
-    orthography: {},
+    // G6: a preset may ship a seed orthography (its own spelling conventions);
+    // otherwise start empty and fall back to DEFAULT_ORTHOGRAPHY in romanize().
+    orthography: { ...(config.seedOrthography ?? {}) },
     otRanking: DEFAULT_OT_RANKING.slice(),
     lastChangeGeneration: {},
     stressPattern: config.seedStressPattern ?? "penult",
