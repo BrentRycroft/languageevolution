@@ -55,6 +55,23 @@ enrichment (A2 / A3 / item 3) that depended on it — see those entries.
   (metric_bands.snapshot.ts, in the scorecard). Unblocks geometric reworks (G1)
   and GPU offload (G7). Behavior-neutral.
 
+- **G1 — geometric meaning inventory (CODE COMPLETE 2026-06-14; heavy re-verify
+  DEFERRED).** The meaning set is now DERIVED from the baked embedding/corpus data
+  (2,423-concept embedding vocabulary) instead of the hand ~1,800-concept list.
+  conceptRegistry.ts (Layer-0 leaf: CONCEPT_IDS + posOf/tierOf/zipfFrequencyFor) →
+  concepts.ts façade (geometric cluster+colex + retained curated metadata). Hand
+  data retired: BASIC_240 + clusterOfBasic240 removed, expanded_concepts.ts deleted,
+  fillMissing pads to tier-0 core. tiers = corpus-rank percentile; POS = WordNet
+  baked table; cluster/colex = geometry. Commits eb4d076→a5d82ae→d036c02→427b517→
+  3d19378→7553f4e. **FAST full suite GREEN (2042✓).** Metric bands RE-BAKED from a
+  real RUN_SLOW scorecard run (the Swadesh curve + several metrics shifted
+  deliberately; NaN regularShare preset moved english→tokipona).
+  **DEFERRED until the G7 GPU perf rework makes RUN_SLOW cheap:** the full RUN_SLOW
+  gate — confirm the re-baked bands pass + scorecard catastrophe floors reached,
+  reproducibility 30-step tier, and the `divergence_regression` + `proto_preservation`
+  statistical floors hold post-inventory (a broken floor = real regression to fix,
+  NOT auto-rebake). Run it once RUN_SLOW is fast, fix from there.
+
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
 | Area | State | Gap note |
