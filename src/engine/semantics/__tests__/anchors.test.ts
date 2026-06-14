@@ -3,11 +3,13 @@ import { ANCHORS, nearestAnchor, anchorsWithin, kNearestAnchors, glossOf } from 
 import { fromFloats } from "../vec";
 import { embed } from "../embeddings";
 import { CONCEPT_IDS } from "../../lexicon/concepts";
-import { ANCHOR_EXTRA_TABLE } from "../anchorExtrasData";
 
 describe("anchors — the fixed English-concept coordinate system", () => {
-  it("covers every registered concept plus the anchor-coverage extras (deterministic)", () => {
-    expect(ANCHORS.length).toBe(CONCEPT_IDS.length + Object.keys(ANCHOR_EXTRA_TABLE).length);
+  it("covers exactly the registered concept inventory (deterministic)", () => {
+    // G1: the anchor-coverage extras are now UNIONED into CONCEPT_IDS (the
+    // embedding vocabulary), so ANCHORS covers exactly CONCEPT_IDS — one anchor
+    // per registered concept (extras included, not added on top).
+    expect(ANCHORS.length).toBe(CONCEPT_IDS.length);
     const set = new Set(ANCHORS.map((a) => a.concept));
     for (const c of CONCEPT_IDS) expect(set.has(c)).toBe(true);
   });

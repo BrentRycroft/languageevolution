@@ -64,8 +64,10 @@ describe("anchorQueries — posOfPoint hand-picked concepts", () => {
     expect(posOfPoint(anchorPointFull("i"))).toBe("closed");
   });
 
-  it("'above' (other → closed) → 'closed'", () => {
-    expect(CONCEPTS["above"]!.pos).toBe("other");
+  it("'above' (adverb → closed) → 'closed'", () => {
+    // G1: WordNet tags 'above' adverb (no dedicated open-class one-hot), so the
+    // labeled-POS coarsening still collapses it to the closed bucket.
+    expect(CONCEPTS["above"]!.pos).toBe("adverb");
     expect(posOfPoint(anchorPointFull("above"))).toBe("closed");
   });
 });

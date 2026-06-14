@@ -4,7 +4,8 @@ import { createSimulation } from "../simulation";
 import { defaultConfig } from "../config";
 import { makeRng } from "../rng";
 import { clusterOf } from "../semantics/clusters";
-import { tGlosses as lexKeys, tDelete as lexDelete } from "../lexicon/__tests__/glossSeam";
+import { conceptsAtOrBelow } from "../lexicon/concepts";
+import { tGlosses as lexKeys, tDelete as lexDelete, tHas as lexHas } from "../lexicon/__tests__/glossSeam";
 
 /**
  * genesis_need.test.ts
@@ -47,11 +48,17 @@ describe("genesis/need", () => {
     const sim = createSimulation(defaultConfig());
     const state = sim.getState();
     const lang = state.tree[state.rootId]!.language;
+    // Coverage-gap need fires for BASIC (tier-0) concepts. Pick a tier-0 concept
+    // the language has, empty its geometric cluster, and it should register need.
+    const basicPresent = conceptsAtOrBelow(0).filter(
+      (m) => lexHas(lang, m) && clusterOf(m),
+    );
+    const target = basicPresent[0]!;
+    const cl = clusterOf(target)!;
     for (const key of lexKeys(lang)) {
-      if (clusterOf(key) === "animals") lexDelete(lang, key);
+      if (clusterOf(key) === cl) lexDelete(lang, key);
     }
     const need = lexicalNeed(lang, state.tree);
-    expect(need["dog"]).toBeGreaterThan(0);
-    expect(need["wolf"]).toBeGreaterThan(0);
+    expect(need[target]).toBeGreaterThan(0);
   });
 });
