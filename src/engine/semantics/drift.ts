@@ -27,12 +27,11 @@ import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 // drift protection was redundant with Phase 24c's frequency-direction
 // split (high-freq content words are already conservative via
 // freqInput = 1 - freq), and not accurate to real etymology.
-import { CONCEPT_IDS, tierOf, zipfFrequencyFor, type Tier } from "../lexicon/concepts";
+import { CONCEPT_IDS, tierOf, zipfFrequencyFor, conceptsAtOrBelow, type Tier } from "../lexicon/concepts";
 import { recordColexification } from "./colexification";
-import { BASIC_240 } from "../lexicon/basic240";
 
 const EXPANSION_IDS_BY_TIER: ReadonlyMap<Tier, readonly string[]> = (() => {
-  const basicSet = new Set<string>(BASIC_240);
+  const basicSet = new Set<string>(conceptsAtOrBelow(0)); // G1: tier-0 core excluded from expansion pool
   const buckets: Record<number, string[]> = { 0: [], 1: [], 2: [], 3: [] };
   for (const id of CONCEPT_IDS) {
     if (basicSet.has(id)) continue;

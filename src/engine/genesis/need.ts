@@ -1,7 +1,6 @@
 import type { Language, LanguageTree, Meaning } from "../types";
 import { satGet } from "../lexicon/satellites";
 import { semanticClusters, clusterOf } from "../semantics/clusters";
-import { BASIC_240 } from "../lexicon/basic240";
 import { CONCEPT_IDS, CONCEPTS, conceptsAtOrBelow, tierOf, type Tier } from "../lexicon/concepts";
 import { EXPANSION_NEED_BASELINE, REGISTRY_FILL_CAP } from "../constants";
 import { leafIds } from "../tree/split";
@@ -55,7 +54,7 @@ export function lexicalNeed(
   }
 
   const tier = (lang.culturalTier ?? 0) as Tier;
-  const basicSet = BASIC_240 as readonly Meaning[];
+  const basicSet = conceptsAtOrBelow(0); // G1: tier-0 (corpus-core) is the new "basic" set
   const basicSetLookup = new Set(basicSet);
   const seedLengths = opts.seedLengths;
 
