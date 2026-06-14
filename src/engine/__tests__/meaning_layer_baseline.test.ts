@@ -6,11 +6,8 @@ import { presetRomance } from "../presets/romance";
 import { presetGermanic } from "../presets/germanic";
 import { presetTokipona } from "../presets/tokipona";
 import { presetEnglish } from "../presets/english";
-import { formToString } from "../phonology/ipa";
-import { fnv1a } from "../rng";
-import { lexIds, lexFormById } from "../lexicon/access";
-import { meaningForLexemeId } from "../lexicon/lexemeIdentity";
 import type { SimulationConfig } from "../types";
+import { signature } from "./signature";
 
 /**
  * meaning_layer_baseline.test.ts — the byte-identical SAFETY NET for the
@@ -45,30 +42,6 @@ const PRESETS: Record<string, () => SimulationConfig> = {
 };
 
 const STEPS = 30;
-
-/** Deterministic hash of every tree node's sorted lexicon forms + word forms. */
-function signature(sim: ReturnType<typeof createSimulation>): string {
-  const tree = sim.getState().tree;
-  const parts: string[] = [];
-  for (const id of Object.keys(tree).sort()) {
-    const lang = tree[id]!.language;
-    // Lock GLOSS → form (not the physical store key). Iterate the id-native seam (lexIds), resolve each
-    // id to its SEED gloss (meaningForLexemeId), then sort by GLOSS — as the original lexKeys(...).sort()
-    // did. NB: sort the GLOSSES, not the combined "gloss=form" strings (a prefix gloss like "a" vs
-    // "a-thing" would otherwise reorder). Byte-identical to the pre-S3 gloss-keyed signature.
-    const lex = lexIds(lang)
-      .map((idk) => ({ g: meaningForLexemeId(lang, idk)!, f: formToString(lexFormById(lang, idk)!) }))
-      .sort((a, b) => (a.g < b.g ? -1 : a.g > b.g ? 1 : 0))
-      .map((e) => `${e.g}=${e.f}`)
-      .join("|");
-    const words = (lang.words ?? [])
-      .map((w) => w.formKey)
-      .sort()
-      .join("|");
-    parts.push(`${id}#${lex}#${words}`);
-  }
-  return fnv1a(parts.join("\n")).toString(16).padStart(8, "0");
-}
 
 // Baseline hashes from the current (pre-migration) engine. Locked.
 // GEN0 re-baselined 2026-06-01 (item 3 enrichment, all presets): each preset
