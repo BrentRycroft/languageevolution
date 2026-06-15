@@ -137,12 +137,16 @@ enrichment (A2 / A3 / item 3) that depended on it — see those entries.
     the Node suite excludes `*.browser.test.ts` and stays the deterministic default. (Key flag:
     `VK_ICD_FILENAMES` → the SwiftShader Vulkan ICD, resolved from Playwright's install; full
     Chrome-for-Testing `channel:"chromium"`, not the WebGPU-less headless-shell.)
-  - **REMAINING to finish T3+T4 (production hardening, now de-risked):** emulate 64-bit
-    accumulation (i32 overflows on full 58-dim GloVe vectors); add GPU top-k/argmin (or GPU
-    distances + CPU top-k); wire the WebGPU backend into T2's batch hook (async precompute → sync
-    read) so the browser app actually uses it; benchmark CPU vs GPU (T4). CPU stays CI's default.
-    NB: WebGPU only accelerates in a browser — it does NOT speed the Node RUN_SLOW suite unless
-    the GPU-in-test runtime (now proven) is wired in and used by the slow paths.
+  - **GPU kernel — DONE & PROVEN** (`7fb5a69`): integer-exact 64-bit squared-distance shader
+    (64-bit accumulation + a full 32×32→64 `mul32` per term — real anchor distances reach ~5e11
+    and a single diff² can top 2³², both of which the kernel now handles). Browser equivalence
+    test runs over REAL anchor vectors (distances > 2³¹) and asserts the GPU result is
+    integer-EXACT vs CPU `distanceSq` for every row + argmin agreement. Green in Chromium/SwiftShader.
+  - **REMAINING (deployment-bound — NOT verifiable in Node CI, so deliberately not done here):**
+    (a) wire the GPU backend into T2's batch hook (async precompute → sync read) so the BROWSER app
+    uses it on the slow paths — this is a sync→async step-loop change that only activates with a
+    browser GPU; (b) benchmark on real GPU hardware (the SwiftShader software adapter is slower than
+    CPU, so a meaningful speedup number needs a real device). CPU stays CI's deterministic default.
 
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
