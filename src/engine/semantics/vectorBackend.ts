@@ -82,3 +82,44 @@ export function cpuVectorBackend(): VectorBackend {
 export function setVectorBackend(b: VectorBackend): void {
   _backend = b;
 }
+
+// ── G7 T2: per-generation geometric memo ──────────────────────────────────────
+//
+// The anchor frame and cluster centroids NEVER change, so nearestAnchor /
+// kNearestAnchors / clusterRegionOf are pure functions of the query point. Emergent-
+// gloss resolution hits these for essentially every lexeme access, re-scanning the
+// full 2,423-anchor matrix each time. Memoising by point content collapses the repeat
+// scans within a generation to one scan per distinct point — the "precompute once,
+// read many" batch hook (a GPU backend fills the same role across the whole batch).
+//
+// Determinism: a content key means a hit returns the BYTE-IDENTICAL result, so the
+// memo never changes output. It is cleared at each generation tick (`clearGeometricMemo`
+// in simulation.step) purely to bound memory as lexemes drift — correctness never
+// depends on clearing.
+const _memo = new Map<string, unknown>();
+
+/** Memoise a pure point-keyed geometric query within the current generation. */
+export function geometricMemo<T>(key: string, compute: () => T): T {
+  const hit = _memo.get(key);
+  if (hit !== undefined) return hit as T;
+  const v = compute();
+  _memo.set(key, v);
+  return v;
+}
+
+/** Reset the per-generation geometric memo (memory hygiene; call per generation). */
+export function clearGeometricMemo(): void {
+  _memo.clear();
+}
+
+/** Current memo entry count (diagnostics/tests). */
+export function geometricMemoSize(): number {
+  return _memo.size;
+}
+
+/** Fixed-length content key for a vector — identical content ⇒ identical key. */
+export function pointKey(p: Vec): string {
+  let s = "";
+  for (let i = 0; i < p.length; i++) s += p[i]! + ",";
+  return s;
+}

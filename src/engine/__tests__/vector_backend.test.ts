@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { getVectorBackend, cpuVectorBackend, type VectorBackend } from "../semantics/vectorBackend";
+import {
+  getVectorBackend, cpuVectorBackend, type VectorBackend,
+  geometricMemo, clearGeometricMemo, geometricMemoSize, pointKey,
+} from "../semantics/vectorBackend";
 import { fromFloats, distanceSq, type Vec } from "../semantics/vec";
+import { nearestAnchor } from "../semantics/anchors";
+import { embed } from "../semantics/embeddings";
 
 /**
  * G7 T1 — the pluggable vector backend. The default is the deterministic CPU
@@ -30,5 +35,38 @@ describe("G7 — CPU vector backend", () => {
   it("breaks exact ties by label ascending (deterministic)", () => {
     // [0.5,0.5] is equidistant from all three rows → ranking is purely the tie-break.
     expect(b.topKIndices(rows, labels, fromFloats([0.5, 0.5]), 3, distanceSq)).toEqual([0, 1, 2]);
+  });
+});
+
+describe("G7 T2 — per-generation geometric memo", () => {
+  it("memoises by key and does not re-run compute on a hit", () => {
+    clearGeometricMemo();
+    let calls = 0;
+    const a = geometricMemo("k", () => { calls++; return 42; });
+    const b = geometricMemo("k", () => { calls++; return 99; });
+    expect(a).toBe(42);
+    expect(b).toBe(42); // hit → second compute never runs
+    expect(calls).toBe(1);
+  });
+
+  it("clearGeometricMemo resets the cache", () => {
+    clearGeometricMemo();
+    geometricMemo("x", () => 1);
+    expect(geometricMemoSize()).toBeGreaterThan(0);
+    clearGeometricMemo();
+    expect(geometricMemoSize()).toBe(0);
+  });
+
+  it("nearestAnchor is byte-identical cold vs warm (memo never changes the result)", () => {
+    clearGeometricMemo();
+    const p = fromFloats(embed("water"));
+    const cold = nearestAnchor(p).concept; // miss
+    const warm = nearestAnchor(p).concept; // hit
+    expect(warm).toBe(cold);
+  });
+
+  it("pointKey is content-based (same content ⇒ same key)", () => {
+    expect(pointKey(fromFloats([1, 2, 3]))).toBe(pointKey(fromFloats([1, 2, 3])));
+    expect(pointKey(fromFloats([1, 2, 3]))).not.toBe(pointKey(fromFloats([1, 2, 4])));
   });
 });

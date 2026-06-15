@@ -19,7 +19,7 @@ import { L_POS_NOUN, L_POS_VERB, L_POS_ADJ, L_POS_CLOSED } from "./anchorLabeled
 import { CLUSTERS } from "../lexicon/basic240";
 import { fromFloats } from "./vec";
 import { embed } from "./embeddings";
-import { getVectorBackend } from "./vectorBackend";
+import { getVectorBackend, geometricMemo, pointKey } from "./vectorBackend";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -137,8 +137,10 @@ const CENTROID_NAMES: readonly string[] = CLUSTER_CENTROIDS.map((c) => c.name);
  * Tie-break by cluster name ascending.
  */
 export function clusterRegionOf(point: Vec): string {
-  const i = getVectorBackend().nearestIndex(CENTROID_POINTS, CENTROID_NAMES, point, lexicalDistSq);
-  return CLUSTER_CENTROIDS[i]!.name;
+  return geometricMemo(`cr:${pointKey(point)}`, () => {
+    const i = getVectorBackend().nearestIndex(CENTROID_POINTS, CENTROID_NAMES, point, lexicalDistSq);
+    return CLUSTER_CENTROIDS[i]!.name;
+  });
 }
 
 /** The set of cluster names in the taxonomy (for validation). */

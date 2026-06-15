@@ -41,6 +41,7 @@ import { stepGrammar, stepMorphology } from "./steps/grammar";
 import { rebuildFormKeyIndex, backfillSenseLexemeIds } from "./lexicon/word";
 import { migrateLexemeStore, migrateSatelliteMaps } from "./lexicon/store";
 import { seedTierTwoOrthography } from "./phonology/orthography";
+import { clearGeometricMemo } from "./semantics/vectorBackend";
 import { stepSemantics } from "./steps/semantics";
 import { stepObsolescence } from "./steps/obsolescence";
 import { stepCopulaErosion, stepCopulaGenesis } from "./steps/copula";
@@ -186,6 +187,10 @@ export function createSimulation(
 
     const rng = makeRng(state.rngState);
     const nextGen = state.generation + 1;
+    // G7 T2: reset the per-generation geometric memo (nearestAnchor / kNearestAnchors
+    // / clusterRegionOf are point-pure; the memo collapses repeated full-matrix scans
+    // within a tick and is cleared here so it can't grow unbounded as lexemes drift).
+    clearGeometricMemo();
     // Phase 29 Tranche 6f: hoist the worldMap fetch out of the per-leaf
     // loop. getWorldMap is cached internally but the call still does
     // hash work; we only need it once per generation regardless.

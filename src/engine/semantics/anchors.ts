@@ -18,7 +18,7 @@ import type { Meaning } from "../types";
 import { type Vec, distanceSq, fromFloats } from "./vec";
 import { embed } from "./embeddings";
 import { CONCEPT_IDS } from "../lexicon/conceptRegistry";
-import { getVectorBackend } from "./vectorBackend";
+import { getVectorBackend, geometricMemo, pointKey } from "./vectorBackend";
 
 export interface Anchor {
   /** The English concept this anchor labels — the emergent gloss a lexeme adopts when nearest it. */
@@ -61,7 +61,9 @@ export function glossOf(point: Vec): Meaning {
 
 /** The single anchor whose point is closest to `point` (integer-exact, id tie-break). */
 export function nearestAnchor(point: Vec): Anchor {
-  return ANCHORS[getVectorBackend().nearestIndex(ANCHOR_POINTS, ANCHOR_LABELS, point, distanceSq)]!;
+  return geometricMemo(`na:${pointKey(point)}`, () =>
+    ANCHORS[getVectorBackend().nearestIndex(ANCHOR_POINTS, ANCHOR_LABELS, point, distanceSq)]!,
+  );
 }
 
 /**
@@ -77,7 +79,8 @@ export function anchorsWithin(point: Vec, r: number): Anchor[] {
 
 /** The `k` anchors nearest `point`, nearest-first (integer-exact distance, id tie-break). */
 export function kNearestAnchors(point: Vec, k: number): Anchor[] {
-  return getVectorBackend()
-    .topKIndices(ANCHOR_POINTS, ANCHOR_LABELS, point, k, distanceSq)
-    .map((i) => ANCHORS[i]!);
+  const idx = geometricMemo(`kn:${k}:${pointKey(point)}`, () =>
+    getVectorBackend().topKIndices(ANCHOR_POINTS, ANCHOR_LABELS, point, k, distanceSq),
+  );
+  return idx.map((i) => ANCHORS[i]!);
 }
