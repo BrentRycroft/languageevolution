@@ -129,15 +129,20 @@ enrichment (A2 / A3 / item 3) that depended on it — see those entries.
   - **T2** (`e654eb1`): per-generation geometric memo (point-pure queries cached within a
     tick, cleared in `simulation.step`) — collapses the repeated full-matrix gloss-resolution
     scans; the "compute once, read many" batch hook a GPU fills. Determinism-safe.
-  - **REMAINING — T3+T4 (the big, specialized, environment-uncertain part):** the WebGPU
-    backend (WGSL compute shaders: batched integer cosine + argmin/top-k, capability-detected
-    `navigator.gpu`) + **getting the Node/vitest tests to run through a real GPU** (Node has no
-    `navigator.gpu`). Two routes, both with feasibility risk on Windows: native `webgpu` (Dawn)
-    npm bindings, or **vitest browser mode via Playwright Chromium** (Chromium has WebGPU).
-    Needs a feasibility spike (pick a route, prove ONE GPU equivalence test green) before the
-    full shader implementation. CPU path stays the deterministic CI default regardless.
-    NB: WebGPU only accelerates in a browser — it does NOT speed up the Node/vitest RUN_SLOW
-    suite unless the GPU-in-test runtime above lands.
+  - **T3 feasibility spike — PROVEN** (`48ba666`): chose **vitest browser mode via Playwright
+    Chromium**. `vectorBackend.webgpu.ts` (WGSL compute shader for integer squared-distances) +
+    a browser equivalence test that runs in real Chromium and asserts GPU results BYTE-IDENTICAL
+    to the CPU `distanceSq` loop — green via Chromium's bundled **SwiftShader** software adapter
+    (so it works with no discrete GPU). Separate `vitest.browser.config.ts` + `npm run test:gpu`;
+    the Node suite excludes `*.browser.test.ts` and stays the deterministic default. (Key flag:
+    `VK_ICD_FILENAMES` → the SwiftShader Vulkan ICD, resolved from Playwright's install; full
+    Chrome-for-Testing `channel:"chromium"`, not the WebGPU-less headless-shell.)
+  - **REMAINING to finish T3+T4 (production hardening, now de-risked):** emulate 64-bit
+    accumulation (i32 overflows on full 58-dim GloVe vectors); add GPU top-k/argmin (or GPU
+    distances + CPU top-k); wire the WebGPU backend into T2's batch hook (async precompute → sync
+    read) so the browser app actually uses it; benchmark CPU vs GPU (T4). CPU stays CI's default.
+    NB: WebGPU only accelerates in a browser — it does NOT speed the Node RUN_SLOW suite unless
+    the GPU-in-test runtime (now proven) is wired in and used by the slow paths.
 
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
