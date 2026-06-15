@@ -79,6 +79,9 @@ export default defineConfig(({ command }) => ({
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
+      // G7: browser-mode WebGPU tests run via `npm run test:gpu`
+      // (vitest.browser.config.ts), never in the Node suite.
+      "**/*.browser.test.ts",
       ...(process.env.RUN_SLOW
         ? []
         : [
