@@ -121,6 +121,24 @@ enrichment (A2 / A3 / item 3) that depended on it — see those entries.
   translator/narrative 188). **DEFERRED:** the long-run opacity-accrues-vs-Latin-shifts LOCK
   is inherently RUN_SLOW → folds into the G7-deferred bucket.
 
+- **G7 — GPU / client offload (IN PROGRESS; T1+T2 done 2026-06-14, inline).** Behind a
+  pluggable `vectorBackend` so the hot full-matrix geometric kernels can run on a GPU.
+  - **T1** (`f400633`): `semantics/vectorBackend.ts` — `VectorBackend` (nearestIndex,
+    topKIndices) + CPU default; `nearestAnchor`/`kNearestAnchors`/`clusterRegionOf` route
+    through it, byte-identical (same distanceSq + label tie-break).
+  - **T2** (`e654eb1`): per-generation geometric memo (point-pure queries cached within a
+    tick, cleared in `simulation.step`) — collapses the repeated full-matrix gloss-resolution
+    scans; the "compute once, read many" batch hook a GPU fills. Determinism-safe.
+  - **REMAINING — T3+T4 (the big, specialized, environment-uncertain part):** the WebGPU
+    backend (WGSL compute shaders: batched integer cosine + argmin/top-k, capability-detected
+    `navigator.gpu`) + **getting the Node/vitest tests to run through a real GPU** (Node has no
+    `navigator.gpu`). Two routes, both with feasibility risk on Windows: native `webgpu` (Dawn)
+    npm bindings, or **vitest browser mode via Playwright Chromium** (Chromium has WebGPU).
+    Needs a feasibility spike (pick a route, prove ONE GPU equivalence test green) before the
+    full shader implementation. CPU path stays the deterministic CI default regardless.
+    NB: WebGPU only accelerates in a browser — it does NOT speed up the Node/vitest RUN_SLOW
+    suite unless the GPU-in-test runtime above lands.
+
 ## Realism & quality checklist (scoreboard: none / partial / solid)
 
 | Area | State | Gap note |
