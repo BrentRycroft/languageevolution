@@ -7,17 +7,38 @@
  * Browser-only (`navigator.gpu`); verified against the deterministic CPU backend by
  * the browser equivalence test (`*.browser.test.ts`, run via vitest browser mode).
  *
- * SPIKE SCOPE: accumulates the sum of squared diffs in `i32`, which is exact only
- * while Σ(diff²) < 2³¹. Small inputs (the equivalence test) stay exact; the
- * production 58-dim GloVe vectors can overflow i32, so integer-exact-at-scale needs
- * emulated 64-bit accumulation — a follow-up once this proves the pipeline works.
+ * Integer-exact at production scale: the sum of squared diffs over 58 quantized
+ * GloVe dims reaches ~10¹¹, overflowing i32, so the shader accumulates a 64-bit
+ * value as a (lo, hi) u32 pair with manual carry — exactly reproducing the CPU
+ * `distanceSq` (which accumulates in a float64, exact below 2⁵³). Each term `diff²`
+ * is computed in u32 (|diff| ≤ ~49k ⇒ diff² < 2³²), so no single term overflows
+ * either. Results reconstruct in JS as `lo + hi·2³²`.
  */
 
 const SQ_DIST_SHADER = /* wgsl */ `
 @group(0) @binding(0) var<storage, read> matrix : array<i32>;        // n * d, row-major
 @group(0) @binding(1) var<storage, read> query  : array<i32>;        // d
-@group(0) @binding(2) var<storage, read_write> result : array<i32>;  // n
+@group(0) @binding(2) var<storage, read_write> result : array<u32>;  // n*2: [lo, hi] per row
 @group(0) @binding(3) var<uniform> dims : vec2<u32>;                  // (n, d)
+
+// Full 32×32 → 64-bit unsigned product as (lo, hi). u32 multiply wraps at 32 bits,
+// so a single term diff² can exceed 32 bits (|diff| can top 2¹⁶); split into 16-bit
+// halves and reassemble with carries.
+fn mul32(a : u32, b : u32) -> vec2<u32> {
+  let aL = a & 0xFFFFu; let aH = a >> 16u;
+  let bL = b & 0xFFFFu; let bH = b >> 16u;
+  let ll = aL * bL;
+  let lh = aL * bH;
+  let hl = aH * bL;
+  let hh = aH * bH;
+  var lo = ll;
+  var hi = hh;
+  // add (lh << 16)
+  let s1 = lo + (lh << 16u); if (s1 < lo) { hi = hi + 1u; } lo = s1; hi = hi + (lh >> 16u);
+  // add (hl << 16)
+  let s2 = lo + (hl << 16u); if (s2 < lo) { hi = hi + 1u; } lo = s2; hi = hi + (hl >> 16u);
+  return vec2<u32>(lo, hi);
+}
 
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) gid : vec3<u32>) {
@@ -25,13 +46,20 @@ fn main(@builtin(global_invocation_id) gid : vec3<u32>) {
   let n = dims.x;
   let d = dims.y;
   if (i >= n) { return; }
-  var acc : i32 = 0;
+  var lo : u32 = 0u;
+  var hi : u32 = 0u;
   let base = i * d;
   for (var j : u32 = 0u; j < d; j = j + 1u) {
     let diff = matrix[base + j] - query[j];
-    acc = acc + diff * diff;
+    let ad = u32(abs(diff));
+    let sq = mul32(ad, ad);            // exact 64-bit diff²
+    let newLo = lo + sq.x;
+    if (newLo < lo) { hi = hi + 1u; }  // carry from the low add
+    lo = newLo;
+    hi = hi + sq.y;                     // high half of diff²
   }
-  result[i] = acc;
+  result[i * 2u] = lo;
+  result[i * 2u + 1u] = hi;
 }
 `;
 
@@ -56,8 +84,8 @@ export async function getGpuDevice(): Promise<GPUDevice | null> {
 
 /**
  * Squared distance from `query` to every row of `matrix` (n rows × d dims, row-major),
- * computed on the GPU. Integer result, byte-identical to the CPU `distanceSq` loop
- * while the accumulator stays within i32 (see SPIKE SCOPE).
+ * computed on the GPU. Integer-exact (64-bit accumulation), equal to the CPU
+ * `distanceSq` for every row. Returns one exact number per row (`lo + hi·2³²`).
  */
 export async function gpuSquaredDistances(
   device: GPUDevice,
@@ -65,7 +93,7 @@ export async function gpuSquaredDistances(
   n: number,
   d: number,
   query: Int32Array,
-): Promise<Int32Array> {
+): Promise<number[]> {
   // The runtime arrays are always ArrayBuffer-backed (never SharedArrayBuffer);
   // cast only at the GPU write boundary to satisfy writeBuffer's stricter type.
   const asGpuSrc = (a: Int32Array): Int32Array<ArrayBuffer> => a as Int32Array<ArrayBuffer>;
@@ -82,8 +110,9 @@ export async function gpuSquaredDistances(
   });
   device.queue.writeBuffer(queryBuf, 0, asGpuSrc(query));
 
+  const resultBytes = n * 2 * 4; // (lo, hi) u32 per row
   const resultBuf = device.createBuffer({
-    size: n * 4,
+    size: resultBytes,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
   });
 
@@ -117,16 +146,18 @@ export async function gpuSquaredDistances(
   pass.end();
 
   const staging = device.createBuffer({
-    size: n * 4,
+    size: resultBytes,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
-  encoder.copyBufferToBuffer(resultBuf, 0, staging, 0, n * 4);
+  encoder.copyBufferToBuffer(resultBuf, 0, staging, 0, resultBytes);
   device.queue.submit([encoder.finish()]);
 
   await staging.mapAsync(GPUMapMode.READ);
-  const out = new Int32Array(staging.getMappedRange().slice(0));
+  const u = new Uint32Array(staging.getMappedRange().slice(0));
   staging.unmap();
-
   for (const b of [matrixBuf, queryBuf, resultBuf, dimsBuf, staging]) b.destroy();
+
+  const out = new Array<number>(n);
+  for (let i = 0; i < n; i++) out[i] = u[i * 2]! + u[i * 2 + 1]! * 4294967296; // lo + hi·2³²
   return out;
 }
