@@ -19,6 +19,7 @@ import { L_POS_NOUN, L_POS_VERB, L_POS_ADJ, L_POS_CLOSED } from "./anchorLabeled
 import { CLUSTERS } from "../lexicon/basic240";
 import { fromFloats } from "./vec";
 import { embed } from "./embeddings";
+import { getVectorBackend } from "./vectorBackend";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -125,6 +126,9 @@ function buildCentroids(): readonly ClusterCentroid[] {
 
 /** Frozen cluster centroid table, keyed-by-name-ascending order. Built once. */
 const CLUSTER_CENTROIDS: readonly ClusterCentroid[] = buildCentroids();
+// G7: parallel arrays for the vector backend (argmin by lexical distSq, name tie-break).
+const CENTROID_POINTS: readonly Vec[] = CLUSTER_CENTROIDS.map((c) => c.point);
+const CENTROID_NAMES: readonly string[] = CLUSTER_CENTROIDS.map((c) => c.name);
 
 /**
  * The nearest semantic-cluster region, by lexical-subspace geometry.
@@ -133,17 +137,8 @@ const CLUSTER_CENTROIDS: readonly ClusterCentroid[] = buildCentroids();
  * Tie-break by cluster name ascending.
  */
 export function clusterRegionOf(point: Vec): string {
-  let bestName = CLUSTER_CENTROIDS[0]!.name;
-  let bestD = lexicalDistSq(point, CLUSTER_CENTROIDS[0]!.point);
-  for (let i = 1; i < CLUSTER_CENTROIDS.length; i++) {
-    const c = CLUSTER_CENTROIDS[i]!;
-    const d = lexicalDistSq(point, c.point);
-    if (d < bestD || (d === bestD && c.name < bestName)) {
-      bestD = d;
-      bestName = c.name;
-    }
-  }
-  return bestName;
+  const i = getVectorBackend().nearestIndex(CENTROID_POINTS, CENTROID_NAMES, point, lexicalDistSq);
+  return CLUSTER_CENTROIDS[i]!.name;
 }
 
 /** The set of cluster names in the taxonomy (for validation). */

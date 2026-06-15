@@ -18,6 +18,7 @@ import type { Meaning } from "../types";
 import { type Vec, distanceSq, fromFloats } from "./vec";
 import { embed } from "./embeddings";
 import { CONCEPT_IDS } from "../lexicon/conceptRegistry";
+import { getVectorBackend } from "./vectorBackend";
 
 export interface Anchor {
   /** The English concept this anchor labels — the emergent gloss a lexeme adopts when nearest it. */
@@ -41,6 +42,13 @@ export const ANCHORS: readonly Anchor[] = ANCHOR_CONCEPTS.map((concept) => ({
   point: fromFloats(embed(concept)),
 }));
 
+// G7: parallel arrays for the vector backend. Built once; the backend ranks by
+// integer `distanceSq` with a concept-id tie-break — byte-identical to the
+// hand loops these route replaced (ANCHORS is already in sorted CONCEPT_IDS order,
+// so "lowest index wins on a tie" equals "lowest concept wins").
+const ANCHOR_POINTS: readonly Vec[] = ANCHORS.map((a) => a.point);
+const ANCHOR_LABELS: readonly string[] = ANCHORS.map((a) => a.concept);
+
 /**
  * The EMERGENT GLOSS of a point: the concept of its nearest anchor. A lexeme's English label is not
  * stored — it is read off the coordinate frame here, so a word that drifts into a new region
@@ -53,17 +61,7 @@ export function glossOf(point: Vec): Meaning {
 
 /** The single anchor whose point is closest to `point` (integer-exact, id tie-break). */
 export function nearestAnchor(point: Vec): Anchor {
-  let best = ANCHORS[0]!;
-  let bestD = distanceSq(point, best.point);
-  for (let i = 1; i < ANCHORS.length; i++) {
-    const a = ANCHORS[i]!;
-    const d = distanceSq(point, a.point);
-    if (d < bestD) {
-      bestD = d;
-      best = a;
-    }
-  }
-  return best;
+  return ANCHORS[getVectorBackend().nearestIndex(ANCHOR_POINTS, ANCHOR_LABELS, point, distanceSq)]!;
 }
 
 /**
@@ -79,7 +77,7 @@ export function anchorsWithin(point: Vec, r: number): Anchor[] {
 
 /** The `k` anchors nearest `point`, nearest-first (integer-exact distance, id tie-break). */
 export function kNearestAnchors(point: Vec, k: number): Anchor[] {
-  const scored = ANCHORS.map((a) => ({ a, d: distanceSq(point, a.point) }));
-  scored.sort((x, y) => x.d - y.d || (x.a.concept < y.a.concept ? -1 : x.a.concept > y.a.concept ? 1 : 0));
-  return scored.slice(0, k).map((x) => x.a);
+  return getVectorBackend()
+    .topKIndices(ANCHOR_POINTS, ANCHOR_LABELS, point, k, distanceSq)
+    .map((i) => ANCHORS[i]!);
 }
